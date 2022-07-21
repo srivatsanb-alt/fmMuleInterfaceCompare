@@ -40,4 +40,4 @@ engine = create_engine(
     max_overflow=40,
     creator=connect,
 )
-session_maker = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+session_maker = sessionmaker(autocommit=False, autoflush=True, bind=engine)

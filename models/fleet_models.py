@@ -1,5 +1,7 @@
 from sqlalchemy import ARRAY, Boolean, Column, Float, ForeignKey, Integer, String
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
+
 from models.base_models import Base, TimestampMixin
 
 
@@ -44,8 +46,15 @@ class SherpaModel(TimestampMixin, Base):
     ip_address = Column(String, unique=True)
     hashed_api_key = Column(String, unique=True, index=True)
 
+    initialized = Column(Boolean)
     disabled = Column(Boolean)
+    error = Column(String)
+
     pose = Column(ARRAY(Float))
+    trip_id = Column(Integer)
+    trip_leg_id = Column(Integer)
 
     fleet_id = Column(Integer, ForeignKey("fleets.id"))
     fleet = relationship("FleetModel", back_populates="sherpas")
+
+    other_info = Column(JSONB)

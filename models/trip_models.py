@@ -1,7 +1,10 @@
+import time
 from sqlalchemy import ARRAY, Column, DateTime, ForeignKey, Integer, String
 from models.base_models import Base, TimestampMixin
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import JSONB
+
+from utils.util import ts_to_str
 
 
 class TripStatus:
@@ -13,14 +16,14 @@ class TripStatus:
     FAILED = "failed"
 
 
-class TripModel(Base, TimestampMixin):
+class Trip(Base, TimestampMixin):
     __tablename__ = "trips"
 
     id = Column(Integer, primary_key=True, index=True)
 
     # sherpa doing the trip
-    sherpa_id = Column(Integer, ForeignKey("sherpas.id"))
-    sherpa = relationship("SherpaModel")
+    sherpa = Column(String, ForeignKey("sherpas.name"))
+    sherpa_ref = relationship("SherpaModel")
 
     # when trip was booked
     booking_time = Column(DateTime)
@@ -31,6 +34,12 @@ class TripModel(Base, TimestampMixin):
 
     # station names on route
     route = Column(ARRAY(String))
+    # all the stations in the booking plus other automatically added stations such
+    # as parking or hitching stations
+    augmented_route = Column(ARRAY(String))
+    # index into the stations in augmented route.
+    next_station_idx = Column(Integer)
+
     # BOOKED, ASSIGNED, WAITING_STATION, EN_ROUTE, SUCCEEDED, FAILED
     status = Column(String)
 
@@ -41,19 +50,69 @@ class TripModel(Base, TimestampMixin):
     # other details we may want to store about the trip
     other_info = Column(JSONB)
 
+    def __init__(self, route, priority=0, metadata=None):
+        self.booking_time = ts_to_str(time.time())
+        self.route = route
+        self.status = TripStatus.BOOKED
+        self.priority = priority
+        self.trip_metadata = metadata
+        self.augmented_route = route
+        self.next_station_idx = 0
 
-class PendingTripModel(Base, TimestampMixin):
+    def assign_sherpa(self, sherpa: str):
+        self.sherpa = sherpa
+        self.status = TripStatus.ASSIGNED
+
+    def start(self):
+        self.start_time = ts_to_str(time.time())
+
+    def end(self, success):
+        self.end_time = ts_to_str(time.time())
+        self.status = TripStatus.SUCCEEDED if success else TripStatus.FAILED
+
+    def finished(self):
+        return self.next_station_idx >= len(self.augmented_route)
+
+    def add_station(self, station: str, index: int):
+        self.augmented_route[index] = station
+
+    def curr_station(self):
+        if self.next_station_idx > 0:
+            return self.augmented_route[self.next_station_idx - 1]
+        else:
+            return None
+
+    def next_station(self):
+        if self.next_station_idx < len(self.augmented_route):
+            return self.augmented_route[self.next_station_idx]
+        else:
+            return None
+
+    def start_leg(self):
+        self.status = TripStatus.EN_ROUTE
+
+    def end_leg(self):
+        self.status = TripStatus.WAITING_STATION
+        self.next_station_idx += 1
+        if self.finished():
+            self.end(success=True)
+
+    def __repr__(self):
+        return str(self.__dict__)
+
+
+class PendingTrip(Base, TimestampMixin):
     __tablename__ = "pending_trips"
     trip_id = Column(Integer, ForeignKey("trips.id"), primary_key=True)
     trip = relationship("TripModel")
 
 
-class TripLegModel(Base, TimestampMixin):
+class TripLeg(Base, TimestampMixin):
     __tablename__ = "trip_legs"
 
     id = Column(Integer, primary_key=True, index=True)
     # trip this leg belongs to
-    trip_id = Column(Integer, ForeignKey("trips.id"))
+    trip_id = Column(Integer, ForeignKey("trips.id"), index=True)
     trip = relationship("TripModel")
 
     # when this leg started
@@ -65,10 +124,23 @@ class TripLegModel(Base, TimestampMixin):
     from_station = Column(String)
     to_station = Column(String)
 
+    def __init__(self, trip_id, from_station, to_station):
+        self.trip_id = trip_id
+        self.start_time = ts_to_str(time.time())
+        self.from_station = from_station
+        self.to_station = to_station
 
-class OngoingTripModel(Base, TimestampMixin):
+    def end(self):
+        self.end_time = ts_to_str(time.time())
+
+
+class OngoingTrip(Base, TimestampMixin):
     __tablename__ = "ongoing_trips"
-    trip_id = Column(Integer, ForeignKey("trips.id"), primary_key=True)
-    trip = relationship("TripModel")
+    sherpa = Column(String, index=True)
+    trip_id = Column(Integer, ForeignKey("trips.id"), primary_key=True, index=True)
+    trip_ref = relationship("TripModel")
     trip_leg_id = Column(Integer, ForeignKey("trip_legs.id"))
-    trip_leg = relationship("TripLegModel")
+    trip_leg_ref = relationship("TripLegModel")
+
+    def set_leg_id(self, trip_leg_id):
+        self.trip_leg_id = trip_leg_id
