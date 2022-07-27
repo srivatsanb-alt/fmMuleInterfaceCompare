@@ -1,3 +1,5 @@
+import hashlib
+import secrets
 from core.db import session_maker
 
 from models.fleet_models import Sherpa
@@ -78,7 +80,16 @@ class DBSession:
         self.trip.end_leg()
 
 
-def add_sherpa(sherpa: str, hwid=None, ip_address=None, hashed_api_key=None, fleet_id=None):
+def gen_api_key(hwid):
+    return secrets.token_urlsafe(32) + "_" + hwid
+
+
+def add_sherpa(sherpa: str, hwid=None, ip_address=None, api_key=None, fleet_id=None):
+    if not hwid:
+        raise ValueError("Sherpa hardware id cannot be null")
+    if not api_key:
+        api_key = gen_api_key(hwid)
+    hashed_api_key = hashlib.sha256(api_key.encode("utf-8")).hexdigest()
     with session_maker() as db:
         sherpa = Sherpa(
             name=sherpa,
@@ -91,3 +102,5 @@ def add_sherpa(sherpa: str, hwid=None, ip_address=None, hashed_api_key=None, fle
         )
         db.add(sherpa)
         db.commit()
+
+    return api_key
