@@ -3,16 +3,22 @@ import toml
 
 
 def read_config():
-    return toml.load(os.getenv("HIVEMIND_CONFIG_DIR") + "/config.toml")
+    return toml.load(os.getenv("FM_CONFIG_DIR") + "/config.toml")
 
 
-def get_fleet_mode(config):
+def get_fleet_mode(config=None):
+    if not config:
+        config = read_config()
     return config["fleet"]["mode"]
 
 
-def get_handler_class(config):
+def get_handler_class(config=None):
+    if not config:
+        config = read_config()
     return config["fleet"]["handler_class"]
 
 
-def get_handler_package(config):
+def get_handler_package(config=None):
+    if not config:
+        config = read_config()
     return config["fleet"]["handler_package"]
