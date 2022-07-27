@@ -1,17 +1,18 @@
-import secrets
-from pydantic import BaseSettings, PostgresDsn
+import os
+import toml
 
 
-class Settings(BaseSettings):
-    FM_SECRET_KEY: str = secrets.token_urlsafe(32)
-
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8
-
-    FM_DATABASE_URI: PostgresDsn
-
-    class Config:
-        case_sensitive = True
-        env_file = ".env"
+def read_config():
+    return toml.load(os.getenv("HIVEMIND_CONFIG_DIR") + "/config.toml")
 
 
-settings = Settings()
+def get_fleet_mode(config):
+    return config["fleet"]["mode"]
+
+
+def get_handler_class(config):
+    return config["fleet"]["handler_class"]
+
+
+def get_handler_package(config):
+    return config["fleet"]["handler_package"]

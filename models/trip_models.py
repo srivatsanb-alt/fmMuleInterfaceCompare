@@ -23,7 +23,7 @@ class Trip(Base, TimestampMixin):
 
     # sherpa doing the trip
     sherpa = Column(String, ForeignKey("sherpas.name"))
-    sherpa_ref = relationship("SherpaModel")
+    sherpa_ref = relationship("Sherpa")
 
     # when trip was booked
     booking_time = Column(DateTime)
@@ -104,7 +104,7 @@ class Trip(Base, TimestampMixin):
 class PendingTrip(Base, TimestampMixin):
     __tablename__ = "pending_trips"
     trip_id = Column(Integer, ForeignKey("trips.id"), primary_key=True)
-    trip = relationship("TripModel")
+    trip = relationship("Trip")
 
 
 class TripLeg(Base, TimestampMixin):
@@ -113,7 +113,7 @@ class TripLeg(Base, TimestampMixin):
     id = Column(Integer, primary_key=True, index=True)
     # trip this leg belongs to
     trip_id = Column(Integer, ForeignKey("trips.id"), index=True)
-    trip = relationship("TripModel")
+    trip = relationship("Trip")
 
     # when this leg started
     start_time = Column(DateTime)
@@ -138,9 +138,9 @@ class OngoingTrip(Base, TimestampMixin):
     __tablename__ = "ongoing_trips"
     sherpa = Column(String, index=True)
     trip_id = Column(Integer, ForeignKey("trips.id"), primary_key=True, index=True)
-    trip_ref = relationship("TripModel")
+    trip_ref = relationship("Trip")
     trip_leg_id = Column(Integer, ForeignKey("trip_legs.id"))
-    trip_leg_ref = relationship("TripLegModel")
+    trip_leg_ref = relationship("TripLeg")
 
     def set_leg_id(self, trip_leg_id):
         self.trip_leg_id = trip_leg_id

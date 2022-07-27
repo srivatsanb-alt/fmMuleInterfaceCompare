@@ -6,7 +6,7 @@ import aioredis
 import psycopg2
 import redis
 
-from core.config import settings
+from core.settings import settings
 
 
 aioredis = aioredis.from_url(

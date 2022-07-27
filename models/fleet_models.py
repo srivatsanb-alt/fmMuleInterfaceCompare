@@ -1,6 +1,6 @@
 from sqlalchemy import ARRAY, Boolean, Column, Float, ForeignKey, Integer, String
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, synonym
 
 from models.base_models import Base, TimestampMixin
 
@@ -24,7 +24,7 @@ class MapFile(TimestampMixin, Base):
     file_hash = Column(String)
 
 
-class FleetModel(TimestampMixin, Base):
+class Fleet(TimestampMixin, Base):
     __tablename__ = "fleets"
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, unique=True)
@@ -34,10 +34,10 @@ class FleetModel(TimestampMixin, Base):
 
     map_id = Column(Integer, ForeignKey("maps.id"))
     map = relationship("Map")
-    sherpas = relationship("SherpaModel", back_populates="fleet")
+    sherpas = relationship("Sherpa", back_populates="fleet")
 
 
-class SherpaModel(TimestampMixin, Base):
+class Sherpa(TimestampMixin, Base):
     __tablename__ = "sherpas"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -55,6 +55,6 @@ class SherpaModel(TimestampMixin, Base):
     trip_leg_id = Column(Integer)
 
     fleet_id = Column(Integer, ForeignKey("fleets.id"))
-    fleet = relationship("FleetModel", back_populates="sherpas")
+    fleet = relationship("Fleet", back_populates="sherpas")
 
     other_info = Column(JSONB)

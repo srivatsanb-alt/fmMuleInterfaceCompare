@@ -1,9 +1,6 @@
-import time
+from core.db import session_maker
 
-from core.db import session_maker, engine
-
-from entities.fleet_entities import add_or_update_sherpa
-from models import fleet_models, trip_models
+from models.fleet_models import Sherpa
 from models.trip_models import OngoingTrip, TripLeg, Trip
 from sqlalchemy.orm import Session
 
@@ -18,6 +15,9 @@ class DBSession:
     def close(self):
         self.session.commit()
         self.session.close()
+
+    def get_sherpa(self, name: str):
+        return self.session.query(Sherpa).filter(Sherpa.name == name).one()
 
     def new_trip(self, route, priority=0, metadata=None):
         self.trip = Trip(route=route, priority=priority, metadata=metadata)
@@ -78,52 +78,16 @@ class DBSession:
         self.trip.end_leg()
 
 
-def test():
-    fleet_models.Base.metadata.drop_all(bind=engine)
-    trip_models.Base.metadata.drop_all(bind=engine)
-    fleet_models.Base.metadata.create_all(bind=engine)
-    trip_models.Base.metadata.create_all(bind=engine)
-
-    add_or_update_sherpa("S1")
-
-    sess = DBSession()
-    sess.new_trip(route=["a", "b", "c"])
-    time.sleep(2)
-    sess.assign_sherpa("S1")
-    sess.close()
-    time.sleep(2)
-
-    sess = DBSession()
-    sess.start_trip("S1")
-    sess.close()
-
-    sess = DBSession()
-    sess.start_leg("S1")
-    sess.close()
-    sess = DBSession()
-    time.sleep(5)
-    sess.end_leg("S1")
-    sess.close()
-
-    sess = DBSession()
-    time.sleep(2)
-    sess.start_leg("S1")
-    sess.close()
-    sess = DBSession()
-    time.sleep(5)
-    sess.end_leg("S1")
-    sess.close()
-
-    sess = DBSession()
-    time.sleep(2)
-    sess.start_leg("S1")
-    sess.close()
-    sess = DBSession()
-    time.sleep(5)
-    sess.end_leg("S1")
-    sess.end_trip("S1")
-    sess.close()
-
-
-if __name__ == "__main__":
-    test()
+def add_sherpa(sherpa: str, hwid=None, ip_address=None, hashed_api_key=None, fleet_id=None):
+    with session_maker() as db:
+        sherpa = Sherpa(
+            name=sherpa,
+            hwid=hwid,
+            ip_address=ip_address,
+            hashed_api_key=hashed_api_key,
+            disabled=False,
+            pose=None,
+            fleet_id=fleet_id,
+        )
+        db.add(sherpa)
+        db.commit()
