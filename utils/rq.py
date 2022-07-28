@@ -1,10 +1,12 @@
 import logging
 import os
+
 import redis
-from rq import Queue
 from core.config import get_fleet_mode
 from core.db import session_maker
 from models.fleet_models import Fleet, Sherpa
+
+from rq import Queue
 
 
 class Queues:
@@ -13,13 +15,41 @@ class Queues:
         os.getenv("FM_REDIS_URI"), encoding="utf-8", decode_responses=True
     )
     from_frontend_queue = Queue("from_frontend", connection=redis_conn)
-    to_sherpa_queue = Queue("to_sherpa", connection=redis_conn)
     to_frontend_queue = Queue("to_frontend", connection=redis_conn)
+    to_sherpa_queue = Queue("to_sherpa", connection=redis_conn)
     handler_queue = Queue("to_handlers", connection=redis_conn)
+    queues = [
+        "from_frontend",
+        "to_frontend",
+        "to_sherpa",
+        "to_handlers",
+    ]
+
+    @classmethod
+    def add_all_queues(cls, config):
+        with session_maker() as db:
+            db_fleets = db.query(Fleet).all()
+
+        fleet_mode = get_fleet_mode(config)
+
+        with session_maker() as db:
+            for fleet in db_fleets:
+                db_sherpas = db.query(Sherpa).filter(Sherpa.fleet_id == fleet.id).all()
+                for sherpa in db_sherpas:
+                    cls.add_queue("from_sherpa_" + sherpa.name)
+            if fleet_mode == "flipkart":
+                # TODO: add conveyor queues.
+                pass
 
     @classmethod
     def add_queue(cls, name):
-        setattr(cls, name, Queue(name, connection=cls.redis_conn))
+        queue = Queue(name, connection=cls.redis_conn)
+        setattr(cls, name, queue)
+        cls.queues.append(name)
+
+    @classmethod
+    def get_queues(cls):
+        return cls.queues
 
 
 def report_failure(job, connection, fail_type, value, traceback):
@@ -38,19 +68,3 @@ def enqueue(queue: Queue, func, data, *args, **kwargs):
         *args,
         **kwargs,
     )
-
-
-def get_queues(config):
-    with session_maker() as db:
-        db_fleets = db.query(Fleet).all()
-
-    fleet_mode = get_fleet_mode(config)
-
-    with session_maker() as db:
-        for fleet in db_fleets:
-            db_sherpas = db.query(Sherpa).filter(Sherpa.fleet_id == fleet.id).all()
-        for sherpa in db_sherpas:
-            Queues.add_queue("from_sherpa_" + sherpa.name)
-        if fleet_mode == "flipkart":
-            # TODO: add conveyor queues.
-            pass

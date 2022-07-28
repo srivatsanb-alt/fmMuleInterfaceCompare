@@ -1,14 +1,14 @@
-from logging import WARNING
 import logging
-from multiprocessing import Process
 import os
+from logging import WARNING
+from multiprocessing import Process
 
 import redis
-from core.config import get_fleet_mode, read_config
-from core.logs import init_logging
 from rq import Connection, Worker
 
-from utils.rq import get_queues
+from core.config import get_fleet_mode, read_config
+from core.logs import init_logging
+from utils.rq import Queues
 
 
 def init_fleet_manager(config):
@@ -26,8 +26,9 @@ def start(queue):
             queue,
             disable_default_exception_handler=True,
             log_job_description=False,
-            connection=redis.from_url(os.getenv("HIVEMIND_REDIS_URI")),
+            connection=redis.from_url(os.getenv("FM_REDIS_URI")),
         )
+        logging.info(f"Started worker for queue {queue}")
         worker.work(logging_level=WARNING, with_scheduler=True)
 
 
@@ -35,9 +36,9 @@ if __name__ == "__main__":
     config = read_config()
     init_fleet_manager(config)
 
-    queues = get_queues(config)
+    Queues.add_all_queues(config)
 
-    for q in queues:
+    for q in Queues.get_queues():
         process = Process(target=start, args=(q,))
         process.start()
 

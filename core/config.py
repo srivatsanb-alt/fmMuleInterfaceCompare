@@ -9,16 +9,16 @@ def read_config():
 def get_fleet_mode(config=None):
     if not config:
         config = read_config()
-    return config["fleet"]["mode"]
+    return config["fleet"].get("mode")
 
 
 def get_handler_class(config=None):
     if not config:
         config = read_config()
-    return config["fleet"]["handler_class"]
+    return config["fleet"].get("handler_class")
 
 
 def get_handler_package(config=None):
     if not config:
         config = read_config()
-    return config["fleet"]["handler_package"]
+    return config["fleet"].get("handler_package")
