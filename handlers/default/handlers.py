@@ -9,9 +9,9 @@ class Handlers:
     def should_handle_msg(self, msg):
         return True, None
 
-    def handle(self, msg):
+    def handle(self, msg, source):
         handle_ok, reason = self.should_handle_msg(msg)
-        print("All is well")
+        print(f"All is well with {source}")
 
     def handle_trip_booking(self, msg):
         route = msg["route"]

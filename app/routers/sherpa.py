@@ -1,5 +1,6 @@
 import hashlib
 import importlib
+import logging
 
 from core import config
 from core.db import session_maker
@@ -22,7 +23,7 @@ def get_sherpa(x_api_key: str = Header(None)):
 
 
 router = APIRouter(
-    prefix="/sherpa",
+    prefix="/api/v1/sherpa",
     tags=["sherpa"],
     # dependencies=[Depends(get_sherpa)],
     responses={404: {"description": "Not found"}},
@@ -38,4 +39,8 @@ async def init_sherpa(init_msg: InitMsg, sherpa: str = Depends(get_sherpa)):
     handler_obj = getattr(importlib.import_module(handler_package), handler_class)()
     init_msg.name = sherpa
 
-    enqueue(Queues.handler_queue, handler_obj.handle, init_msg, source="init")
+    enqueue(Queues.handler_queue, handle, handler_obj, init_msg, source="init")
+
+
+def handle(handler, msg, source):
+    handler.handle(msg, source)

@@ -1,14 +1,14 @@
 import logging
 import os
 
-from db import session_maker
+from .db import session_maker
 from models.fleet_models import Fleet, Sherpa
 
 FORMATTER = logging.Formatter("%(asctime)s %(levelname)s [%(funcName)s] %(message)s")
 
 
 def init_logging():
-    logdir = os.environ["HIVEMIND_LOG_DIR"]
+    logdir = os.environ["FM_LOG_DIR"]
     try:
         os.mkdir(logdir)
     except FileExistsError:
