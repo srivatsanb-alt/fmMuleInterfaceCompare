@@ -1,6 +1,6 @@
 from sqlalchemy import ARRAY, Boolean, Column, Float, ForeignKey, Integer, String
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import relationship, synonym
+from sqlalchemy.orm import relationship
 
 from models.base_models import Base, TimestampMixin
 
@@ -27,7 +27,7 @@ class MapFile(TimestampMixin, Base):
 class Fleet(TimestampMixin, Base):
     __tablename__ = "fleets"
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, unique=True)
+    name = Column(String, unique=True, index=True)
     customer = Column(String)
     site = Column(String)
     location = Column(String)

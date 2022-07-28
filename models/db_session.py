@@ -1,10 +1,8 @@
-import hashlib
-import secrets
 from core.db import session_maker
+from sqlalchemy.orm import Session
 
 from models.fleet_models import Sherpa
-from models.trip_models import OngoingTrip, TripLeg, Trip
-from sqlalchemy.orm import Session
+from models.trip_models import OngoingTrip, Trip, TripLeg
 
 
 class DBSession:
@@ -78,29 +76,3 @@ class DBSession:
         self.set_trip_leg(sherpa)
         self.trip_leg.end()
         self.trip.end_leg()
-
-
-def gen_api_key(hwid):
-    return secrets.token_urlsafe(32) + "_" + hwid
-
-
-def add_sherpa(sherpa: str, hwid=None, ip_address=None, api_key=None, fleet_id=None):
-    if not hwid:
-        raise ValueError("Sherpa hardware id cannot be null")
-    if not api_key:
-        api_key = gen_api_key(hwid)
-    hashed_api_key = hashlib.sha256(api_key.encode("utf-8")).hexdigest()
-    with session_maker() as db:
-        sherpa = Sherpa(
-            name=sherpa,
-            hwid=hwid,
-            ip_address=ip_address,
-            hashed_api_key=hashed_api_key,
-            disabled=False,
-            pose=None,
-            fleet_id=fleet_id,
-        )
-        db.add(sherpa)
-        db.commit()
-
-    return api_key
