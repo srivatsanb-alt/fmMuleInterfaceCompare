@@ -39,8 +39,8 @@ async def init_sherpa(init_msg: InitMsg, sherpa: str = Depends(get_sherpa)):
     handler_obj = getattr(importlib.import_module(handler_package), handler_class)()
     init_msg.name = sherpa
 
-    enqueue(Queues.handler_queue, handle, handler_obj, init_msg, source="init")
+    enqueue(Queues.handler_queue, handle, handler_obj, init_msg)
 
 
-def handle(handler, msg, source):
-    handler.handle(msg, source)
+def handle(handler, msg):
+    handler.handle(msg)

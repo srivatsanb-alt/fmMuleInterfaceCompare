@@ -1,0 +1,2 @@
+class MessageType:
+    INIT = "init"
