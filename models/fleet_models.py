@@ -1,8 +1,8 @@
-from sqlalchemy import ARRAY, Boolean, Column, Float, ForeignKey, Integer, String
+from sqlalchemy import ARRAY, Boolean, Column, Enum, Float, ForeignKey, Integer, String
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 
-from models.base_models import Base, TimestampMixin
+from models.base_models import Base, StationProperties, TimestampMixin
 
 
 class Map(TimestampMixin, Base):
@@ -24,7 +24,7 @@ class MapFile(TimestampMixin, Base):
     file_hash = Column(String)
 
 
-class Fleet(TimestampMixin, Base):
+class Fleet(Base):
     __tablename__ = "fleets"
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, unique=True, index=True)
@@ -37,7 +37,7 @@ class Fleet(TimestampMixin, Base):
     sherpas = relationship("Sherpa", back_populates="fleet")
 
 
-class Sherpa(TimestampMixin, Base):
+class Sherpa(Base):
     __tablename__ = "sherpas"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -46,15 +46,44 @@ class Sherpa(TimestampMixin, Base):
     ip_address = Column(String, unique=True)
     hashed_api_key = Column(String, unique=True, index=True)
 
+    fleet_id = Column(Integer, ForeignKey("fleets.id"))
+    fleet = relationship("Fleet", back_populates="sherpas")
+
+
+class SherpaStatus(TimestampMixin, Base):
+    __tablename__ = "sherpastatus"
+
+    sherpa_name = Column(String, ForeignKey("sherpas.name"), primary_key=True, index=True)
+    sherpa = relationship("Sherpa")
+
     initialized = Column(Boolean)
     disabled = Column(Boolean)
+    idle = Column(Boolean)
     error = Column(String)
 
     pose = Column(ARRAY(Float))
     trip_id = Column(Integer)
     trip_leg_id = Column(Integer)
 
-    fleet_id = Column(Integer, ForeignKey("fleets.id"))
-    fleet = relationship("Fleet", back_populates="sherpas")
-
     other_info = Column(JSONB)
+
+
+class Station(Base):
+    __tablename__ = "stations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, unique=True, index=True)
+    pose = Column(ARRAY(Float))
+    properties = Column(ARRAY(Enum(StationProperties)))
+    button_id = Column(String)
+
+
+class StationStatus(TimestampMixin, Base):
+    __tablename__ = "stationstatus"
+
+    station_name = Column(String, ForeignKey("stations.name"), primary_key=True, index=True)
+    station = relationship("Station")
+
+    disabled = Column(Boolean)
+    arriving_sherpas = Column(ARRAY(String))
+    sherpa_at_station = Column(String)
