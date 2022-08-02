@@ -1,78 +1,87 @@
 from core.db import session_maker
 from sqlalchemy.orm import Session
 
-from models.fleet_models import Sherpa
-from models.trip_models import OngoingTrip, Trip, TripLeg
+from models.fleet_models import Sherpa, SherpaStatus, Station, StationStatus
+from models.trip_models import OngoingTrip, PendingTrip, Trip, TripLeg
 
 
 class DBSession:
     def __init__(self):
         self.session: Session = session_maker()
-        self.trip = None
-        self.ongoing_trip = None
-        self.trip_leg = None
+        # self.trip: Trip = None
+        # self.pending_trip: PendingTrip = None
+        # self.ongoing_trip: OngoingTrip = None
+        # self.trip_leg: TripLeg = None
 
     def close(self):
         self.session.commit()
         self.session.close()
 
-    def get_sherpa(self, name: str):
+    def add_to_session(self, obj):
+        self.session.add(obj)
+        self.session.flush()
+        self.session.refresh(obj)
+
+    def create_trip(self, route, priority=0, metadata=None):
+        trip = Trip(route=route, priority=priority, metadata=metadata)
+        self.add_to_session(trip)
+        return trip
+
+    def create_pending_trip(self, trip_id):
+        pending_trip = PendingTrip(trip_id=trip_id)
+        self.add_to_session(pending_trip)
+        return pending_trip
+
+    def create_ongoing_trip(self, sherpa, trip_id):
+        ongoing_trip = OngoingTrip(sherpa_name=sherpa, trip_id=trip_id)
+        self.add_to_session(ongoing_trip)
+        return ongoing_trip
+
+    def create_trip_leg(self, trip_id, curr_station: str, next_station: str):
+        trip_leg = TripLeg(trip_id, curr_station, next_station)
+        self.add_to_session(trip_leg)
+        return trip_leg
+
+    def get_sherpa(self, name: str) -> Sherpa:
         return self.session.query(Sherpa).filter(Sherpa.name == name).one()
 
-    def new_trip(self, route, priority=0, metadata=None):
-        self.trip = Trip(route=route, priority=priority, metadata=metadata)
-        self.session.add(self.trip)
-        self.session.flush()
-        self.session.refresh(self.trip)
-
-    def set_ongoing_trip(self, sherpa: str):
-        self.ongoing_trip = (
-            self.session.query(OngoingTrip).filter(OngoingTrip.sherpa == sherpa).one()
+    def get_sherpa_status(self, name: str) -> SherpaStatus:
+        return (
+            self.session.query(SherpaStatus).filter(SherpaStatus.sherpa_name == name).one()
         )
 
-    def set_trip_leg(self, sherpa: str):
-        if self.trip_leg:
-            return
-        self.set_trip(sherpa)
-        trip_leg_id = self.ongoing_trip.trip_leg_id
-        self.trip_leg = self.session.query(TripLeg).filter(TripLeg.id == trip_leg_id).one()
+    def get_station(self, name: str) -> Station:
+        return self.session.query(Station).filter(Station.name == name).one()
 
-    def set_trip(self, sherpa):
-        if self.trip:
-            return
-        if not self.ongoing_trip:
-            self.set_ongoing_trip(sherpa)
-        trip_id = self.ongoing_trip.trip_id
-        self.trip = self.session.query(Trip).filter(Trip.id == trip_id).one()
-
-    def assign_sherpa(self, sherpa: str):
-        self.ongoing_trip = OngoingTrip(sherpa=sherpa, trip_id=self.trip.id)
-        self.session.add(self.ongoing_trip)
-        self.session.flush()
-        self.session.refresh(self.ongoing_trip)
-        self.trip.assign_sherpa(sherpa)
-
-    def start_trip(self, sherpa: str):
-        self.set_trip(sherpa)
-        self.trip.start()
-
-    def end_trip(self, sherpa: str, success=True):
-        self.set_trip(sherpa)
-        self.trip.end(success)
-        self.session.delete(self.ongoing_trip)
-
-    def start_leg(self, sherpa: str):
-        self.set_trip(sherpa)
-        self.trip_leg = TripLeg(
-            self.trip.id, self.trip.curr_station(), self.trip.next_station()
+    def get_station_status(self, name: str) -> StationStatus:
+        return (
+            self.session.query(StationStatus)
+            .filter(StationStatus.station_name == name)
+            .one()
         )
-        self.session.add(self.trip_leg)
-        self.session.flush()
-        self.session.refresh(self.trip_leg)
-        self.ongoing_trip.set_leg_id(self.trip_leg.id)
-        self.trip.start_leg()
 
-    def end_leg(self, sherpa: str):
-        self.set_trip_leg(sherpa)
-        self.trip_leg.end()
-        self.trip.end_leg()
+    def get_trip(self, trip_id):
+        return self.session.query(Trip).filter(Trip.id == trip_id).one()
+
+    def get_pending_trip(self):
+        return self.session.query(PendingTrip).first()
+
+    def get_ongoing_trip(self, sherpa: str):
+        return (
+            self.session.query(OngoingTrip)
+            .filter(OngoingTrip.sherpa_name == sherpa)
+            .one_or_none()
+        )
+
+    def get_trip_leg(self, sherpa: str):
+        ongoing_trip: OngoingTrip = self.ongoing_trip(sherpa)
+        if ongoing_trip:
+            return self.session.query(TripLeg).filter(
+                TripLeg.id == ongoing_trip.trip_leg_id
+            )
+
+    def delete_pending_trip(self, pending_trip):
+        self.session.delete(pending_trip)
+
+    def delete_ongoing_trip(self, ongoing_trip):
+        self.session.delete(ongoing_trip)
