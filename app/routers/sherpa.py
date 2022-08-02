@@ -1,6 +1,5 @@
 import hashlib
 import importlib
-import logging
 
 from core import config
 from core.db import session_maker
@@ -37,7 +36,7 @@ async def init_sherpa(init_msg: InitMsg, sherpa: str = Depends(get_sherpa)):
     handler_package = config.get_handler_package()
     handler_class = config.get_handler_class()
     handler_obj = getattr(importlib.import_module(handler_package), handler_class)()
-    init_msg.name = sherpa
+    init_msg.source = sherpa
 
     enqueue(Queues.handler_queue, handle, handler_obj, init_msg)
 

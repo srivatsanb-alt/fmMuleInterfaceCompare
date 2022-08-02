@@ -12,6 +12,6 @@ class InitExtraInfo(BaseModel):
 
 class InitMsg(BaseModel):
     current_pose: List[float]
-    name: Union[str, None] = None
+    source: Union[str, None] = None
     extra_info: Union[InitExtraInfo, None] = None
     type = MessageType.INIT
