@@ -5,6 +5,7 @@ from .db import session_maker
 from models.fleet_models import Fleet, Sherpa
 
 FORMATTER = logging.Formatter("%(asctime)s %(levelname)s [%(funcName)s] %(message)s")
+loggers = {}
 
 
 def init_logging():
@@ -45,10 +46,31 @@ def setup_root_logger(logdir, level=logging.INFO):
     handler.setFormatter(FORMATTER)
     logger.addHandler(handler)
 
+    loggers["root"] = logger
 
-def setup_logger(fleet: str, logdir, name="fleet", level=logging.INFO):
+
+def setup_logger(fleet: str, logdir, name=None, level=logging.INFO):
+    global loggers
+
+    if not name:
+        name = fleet
+    if name == fleet:
+        logger = logging.getLogger(fleet)
+        # do not propagate messages to root logger
+        logger.propagate = False
+    else:
+        logger = logging.getLogger(f"{fleet}.{name}")
+        # propagate messages to fleet logger.
+
+    logger.setLevel(level)
     handler = logging.FileHandler(logdir + f"/{fleet}/{name}.log")
     handler.setFormatter(FORMATTER)
-    logger = logging.getLogger(name)
-    logger.setLevel(level)
     logger.addHandler(handler)
+
+    loggers[name] = logger
+
+
+def get_logger(name=None):
+    if name not in loggers:
+        return loggers["root"]
+    return loggers[name]
