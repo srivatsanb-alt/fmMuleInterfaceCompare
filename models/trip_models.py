@@ -22,8 +22,8 @@ class Trip(Base, TimestampMixin):
     id = Column(Integer, primary_key=True, index=True)
 
     # sherpa doing the trip
-    sherpa = Column(String, ForeignKey("sherpas.name"))
-    sherpa_ref = relationship("Sherpa")
+    sherpa_name = Column(String, ForeignKey("sherpas.name"))
+    sherpa = relationship("Sherpa")
 
     # when trip was booked
     booking_time = Column(DateTime)
@@ -60,7 +60,7 @@ class Trip(Base, TimestampMixin):
         self.next_station_idx = 0
 
     def assign_sherpa(self, sherpa: str):
-        self.sherpa = sherpa
+        self.sherpa_name = sherpa
         self.status = TripStatus.ASSIGNED
 
     def start(self):
@@ -136,11 +136,11 @@ class TripLeg(Base, TimestampMixin):
 
 class OngoingTrip(Base, TimestampMixin):
     __tablename__ = "ongoing_trips"
-    sherpa = Column(String, index=True)
+    sherpa_name = Column(String, index=True)
     trip_id = Column(Integer, ForeignKey("trips.id"), primary_key=True, index=True)
-    trip_ref = relationship("Trip")
+    trip = relationship("Trip")
     trip_leg_id = Column(Integer, ForeignKey("trip_legs.id"))
-    trip_leg_ref = relationship("TripLeg")
+    trip_leg = relationship("TripLeg")
 
     def set_leg_id(self, trip_leg_id):
         self.trip_leg_id = trip_leg_id
