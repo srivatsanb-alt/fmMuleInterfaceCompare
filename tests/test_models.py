@@ -85,6 +85,13 @@ def curl_test():
     dbs.close()
 
 
+def init_test():
+    dbs = DBSession()
+    trip = dbs.create_trip(["a", "b", "c"])
+    dbs.create_pending_trip(trip.id)
+    dbs.close()
+
+
 if __name__ == "__main__":
     test_sherpa_model()
     test_trip_model()
