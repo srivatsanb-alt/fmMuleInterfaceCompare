@@ -53,6 +53,7 @@ def add_sherpa_to_fleet(sherpa: str, fleet: str):
 
 def add_station(name: str, pose, properties=None, button_id=None):
     with session_maker() as db:
+        properties = properties if properties else []
         station: Station = Station(
             name=name, pose=pose, properties=properties, button_id=button_id
         )
