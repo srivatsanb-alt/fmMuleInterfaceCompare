@@ -1,13 +1,13 @@
 import hashlib
 import importlib
+from core.config import Config
 
-from core import config
 from core.db import session_maker
 from fastapi import APIRouter, Depends, HTTPException, Header
 from models.fleet_models import Sherpa
 from utils.rq import Queues, enqueue
 
-from endpoints.request_models import InitMsg
+from endpoints.request_models import InitMsg, ReachedMsg, SherpaMsg
 
 
 def get_sherpa(x_api_key: str = Header(None)):
@@ -29,16 +29,25 @@ router = APIRouter(
 )
 
 
-@router.post("/init/")
-async def init_sherpa(init_msg: InitMsg, sherpa: str = Depends(get_sherpa)):
+def process_msg(msg: SherpaMsg, sherpa: str):
     if sherpa is None:
         raise HTTPException(status_code=403, detail="Unknown sherpa")
-    handler_package = config.get_handler_package()
-    handler_class = config.get_handler_class()
+    handler_package = Config.get_handler_package()
+    handler_class = Config.get_handler_class()
     handler_obj = getattr(importlib.import_module(handler_package), handler_class)()
-    init_msg.source = sherpa
+    msg.source = sherpa
 
-    enqueue(Queues.handler_queue, handle, handler_obj, init_msg)
+    enqueue(Queues.handler_queue, handle, handler_obj, msg)
+
+
+@router.post("/init/")
+async def init_sherpa(init_msg: InitMsg, sherpa: str = Depends(get_sherpa)):
+    process_msg(init_msg, sherpa)
+
+
+@router.post("/reached/")
+async def reached(reached_msg: ReachedMsg, sherpa: str = Depends(get_sherpa)):
+    process_msg(reached_msg, sherpa)
 
 
 def handle(handler, msg):
