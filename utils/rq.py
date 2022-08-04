@@ -2,7 +2,7 @@ import logging
 import os
 
 import redis
-from core.config import get_fleet_mode
+from core.config import Config
 from core.db import session_maker
 from models.fleet_models import Fleet, Sherpa
 
@@ -30,7 +30,7 @@ class Queues:
         with session_maker() as db:
             db_fleets = db.query(Fleet).all()
 
-        fleet_mode = get_fleet_mode(config)
+        fleet_mode = Config.get_fleet_mode()
 
         with session_maker() as db:
             for fleet in db_fleets:

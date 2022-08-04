@@ -6,14 +6,14 @@ from multiprocessing import Process
 import redis
 from rq import Connection, Worker
 
-from core.config import get_fleet_mode, read_config
+from core.config import Config
 from core.logs import init_logging
 from utils.rq import Queues
 
 
 def init_fleet_manager(config):
     init_logging()
-    if get_fleet_mode(config) == "flipkart":
+    if Config.get_fleet_mode() == "flipkart":
         # TODO: load globals
         # TODO: load_ez_data
         pass
@@ -33,7 +33,7 @@ def start(queue):
 
 
 if __name__ == "__main__":
-    config = read_config()
+    config = Config.read_config()
     init_fleet_manager(config)
 
     Queues.add_all_queues(config)
