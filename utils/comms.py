@@ -1,12 +1,28 @@
+from typing import Dict
+
+from core.config import Config
 from core.logs import get_logger
+from endpoints.request_models import FMCommand
+from models.fleet_models import Sherpa
 
 
-def send_move_msg(sherpa: str, trip_id: int, trip_leg_id: int, dest_name, dest_pose):
-    msg = {
-        "trip_id": trip_id,
-        "trip_leg_id": trip_leg_id,
-        "destination_pose": dest_pose,
-        "destination_name": dest_name,
-    }
-    # POST to sherpa URL
-    get_logger(sherpa).info(f"msg to {sherpa}: {msg}")
+def get_sherpa_url(
+    sherpa: Sherpa,
+):
+    version = Config.get_api_version()
+    return f"https://{sherpa.ip_address}/api/{version}/fm"
+
+
+def post(url, body: Dict):
+    # requests.post(url, json=body)
+    pass
+
+
+def send_msg_to_sherpa(sherpa: Sherpa, msg: FMCommand):
+    base_url = get_sherpa_url(sherpa)
+    body = msg.dict()
+    endpoint = body.pop("endpoint")
+    url = f"{base_url}/{endpoint}"
+    post(url, body)
+    get_logger(sherpa.name).info(f"msg to {sherpa.name}: {body}")
+    get_logger(sherpa.name).info(f"msg url: {url}")
