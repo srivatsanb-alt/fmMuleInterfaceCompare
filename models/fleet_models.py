@@ -49,12 +49,14 @@ class Sherpa(Base):
     fleet_id = Column(Integer, ForeignKey("fleets.id"))
     fleet = relationship("Fleet", back_populates="sherpas")
 
+    status = relationship("SherpaStatus", back_populates="sherpa", uselist=False)
+
 
 class SherpaStatus(TimestampMixin, Base):
     __tablename__ = "sherpastatus"
 
     sherpa_name = Column(String, ForeignKey("sherpas.name"), primary_key=True, index=True)
-    sherpa = relationship("Sherpa")
+    sherpa = relationship("Sherpa", back_populates="status")
 
     initialized = Column(Boolean)
     disabled = Column(Boolean)
@@ -62,6 +64,9 @@ class SherpaStatus(TimestampMixin, Base):
     error = Column(String)
 
     pose = Column(ARRAY(Float))
+    battery_status = Column(Float)
+    mode = Column(String)
+
     trip_id = Column(Integer)
     trip_leg_id = Column(Integer)
 
