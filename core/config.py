@@ -1,3 +1,4 @@
+import importlib
 import os
 from typing import Dict
 import toml
@@ -17,6 +18,7 @@ def flatten_config(config: Dict, prefix: str = None):
 
 class Config:
     config = {}
+    handler_obj = None
 
     def __init__(self):
         raise NotImplementedError("Config class cannot be instantiated")
@@ -42,6 +44,16 @@ class Config:
         if not cls.config:
             cls.config = cls.read_config()
         return cls.config["fleet"].get("handler_package", "handlers.default.handlers")
+
+    @classmethod
+    def get_handler(cls):
+        if not cls.handler_obj:
+            handler_package = cls.get_handler_package()
+            handler_class = cls.get_handler_class()
+            cls.handler_obj = getattr(
+                importlib.import_module(handler_package), handler_class
+            )()
+        return cls.handler_obj
 
     @classmethod
     def get_api_version(cls):
