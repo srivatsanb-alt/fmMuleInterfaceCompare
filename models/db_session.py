@@ -1,7 +1,8 @@
+from typing import List
 from core.db import session_maker
 from sqlalchemy.orm import Session
 
-from models.fleet_models import Sherpa, SherpaStatus, Station, StationStatus
+from models.fleet_models import Fleet, MapFile, Sherpa, SherpaStatus, Station, StationStatus
 from models.trip_models import OngoingTrip, PendingTrip, Trip, TripLeg
 
 
@@ -42,8 +43,15 @@ class DBSession:
         self.add_to_session(trip_leg)
         return trip_leg
 
+    def get_map_files(self, fleet_name: str) -> List[MapFile]:
+        fleet: Fleet = self.session.query(Fleet).filter(Fleet.name == fleet_name).one()
+        return self.session.query(MapFile).filter(MapFile.map_id == fleet.map_id).all()
+
     def get_sherpa(self, name: str) -> Sherpa:
         return self.session.query(Sherpa).filter(Sherpa.name == name).one()
+
+    def get_all_sherpas(self) -> List[Sherpa]:
+        return self.session.query(Sherpa).all()
 
     def get_sherpa_status(self, name: str) -> SherpaStatus:
         return (
@@ -85,3 +93,6 @@ class DBSession:
 
     def delete_ongoing_trip(self, ongoing_trip):
         self.session.delete(ongoing_trip)
+
+
+session = DBSession()
