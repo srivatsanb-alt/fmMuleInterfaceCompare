@@ -1,14 +1,22 @@
 from core.logs import get_logger
-from endpoints.request_models import HitchMsg, InitMsg, MoveMsg, PeripheralsMsg, ReachedMsg
+from endpoints.request_models import (
+    HitchReq,
+    InitReq,
+    InitMsg,
+    InitResp,
+    MapFileInfo,
+    MoveReq,
+    PeripheralsReq,
+    ReachedReq,
+    SherpaStatusMsg,
+)
 import handlers.default.handler_utils as hutils
 from models.base_models import StationProperties
-from models.db_session import DBSession
+from models.db_session import session
 from models.fleet_models import Fleet, Sherpa, SherpaStatus, Station
 from models.trip_models import OngoingTrip, PendingTrip, Trip, TripLeg
-from utils.comms import send_msg_to_sherpa
+from utils.comms import process_response, send_msg_to_sherpa
 from utils.util import are_poses_close
-
-session = DBSession()
 
 
 class Handlers:
@@ -52,7 +60,7 @@ class Handlers:
         get_logger(sherpa_name).info(
             f"{sherpa_name} started leg of trip {trip.id} from {trip.curr_station()} to {trip.next_station()}"
         )
-        move_msg = MoveMsg(
+        move_msg = MoveReq(
             trip_id=trip.id,
             trip_leg_id=trip_leg.id,
             destination_pose=next_station.pose,
@@ -75,15 +83,14 @@ class Handlers:
             session.delete_pending_trip(pending_trip)
             get_logger().info(f"deleted pending trip id {pending_trip.trip_id}")
 
-    def handle_init(self, msg: InitMsg):
-        sherpa_name = msg.source
+    def initialize_sherpa(self, sherpa_name):
         sherpa_status: SherpaStatus = session.get_sherpa_status(sherpa_name)
-        sherpa_status.pose = msg.current_pose
         sherpa_status.initialized = True
+        get_logger(sherpa_name).info(f"{sherpa_name} initialized")
 
         self.maybe_assign_sherpa_to_pending_trip(sherpa_name)
 
-    def handle_reached(self, msg: ReachedMsg):
+    def handle_reached(self, msg: ReachedReq):
         sherpa_name = msg.source
         ongoing_trip: OngoingTrip = session.get_ongoing_trip(sherpa_name)
         trip: Trip = ongoing_trip.trip
@@ -95,12 +102,12 @@ class Handlers:
         station: Station = session.get_station(station_name)
         # if at unhitch station send unhitch command.
         if StationProperties.AUTO_UNHITCH in station.properties:
-            unhitch_msg = PeripheralsMsg(HitchMsg(False))
+            unhitch_msg = PeripheralsReq(HitchReq(False))
             send_msg_to_sherpa(sherpa_name, unhitch_msg)
             return
         # if at hitch station send hitch command.
         if StationProperties.AUTO_HITCH in station.properties:
-            hitch_msg = PeripheralsMsg(HitchMsg(True))
+            hitch_msg = PeripheralsReq(HitchReq(True))
             send_msg_to_sherpa(sherpa_name, hitch_msg)
             return
 
@@ -108,11 +115,42 @@ class Handlers:
             self.end_trip()
             self.maybe_assign_sherpa_to_pending_trip(sherpa_name)
 
+    def handle_sherpa_status(self, msg: SherpaStatusMsg):
+        sherpa_name = msg.sherpa_name
+        sherpa: Sherpa = session.get_sherpa(sherpa_name)
+        status: SherpaStatus = session.get_sherpa_status(sherpa_name)
+        status.pose = msg.current_pose
+        status.battery_status = msg.battery_status
+        if msg.mode != status.mode:
+            get_logger(sherpa_name).info(f"{sherpa_name} switched to {msg.mode} mode")
+            status.mode = msg.mode
+        status.error = msg.error_info if msg.error else None
+        if msg.mode != "fleet":
+            status.initialized = False
+        elif not status.initialized:
+            # sherpa switched to fleet mode
+            fleet_name = sherpa.fleet.name
+            map_files = session.get_map_files(fleet_name)
+            map_file_info = [
+                MapFileInfo(file_name=mf.filename, hash=mf.file_hash) for mf in map_files
+            ]
+            init_req: InitReq = InitReq(fleet_name=fleet_name, map_files=map_file_info)
+            response: InitResp = InitResp.from_json(
+                process_response(send_msg_to_sherpa(sherpa, init_req))
+            )
+            sherpa.hwid = response.hwid
+            sherpa.ip_address = response.ip_address
+            if response.map_files_match:
+                self.initialize_sherpa(sherpa_name)
+
     def handle(self, msg):
         handle_ok, reason = self.should_handle_msg(msg)
         if not handle_ok:
             get_logger().warning(f"message of type {msg.type} ignored, reason={reason}")
             return
-        msg_handler = getattr(self, "handle_" + msg.type)
+        msg_handler = getattr(self, "handle_" + msg.type, None)
+        if not msg_handler:
+            get_logger().error(f"no handler defined for {msg.type}")
+            return
         msg_handler(msg)
         session.close()

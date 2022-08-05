@@ -1,13 +1,14 @@
+import json
+from dataclasses import asdict, dataclass, fields
 from enum import Enum
 from typing import List, Union
-from pydantic import BaseModel
 
 from core.constants import MessageType
+from pydantic import BaseModel
+
 
 # Messages from sherpas to FM
-
-
-class SherpaMsg(BaseModel):
+class SherpaReq(BaseModel):
     source: Union[str, None] = None
     type: str
 
@@ -18,13 +19,13 @@ class InitExtraInfo(BaseModel):
     chassis_number: str
 
 
-class InitMsg(SherpaMsg):
+class InitMsg(SherpaReq):
     current_pose: List[float]
     extra_info: Union[InitExtraInfo, None] = None
     type = MessageType.INIT
 
 
-class ReachedMsg(SherpaMsg):
+class ReachedReq(SherpaReq):
     trip_id: int
     trip_leg_id: int
     destination_pose: List[float]
@@ -32,8 +33,36 @@ class ReachedMsg(SherpaMsg):
     type = MessageType.REACHED
 
 
+# Messages from sherpas to FM (Websocket)
+class JsonMixin:
+    @classmethod
+    def from_dict(cls, obj_dict):
+        flds = [f.name for f in fields(cls)]
+        attribs = {k: v for (k, v) in obj_dict.items() if k in flds}
+        return cls(**attribs)
+
+    @classmethod
+    def from_json(cls, obj_json):
+        return cls.from_dict(json.loads(obj_json))
+
+    def to_json(self):
+        return json.dumps(asdict(self))
+
+
+@dataclass
+class SherpaStatusMsg(JsonMixin):
+    type: str
+    timestamp: float
+    sherpa_name: str
+    current_pose: list
+    battery_status: float
+    mode: str
+    error: bool
+    error_info: str = None
+
+
 # Messages from FM to sherpas
-class FMCommand(BaseModel):
+class FMReq(BaseModel):
     endpoint: str
 
 
@@ -42,7 +71,7 @@ class DirectionEnum(str, Enum):
     receive = "receive"
 
 
-class MoveMsg(FMCommand):
+class MoveReq(FMReq):
     endpoint: str = "move_to"
     trip_id: int
     trip_leg_id: int
@@ -50,20 +79,39 @@ class MoveMsg(FMCommand):
     destination_name: str
 
 
-class HitchMsg(BaseModel):
+class HitchReq(BaseModel):
     hitch: bool
 
 
-class ConveyorMsg(BaseModel):
+class ConveyorReq(BaseModel):
     direction: DirectionEnum
     num_units: int
 
 
-class DispatchButtonMsg(BaseModel):
+class DispatchButtonReq(BaseModel):
     value: bool
 
 
-class PeripheralsMsg(FMCommand):
+class PeripheralsReq(FMReq):
     endpoint: str = "peripherals"
-    hitch_msg: HitchMsg = None
-    conv_msg: ConveyorMsg = None
+    hitch_msg: HitchReq = None
+    conv_msg: ConveyorReq = None
+
+
+class MapFileInfo(BaseModel):
+    file_name: str
+    hash: str
+
+
+class InitReq(FMReq):
+    endpoint: str = "init"
+    fleet_name: str
+    map_files: List[MapFileInfo]
+
+
+@dataclass
+class InitResp(JsonMixin):
+    display_name: str
+    hwid: str
+    ip_address: str
+    map_files_match: bool
