@@ -51,6 +51,10 @@ class Queues:
     def get_queues(cls):
         return cls.queues
 
+    @classmethod
+    def get_queue(cls, qname):
+        return getattr(cls, qname)
+
 
 def report_failure(job, connection, fail_type, value, traceback):
     logging.getLogger().error(
