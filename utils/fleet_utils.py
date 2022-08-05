@@ -1,9 +1,19 @@
 import hashlib
+import os
 import secrets
 
 
-from models.fleet_models import Fleet, Sherpa, SherpaStatus, Station, StationStatus
+from models.fleet_models import (
+    Fleet,
+    Map,
+    MapFile,
+    Sherpa,
+    SherpaStatus,
+    Station,
+    StationStatus,
+)
 from core.db import session_maker
+from sqlalchemy.exc import NoResultFound
 
 
 def gen_api_key(hwid):
@@ -32,12 +42,20 @@ def add_sherpa(sherpa_name: str, hwid=None, ip_address=None, api_key=None, fleet
     return api_key
 
 
-def add_fleet(fleet: str, customer=None, site=None, location=None):
-    if not fleet:
-        raise ValueError("Fleet name cannot be null")
+def add_update_fleet(**kwargs):
+    fleet_name = kwargs.get("name")
+    if not fleet_name:
+        raise ValueError("fleet name should not be null")
     with session_maker() as db:
-        fleet = Fleet(name=fleet, customer=customer, site=site, location=location)
-        db.add(fleet)
+        try:
+            fleet: Fleet = db.query(Fleet).filter(Fleet.name == fleet_name).one()
+        except NoResultFound:
+            fleet = Fleet()
+        for col in Fleet.__table__.columns.keys():
+            val = kwargs.get(col)
+            if not val:
+                continue
+            setattr(fleet, col, val)
         db.commit()
 
 
@@ -63,3 +81,41 @@ def add_station(name: str, pose, properties=None, button_id=None):
         db.add(station)
         db.add(station_status)
         db.commit()
+
+
+def add_map(name: str):
+    with session_maker() as db:
+        map: Map = Map(name=name)
+        db.add(map)
+        db.commit()
+
+
+def add_map_files(fleet_name: str):
+    path_prefix = f"{os.environ['FM_MAP_DIR']}/{fleet_name}/map"
+    with open(f"{path_prefix}/map_files.txt") as f:
+        map_files = f.readlines()
+
+    with session_maker() as db:
+        fleet: Fleet = db.query(Fleet).filter(Fleet.name == fleet_name).one()
+        map_id = fleet.map_id
+        for map_file_name in map_files:
+            map_file_name = map_file_name.rstrip()
+            map_file_path = f"{path_prefix}/{map_file_name}"
+            sha1 = compute_sha1_hash(map_file_path)
+            map_file = MapFile(map_id=map_id, filename=map_file_name, file_hash=sha1)
+            db.add(map_file)
+        db.commit()
+
+
+BUF_SIZE = 65536
+
+
+def compute_sha1_hash(fpath):
+    sha1 = hashlib.sha1()
+    with open(fpath, "rb") as f:
+        while True:
+            data = f.read(BUF_SIZE)
+            if not data:
+                break
+            sha1.update(data)
+    return sha1.hexdigest()
