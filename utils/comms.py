@@ -17,23 +17,24 @@ def get_sherpa_url(
 
 
 def post(url, body: Dict):
-    from unittest.mock import Mock
-    from requests.models import Response
-    import json
+    # from unittest.mock import Mock
+    # from requests.models import Response
+    # import json
 
-    response = Mock(spec=Response)
+    # response = Mock(spec=Response)
 
-    resp_d = {
-        "display_name": "S2",
-        "hwid": "efgh",
-        "ip_address": "10.1.2.3",
-        "map_files_match": True,
-    }
-    response.json.return_value = json.dumps(resp_d)
-    response.status_code = 200
+    # resp_d = {
+    # "display_name": "S2",
+    # "hwid": "abcd",
+    # "ip_address": "10.4.5.6",
+    # "map_files_match": True,
+    # }
+    # response.json.return_value = json.dumps(resp_d)
+    # response.status_code = 200
+    #
+    # return response
 
-    return response
-    # return requests.post(url, json=body)
+    return requests.post(url, json=body)
 
 
 def send_msg_to_sherpa(sherpa: Sherpa, msg: FMReq):
