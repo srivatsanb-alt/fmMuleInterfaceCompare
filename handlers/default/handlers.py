@@ -82,7 +82,7 @@ class Handlers:
     def assign_sherpa_to_pending_trip(self, pending_trip: PendingTrip, sherpa_name: str):
         self.start_trip(pending_trip.trip, sherpa_name)
         session.delete_pending_trip(pending_trip)
-        get_logger().info(f"deleted pending trip id {pending_trip.trip_id}")
+        get_logger(sherpa_name).info(f"deleted pending trip id {pending_trip.trip_id}")
 
     def initialize_sherpa(self, sherpa_name):
         sherpa_status: SherpaStatus = session.get_sherpa_status(sherpa_name)
@@ -123,7 +123,7 @@ class Handlers:
                 get_logger(sherpa_name).info(
                     f"found pending trip id {pending_trip.trip_id}"
                 )
-                self.assign_sherpa_to_pending_trip(sherpa_name)
+                self.assign_sherpa_to_pending_trip(pending_trip, sherpa_name)
 
     def handle_sherpa_status(self, msg: SherpaStatusMsg):
         sherpa_name = msg.sherpa_name
@@ -159,11 +159,26 @@ class Handlers:
         if req.dispatch_button:
             get_logger().info(f"got dispatch message: {req.dispatch_button}")
             self.handle_dispatch_button(req.dispatch_button, sherpa_name)
+        elif req.auto_hitch:
+            get_logger().info(f"got auto-hitch message: {req.auto_hitch}")
+            self.handle_auto_hitch(req.auto_hitch, sherpa_name)
+
+    def handle_auto_hitch(self, req: HitchReq, sherpa_name):
+        if not req.hitch:
+            # auto-unhitch done
+            get_logger(sherpa_name).info(f"auto-unhitch done on {sherpa_name}")
+            self.handle_next(sherpa_name)
 
     def handle_dispatch_button(self, req: DispatchButtonReq, sherpa_name):
         if not req.value:
-            get_logger(sherpa_name).info("dispatch button not pressed, taking no action")
+            get_logger(sherpa_name).info(
+                f"dispatch button not pressed on {sherpa_name}, taking no action"
+            )
             return
+        get_logger(sherpa_name).info(f"dispatch button pressed on {sherpa_name}")
+        self.handle_next(sherpa_name)
+
+    def handle_next(self, sherpa_name):
         ongoing_trip: OngoingTrip = session.get_ongoing_trip(sherpa_name)
         if not ongoing_trip.finished_booked():
             self.start_leg(ongoing_trip)
