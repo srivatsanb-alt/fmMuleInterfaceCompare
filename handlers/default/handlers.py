@@ -157,10 +157,8 @@ class Handlers:
     def handle_peripherals(self, req: SherpaPeripheralsReq):
         sherpa_name = req.source
         if req.dispatch_button:
-            get_logger().info(f"got dispatch message: {req.dispatch_button}")
             self.handle_dispatch_button(req.dispatch_button, sherpa_name)
         elif req.auto_hitch:
-            get_logger().info(f"got auto-hitch message: {req.auto_hitch}")
             self.handle_auto_hitch(req.auto_hitch, sherpa_name)
 
     def handle_auto_hitch(self, req: HitchReq, sherpa_name):
