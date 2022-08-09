@@ -37,8 +37,8 @@ class Trip(Base, TimestampMixin):
     # all the stations in the booking plus other automatically added stations such
     # as parking or hitching stations
     augmented_route = Column(ARRAY(String))
-    # index into the stations in augmented route.
-    next_station_idx = Column(Integer)
+    # augmented route indices that are part of the booking route.
+    aug_idxs_booked = Column(ARRAY(Integer))
 
     # BOOKED, ASSIGNED, WAITING_STATION, EN_ROUTE, SUCCEEDED, FAILED
     status = Column(String)
@@ -57,7 +57,7 @@ class Trip(Base, TimestampMixin):
         self.priority = priority
         self.trip_metadata = metadata
         self.augmented_route = route
-        self.next_station_idx = 0
+        self.aug_idxs_booked = list(range(len(self.augmented_route)))
 
     def assign_sherpa(self, sherpa: str):
         self.sherpa_name = sherpa
@@ -69,33 +69,6 @@ class Trip(Base, TimestampMixin):
     def end(self, success):
         self.end_time = ts_to_str(time.time())
         self.status = TripStatus.SUCCEEDED if success else TripStatus.FAILED
-
-    def finished(self):
-        return self.next_station_idx >= len(self.augmented_route)
-
-    def add_station(self, station: str, index: int):
-        self.augmented_route[index] = station
-
-    def curr_station(self):
-        if self.next_station_idx > 0:
-            return self.augmented_route[self.next_station_idx - 1]
-        else:
-            return None
-
-    def next_station(self):
-        if self.next_station_idx < len(self.augmented_route):
-            return self.augmented_route[self.next_station_idx]
-        else:
-            return None
-
-    def start_leg(self):
-        self.status = TripStatus.EN_ROUTE
-
-    def end_leg(self):
-        self.status = TripStatus.WAITING_STATION
-        self.next_station_idx += 1
-        if self.finished():
-            self.end(success=True)
 
     def __repr__(self):
         return str(self.__dict__)
@@ -141,6 +114,45 @@ class OngoingTrip(Base, TimestampMixin):
     trip = relationship("Trip")
     trip_leg_id = Column(Integer, ForeignKey("trip_legs.id"))
     trip_leg = relationship("TripLeg")
+
+    # index into the stations in booking route.
+    next_idx = Column(Integer)
+    # index into the stations in augmented route.
+    next_idx_aug = Column(Integer)
+
+    def init(self):
+        self.next_idx_aug = 0
+        self.next_idx = 0 if 0 in self.trip.aug_idxs_booked else -1
+
+    def curr_station(self):
+        if self.next_idx_aug > 0:
+            return self.trip.augmented_route[self.next_idx_aug - 1]
+        else:
+            return None
+
+    def next_station(self):
+        if self.next_idx_aug < len(self.trip.augmented_route):
+            return self.trip.augmented_route[self.next_idx_aug]
+        else:
+            return None
+
+    def start_leg(self, trip_leg_id):
+        self.trip_leg_id = trip_leg_id
+        self.trip.status = TripStatus.EN_ROUTE
+
+    def end_leg(self):
+        self.trip.status = TripStatus.WAITING_STATION
+        self.next_idx_aug += 1
+        if self.next_idx_aug in self.trip.aug_idxs_booked:
+            self.next_idx += 1
+        if self.finished():
+            self.trip.end(success=True)
+
+    def finished(self):
+        return self.next_idx_aug >= len(self.trip.augmented_route)
+
+    def finished_booked(self):
+        return self.next_idx >= len(self.trip.route)
 
     def set_leg_id(self, trip_leg_id):
         self.trip_leg_id = trip_leg_id
