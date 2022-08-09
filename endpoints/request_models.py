@@ -1,16 +1,35 @@
 import json
 from dataclasses import asdict, dataclass, fields
 from enum import Enum
-from typing import List, Union
+from typing import List, Optional, Union, Dict
 
 from core.constants import MessageType
 from pydantic import BaseModel
+
+
+class HitchReq(BaseModel):
+    hitch: bool
+
+
+class DirectionEnum(str, Enum):
+    send = "send"
+    receive = "receive"
+
+
+class ConveyorReq(BaseModel):
+    direction: DirectionEnum
+    num_units: int
+
+
+class DispatchButtonReq(BaseModel):
+    value: bool
 
 
 # Messages from sherpas to FM
 class SherpaReq(BaseModel):
     source: Union[str, None] = None
     type: str
+    timestamp: float
 
 
 class InitExtraInfo(BaseModel):
@@ -31,6 +50,29 @@ class ReachedReq(SherpaReq):
     destination_pose: List[float]
     destination_name: str
     type = MessageType.REACHED
+
+
+class SherpaPeripheralsReq(SherpaReq):
+    auto_hitch: HitchReq = None
+    conveyor: ConveyorReq = None
+    dispatch_button: DispatchButtonReq = None
+    error_info: str = None
+
+
+class TripsReq(BaseModel):
+    type: str
+
+
+class TripMsg(BaseModel):
+    route: List[str]
+    tasks: Optional[Dict[str, str]] = None
+    priority: Optional[int] = 0
+    metadata: Optional[Dict[str, str]] = None
+
+
+class BookingReq(TripsReq):
+    trips: List[TripMsg]
+    type: str = MessageType.BOOKING
 
 
 # Messages from sherpas to FM (Websocket)
@@ -54,7 +96,7 @@ class SherpaStatusMsg(JsonMixin):
     type: str
     timestamp: float
     sherpa_name: str
-    current_pose: list
+    current_pose: List[float]
     battery_status: float
     mode: str
     error: bool
@@ -66,11 +108,6 @@ class FMReq(BaseModel):
     endpoint: str
 
 
-class DirectionEnum(str, Enum):
-    send = "send"
-    receive = "receive"
-
-
 class MoveReq(FMReq):
     endpoint: str = "move_to"
     trip_id: int
@@ -79,23 +116,10 @@ class MoveReq(FMReq):
     destination_name: str
 
 
-class HitchReq(BaseModel):
-    hitch: bool
-
-
-class ConveyorReq(BaseModel):
-    direction: DirectionEnum
-    num_units: int
-
-
-class DispatchButtonReq(BaseModel):
-    value: bool
-
-
 class PeripheralsReq(FMReq):
     endpoint: str = "peripherals"
-    hitch_msg: HitchReq = None
-    conv_msg: ConveyorReq = None
+    hitch_msg: Optional[HitchReq]
+    conv_msg: Optional[ConveyorReq]
 
 
 class MapFileInfo(BaseModel):
