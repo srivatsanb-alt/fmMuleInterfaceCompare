@@ -5,6 +5,7 @@ import redis
 from core.config import Config
 from core.db import session_maker
 from models.fleet_models import Fleet, Sherpa
+from models.db_session import session
 
 from rq import Queue
 
@@ -60,6 +61,7 @@ def report_failure(job, connection, fail_type, value, traceback):
     logging.getLogger().error(
         f"RQ job failed: error: {fail_type}, func: {job.func_name}, args: {job.args}, kwargs: {job.kwargs}"
     )
+    session.close_on_error()
 
 
 def enqueue(queue: Queue, func, data, *args, **kwargs):
