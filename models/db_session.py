@@ -18,6 +18,9 @@ class DBSession:
         self.session.commit()
         self.session.close()
 
+    def close_on_error(self):
+        self.session.close()
+
     def add_to_session(self, obj):
         self.session.add(obj)
         self.session.flush()
@@ -36,6 +39,7 @@ class DBSession:
     def create_ongoing_trip(self, sherpa, trip_id):
         ongoing_trip = OngoingTrip(sherpa_name=sherpa, trip_id=trip_id)
         self.add_to_session(ongoing_trip)
+        ongoing_trip.init()
         return ongoing_trip
 
     def create_trip_leg(self, trip_id, curr_station: str, next_station: str):
@@ -50,8 +54,8 @@ class DBSession:
     def get_sherpa(self, name: str) -> Sherpa:
         return self.session.query(Sherpa).filter(Sherpa.name == name).one()
 
-    def get_all_sherpas(self) -> List[Sherpa]:
-        return self.session.query(Sherpa).all()
+    def get_all_sherpas(self) -> List[SherpaStatus]:
+        return self.session.query(SherpaStatus).all()
 
     def get_sherpa_status(self, name: str) -> SherpaStatus:
         return (
