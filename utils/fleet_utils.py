@@ -51,6 +51,7 @@ def add_update_fleet(**kwargs):
             fleet: Fleet = db.query(Fleet).filter(Fleet.name == fleet_name).one()
         except NoResultFound:
             fleet = Fleet()
+            db.add(fleet)
         for col in Fleet.__table__.columns.keys():
             val = kwargs.get(col)
             if not val:
@@ -69,17 +70,25 @@ def add_sherpa_to_fleet(sherpa: str, fleet: str):
         db.commit()
 
 
-def add_station(name: str, pose, properties=None, button_id=None):
+def add_update_station(**kwargs):
+    station_name = kwargs.get("name")
+    if not station_name:
+        raise ValueError("station name should not be null")
     with session_maker() as db:
-        properties = properties if properties else []
-        station: Station = Station(
-            name=name, pose=pose, properties=properties, button_id=button_id
-        )
-        station_status = StationStatus(
-            station_name=name, disabled=False, arriving_sherpas=[]
-        )
-        db.add(station)
-        db.add(station_status)
+        try:
+            station: Station = db.query(Station).filter_by(name=station_name).one()
+        except NoResultFound:
+            station = Station()
+            db.add(station)
+            station_status = StationStatus(
+                station_name=station_name, disabled=False, arriving_sherpas=[]
+            )
+            db.add(station_status)
+        for col in Station.__table__.columns.keys():
+            val = kwargs.get(col)
+            if not val:
+                continue
+            setattr(station, col, val)
         db.commit()
 
 
