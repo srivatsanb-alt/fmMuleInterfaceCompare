@@ -1,6 +1,11 @@
+from typing import Dict, List
 from core.logs import get_logger
-from models.db_session import DBSession
+from models.db_session import DBSession, session
+from models.fleet_models import Sherpa, SherpaStatus
 from models.trip_models import OngoingTrip, Trip, TripLeg
+
+
+AVAILABLE = "available"
 
 
 def assign_sherpa(trip: Trip, sherpa: str, session: DBSession):
@@ -17,34 +22,37 @@ def start_trip(ongoing_trip: OngoingTrip, session: DBSession):
 def end_trip(ongoing_trip: OngoingTrip, success: bool, session: DBSession):
     ongoing_trip.trip.end(success)
     session.delete_ongoing_trip(ongoing_trip)
+    sherpa_status = session.get_sherpa_status(ongoing_trip.sherpa_name)
+    sherpa_status.idle = True
 
 
 def start_leg(ongoing_trip: OngoingTrip, session: DBSession) -> TripLeg:
     trip: Trip = ongoing_trip.trip
     trip_leg: TripLeg = session.create_trip_leg(
-        trip.id, trip.curr_station(), trip.next_station()
+        trip.id, ongoing_trip.curr_station(), ongoing_trip.next_station()
     )
-    ongoing_trip.set_leg_id(trip_leg.id)
-    trip.start_leg()
+    ongoing_trip.start_leg(trip_leg.id)
+    # ongoing_trip.set_leg_id(trip_leg.id)
+    # trip.start_leg()
     sherpa_name = ongoing_trip.sherpa_name
-    if trip.curr_station():
-        update_leg_curr_station(trip.curr_station(), sherpa_name, session)
-    update_leg_next_station(trip.next_station(), sherpa_name, session)
+    if ongoing_trip.curr_station():
+        update_leg_curr_station(ongoing_trip.curr_station(), sherpa_name, session)
+    update_leg_next_station(ongoing_trip.next_station(), sherpa_name, session)
     update_leg_sherpa(sherpa_name, session)
 
     return trip_leg
 
 
-def end_leg(trip_leg: TripLeg):
-    trip_leg.end()
-    trip_leg.trip.end_leg()
+def end_leg(ongoing_trip: OngoingTrip):
+    ongoing_trip.trip_leg.end()
+    ongoing_trip.end_leg()
 
 
 def update_leg_curr_station(curr_station_name: str, sherpa: str, session: DBSession):
     curr_station_status = session.get_station_status(curr_station_name)
     if not curr_station_status:
         return
-    if sherpa in curr_station_status.arriving_sherpas():
+    if sherpa in curr_station_status.arriving_sherpas:
         curr_station_status.arriving_sherpas.remove(sherpa)
 
 
@@ -58,3 +66,35 @@ def update_leg_next_station(next_station_name: str, sherpa: str, session: DBSess
 def update_leg_sherpa(sherpa_name: str, session: DBSession):
     sherpa_status = session.get_sherpa_status(sherpa_name)
     sherpa_status.idle = False
+
+
+def get_sherpa_availability(all_sherpas: List[SherpaStatus]):
+    availability = {}
+
+    for sherpa in all_sherpas:
+        reason = None
+        if not reason and not sherpa.initialized:
+            reason = "not init"
+        if not reason and sherpa.disabled:
+            reason = "disabled"
+        if not reason and not sherpa.idle:
+            reason = "not idle"
+        if not reason:
+            reason = AVAILABLE
+
+        availability[sherpa.sherpa_name] = reason
+
+    return availability
+
+
+def find_best_sherpa():
+    all_sherpas: List[SherpaStatus] = session.get_all_sherpas()
+    availability: Dict[str, str] = get_sherpa_availability(all_sherpas)
+    get_logger().info(f"sherpa availability: {availability}")
+
+    for name, reason in availability.items():
+        if reason == AVAILABLE:
+            get_logger().info(f"found {name}")
+            return name
+
+    return None

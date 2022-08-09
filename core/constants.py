@@ -3,3 +3,4 @@ class MessageType:
     REACHED = "reached"
     SHERPA_STATUS = "sherpa_status"
     TRIP_STATUS = "trip_status"
+    BOOKING = "book"

@@ -1,7 +1,12 @@
 from app.routers.dependencies import get_sherpa
 
 from core.config import Config
-from endpoints.request_models import InitMsg, ReachedReq, SherpaReq
+from endpoints.request_models import (
+    InitMsg,
+    ReachedReq,
+    SherpaPeripheralsReq,
+    SherpaReq,
+)
 from fastapi import APIRouter, Depends, HTTPException
 from utils.rq import Queues, enqueue
 
@@ -30,6 +35,13 @@ async def init_sherpa(init_msg: InitMsg, sherpa: str = Depends(get_sherpa)):
 @router.post("/reached/")
 async def reached(reached_msg: ReachedReq, sherpa: str = Depends(get_sherpa)):
     process_msg(reached_msg, sherpa)
+
+
+@router.post("/peripherals/")
+async def peripherals(
+    peripherals_req: SherpaPeripheralsReq, sherpa: str = Depends(get_sherpa)
+):
+    process_msg(peripherals_req, sherpa)
 
 
 def handle(handler, msg):
