@@ -13,4 +13,4 @@ def get_sherpa(x_api_key: str = Header(None)):
     db_sherpa: Sherpa = (
         db.query(Sherpa).filter(Sherpa.hashed_api_key == hashed_api_key).one_or_none()
     )
-    return db_sherpa.name if db_sherpa else None
+    return db_sherpa

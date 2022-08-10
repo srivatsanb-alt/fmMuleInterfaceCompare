@@ -9,24 +9,27 @@ from app.routers.dependencies import get_sherpa
 from core.config import Config
 from core.constants import MessageType
 from endpoints.request_models import SherpaStatusMsg
+from models.fleet_models import Sherpa
 from utils.rq import Queues, enqueue
 
 router = APIRouter()
 
 
 @router.websocket("/ws/api/v1/sherpa/")
-async def status(websocket: WebSocket, sherpa: str = Depends(get_sherpa)):
+async def status(websocket: WebSocket, sherpa: Sherpa = Depends(get_sherpa)):
     if not sherpa:
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
 
     await websocket.accept()
-    logging.getLogger().info(f"websocket connection started for {sherpa}")
+    logging.getLogger().info(f"websocket connection started for {sherpa.name}")
+
+    sherpa.ip_address = f"{websocket.client.host}:{websocket.client.port}"
 
     rw = [
         asyncio.create_task(reader(websocket)),
         asyncio.create_task(
-            writer(websocket, sherpa),
+            writer(websocket, sherpa.name),
         ),
     ]
     try:
@@ -41,7 +44,7 @@ async def reader(websocket):
         try:
             msg = await websocket.receive_json()
         except WebSocketDisconnect:
-            logging.info(f"websocket disconnected")
+            logging.info("websocket disconnected")
             return
         msg_type = msg.get("type")
         if msg_type == MessageType.TRIP_STATUS:
