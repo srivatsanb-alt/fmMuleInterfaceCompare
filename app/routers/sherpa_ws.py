@@ -2,13 +2,14 @@ import ast
 import asyncio
 import logging
 import os
-import aioredis
-from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
 
+import aioredis
 from app.routers.dependencies import get_sherpa
 from core.config import Config
 from core.constants import MessageType
 from endpoints.request_models import SherpaStatusMsg
+from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
+from models.db_session import session
 from models.fleet_models import Sherpa
 from utils.rq import Queues, enqueue
 
@@ -24,7 +25,12 @@ async def status(websocket: WebSocket, sherpa: Sherpa = Depends(get_sherpa)):
     await websocket.accept()
     logging.getLogger().info(f"websocket connection started for {sherpa.name}")
 
-    sherpa.ip_address = f"{websocket.client.host}:{websocket.client.port}"
+    client_ip = websocket.client.host
+    if sherpa.ip_address != client_ip:
+        # write IP address to sherpa table
+        db_sherpa = session.get_sherpa(sherpa.name)
+        db_sherpa.ip_address = client_ip
+        session.close()
 
     rw = [
         asyncio.create_task(reader(websocket)),
