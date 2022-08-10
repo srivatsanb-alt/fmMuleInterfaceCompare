@@ -13,7 +13,8 @@ def get_sherpa_url(
     sherpa: Sherpa,
 ):
     version = Config.get_api_version()
-    return f"https://{sherpa.ip_address}/api/{version}/fm"
+    port = Config.get_sherpa_port()
+    return f"https://{sherpa.ip_address}:{port}/api/{version}/fm"
 
 
 def post(url, body: Dict):
