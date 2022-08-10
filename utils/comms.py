@@ -14,7 +14,7 @@ def get_sherpa_url(
 ):
     version = Config.get_api_version()
     port = Config.get_sherpa_port()
-    return f"https://{sherpa.ip_address}:{port}/api/{version}/fm"
+    return f"http://{sherpa.ip_address}:{port}/api/{version}/fm"
 
 
 def post(url, body: Dict):
@@ -53,4 +53,6 @@ def send_msg_to_sherpa(sherpa: Sherpa, msg: FMReq):
 
 def process_response(response: requests.Response):
     response.raise_for_status()
-    return response.json()
+    response_json = response.json()
+    get_logger().info(f"received response: {response_json}")
+    return response_json
