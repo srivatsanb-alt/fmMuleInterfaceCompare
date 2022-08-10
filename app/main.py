@@ -2,7 +2,13 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from .routers import sherpa_http, sherpa_ws, trips_http
+import logging
 
+logging.basicConfig(
+    format="{asctime} {levelname} [{funcName}] {message}",
+    style="{",
+    level=logging.INFO,
+)
 app = FastAPI()
 
 app.add_middleware(
