@@ -40,6 +40,8 @@ async def status(websocket: WebSocket, sherpa: Sherpa = Depends(get_sherpa)):
     ]
     try:
         await asyncio.gather(*rw)
+    except:
+        [t.cancel() for t in rw]
     finally:
         [t.cancel() for t in rw]
 
