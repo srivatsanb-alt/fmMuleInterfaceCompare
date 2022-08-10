@@ -54,6 +54,13 @@ class DBSession:
     def get_sherpa(self, name: str) -> Sherpa:
         return self.session.query(Sherpa).filter(Sherpa.name == name).one()
 
+    def get_sherpa_by_api_key(self, hashed_api_key: str) -> Sherpa:
+        return (
+            self.session.query(Sherpa)
+            .filter(Sherpa.hashed_api_key == hashed_api_key)
+            .one_or_none()
+        )
+
     def get_all_sherpas(self) -> List[SherpaStatus]:
         return self.session.query(SherpaStatus).all()
 
