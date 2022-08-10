@@ -137,5 +137,4 @@ class InitReq(FMReq):
 class InitResp(JsonMixin):
     display_name: str
     hwid: str
-    ip_address: str
     map_files_match: bool
