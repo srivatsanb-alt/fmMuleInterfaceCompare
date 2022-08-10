@@ -3,7 +3,7 @@ import asyncio
 import logging
 import os
 import aioredis
-from fastapi import APIRouter, Depends, WebSocket
+from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
 
 from app.routers.dependencies import get_sherpa
 from core.config import Config
@@ -14,7 +14,7 @@ from utils.rq import Queues, enqueue
 router = APIRouter()
 
 
-@router.websocket("/api/v1/sherpa/")
+@router.websocket("/ws/api/v1/sherpa/")
 async def status(websocket: WebSocket, sherpa: str = Depends(get_sherpa)):
     if not sherpa:
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
@@ -38,7 +38,11 @@ async def status(websocket: WebSocket, sherpa: str = Depends(get_sherpa)):
 async def reader(websocket):
     handler_obj = Config.get_handler()
     while True:
-        msg = await websocket.receive_json()
+        try:
+            msg = await websocket.receive_json()
+        except WebSocketDisconnect:
+            logging.info(f"websocket disconnected")
+            return
         msg_type = msg.get("type")
         if msg_type == MessageType.TRIP_STATUS:
             enqueue(Queues.handler_queue, handle, handler_obj, msg, ttl=2)
@@ -51,7 +55,7 @@ async def reader(websocket):
 
 async def writer(websocket, sherpa):
     redis = aioredis.Redis.from_url(
-        os.getenv("HIVEMIND_REDIS_URI"), max_connections=10, decode_responses=True
+        os.getenv("FM_REDIS_URI"), max_connections=10, decode_responses=True
     )
     psub = redis.pubsub()
     await psub.subscribe(f"channel:{sherpa}")

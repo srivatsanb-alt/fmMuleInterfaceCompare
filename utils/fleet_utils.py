@@ -78,7 +78,7 @@ def add_update_station(**kwargs):
         try:
             station: Station = db.query(Station).filter_by(name=station_name).one()
         except NoResultFound:
-            station = Station()
+            station = Station(properties=[])
             db.add(station)
             station_status = StationStatus(
                 station_name=station_name, disabled=False, arriving_sherpas=[]
@@ -92,11 +92,14 @@ def add_update_station(**kwargs):
         db.commit()
 
 
-def add_map(name: str):
+def add_map(name: str, fleet: str):
     with session_maker() as db:
         map: Map = Map(name=name)
         db.add(map)
         db.commit()
+        db.refresh(map)
+        add_update_fleet(name=fleet, map_id=map.id)
+
 
 
 def add_map_files(fleet_name: str):

@@ -99,7 +99,7 @@ class SherpaStatusMsg(JsonMixin):
     current_pose: List[float]
     battery_status: float
     mode: str
-    error: bool
+    error: bool = None
     error_info: str = None
 
 
