@@ -149,8 +149,8 @@ class Handlers:
             response: InitResp = InitResp.from_json(
                 process_response(send_msg_to_sherpa(sherpa, init_req))
             )
+            get_logger(sherpa_name).info(f"received from {sherpa_name}: {response}")
             sherpa.hwid = response.hwid
-            sherpa.ip_address = response.ip_address
             if response.map_files_match:
                 self.initialize_sherpa(sherpa_name)
 
@@ -217,4 +217,5 @@ class Handlers:
             get_logger().error(f"no handler defined for {msg.type}")
             return
         msg_handler(msg)
+        # TODO: do this in RQ's success handler
         session.close()
