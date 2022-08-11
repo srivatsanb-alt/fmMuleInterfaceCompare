@@ -1,3 +1,4 @@
+import requests
 from core.logs import get_logger
 from endpoints.request_models import (
     BookingReq,
@@ -18,7 +19,7 @@ from models.base_models import StationProperties
 from models.db_session import session
 from models.fleet_models import Fleet, Sherpa, SherpaStatus, Station
 from models.trip_models import OngoingTrip, PendingTrip, Trip, TripLeg
-from utils.comms import process_response, send_msg_to_sherpa
+from utils.comms import send_move_msg, send_msg_to_sherpa
 from utils.util import are_poses_close
 
 
@@ -63,13 +64,10 @@ class Handlers:
         get_logger(sherpa_name).info(
             f"{sherpa_name} started leg of trip {trip.id} from {ongoing_trip.curr_station()} to {ongoing_trip.next_station()}"
         )
-        move_msg = MoveReq(
-            trip_id=trip.id,
-            trip_leg_id=trip_leg.id,
-            destination_pose=next_station.pose,
-            destination_name=next_station.name,
+        response: requests.Response = send_move_msg(sherpa, ongoing_trip, next_station)
+        get_logger(sherpa_name).info(
+            f"received from {sherpa_name}: status {response.status_code}"
         )
-        send_msg_to_sherpa(sherpa, move_msg)
 
     def end_leg(self, ongoing_trip: OngoingTrip):
         trip: Trip = ongoing_trip.trip
@@ -84,10 +82,26 @@ class Handlers:
         session.delete_pending_trip(pending_trip)
         get_logger(sherpa_name).info(f"deleted pending trip id {pending_trip.trip_id}")
 
+    def resume_ongoing_trip(self, ongoing_trip: OngoingTrip, sherpa_status: SherpaStatus):
+        station_name: str = ongoing_trip.trip_leg.to_station
+        station: Station = session.get_station(station_name)
+        response: requests.Response = send_move_msg(
+            sherpa_status.sherpa, ongoing_trip, station
+        )
+        get_logger(sherpa_status.sherpa_name).info(
+            f"received from {sherpa_status.sherpa_name}: status {response.status_code}"
+        )
+
     def initialize_sherpa(self, sherpa_name):
         sherpa_status: SherpaStatus = session.get_sherpa_status(sherpa_name)
         sherpa_status.initialized = True
         get_logger(sherpa_name).info(f"{sherpa_name} initialized")
+
+        ongoing_trip: OngoingTrip = session.get_ongoing_trip(sherpa_name)
+        if ongoing_trip:
+            get_logger(sherpa_name).info(f"found ongoing trip id {ongoing_trip.trip_id}")
+            self.resume_ongoing_trip(ongoing_trip, sherpa_status)
+            return
 
         pending_trip: PendingTrip = session.get_pending_trip()
         if pending_trip:
@@ -107,13 +121,19 @@ class Handlers:
         if StationProperties.AUTO_UNHITCH in station.properties:
             get_logger(sherpa_name).info(f"{sherpa_name} reached an auto-unhitch station")
             unhitch_msg = PeripheralsReq(hitch_msg=HitchReq(hitch=False))
-            send_msg_to_sherpa(ongoing_trip.trip.sherpa, unhitch_msg)
+            response = send_msg_to_sherpa(ongoing_trip.trip.sherpa, unhitch_msg)
+            get_logger(sherpa_name).info(
+                f"received from {sherpa_name}: status {response.status_code}"
+            )
             return
         # if at hitch station send hitch command.
         if StationProperties.AUTO_HITCH in station.properties:
             get_logger(sherpa_name).info(f"{sherpa_name} reached an auto-hitch station")
             hitch_msg = PeripheralsReq(hitch_msg=HitchReq(hitch=True))
-            send_msg_to_sherpa(ongoing_trip.trip.sherpa, hitch_msg)
+            response = send_msg_to_sherpa(ongoing_trip.trip.sherpa, hitch_msg)
+            get_logger(sherpa_name).info(
+                f"received from {sherpa_name}: status {response.status_code}"
+            )
             return
 
         if ongoing_trip.finished():
@@ -146,9 +166,7 @@ class Handlers:
                 MapFileInfo(file_name=mf.filename, hash=mf.file_hash) for mf in map_files
             ]
             init_req: InitReq = InitReq(fleet_name=fleet_name, map_files=map_file_info)
-            response: InitResp = InitResp.from_dict(
-                process_response(send_msg_to_sherpa(sherpa, init_req))
-            )
+            response: InitResp = InitResp.from_dict(send_msg_to_sherpa(sherpa, init_req))
             get_logger(sherpa_name).info(f"received from {sherpa_name}: {response}")
             sherpa.hwid = response.hwid
             if response.map_files_match:
