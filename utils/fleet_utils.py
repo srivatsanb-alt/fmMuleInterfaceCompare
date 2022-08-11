@@ -92,9 +92,9 @@ def add_update_station(**kwargs):
         db.commit()
 
 
-def add_map(name: str, fleet: str):
+def add_map(fleet: str):
     with session_maker() as db:
-        map: Map = Map(name=name)
+        map: Map = Map(name=fleet)
         db.add(map)
         db.commit()
         db.refresh(map)
