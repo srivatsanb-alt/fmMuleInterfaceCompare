@@ -166,10 +166,11 @@ class Handlers:
                 MapFileInfo(file_name=mf.filename, hash=mf.file_hash) for mf in map_files
             ]
             init_req: InitReq = InitReq(fleet_name=fleet_name, map_files=map_file_info)
-            response: InitResp = InitResp.from_dict(send_msg_to_sherpa(sherpa, init_req))
-            get_logger(sherpa_name).info(f"received from {sherpa_name}: {response}")
-            sherpa.hwid = response.hwid
-            if response.map_files_match:
+            response: requests.Response = send_msg_to_sherpa(sherpa, init_req)
+            init_resp: InitResp = InitResp.from_dict(response.json())
+            get_logger(sherpa_name).info(f"received from {sherpa_name}: {init_resp}")
+            sherpa.hwid = init_resp.hwid
+            if init_resp.map_files_match:
                 self.initialize_sherpa(sherpa_name)
 
     def handle_peripherals(self, req: SherpaPeripheralsReq):
