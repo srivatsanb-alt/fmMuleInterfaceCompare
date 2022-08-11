@@ -55,9 +55,8 @@ def send_msg_to_sherpa(sherpa: Sherpa, msg: FMReq) -> Dict:
 
 def process_response(response: requests.Response) -> Dict:
     response.raise_for_status()
-    response_json = response.json()
-    get_logger().info(f"received response: {response_json}")
-    return response_json
+    get_logger().info(f"received response: {response.json()}")
+    return response
 
 
 def send_move_msg(sherpa: Sherpa, ongoing_trip: OngoingTrip, station: Station) -> Dict:
