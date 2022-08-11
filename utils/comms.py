@@ -5,8 +5,9 @@ import requests
 
 from core.config import Config
 from core.logs import get_logger
-from endpoints.request_models import FMReq
-from models.fleet_models import Sherpa
+from endpoints.request_models import FMReq, MoveReq
+from models.fleet_models import Sherpa, Station
+from models.trip_models import OngoingTrip
 
 
 def get_sherpa_url(
@@ -17,7 +18,7 @@ def get_sherpa_url(
     return f"http://{sherpa.ip_address}:{port}/api/{version}/fm"
 
 
-def post(url, body: Dict):
+def post(url, body: Dict) -> Dict:
     # from unittest.mock import Mock
     # from requests.models import Response
     # import json
@@ -35,10 +36,11 @@ def post(url, body: Dict):
     #
     # return response
 
-    return requests.post(url, json=body)
+    response = requests.post(url, json=body)
+    return process_response(response)
 
 
-def send_msg_to_sherpa(sherpa: Sherpa, msg: FMReq):
+def send_msg_to_sherpa(sherpa: Sherpa, msg: FMReq) -> Dict:
     body = msg.dict()
     body["timestamp"] = time.time()
     endpoint = body.pop("endpoint")
@@ -51,8 +53,18 @@ def send_msg_to_sherpa(sherpa: Sherpa, msg: FMReq):
     return post(url, body)
 
 
-def process_response(response: requests.Response):
+def process_response(response: requests.Response) -> Dict:
     response.raise_for_status()
     response_json = response.json()
     get_logger().info(f"received response: {response_json}")
     return response_json
+
+
+def send_move_msg(sherpa: Sherpa, ongoing_trip: OngoingTrip, station: Station) -> Dict:
+    move_msg = MoveReq(
+        trip_id=ongoing_trip.trip_id,
+        trip_leg_id=ongoing_trip.trip_leg_id,
+        destination_pose=station.pose,
+        destination_name=station.name,
+    )
+    return send_msg_to_sherpa(sherpa, move_msg)
