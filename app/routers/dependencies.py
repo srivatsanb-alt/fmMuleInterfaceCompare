@@ -9,14 +9,8 @@ def get_sherpa(x_api_key: str = Header(None)):
         return None
 
     hashed_api_key = hashlib.sha256(x_api_key.encode("utf-8")).hexdigest()
-    sherpa: Sherpa = session.get_sherpa_by_api_key(hashed_api_key)
-
-    if not sherpa:
-        session.close()
-        return None
-
-    name = sherpa.name
-    ipaddr = sherpa.ip_address
+    sherpa = session.get_sherpa_by_api_key(hashed_api_key)
+    sherpa_name = sherpa.name if sherpa else None
     session.close()
 
-    return [name, ipaddr]
+    return sherpa_name

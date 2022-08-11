@@ -8,7 +8,7 @@ from app.routers.dependencies import get_sherpa
 from core.config import Config
 from core.constants import MessageType
 from endpoints.request_models import SherpaStatusMsg
-from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, status
 from models.db_session import session
 from utils.rq import Queues, enqueue
 
@@ -16,28 +16,25 @@ router = APIRouter()
 
 
 @router.websocket("/ws/api/v1/sherpa/")
-async def status(websocket: WebSocket, sherpa=Depends(get_sherpa)):
+async def sherpa_status(websocket: WebSocket, sherpa=Depends(get_sherpa)):
     if not sherpa:
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
 
     await websocket.accept()
-
-    sherpa_name = sherpa[0]
-    sherpa_ipaddr = sherpa[1]
-    logging.getLogger().info(f"websocket connection started for {sherpa_name}")
+    logging.getLogger().info(f"websocket connection started for {sherpa}")
 
     client_ip = websocket.client.host
-
-    if sherpa_ipaddr != client_ip:
-        db_sherpa = session.get_sherpa(sherpa_name)
+    db_sherpa = session.get_sherpa(sherpa)
+    if db_sherpa.ip_address != client_ip:
+        # write IP address to sherpa table
         db_sherpa.ip_address = client_ip
-        session.close()
+    session.close()
 
     rw = [
         asyncio.create_task(reader(websocket)),
         asyncio.create_task(
-            writer(websocket, sherpa_name),
+            writer(websocket, sherpa),
         ),
     ]
     try:
