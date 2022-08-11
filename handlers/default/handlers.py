@@ -95,6 +95,8 @@ class Handlers:
     def initialize_sherpa(self, sherpa_name):
         sherpa_status: SherpaStatus = session.get_sherpa_status(sherpa_name)
         sherpa_status.initialized = True
+        sherpa_status.idle = True
+        sherpa_status.disabled = False
         get_logger(sherpa_name).info(f"{sherpa_name} initialized")
 
         ongoing_trip: OngoingTrip = session.get_ongoing_trip(sherpa_name)
