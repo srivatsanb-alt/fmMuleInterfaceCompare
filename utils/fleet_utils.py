@@ -98,8 +98,8 @@ def add_map(name: str, fleet: str):
         db.add(map)
         db.commit()
         db.refresh(map)
-        add_update_fleet(name=fleet, map_id=map.id)
-
+    add_map_files(fleet)
+    add_update_fleet(name=fleet, map_id=map.id)
 
 
 def add_map_files(fleet_name: str):
