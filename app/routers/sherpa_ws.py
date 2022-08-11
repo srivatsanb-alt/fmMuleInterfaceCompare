@@ -10,37 +10,39 @@ from core.constants import MessageType
 from endpoints.request_models import SherpaStatusMsg
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
 from models.db_session import session
-from models.fleet_models import Sherpa
 from utils.rq import Queues, enqueue
 
 router = APIRouter()
 
 
 @router.websocket("/ws/api/v1/sherpa/")
-async def status(websocket: WebSocket, sherpa: Sherpa = Depends(get_sherpa)):
+async def status(websocket: WebSocket, sherpa=Depends(get_sherpa)):
     if not sherpa:
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
 
     await websocket.accept()
-    logging.getLogger().info(f"websocket connection started for {sherpa.name}")
+
+    sherpa_name = sherpa[0]
+    sherpa_ipaddr = sherpa[1]
+    logging.getLogger().info(f"websocket connection started for {sherpa_name}")
 
     client_ip = websocket.client.host
-    if sherpa.ip_address != client_ip:
-        # write IP address to sherpa table
-        db_sherpa = session.get_sherpa(sherpa.name)
+
+    if sherpa_ipaddr != client_ip:
+        db_sherpa = session.get_sherpa(sherpa_name)
         db_sherpa.ip_address = client_ip
         session.close()
 
     rw = [
         asyncio.create_task(reader(websocket)),
         asyncio.create_task(
-            writer(websocket, sherpa.name),
+            writer(websocket, sherpa_name),
         ),
     ]
     try:
         await asyncio.gather(*rw)
-    except:
+    except Exception:
         [t.cancel() for t in rw]
     finally:
         [t.cancel() for t in rw]
