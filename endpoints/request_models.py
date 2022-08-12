@@ -58,6 +58,7 @@ class SherpaPeripheralsReq(SherpaReq):
     conveyor: ConveyorReq = None
     dispatch_button: DispatchButtonReq = None
     error_info: str = None
+    type = MessageType.PERIPHERALS
 
 
 class TripsReq(BaseModel):

@@ -32,7 +32,7 @@ async def init_sherpa(init_msg: InitMsg, sherpa: str = Depends(get_sherpa)):
     process_msg(init_msg, sherpa)
 
 
-@router.post("/reached/")
+@router.post("/trip/reached/")
 async def reached(reached_msg: ReachedReq, sherpa: str = Depends(get_sherpa)):
     process_msg(reached_msg, sherpa)
 
