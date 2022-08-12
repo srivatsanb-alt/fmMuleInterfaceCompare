@@ -1,13 +1,17 @@
-from app.routers.dependencies import get_sherpa
+import time
 
+from app.routers.dependencies import get_sherpa
 from core.config import Config
 from endpoints.request_models import (
     InitMsg,
     ReachedReq,
     SherpaPeripheralsReq,
     SherpaReq,
+    VerifyFleetFilesResp,
 )
 from fastapi import APIRouter, Depends, HTTPException
+from redis import Redis
+from rq.job import Job
 from utils.rq import Queues, enqueue
 
 router = APIRouter(
@@ -24,7 +28,7 @@ def process_msg(msg: SherpaReq, sherpa: str):
     handler_obj = Config.get_handler()
     msg.source = sherpa
 
-    enqueue(Queues.handler_queue, handle, handler_obj, msg)
+    return enqueue(Queues.handler_queue, handle, handler_obj, msg)
 
 
 @router.post("/init/")
@@ -44,5 +48,22 @@ async def peripherals(
     process_msg(peripherals_req, sherpa)
 
 
+@router.get("/verify_fleet_files", response_model=VerifyFleetFilesResp)
+async def verify_fleet_files(sherpa: str = Depends(get_sherpa)):
+    job: Job = process_msg(
+        SherpaReq(type="verify_fleet_files", timestamp=time.time()), sherpa
+    )
+    redis = Redis()
+    while True:
+        status = Job.fetch(job.id, connection=redis).get_status(refresh=True)
+        if status == "finished":
+            response = Job.fetch(job.id, connection=redis).result
+            break
+        if status == "failed":
+            raise HTTPException(status_code=500)
+        time.sleep(1)
+    return VerifyFleetFilesResp.from_json(response)
+
+
 def handle(handler, msg):
-    handler.handle(msg)
+    return handler.handle(msg)

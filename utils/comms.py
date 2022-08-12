@@ -40,6 +40,13 @@ def post(url, body: Dict) -> Dict:
     return process_response(response)
 
 
+def get(sherpa: Sherpa, req: FMReq) -> Dict:
+    base_url = get_sherpa_url(sherpa)
+    url = f"{base_url}/{req.endpoint}"
+    response = requests.get(url)
+    return process_response(response)
+
+
 def send_msg_to_sherpa(sherpa: Sherpa, msg: FMReq) -> Dict:
     body = msg.dict()
     body["timestamp"] = time.time()

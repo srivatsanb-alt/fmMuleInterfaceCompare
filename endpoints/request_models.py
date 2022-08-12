@@ -7,6 +7,8 @@ from typing import List, Optional, Union, Dict
 from core.constants import MessageType
 from pydantic import BaseModel
 
+from models.fleet_models import MapFile
+
 
 class HitchReq(BaseModel):
     hitch: bool
@@ -26,7 +28,10 @@ class DispatchButtonReq(BaseModel):
     value: bool
 
 
-# Messages from sherpas to FM
+#################################################
+# Messages from sherpas
+
+
 class SherpaReq(BaseModel):
     source: Union[str, None] = None
     type: str
@@ -61,6 +66,10 @@ class SherpaPeripheralsReq(SherpaReq):
     type = MessageType.PERIPHERALS
 
 
+#################################################
+# Messages from frontend
+
+
 class TripsReq(BaseModel):
     type: str
 
@@ -77,7 +86,10 @@ class BookingReq(TripsReq):
     type: str = MessageType.BOOKING
 
 
-# Messages from sherpas to FM (Websocket)
+#################################################
+# Messages from sherpas (Websocket)
+
+
 class JsonMixin:
     @classmethod
     def from_dict(cls, obj_dict):
@@ -140,7 +152,10 @@ class TripStatusMsg(JsonMixin):
     type: str = MessageType.TRIP_STATUS
 
 
-# Messages from FM to sherpas
+#################################################
+# Messages to sherpas
+
+
 class FMReq(BaseModel):
     endpoint: str
 
@@ -159,19 +174,23 @@ class PeripheralsReq(FMReq):
     conv_msg: Optional[ConveyorReq]
 
 
-class MapFileInfo(BaseModel):
+@dataclass
+class MapFileInfo(JsonMixin):
     file_name: str
     hash: str
 
 
+@dataclass
+class VerifyFleetFilesResp(JsonMixin):
+    fleet_name: str
+    files_info: List[MapFileInfo]
+
+
 class InitReq(FMReq):
     endpoint: str = "init"
-    fleet_name: str
-    map_files: List[MapFileInfo]
 
 
 @dataclass
 class InitResp(JsonMixin):
     display_name: str
     hwid: str
-    map_files_match: bool

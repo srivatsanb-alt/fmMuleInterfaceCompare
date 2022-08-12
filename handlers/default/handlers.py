@@ -1,4 +1,4 @@
-import requests
+from requests import Response
 from core.logs import get_logger
 from endpoints.request_models import (
     BookingReq,
@@ -10,14 +10,16 @@ from endpoints.request_models import (
     PeripheralsReq,
     ReachedReq,
     SherpaPeripheralsReq,
+    SherpaReq,
     SherpaStatusMsg,
     TripStatusMsg,
+    VerifyFleetFilesResp,
 )
 from models.base_models import StationProperties
 from models.db_session import session
 from models.fleet_models import Fleet, Sherpa, SherpaStatus, Station
 from models.trip_models import OngoingTrip, PendingTrip, Trip
-from utils.comms import send_move_msg, send_msg_to_sherpa
+from utils.comms import get, send_move_msg, send_msg_to_sherpa
 from utils.util import are_poses_close
 
 import handlers.default.handler_utils as hutils
@@ -64,7 +66,7 @@ class Handlers:
         get_logger(sherpa_name).info(
             f"{sherpa_name} started leg of trip {trip.id} from {ongoing_trip.curr_station()} to {ongoing_trip.next_station()}"
         )
-        response: requests.Response = send_move_msg(sherpa, ongoing_trip, next_station)
+        response: Response = send_move_msg(sherpa, ongoing_trip, next_station)
         get_logger(sherpa_name).info(
             f"received from {sherpa_name}: status {response.status_code}"
         )
@@ -85,9 +87,7 @@ class Handlers:
     def resume_ongoing_trip(self, ongoing_trip: OngoingTrip, sherpa_status: SherpaStatus):
         station_name: str = ongoing_trip.trip_leg.to_station
         station: Station = session.get_station(station_name)
-        response: requests.Response = send_move_msg(
-            sherpa_status.sherpa, ongoing_trip, station
-        )
+        response: Response = send_move_msg(sherpa_status.sherpa, ongoing_trip, station)
         get_logger(sherpa_status.sherpa_name).info(
             f"received from {sherpa_status.sherpa_name}: status {response.status_code}"
         )
@@ -151,29 +151,28 @@ class Handlers:
         sherpa_name = msg.sherpa_name
         sherpa: Sherpa = session.get_sherpa(sherpa_name)
         status: SherpaStatus = session.get_sherpa_status(sherpa_name)
+
         status.pose = msg.current_pose
         status.battery_status = msg.battery_status
-        if msg.mode != status.mode:
-            get_logger(sherpa_name).info(f"{sherpa_name} switched to {msg.mode} mode")
-            status.mode = msg.mode
         status.error = msg.error_info if msg.error else None
+
+        if msg.mode == status.mode:
+            return
+
+        status.mode = msg.mode
+        get_logger(sherpa_name).info(f"{sherpa_name} switched to {msg.mode} mode")
+
         if msg.mode != "fleet":
             get_logger(sherpa_name).info(f"{sherpa_name} uninitialized")
             status.initialized = False
         elif not status.initialized:
             # sherpa switched to fleet mode
-            fleet_name = sherpa.fleet.name
-            map_files = session.get_map_files(fleet_name)
-            map_file_info = [
-                MapFileInfo(file_name=mf.filename, hash=mf.file_hash) for mf in map_files
-            ]
-            init_req: InitReq = InitReq(fleet_name=fleet_name, map_files=map_file_info)
-            response: requests.Response = send_msg_to_sherpa(sherpa, init_req)
+            init_req: InitReq = InitReq()
+            response: Response = get(sherpa, init_req)
             init_resp: InitResp = InitResp.from_dict(response.json())
             get_logger(sherpa_name).info(f"received from {sherpa_name}: {init_resp}")
             sherpa.hwid = init_resp.hwid
-            if init_resp.map_files_match:
-                self.initialize_sherpa(sherpa_name)
+            self.initialize_sherpa(sherpa_name)
 
     def handle_peripherals(self, req: SherpaPeripheralsReq):
         sherpa_name = req.source
@@ -230,6 +229,19 @@ class Handlers:
     def handle_trip_status(self, req: TripStatusMsg):
         pass
 
+    def handle_verify_fleet_files(self, req: SherpaReq):
+        sherpa_name = req.source
+        sherpa: Sherpa = session.get_sherpa(sherpa_name)
+        fleet_name = sherpa.fleet.name
+        map_files = session.get_map_files(fleet_name)
+        map_file_info = [
+            MapFileInfo(file_name=mf.filename, hash=mf.file_hash) for mf in map_files
+        ]
+        response: VerifyFleetFilesResp = VerifyFleetFilesResp(
+            fleet_name=fleet_name, files_info=map_file_info
+        )
+        return response.to_json()
+
     def handle(self, msg):
         get_logger().info(f"got message: {msg}")
         handle_ok, reason = self.should_handle_msg(msg)
@@ -240,6 +252,7 @@ class Handlers:
         if not msg_handler:
             get_logger().error(f"no handler defined for {msg.type}")
             return
-        msg_handler(msg)
+        response = msg_handler(msg)
         # TODO: do this in RQ's success handler
         session.close()
+        return response
