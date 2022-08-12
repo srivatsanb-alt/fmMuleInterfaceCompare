@@ -1,4 +1,7 @@
+import os
 import time
+
+import redis
 
 from app.routers.dependencies import get_sherpa
 from core.config import Config
@@ -10,7 +13,6 @@ from endpoints.request_models import (
     VerifyFleetFilesResp,
 )
 from fastapi import APIRouter, Depends, HTTPException
-from redis import Redis
 from rq.job import Job
 from utils.rq import Queues, enqueue
 
@@ -53,11 +55,13 @@ async def verify_fleet_files(sherpa: str = Depends(get_sherpa)):
     job: Job = process_msg(
         SherpaReq(type="verify_fleet_files", timestamp=time.time()), sherpa
     )
-    redis = Redis()
+    redis_conn = redis.from_url(
+        os.getenv("FM_REDIS_URI"), encoding="utf-8", decode_responses=True
+    )
     while True:
-        status = Job.fetch(job.id, connection=redis).get_status(refresh=True)
+        status = Job.fetch(job.id, connection=redis_conn).get_status(refresh=True)
         if status == "finished":
-            response = Job.fetch(job.id, connection=redis).result
+            response = Job.fetch(job.id, connection=redis_conn).result
             break
         if status == "failed":
             raise HTTPException(status_code=500)
