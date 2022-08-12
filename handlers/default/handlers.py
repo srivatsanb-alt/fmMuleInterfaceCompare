@@ -112,7 +112,15 @@ class Handlers:
 
     def handle_reached(self, msg: ReachedReq):
         sherpa_name = msg.source
+        sherpa: SherpaStatus = session.get_sherpa_status(sherpa_name)
+
         ongoing_trip: OngoingTrip = session.get_ongoing_trip(sherpa_name)
+        dest_pose = session.get_station(ongoing_trip.next_station()).pose
+        if not are_poses_close(dest_pose, msg.destination_pose):
+            raise ValueError(
+                f"{sherpa_name} sent to {dest_pose} but reached {msg.destination_pose}"
+            )
+        sherpa.pose = msg.destination_pose
 
         # TODO: Confirm that reached pose matches expected pose.
         self.end_leg(ongoing_trip)
