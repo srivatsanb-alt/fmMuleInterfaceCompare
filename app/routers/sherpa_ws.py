@@ -7,7 +7,7 @@ import aioredis
 from app.routers.dependencies import get_sherpa
 from core.config import Config
 from core.constants import MessageType
-from endpoints.request_models import SherpaStatusMsg
+from endpoints.request_models import SherpaStatusMsg, TripStatusMsg
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, status
 from models.db_session import session
 from utils.rq import Queues, enqueue
@@ -55,7 +55,8 @@ async def reader(websocket):
             return
         msg_type = msg.get("type")
         if msg_type == MessageType.TRIP_STATUS:
-            enqueue(Queues.handler_queue, handle, handler_obj, msg, ttl=2)
+            trip_status_msg = TripStatusMsg.from_dict(msg)
+            enqueue(Queues.handler_queue, handle, handler_obj, trip_status_msg, ttl=2)
         elif msg_type == MessageType.SHERPA_STATUS:
             status_msg = SherpaStatusMsg.from_dict(msg)
             enqueue(Queues.handler_queue, handle, handler_obj, status_msg)

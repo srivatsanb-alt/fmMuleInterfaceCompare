@@ -5,22 +5,22 @@ from endpoints.request_models import (
     DispatchButtonReq,
     HitchReq,
     InitReq,
-    InitMsg,
     InitResp,
     MapFileInfo,
-    MoveReq,
     PeripheralsReq,
     ReachedReq,
     SherpaPeripheralsReq,
     SherpaStatusMsg,
+    TripStatusMsg,
 )
-import handlers.default.handler_utils as hutils
 from models.base_models import StationProperties
 from models.db_session import session
 from models.fleet_models import Fleet, Sherpa, SherpaStatus, Station
-from models.trip_models import OngoingTrip, PendingTrip, Trip, TripLeg
+from models.trip_models import OngoingTrip, PendingTrip, Trip
 from utils.comms import send_move_msg, send_msg_to_sherpa
 from utils.util import are_poses_close
+
+import handlers.default.handler_utils as hutils
 
 
 class Handlers:
@@ -60,7 +60,7 @@ class Handlers:
             get_logger(sherpa_name).info(f"{sherpa_name} already at {next_station.name}")
             ongoing_trip.end_leg()
             return
-        trip_leg = hutils.start_leg(ongoing_trip, session)
+        hutils.start_leg(ongoing_trip, session)
         get_logger(sherpa_name).info(
             f"{sherpa_name} started leg of trip {trip.id} from {ongoing_trip.curr_station()} to {ongoing_trip.next_station()}"
         )
@@ -226,6 +226,9 @@ class Handlers:
                 return
             else:
                 self.start_trip(trip, sherpa)
+
+    def handle_trip_status(self, req: TripStatusMsg):
+        pass
 
     def handle(self, msg):
         get_logger().info(f"got message: {msg}")

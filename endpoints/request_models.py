@@ -3,6 +3,7 @@ from dataclasses import asdict, dataclass, fields
 from enum import Enum
 from typing import List, Optional, Union, Dict
 
+
 from core.constants import MessageType
 from pydantic import BaseModel
 
@@ -93,7 +94,6 @@ class JsonMixin:
 
 @dataclass
 class SherpaStatusMsg(JsonMixin):
-    type: str
     timestamp: float
     sherpa_name: str
     current_pose: List[float]
@@ -101,6 +101,42 @@ class SherpaStatusMsg(JsonMixin):
     mode: str
     error: bool = None
     error_info: str = None
+    type: str = MessageType.SHERPA_STATUS
+
+
+@dataclass
+class StoppageInfo(JsonMixin):
+    local_obstacle: List[float]
+    time_elapsed_stoppages: float
+    time_elapsed_obstacle_stoppages: float
+    time_elapsed_visa_stoppages: float
+    time_elapsed_other_stoppages: float
+
+
+@dataclass
+class Stoppages(JsonMixin):
+    type: str
+    extra_info: StoppageInfo
+
+
+@dataclass
+class TripInfo(JsonMixin):
+    current_pose: List[float]
+    destination_pose: List[float]
+    destination_name: str
+    eta_at_start: float
+    eta: float
+    progress: float
+    stoppages: Stoppages = None
+
+
+@dataclass
+class TripStatusMsg(JsonMixin):
+    timestamp: float
+    trip_id: int
+    trip_leg_id: int
+    trip_info: TripInfo
+    type: str = MessageType.TRIP_STATUS
 
 
 # Messages from FM to sherpas

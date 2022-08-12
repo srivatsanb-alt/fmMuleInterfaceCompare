@@ -1,7 +1,7 @@
 from typing import Dict, List
 from core.logs import get_logger
 from models.db_session import DBSession, session
-from models.fleet_models import Sherpa, SherpaStatus
+from models.fleet_models import SherpaStatus
 from models.trip_models import OngoingTrip, Trip, TripLeg
 
 
