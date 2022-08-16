@@ -170,8 +170,8 @@ class MoveReq(FMReq):
 
 class PeripheralsReq(FMReq):
     endpoint: str = "peripherals"
-    hitch_msg: Optional[HitchReq]
-    conv_msg: Optional[ConveyorReq]
+    auto_hitch: Optional[HitchReq]
+    conveyor: Optional[ConveyorReq]
 
 
 @dataclass
