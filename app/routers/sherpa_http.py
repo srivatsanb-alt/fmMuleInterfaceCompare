@@ -55,9 +55,7 @@ async def verify_fleet_files(sherpa: str = Depends(get_sherpa)):
     job: Job = process_msg(
         SherpaReq(type="verify_fleet_files", timestamp=time.time()), sherpa
     )
-    redis_conn = redis.from_url(
-        os.getenv("FM_REDIS_URI"), encoding="utf-8", decode_responses=True
-    )
+    redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
     while True:
         status = Job.fetch(job.id, connection=redis_conn).get_status(refresh=True)
         if status == "finished":
