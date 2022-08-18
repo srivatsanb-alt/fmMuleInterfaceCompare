@@ -16,6 +16,17 @@ class TripStatus:
     FAILED = "failed"
 
 
+class TripState:
+    WAITING_STATION_PRE_ACTION_START = "waiting_station_pre_action_start"
+    WAITING_STATION_PRE_ACTION_END = "waiting_station_pre_action_end"
+    WAITING_STATION_POST_ACTION_START = "waiting_station_post_action_start"
+    WAITING_STATION_POST_ACTION_END = "waiting_station_post_action_end"
+    WAITING_STATION_AUTO_HITCH_START = "waiting_station_auto_hitch_start"
+    WAITING_STATION_AUTO_HITCH_END = "waiting_station_auto_hitch_end"
+    WAITING_STATION_AUTO_UNHITCH_START = "waiting_station_auto_unhitch_start"
+    WAITING_STATION_AUTO_UNHITCH_END = "waiting_station_auto_unhitch_end"
+
+
 class Trip(Base, TimestampMixin):
     __tablename__ = "trips"
 
@@ -119,6 +130,8 @@ class OngoingTrip(Base, TimestampMixin):
     next_idx = Column(Integer)
     # index into the stations in augmented route.
     next_idx_aug = Column(Integer)
+    # list of TripStates
+    states = Column(ARRAY(String))
 
     def init(self):
         self.next_idx_aug = 0

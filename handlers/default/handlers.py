@@ -18,7 +18,7 @@ from models.request_models import (
 from models.base_models import StationProperties
 from models.db_session import session
 from models.fleet_models import Fleet, Sherpa, SherpaStatus, Station
-from models.trip_models import OngoingTrip, PendingTrip, Trip
+from models.trip_models import OngoingTrip, PendingTrip, Trip, TripState, TripStatus
 from utils.comms import get, send_move_msg, send_msg_to_sherpa
 from utils.util import are_poses_close
 
@@ -49,6 +49,7 @@ class Handlers:
         sherpa_status: SherpaStatus = session.get_sherpa_status(sherpa_name)
         sherpa: Sherpa = trip.sherpa
         fleet: Fleet = sherpa.fleet
+
         if not sherpa_name:
             get_logger(fleet.name).error(f"cannot start leg of unassigned trip {trip.id}")
             return
@@ -60,8 +61,10 @@ class Handlers:
         next_station: Station = session.get_station(ongoing_trip.next_station())
         if are_poses_close(sherpa_status.pose, next_station.pose, sherpa_name):
             get_logger(sherpa_name).info(f"{sherpa_name} already at {next_station.name}")
-            ongoing_trip.end_leg()
+            hutils.end_leg()
             return
+
+        self.do_pre_actions(ongoing_trip)
         hutils.start_leg(ongoing_trip, session)
         get_logger(sherpa_name).info(
             f"{sherpa_name} started leg of trip {trip.id} from {ongoing_trip.curr_station()} to {ongoing_trip.next_station()}"
@@ -78,6 +81,8 @@ class Handlers:
             f"{sherpa_name} finished leg of trip {trip.id} from {ongoing_trip.curr_station()} to {ongoing_trip.next_station()}"
         )
         hutils.end_leg(ongoing_trip)
+
+        self.do_post_actions(ongoing_trip)
 
     def assign_sherpa_to_pending_trip(self, pending_trip: PendingTrip, sherpa_name: str):
         self.start_trip(pending_trip.trip, sherpa_name)
@@ -122,21 +127,12 @@ class Handlers:
             )
         sherpa.pose = msg.destination_pose
 
-        # TODO: Confirm that reached pose matches expected pose.
         self.end_leg(ongoing_trip)
 
-        station_name = ongoing_trip.curr_station()
-        station: Station = session.get_station(station_name)
-        # if at unhitch station send unhitch command.
-        if StationProperties.AUTO_UNHITCH in station.properties:
-            get_logger(sherpa_name).info(f"{sherpa_name} reached an auto-unhitch station")
-            unhitch_msg = PeripheralsReq(auto_hitch=HitchReq(hitch=False))
-            response = send_msg_to_sherpa(ongoing_trip.trip.sherpa, unhitch_msg)
-            get_logger(sherpa_name).info(
-                f"received from {sherpa_name}: status {response.status_code}"
-            )
-            return
+    def do_pre_actions(self, ongoing_trip: OngoingTrip):
+        station: Station = session.get_station(ongoing_trip.curr_station())
         # if at hitch station send hitch command.
+        sherpa_name = ongoing_trip.sherpa_name
         if StationProperties.AUTO_HITCH in station.properties:
             get_logger(sherpa_name).info(f"{sherpa_name} reached an auto-hitch station")
             hitch_msg = PeripheralsReq(auto_hitch=HitchReq(hitch=True))
@@ -144,8 +140,20 @@ class Handlers:
             get_logger(sherpa_name).info(
                 f"received from {sherpa_name}: status {response.status_code}"
             )
-            return
+            ongoing_trip.states.append(TripState.WAITING_STATION_AUTO_HITCH_START)
 
+    def do_post_actions(self, ongoing_trip: OngoingTrip):
+        station: Station = session.get_station(ongoing_trip.curr_station())
+        # if at unhitch station send unhitch command.
+        sherpa_name = ongoing_trip.sherpa_name
+        if StationProperties.AUTO_UNHITCH in station.properties:
+            get_logger(sherpa_name).info(f"{sherpa_name} reached an auto-unhitch station")
+            unhitch_msg = PeripheralsReq(hitch_msg=HitchReq(hitch=False))
+            response = send_msg_to_sherpa(ongoing_trip.trip.sherpa, unhitch_msg)
+            get_logger(sherpa_name).info(
+                f"received from {sherpa_name}: status {response.status_code}"
+            )
+            ongoing_trip.states.append(TripState.WAITING_STATION_AUTO_UNHITCH_START)
         if ongoing_trip.finished():
             self.end_trip(ongoing_trip)
             pending_trip: PendingTrip = session.get_pending_trip()
@@ -184,18 +192,41 @@ class Handlers:
 
     def handle_peripherals(self, req: SherpaPeripheralsReq):
         sherpa_name = req.source
+        ongoing_trip: OngoingTrip = session.get_ongoing_trip(sherpa_name)
+        if not ongoing_trip:
+            get_logger(sherpa_name).info(
+                f"ignoring peripherals request from {sherpa_name} without ongoing trip"
+            )
+            return
         if req.dispatch_button:
-            self.handle_dispatch_button(req.dispatch_button, sherpa_name)
+            self.handle_dispatch_button(req.dispatch_button, ongoing_trip)
         elif req.auto_hitch:
-            self.handle_auto_hitch(req.auto_hitch, sherpa_name)
+            self.handle_auto_hitch(req.auto_hitch, ongoing_trip)
 
-    def handle_auto_hitch(self, req: HitchReq, sherpa_name):
-        if not req.hitch:
-            # auto-unhitch done
-            get_logger(sherpa_name).info(f"auto-unhitch done on {sherpa_name}")
+    def handle_auto_hitch(self, req: HitchReq, ongoing_trip: OngoingTrip):
+        sherpa_name = ongoing_trip.sherpa_name
+        if req.hitch:
+            # auto hitch
+            if TripState.WAITING_STATION_AUTO_HITCH_START not in ongoing_trip.states:
+                error = f"auto-hitch done by {sherpa_name} without auto-hitch command"
+                get_logger(sherpa_name).error(error)
+                raise ValueError(error)
+            get_logger(sherpa_name).info(f"auto-hitch done by {sherpa_name}")
+            ongoing_trip.states.remove(TripState.WAITING_STATION_AUTO_HITCH_START)
+            ongoing_trip.states.append(TripState.WAITING_STATION_AUTO_HITCH_END)
+        else:
+            # auto unhitch
+            if TripState.WAITING_STATION_AUTO_UNHITCH_START not in ongoing_trip.states:
+                error = f"auto-unhitch done by {sherpa_name} without auto-unhitch command"
+                get_logger(sherpa_name).error(error)
+                raise ValueError(error)
+            get_logger(sherpa_name).info(f"auto-unhitch done by {sherpa_name}")
+            ongoing_trip.states.remove(TripState.WAITING_STATION_AUTO_UNHITCH_START)
+            ongoing_trip.states.remove(TripState.WAITING_STATION_AUTO_UNHITCH_END)
             self.handle_next(sherpa_name)
 
-    def handle_dispatch_button(self, req: DispatchButtonReq, sherpa_name):
+    def handle_dispatch_button(self, req: DispatchButtonReq, ongoing_trip: OngoingTrip):
+        sherpa_name = ongoing_trip.sherpa_name
         if not req.value:
             get_logger(sherpa_name).info(
                 f"dispatch button not pressed on {sherpa_name}, taking no action"
@@ -206,6 +237,16 @@ class Handlers:
 
     def handle_next(self, sherpa_name):
         ongoing_trip: OngoingTrip = session.get_ongoing_trip(sherpa_name)
+
+        if ongoing_trip.finished():
+            self.end_trip(ongoing_trip)
+            pending_trip: PendingTrip = session.get_pending_trip()
+            if pending_trip:
+                get_logger(sherpa_name).info(
+                    f"found pending trip id {pending_trip.trip_id}"
+                )
+                self.assign_sherpa_to_pending_trip(pending_trip, sherpa_name)
+
         if not ongoing_trip.finished_booked():
             self.start_leg(ongoing_trip)
             return
