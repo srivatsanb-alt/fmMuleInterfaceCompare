@@ -5,7 +5,7 @@ import redis
 
 from app.routers.dependencies import get_sherpa
 from core.config import Config
-from endpoints.request_models import (
+from models.request_models import (
     InitMsg,
     ReachedReq,
     SherpaPeripheralsReq,

@@ -7,7 +7,7 @@ import aioredis
 from app.routers.dependencies import get_sherpa
 from core.config import Config
 from core.constants import MessageType
-from endpoints.request_models import SherpaStatusMsg, TripStatusMsg
+from models.request_models import SherpaStatusMsg, TripStatusMsg
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, status
 from models.db_session import session
 from utils.rq import Queues, enqueue

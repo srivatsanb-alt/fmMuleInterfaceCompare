@@ -5,7 +5,7 @@ import requests
 
 from core.config import Config
 from core.logs import get_logger
-from endpoints.request_models import FMReq, MoveReq
+from models.request_models import FMReq, MoveReq
 from models.fleet_models import Sherpa, Station
 from models.trip_models import OngoingTrip
 

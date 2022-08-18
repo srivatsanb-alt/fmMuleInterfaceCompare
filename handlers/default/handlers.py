@@ -1,6 +1,6 @@
 from requests import Response
 from core.logs import get_logger
-from endpoints.request_models import (
+from models.request_models import (
     BookingReq,
     DispatchButtonReq,
     HitchReq,

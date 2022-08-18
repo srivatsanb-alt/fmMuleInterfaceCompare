@@ -7,7 +7,7 @@ from typing import List, Optional, Union, Dict
 from core.constants import MessageType
 from pydantic import BaseModel
 
-from models.fleet_models import MapFile
+from models.base_models import JsonMixin
 
 
 class HitchReq(BaseModel):
@@ -88,21 +88,6 @@ class BookingReq(TripsReq):
 
 #################################################
 # Messages from sherpas (Websocket)
-
-
-class JsonMixin:
-    @classmethod
-    def from_dict(cls, obj_dict):
-        flds = [f.name for f in fields(cls)]
-        attribs = {k: v for (k, v) in obj_dict.items() if k in flds}
-        return cls(**attribs)
-
-    @classmethod
-    def from_json(cls, obj_json):
-        return cls.from_dict(json.loads(obj_json))
-
-    def to_json(self):
-        return json.dumps(asdict(self))
 
 
 @dataclass

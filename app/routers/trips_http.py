@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from core.config import Config
 
-from endpoints.request_models import BookingReq, TripsReq
+from models.request_models import BookingReq, TripsReq
 from utils.rq import Queues, enqueue
 
 
