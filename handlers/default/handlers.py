@@ -130,7 +130,7 @@ class Handlers:
         # if at unhitch station send unhitch command.
         if StationProperties.AUTO_UNHITCH in station.properties:
             get_logger(sherpa_name).info(f"{sherpa_name} reached an auto-unhitch station")
-            unhitch_msg = PeripheralsReq(hitch_msg=HitchReq(hitch=False))
+            unhitch_msg = PeripheralsReq(auto_hitch=HitchReq(hitch=False))
             response = send_msg_to_sherpa(ongoing_trip.trip.sherpa, unhitch_msg)
             get_logger(sherpa_name).info(
                 f"received from {sherpa_name}: status {response.status_code}"
@@ -139,7 +139,7 @@ class Handlers:
         # if at hitch station send hitch command.
         if StationProperties.AUTO_HITCH in station.properties:
             get_logger(sherpa_name).info(f"{sherpa_name} reached an auto-hitch station")
-            hitch_msg = PeripheralsReq(hitch_msg=HitchReq(hitch=True))
+            hitch_msg = PeripheralsReq(auto_hitch=HitchReq(hitch=True))
             response = send_msg_to_sherpa(ongoing_trip.trip.sherpa, hitch_msg)
             get_logger(sherpa_name).info(
                 f"received from {sherpa_name}: status {response.status_code}"
