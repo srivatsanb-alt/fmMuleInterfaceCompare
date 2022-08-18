@@ -64,10 +64,15 @@ def report_failure(job, connection, fail_type, value, traceback):
     session.close_on_error()
 
 
+def report_success(job, connection, result, *args, **kwargs):
+    session.close()
+
+
 def enqueue(queue: Queue, func, data, *args, **kwargs):
     kwargs.setdefault("result_ttl", 100)
     kwargs.setdefault("failure_ttl", 0)
     kwargs.setdefault("on_failure", report_failure)
+    kwargs.setdefault("on_success", report_success)
     return queue.enqueue(
         func,
         data,

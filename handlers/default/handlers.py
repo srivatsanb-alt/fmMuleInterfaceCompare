@@ -261,6 +261,4 @@ class Handlers:
             get_logger().error(f"no handler defined for {msg.type}")
             return
         response = msg_handler(msg)
-        # TODO: do this in RQ's success handler
-        session.close()
         return response
