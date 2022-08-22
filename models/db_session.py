@@ -1,7 +1,7 @@
 from typing import List
 from core.db import session_maker
 from sqlalchemy.orm import Session
-
+from models.frontend_models import FrontendUser
 from models.fleet_models import Fleet, MapFile, Sherpa, SherpaStatus, Station, StationStatus
 from models.trip_models import OngoingTrip, PendingTrip, Trip, TripLeg
 
@@ -58,6 +58,14 @@ class DBSession:
         return (
             self.session.query(Sherpa)
             .filter(Sherpa.hashed_api_key == hashed_api_key)
+            .one_or_none()
+        )
+
+    def get_frontend_user(self, name: str, hashed_password: str) -> FrontendUser:
+        return (
+            self.session.query(FrontendUser)
+            .filter(FrontendUser.name == name,
+                    FrontendUser.hashed_password == hashed_password)
             .one_or_none()
         )
 
