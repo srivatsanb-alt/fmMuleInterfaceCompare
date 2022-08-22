@@ -18,26 +18,17 @@ def get_sherpa_url(
     return f"http://{sherpa.ip_address}:{port}/api/{version}/fm"
 
 
+def post_mock(url, body: Dict) -> Dict:
+    return process_response_mock(None)
+
+
 def post(url, body: Dict) -> Dict:
-    # from unittest.mock import Mock
-    # from requests.models import Response
-    # import json
-
-    # response = Mock(spec=Response)
-
-    # resp_d = {
-    # "display_name": "S2",
-    # "hwid": "abcd",
-    # "ip_address": "10.4.5.6",
-    # "map_files_match": True,
-    # }
-    # response.json.return_value = json.dumps(resp_d)
-    # response.status_code = 200
-    #
-    # return response
-
     response = requests.post(url, json=body)
     return process_response(response)
+
+
+def get_mock(sherpa: Sherpa, req: FMReq) -> Dict:
+    return process_response_mock(None, json=True)
 
 
 def get(sherpa: Sherpa, req: FMReq) -> Dict:
@@ -58,6 +49,23 @@ def send_msg_to_sherpa(sherpa: Sherpa, msg: FMReq) -> Dict:
     get_logger(sherpa.name).info(f"msg to {sherpa.name}: {body}")
     get_logger(sherpa.name).info(f"msg url: {url}")
     return post(url, body)
+
+
+def process_response_mock(response: requests.Response, json=False) -> Dict:
+    from unittest.mock import Mock
+    from requests.models import Response
+
+    response = Mock(spec=Response)
+
+    resp_d = {
+        "display_name": "S2",
+        "hwid": "abcd",
+    }
+    if json:
+        response.json.return_value = resp_d
+    response.status_code = 200
+
+    return response
 
 
 def process_response(response: requests.Response) -> Dict:
