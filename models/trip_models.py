@@ -1,10 +1,15 @@
 import time
-from sqlalchemy import ARRAY, Column, DateTime, ForeignKey, Integer, String
-from models.base_models import Base, TimestampMixin
-from sqlalchemy.orm import relationship
-from sqlalchemy.dialects.postgresql import JSONB
 
+from sqlalchemy import ARRAY, Column, DateTime, ForeignKey, Integer, String
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.orm import relationship
+from sqlalchemy.orm.attributes import flag_modified
 from utils.util import ts_to_str
+
+from models.base_models import Base, TimestampMixin
+
+START = "start"
+END = "end"
 
 
 class TripStatus:
@@ -17,14 +22,12 @@ class TripStatus:
 
 
 class TripState:
-    WAITING_STATION_PRE_ACTION_START = "waiting_station_pre_action_start"
-    WAITING_STATION_PRE_ACTION_END = "waiting_station_pre_action_end"
-    WAITING_STATION_POST_ACTION_START = "waiting_station_post_action_start"
-    WAITING_STATION_POST_ACTION_END = "waiting_station_post_action_end"
     WAITING_STATION_AUTO_HITCH_START = "waiting_station_auto_hitch_start"
     WAITING_STATION_AUTO_HITCH_END = "waiting_station_auto_hitch_end"
     WAITING_STATION_AUTO_UNHITCH_START = "waiting_station_auto_unhitch_start"
     WAITING_STATION_AUTO_UNHITCH_END = "waiting_station_auto_unhitch_end"
+    WAITING_STATION_DISPATCH_START = "waiting_station_dispatch_start"
+    WAITING_STATION_DISPATCH_END = "waiting_station_dispatch_end"
 
 
 class Trip(Base, TimestampMixin):
@@ -131,11 +134,12 @@ class OngoingTrip(Base, TimestampMixin):
     # index into the stations in augmented route.
     next_idx_aug = Column(Integer)
     # list of TripStates
-    states = Column(ARRAY(String))
+    states = Column(ARRAY(String), server_default="{}")
 
     def init(self):
         self.next_idx_aug = 0
         self.next_idx = 0 if 0 in self.trip.aug_idxs_booked else -1
+        self.states = []
 
     def curr_station(self):
         if self.next_idx_aug > 0:
@@ -152,12 +156,13 @@ class OngoingTrip(Base, TimestampMixin):
     def start_leg(self, trip_leg_id):
         self.trip_leg_id = trip_leg_id
         self.trip.status = TripStatus.EN_ROUTE
+        self.states.clear()
 
     def end_leg(self):
         self.trip.status = TripStatus.WAITING_STATION
-        self.next_idx_aug += 1
         if self.next_idx_aug in self.trip.aug_idxs_booked:
             self.next_idx += 1
+        self.next_idx_aug += 1
         if self.finished():
             self.trip.end(success=True)
 
@@ -167,5 +172,24 @@ class OngoingTrip(Base, TimestampMixin):
     def finished_booked(self):
         return self.next_idx >= len(self.trip.route)
 
-    def set_leg_id(self, trip_leg_id):
-        self.trip_leg_id = trip_leg_id
+    def check_continue(self):
+        # Trip can continue if every state has a matching end state.
+        return all([get_end_state(state) in self.states for state in self.states])
+
+    def add_state(self, state):
+        self.states.append(state)
+        flag_modified(self, "states")
+
+    def clear_states(self):
+        self.states.clear()
+        flag_modified(self, "states")
+
+
+def is_start_state(state):
+    return state.endswith(START)
+
+
+def get_end_state(state):
+    if not is_start_state(state):
+        return state
+    return state[: -len(START)] + END
