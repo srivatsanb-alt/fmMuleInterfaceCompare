@@ -36,4 +36,5 @@ class StationProperties(enum.Enum):
     DROP = 3
     AUTO_HITCH = 4
     AUTO_UNHITCH = 5
-    CHARGING = 6
+    DISPATCH_NOT_REQD = 6
+    CHARGING = 7
