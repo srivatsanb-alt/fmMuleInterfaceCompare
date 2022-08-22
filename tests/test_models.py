@@ -2,7 +2,12 @@ import time
 from core.db import engine
 from models import fleet_models, trip_models
 from models.db_session import DBSession
-from utils.fleet_utils import add_update_fleet, add_sherpa, add_sherpa_to_fleet, add_station
+from utils.fleet_utils import (
+    add_update_fleet,
+    add_sherpa,
+    add_sherpa_to_fleet,
+    add_update_station,
+)
 
 
 def test_sherpa_model():
@@ -64,21 +69,23 @@ def test_trip_model():
 
 
 def curl_test():
+    from models.fleet_models import StationProperties
+
     fleet_models.Base.metadata.drop_all(bind=engine)
     trip_models.Base.metadata.drop_all(bind=engine)
     fleet_models.Base.metadata.create_all(bind=engine)
     trip_models.Base.metadata.create_all(bind=engine)
     add_update_fleet(name="test")
-    api_key = add_sherpa("S1", "abcd")
+    api_key = add_sherpa(
+        "S2", hwid="abcd", api_key="MbviPsacmoa-hRB_iXp_HSpTsSTSE-YIbl3bHjCb4uM_abcd"
+    )
     print(api_key)
-    add_sherpa_to_fleet("S1", "test")
-    add_station("a", [1.0, 0.0, 3.14])
-    add_station("b", [2.0, 0.0, 3.14])
-    add_station("c", [3.0, 0.0, 3.14])
-    dbs = DBSession()
-    trip = dbs.create_trip(["a", "b", "c"])
-    dbs.create_pending_trip(trip.id)
-    dbs.close()
+    add_sherpa_to_fleet("S2", "test")
+    add_update_station(name="a", pose=[1.0, 0.0, 3.14])
+    add_update_station(
+        name="b", pose=[2.0, 0.0, 3.14], properties=[StationProperties.AUTO_UNHITCH]
+    )
+    add_update_station(name="c", pose=[3.0, 0.0, 3.14])
 
 
 def hall1_test():
@@ -104,7 +111,7 @@ def ws_conn_test():
 
     client = TestClient(app)
     headers = {"x-api-key": "MbviPsacmoa-hRB_iXp_HSpTsSTSE-YIbl3bHjCb4uM_abcd"}
-    with client.websocket_connect("/api/v1/sherpa/", headers=headers) as websocket:
+    with client.websocket_connect("/ws/api/v1/sherpa/", headers=headers) as websocket:
         data = {
             "type": "sherpa_status",
             "timestamp": 1654166684,
