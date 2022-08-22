@@ -11,6 +11,8 @@ AVAILABLE = "available"
 def assign_sherpa(trip: Trip, sherpa: str, session: DBSession):
     ongoing_trip = session.create_ongoing_trip(sherpa, trip.id)
     trip.assign_sherpa(sherpa)
+    sherpa_status = session.get_sherpa_status(sherpa)
+    sherpa_status.idle = False
     get_logger(sherpa).info(f"assigned trip id {trip.id} to {sherpa}")
     return ongoing_trip
 
@@ -32,13 +34,10 @@ def start_leg(ongoing_trip: OngoingTrip, session: DBSession) -> TripLeg:
         trip.id, ongoing_trip.curr_station(), ongoing_trip.next_station()
     )
     ongoing_trip.start_leg(trip_leg.id)
-    # ongoing_trip.set_leg_id(trip_leg.id)
-    # trip.start_leg()
     sherpa_name = ongoing_trip.sherpa_name
     if ongoing_trip.curr_station():
         update_leg_curr_station(ongoing_trip.curr_station(), sherpa_name, session)
     update_leg_next_station(ongoing_trip.next_station(), sherpa_name, session)
-    update_leg_sherpa(sherpa_name, session)
 
     return trip_leg
 
@@ -63,26 +62,25 @@ def update_leg_next_station(next_station_name: str, sherpa: str, session: DBSess
     next_station_status.arriving_sherpas.append(sherpa)
 
 
-def update_leg_sherpa(sherpa_name: str, session: DBSession):
-    sherpa_status = session.get_sherpa_status(sherpa_name)
-    sherpa_status.idle = False
+def is_sherpa_available(sherpa):
+    reason = None
+    if not reason and not sherpa.initialized:
+        reason = "not init"
+    if not reason and sherpa.disabled:
+        reason = "disabled"
+    if not reason and not sherpa.idle:
+        reason = "not idle"
+    if not reason:
+        reason = AVAILABLE
+    return reason == AVAILABLE, reason
 
 
 def get_sherpa_availability(all_sherpas: List[SherpaStatus]):
     availability = {}
 
     for sherpa in all_sherpas:
-        reason = None
-        if not reason and not sherpa.initialized:
-            reason = "not init"
-        if not reason and sherpa.disabled:
-            reason = "disabled"
-        if not reason and not sherpa.idle:
-            reason = "not idle"
-        if not reason:
-            reason = AVAILABLE
-
-        availability[sherpa.sherpa_name] = reason
+        available, reason = is_sherpa_available(sherpa)
+        availability[sherpa.sherpa_name] = available, reason
 
     return availability
 
@@ -92,8 +90,8 @@ def find_best_sherpa():
     availability: Dict[str, str] = get_sherpa_availability(all_sherpas)
     get_logger().info(f"sherpa availability: {availability}")
 
-    for name, reason in availability.items():
-        if reason == AVAILABLE:
+    for name, (available, _) in availability.items():
+        if available:
             get_logger().info(f"found {name}")
             return name
 
