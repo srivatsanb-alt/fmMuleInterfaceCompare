@@ -25,16 +25,17 @@ def get_frontend_user(
     token: str = Query(None)
 ):
 
-    details = jwt.decode(
-        token,
-        settings.FM_SECRET_KEY,
-        algorithms=["HS256"],
-        options={"require": ["exp", "sub"]},
-    )
-    return details["sub"]
+    try:
+        details = jwt.decode(
+            token,
+            settings.FM_SECRET_KEY,
+            algorithms=["HS256"],
+            options={"require": ["exp", "sub"]},
+        )
+        return details["sub"]
 
-    # except jwt.exceptions.InvalidTokenError:
-    #     return None
+    except jwt.exceptions.InvalidTokenError:
+        return None
 
 
 def generate_jwt_token(username: str):
