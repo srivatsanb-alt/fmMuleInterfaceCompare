@@ -2,7 +2,6 @@
 set -e
 
 export DOCKER_HOST=ssh://ati@$1
-source env.sh
 
 echo "Pushing to $1"
 
@@ -11,7 +10,23 @@ BRANCH=$(git rev-parse --abbrev-ref HEAD)
 GIT_TAG="$(git rev-parse HEAD) $(git diff --quiet || echo 'dirty')" 
 IMAGE_ID="$IMAGE_ID built on $USER@$(hostname) from $GIT_TAG branch $BRANCH $(date)"
 
-docker image build --build-arg image_meta="${IMAGE_ID}" -t fleet_manager -f Dockerfile.arm64 .
+echo "IMAGE_ID: $IMAGE_ID"
+
+echo "Building fleet manager docker image"
+
+# docker image build -t fleet_manager -f Dockerfile .
+# docker image build --build-arg image_meta="${IMAGE_ID}" -t fleet_manager:$GIT_TAG -f Dockerfile .
+
+# Stop the container if it's already running
+echo "Stopping and removing old fleet manager docker image"
+docker stop fleet_manager 
+docker rm fleet_manager
+
+echo "Running docker image on the server $1"
+docker run -d \
+       --name fm_container \
+       -v /tmp:/tmp \
+        fleet_manager
 
 #echo "Starting postgres"
 #docker stop postgres
@@ -30,20 +45,4 @@ docker image build --build-arg image_meta="${IMAGE_ID}" -t fleet_manager -f Dock
 #        -p $redis_port:$redis_port \
 #         redis/redis-stack:latest 
 
-# Stop the container if it's already running
-docker stop fleet_manager 
-docker rm fleet_manager
-
-echo "building fleet manager docker image"
-docker build \
-	-t fleet_manager:$fm_branch \
-	-f ./Dockerfile .	
-
-for info in $IMAGE_ID
-do
-  PREV_IMAGE_ID=$info
-  docker rmi $PREV_IMAGE_ID
-  echo "deleting previous fleet_manager:latest docker build, id: $PREV_IMAGE_ID"
-  break
-done
 

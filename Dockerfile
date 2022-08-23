@@ -12,7 +12,7 @@ RUN cd /app
 RUN python3.7 -m pip install -U pip setuptools wheel && \
     python3.7 -m pip install -U poetry==1.1.12
 
-RUN cd fleet_manager && \
-    poetry lock && poetry install
+RUN poetry lock && poetry install
+RUN chmod +x fleet_orchestrator.sh
 
-CMD exec poetry run python3 fleet_orchestrator.py  > /app/out/fm_logs.out 2>&1 
+CMD exec ./fleet_orchestrator.sh
