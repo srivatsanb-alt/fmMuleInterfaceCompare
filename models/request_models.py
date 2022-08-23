@@ -68,7 +68,8 @@ class SherpaPeripheralsReq(SherpaReq):
 #################################################
 # Messages from frontend
 
-class FrontendUserLogin(BaseModel):
+
+class UserLogin(BaseModel):
     name: str
     password: str
 
@@ -87,6 +88,7 @@ class TripMsg(BaseModel):
 class BookingReq(TripsReq):
     trips: List[TripMsg]
     type: str = MessageType.BOOKING
+
 
 #################################################
 # Messages from sherpas (Websocket)
