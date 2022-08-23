@@ -35,7 +35,7 @@ class Fleet(Base):
     map_id = Column(Integer, ForeignKey("maps.id"))
     map = relationship("Map")
     sherpas = relationship("Sherpa", back_populates="fleet")
-
+    stations = relationship("Station", back_populates="fleet")
 
 class Sherpa(Base):
     __tablename__ = "sherpas"
@@ -81,6 +81,8 @@ class Station(Base):
     pose = Column(ARRAY(Float))
     properties = Column(ARRAY(Enum(StationProperties)))
     button_id = Column(String)
+    fleet_id = Column(Integer, ForeignKey("fleets.id"))
+    fleet = relationship("Fleet", back_populates="stations")
 
 
 class StationStatus(TimestampMixin, Base):

@@ -68,6 +68,9 @@ class SherpaPeripheralsReq(SherpaReq):
 #################################################
 # Messages from frontend
 
+class FleetInfoRequest(BaseModel):
+    fleet_name: str
+    
 
 class UserLogin(BaseModel):
     name: str
