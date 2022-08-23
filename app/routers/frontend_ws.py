@@ -23,7 +23,6 @@ async def sherpa_status(websocket: WebSocket,
         return
 
     await websocket.accept()
-    client_ip = websocket.client.host
 
     logging.getLogger().info(f"websocket connection started for {user_name}")
 
@@ -48,8 +47,6 @@ async def reader(websocket):
         except WebSocketDisconnect:
             logging.info("websocket disconnected")
             return
-        send_msg_to_frontend(msg)
-
 
 async def writer(websocket, user):
     redis = aioredis.Redis.from_url(
