@@ -11,7 +11,7 @@ from models.request_models import SherpaStatusMsg, TripStatusMsg
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, status
 from models.db_session import session
 from utils.rq import Queues, enqueue
-from utils.comms import send_msg_to_frontend
+from utils.comms import send_status_update
 
 router = APIRouter()
 
@@ -67,7 +67,7 @@ async def reader(websocket):
 
         #send sherpa status and trip_status to frontend
         if not msg.get("only_backend"):
-            send_msg_to_frontend(msg)
+            send_status_update(msg)
 
 
 async def writer(websocket, sherpa):

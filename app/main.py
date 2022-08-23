@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from .routers import sherpa_http, sherpa_ws, trips_http, frontend_http
+from .routers import sherpa_http, sherpa_ws, trips_http, auth, updates
 import logging
 
 
@@ -25,4 +25,5 @@ app.mount("/api/static", StaticFiles(directory="static"), name="static")
 app.include_router(sherpa_http.router)
 app.include_router(sherpa_ws.router)
 app.include_router(trips_http.router)
-app.include_router(frontend_http.router)
+app.include_router(updates.router)
+app.include_router(auth.router)
