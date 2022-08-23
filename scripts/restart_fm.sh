@@ -9,7 +9,7 @@ shutdown() {
     echo "shutting down fleet manager"
     poetry run python scripts/shutdown.py
     echo "shutting down uvicorn"
-    ps -f | grep uvicorn | awk '{print $2}' | xargs kill -9 >& /dev/null
+    ps -ef | grep uvicorn | awk '{print $2}' | xargs kill -9 >& /dev/null
 }
 
 start() {
