@@ -11,17 +11,17 @@ router = APIRouter(
 )
 
 
-def process_req(req: TripsReq):
+def process_req(req: TripsReq, user: str):
+    if not user:
+        raise HTTPException(status_code=403, detail="Unknown user")
+
     handler_obj = Config.get_handler()
     enqueue(Queues.handler_queue, handle, handler_obj, req)
 
 
 @router.post("/book/")
 async def book(booking_req: BookingReq, user=Depends(get_user_from_header)):
-    if not user:
-        raise HTTPException(status_code=403, detail="Unknown user")
-
-    process_req(booking_req)
+    process_req(booking_req, user)
 
 
 def handle(handler, msg):
