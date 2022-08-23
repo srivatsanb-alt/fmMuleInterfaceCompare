@@ -59,16 +59,13 @@ async def reader(websocket):
         if msg_type == MessageType.TRIP_STATUS:
             trip_status_msg = TripStatusMsg.from_dict(msg)
             enqueue(Queues.handler_queue, handle, handler_obj, trip_status_msg, ttl=2)
+            send_status_update(msg)
+
         elif msg_type == MessageType.SHERPA_STATUS:
             status_msg = SherpaStatusMsg.from_dict(msg)
             enqueue(Queues.handler_queue, handle, handler_obj, status_msg)
         else:
             logging.getLogger().error(f"Unsupported message type {msg_type}")
-
-        #send sherpa status and trip_status to frontend
-        if not msg.get("only_backend"):
-            send_status_update(msg)
-
 
 async def writer(websocket, sherpa):
     redis = aioredis.Redis.from_url(

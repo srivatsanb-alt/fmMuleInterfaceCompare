@@ -26,6 +26,7 @@ class DBSession:
         self.session.flush()
         self.session.refresh(obj)
 
+
     def create_trip(self, route, priority=0, metadata=None):
         trip = Trip(route=route, priority=priority, metadata=metadata)
         self.add_to_session(trip)
@@ -46,6 +47,9 @@ class DBSession:
         trip_leg = TripLeg(trip_id, curr_station, next_station)
         self.add_to_session(trip_leg)
         return trip_leg
+
+    def get_all_fleets(self) -> List[Fleet]:
+        return self.session.query(Fleet).all()
 
     def get_map_files(self, fleet_name: str) -> List[MapFile]:
         fleet: Fleet = self.session.query(Fleet).filter(Fleet.name == fleet_name).one()
