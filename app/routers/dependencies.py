@@ -20,8 +20,19 @@ def get_sherpa(x_api_key: str = Header(None)):
     return sherpa_name
 
 
-def get_frontend_user(token: str = Query(None)):
+def get_user_from_header(x_user_token: str = Header(None)):
+    if x_user_token is None:
+        return None
+    return decode_token(x_user_token)
 
+
+def get_user_from_query(token: str = Query(None)):
+    if token is None:
+        return None
+    return decode_token(token)
+
+
+def decode_token(token: str):
     try:
         details = jwt.decode(
             token,

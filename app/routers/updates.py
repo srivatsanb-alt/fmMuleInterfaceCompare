@@ -4,14 +4,15 @@ import logging
 import os
 
 import aioredis
-from app.routers.dependencies import get_frontend_user
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, status
+
+from app.routers.dependencies import get_user_from_query
 
 router = APIRouter()
 
 
 @router.websocket("/ws/api/v1/updates/{token}")
-async def sherpa_status(websocket: WebSocket, user_name=Depends(get_frontend_user)):
+async def sherpa_status(websocket: WebSocket, user_name=Depends(get_user_from_query)):
 
     if not user_name:
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
