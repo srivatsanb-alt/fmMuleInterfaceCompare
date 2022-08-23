@@ -10,7 +10,7 @@ from core.config import Config
 from core.logs import init_logging
 from utils.rq import Queues
 
-from handlers.periodic_updates import send_periodic_updates
+from scripts.periodic_updates import send_periodic_updates
 
 def init_fleet_manager(config):
     init_logging()
