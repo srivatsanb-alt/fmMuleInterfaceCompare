@@ -1,10 +1,11 @@
+import json
 import time
 from typing import Dict
+import redis
 
 import requests
 import os
 import asyncio
-import aioredis
 from core.config import Config
 from core.logs import get_logger
 from models.request_models import FMReq, MoveReq
@@ -87,5 +88,5 @@ def send_move_msg(sherpa: Sherpa, ongoing_trip: OngoingTrip, station: Station) -
 
 
 def send_status_update(msg):
-    pub = aioredis.Redis.from_url(os.getenv("FM_REDIS_URI"), decode_responses=True)
-    asyncio.run(pub.publish("channel:status_updates", str(msg)))
+    pub = redis.from_url(os.getenv("FM_REDIS_URI"), decode_responses=True)
+    pub.publish("channel:status_updates", json.dumps(msg))
