@@ -2,21 +2,16 @@ import ast
 import asyncio
 import logging
 import os
+
 import aioredis
-from utils.comms import send_msg_to_frontend
-from app.routers.dependencies import get_sherpa, get_frontend_user
-from core.config import Config
-from core.constants import MessageType
-from models.request_models import SherpaStatusMsg, TripStatusMsg
+from app.routers.dependencies import get_frontend_user
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, status
-from models.db_session import session
-from utils.rq import Queues, enqueue
 
 router = APIRouter()
 
-@router.websocket("/ws/api/v1/frontend/{token}")
-async def sherpa_status(websocket: WebSocket,
-                        user_name=Depends(get_frontend_user)):
+
+@router.websocket("/ws/api/v1/updates/{token}")
+async def sherpa_status(websocket: WebSocket, user_name=Depends(get_frontend_user)):
 
     if not user_name:
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
@@ -29,7 +24,7 @@ async def sherpa_status(websocket: WebSocket,
     rw = [
         asyncio.create_task(reader(websocket)),
         asyncio.create_task(
-            writer(websocket, user),
+            writer(websocket),
         ),
     ]
     try:
@@ -48,12 +43,13 @@ async def reader(websocket):
             logging.info("websocket disconnected")
             return
 
-async def writer(websocket, user):
+
+async def writer(websocket):
     redis = aioredis.Redis.from_url(
         os.getenv("FM_REDIS_URI"), max_connections=10, decode_responses=True
     )
     psub = redis.pubsub()
-    await psub.subscribe("channel:frontend")
+    await psub.subscribe("channel:status_updates")
     while True:
         message = await psub.get_message(ignore_subscribe_messages=True, timeout=5)
         if message:

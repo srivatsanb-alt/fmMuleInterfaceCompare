@@ -1,12 +1,11 @@
 import hashlib
 import time
+
 import jwt
-import secrets
-from fastapi import Header
-from models.db_session import session
-from models.fleet_models import Sherpa
-from fastapi.param_functions import Query
 from core.settings import settings
+from fastapi import Header
+from fastapi.param_functions import Query
+from models.db_session import session
 
 
 def get_sherpa(x_api_key: str = Header(None)):
@@ -21,9 +20,7 @@ def get_sherpa(x_api_key: str = Header(None)):
     return sherpa_name
 
 
-def get_frontend_user(
-    token: str = Query(None)
-):
+def get_frontend_user(token: str = Query(None)):
 
     try:
         details = jwt.decode(
@@ -43,5 +40,5 @@ def generate_jwt_token(username: str):
         {"sub": username, "exp": time.time() + 64800},
         settings.FM_SECRET_KEY,
         algorithm="HS256",
-       )
+    )
     return access_token
