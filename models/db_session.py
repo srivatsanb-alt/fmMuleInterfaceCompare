@@ -54,6 +54,9 @@ class DBSession:
     def get_sherpa(self, name: str) -> Sherpa:
         return self.session.query(Sherpa).filter(Sherpa.name == name).one()
 
+    def get_all_sherpas(self) -> List[Sherpa]:
+        return self.session.query(Sherpa).all()
+
     def get_sherpa_by_api_key(self, hashed_api_key: str) -> Sherpa:
         return (
             self.session.query(Sherpa)
@@ -69,7 +72,7 @@ class DBSession:
             .one_or_none()
         )
 
-    def get_all_sherpas(self) -> List[SherpaStatus]:
+    def get_all_sherpa_status(self) -> List[SherpaStatus]:
         return self.session.query(SherpaStatus).all()
 
     def get_sherpa_status(self, name: str) -> SherpaStatus:
@@ -80,12 +83,18 @@ class DBSession:
     def get_station(self, name: str) -> Station:
         return self.session.query(Station).filter(Station.name == name).one()
 
+    def get_all_station(self) -> List[Station]:
+        return self.session.query(Station).all()
+
     def get_station_status(self, name: str) -> StationStatus:
         return (
             self.session.query(StationStatus)
             .filter(StationStatus.station_name == name)
             .one()
         )
+
+    def get_all_station_status(self) -> List[StationStatus]:
+        return self.session.query(StationStatus).all()
 
     def get_trip(self, trip_id):
         return self.session.query(Trip).filter(Trip.id == trip_id).one()
