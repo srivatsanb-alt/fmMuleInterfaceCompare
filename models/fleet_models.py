@@ -50,6 +50,9 @@ class Sherpa(Base):
     fleet = relationship("Fleet", back_populates="sherpas")
 
     status = relationship("SherpaStatus", back_populates="sherpa", uselist=False)
+    exclusion_zones = relationship(
+        "ExclusionZone", secondary="visa_assignments", back_populates="sherpas"
+    )
 
 
 class SherpaStatus(TimestampMixin, Base):
