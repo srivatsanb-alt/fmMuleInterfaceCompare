@@ -26,23 +26,7 @@ echo "Running docker image on the server $1"
 docker run -d \
        --name fm_container \
        -v /tmp:/tmp \
+       -v /app/logs:~/logs \
+       -v /app/static:~/static \
         fleet_manager
-
-#echo "Starting postgres"
-#docker stop postgres
-#docker rm postgres 
-#docker run -d \
-#        -e POSTGRES_USER=$postgres_user \
-#        -e POSTGRES_PASSWORD=$postgres_pwd \
-#        -p $postgres_port:$postgres_port \
-#        postgres:latest
-
-#docker stop redis 
-#docker rm redis
-#echo "Starting redis"
-#docker run -d \
-#        --name redis \
-#        -p $redis_port:$redis_port \
-#         redis/redis-stack:latest 
-
 
