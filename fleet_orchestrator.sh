@@ -31,4 +31,16 @@ save_fleet_log() {
 shutdown
 save_fleet_log
 redis-cli flushall
+/usr/bin/redis-server &
 start
+
+
+#echo "Starting postgres"
+#docker stop postgres
+#docker rm postgres 
+#docker run -d \
+#        -e POSTGRES_USER=$postgres_user \
+#        -e POSTGRES_PASSWORD=$postgres_pwd \
+#        -p $postgres_port:$postgres_port \
+#        postgres:latest
+

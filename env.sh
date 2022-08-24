@@ -5,3 +5,4 @@ export FM_MAP_DIR="$FM_INSTALL_DIR/static/"
 export FM_LOG_DIR="$FM_INSTALL_DIR/logs/"
 export FM_CONFIG_DIR="$FM_INSTALL_DIR/config/"
 export ATI_CONFIG="$FM_INSTALL_DIR/static/consolidated.toml"
+export FM_PORT=8000
