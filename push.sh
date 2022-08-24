@@ -26,6 +26,8 @@ echo "Running docker image on the server $1"
 docker run -d \
        --name fm_container \
        -v /tmp:/tmp \
+       -v /app/logs:~/logs \
+       -v /app/static:~/static \
         fleet_manager
 
 #echo "Starting postgres"
