@@ -5,6 +5,7 @@ export FM_MAP_DIR="$FM_INSTALL_DIR/../data/"
 export FM_LOG_DIR="$FM_INSTALL_DIR/logs/"
 export FM_CONFIG_DIR="$FM_INSTALL_DIR/config/"
 export FM_ROOT="$FM_INSTALL_DIR/web/hivemind/backend/"
+export FM_PORT=8000
 export FLEET_DATA="$FM_INSTALL_DIR/../data/"
 export ATI_CONFIG="$FM_INSTALL_DIR/../data/consolidated.toml"
 export ATI_MAP="$FM_INSTALL_DIR/../data/"
