@@ -16,7 +16,7 @@ start() {
     echo "starting fleet manager"
     poetry run python main.py > $LOGS/fm.out 2>&1 &
     echo "starting uvicorn"
-    poetry run uvicorn app.main:app --host 0.0.0.0 > $LOGS/uvicorn.out 2>&1 &
+    poetry run uvicorn app.main:app --host 0.0.0.0 --port $FM_PORT > $LOGS/uvicorn.out 2>&1 &
 }
 
 save_fleet_log() {
@@ -30,5 +30,5 @@ save_fleet_log() {
 
 shutdown
 save_fleet_log
-redis-cli flushall
+redis-cli -u $FM_REDIS_URI flushall
 start
