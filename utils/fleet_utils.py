@@ -1,7 +1,10 @@
 import hashlib
 import os
 import secrets
-
+from core.db import engine
+import inspect
+import glob
+import sys
 
 from models.fleet_models import (
     Fleet,
@@ -102,6 +105,9 @@ def add_map(fleet: str):
     add_map_files(fleet)
 
 
+
+
+
 def add_map_files(fleet_name: str):
     path_prefix = f"{os.environ['FM_MAP_DIR']}/{fleet_name}/map"
     with open(f"{path_prefix}/map_files.txt") as f:
@@ -117,6 +123,36 @@ def add_map_files(fleet_name: str):
             map_file = MapFile(map_id=map_id, filename=map_file_name, file_hash=sha1)
             db.add(map_file)
         db.commit()
+
+
+def create_all_tables(drop=False):
+    all_files = glob.glob("models/*.py")
+    for file in all_files:
+        module = file.split('.')[0]
+        print(f"looking for models in module {module}")
+        try:
+            class_defs = [cls_obj
+                          for cls_name, cls_obj in inspect.getmembers(
+                                                        sys.modules[module])
+                          if (inspect.isclass(cls_obj) &
+                              cls_obj.__module__ == module)
+                          ]
+            for class_def in class_defs:
+                if drop:
+                    class_def.__table__.drop(engine)
+                try:
+                    class_def.__table__.metadata.create_all(bind=engine)
+                    print(f"created table {class_def.__tablename__}")
+                except Exception as e:
+                    print(f"unable to create table {class_def.__tablename__}, {e}")
+        except Exception as e:
+            print(f"unable to fetch models from {module}.py, {e}")
+
+
+def create_table(model, drop=False):
+    if drop:
+        model.__table__.drop(engine)
+    model.__table__.metadata(bind=engine)
 
 
 BUF_SIZE = 65536
