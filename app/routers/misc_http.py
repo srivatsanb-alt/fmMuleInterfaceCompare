@@ -16,6 +16,19 @@ router = APIRouter(
 )
 
 
+@router.get("/api/v1/info/fleet_names")
+async def fleet_names(
+            user_name=Depends(get_user_from_header)
+            ):
+
+    all_fleets = session.get_all_fleets()
+    fleet_list = [fleet.name
+                  for fleet in all_fleets]
+
+    return {"fleet_names": fleet_list}
+
+
+
 @router.post("/api/v1/master_data/fleet")
 async def master_data(master_data_info: MasterDataInfo,
                       user_name=Depends(get_user_from_header)):
