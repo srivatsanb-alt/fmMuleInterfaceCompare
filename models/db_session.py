@@ -81,13 +81,15 @@ class DBSession:
 
     def get_sherpa_status(self, name: str) -> SherpaStatus:
         return (
-            self.session.query(SherpaStatus).filter(SherpaStatus.sherpa_name == name).one()
+            self.session.query(SherpaStatus)
+            .filter(SherpaStatus.sherpa_name == name)
+            .one()
         )
 
     def get_station(self, name: str) -> Station:
         return self.session.query(Station).filter(Station.name == name).one()
 
-    def get_all_station(self) -> List[Station]:
+    def get_all_stations(self) -> List[Station]:
         return self.session.query(Station).all()
 
     def get_station_status(self, name: str) -> StationStatus:
