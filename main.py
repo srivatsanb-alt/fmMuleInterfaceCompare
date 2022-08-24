@@ -10,6 +10,7 @@ from core.config import Config
 from core.logs import init_logging
 from utils.rq import Queues
 
+from scripts.periodic_updates import send_periodic_updates
 
 def init_fleet_manager(config):
     init_logging()
@@ -41,5 +42,8 @@ if __name__ == "__main__":
     for q in Queues.get_queues():
         process = Process(target=start, args=(q,))
         process.start()
+
+    #send periodic status update
+    Process(target=send_periodic_updates).start()
 
     logging.info("Ati Fleet Manager started")
