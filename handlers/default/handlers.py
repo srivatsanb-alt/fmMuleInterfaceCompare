@@ -36,7 +36,6 @@ class Handlers:
         )
         hutils.start_trip(ongoing_trip, session)
         get_logger(sherpa_name).info(f"trip {trip.id} started")
-        self.start_leg(ongoing_trip)
 
     def end_trip(self, ongoing_trip: OngoingTrip, success: bool = True):
         if not ongoing_trip:
@@ -100,11 +99,12 @@ class Handlers:
 
     def assign_next_task(self, sherpa_name):
         ongoing_trip: OngoingTrip = session.get_ongoing_trip(sherpa_name)
-
         if not ongoing_trip or ongoing_trip.finished():
             self.end_trip(ongoing_trip)
             self.assign_pending_trip(sherpa_name)
-        elif not ongoing_trip.finished_booked() and ongoing_trip.check_continue():
+
+        ongoing_trip: OngoingTrip = session.get_ongoing_trip(sherpa_name)
+        if not ongoing_trip.finished_booked() and ongoing_trip.check_continue():
             self.start_leg(ongoing_trip)
 
     def initialize_sherpa(self, sherpa_name):
