@@ -129,12 +129,13 @@ def create_all_tables(drop=False):
     all_files = glob.glob("models/*.py")
     for file in all_files:
         module = file.split('.')[0]
+        module = module.replace("/",".")
         print(f"looking for models in module {module}")
         try:
             class_defs = [cls_obj
                           for cls_name, cls_obj in inspect.getmembers(
                                                         sys.modules[module])
-                          if (inspect.isclass(cls_obj) &
+                          if (inspect.isclass(cls_obj) and
                               cls_obj.__module__ == module)
                           ]
             for class_def in class_defs:
