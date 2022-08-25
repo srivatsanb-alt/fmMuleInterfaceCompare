@@ -5,3 +5,16 @@ class MessageType:
     SHERPA_STATUS = "sherpa_status"
     TRIP_STATUS = "trip_status"
     BOOKING = "book"
+    RESOURCE_ACCESS = "resource_access"
+
+
+class VisaType:
+    PARKING = "parking"
+    EXCLUSIVE_PARKING = "exclusive_parking"
+    UNPARKING = "unparking"
+    TRANSIT = "transit"
+
+
+class VisaAccessType:
+    REQUEST = "request"
+    RELEASE = "release"
