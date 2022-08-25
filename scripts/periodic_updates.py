@@ -41,7 +41,7 @@ def get_fleet_status_msg(fleet):
 
 
 def send_periodic_updates():
-    logging.get_logger().info("starting periodic updates script")
+    logging.getLogger().info("starting periodic updates script")
     time.sleep(5)
     while True:
         all_fleets = session.get_all_fleets()
