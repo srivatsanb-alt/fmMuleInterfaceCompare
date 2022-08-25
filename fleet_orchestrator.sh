@@ -32,6 +32,9 @@ shutdown
 save_fleet_log
 redis-cli flushall
 /usr/bin/redis-server &
+
+echo $Regenerating config
+python3 mule/ati/orchestrator/orchestrator.py
 start
 
 

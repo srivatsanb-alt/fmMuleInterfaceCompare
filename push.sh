@@ -14,8 +14,8 @@ echo "IMAGE_ID: $IMAGE_ID"
 
 echo "Building fleet manager docker image"
 
-# docker image build -t fleet_manager -f Dockerfile .
-# docker image build --build-arg image_meta="${IMAGE_ID}" -t fleet_manager:$GIT_TAG -f Dockerfile .
+docker image build -t fleet_manager -f Dockerfile .
+docker image build --build-arg image_meta="${IMAGE_ID}" -t fleet_manager:$GIT_TAG -f Dockerfile .
 
 # Stop the container if it's already running
 echo "Stopping and removing old fleet manager docker image"
@@ -23,10 +23,10 @@ docker stop fleet_manager
 docker rm fleet_manager
 
 echo "Running docker image on the server $1"
-docker run -d \
-       --name fm_container \
-       -v /tmp:/tmp \
-       -v /app/logs:~/logs \
-       -v /app/static:~/static \
-        fleet_manager
-
+# docker run -d \
+#        --name fm_container \
+#        # -v /tmp:/tmp \ # IS THIS NEEDED? IS THIS CORRECT?
+#        -v ~/fleet_manager/logs:/logs \
+#        -v ~/fleet_manager/static:/static \
+#        -v ~/fleet_manager/mule/config: /app/mule/config \
+#        fleet_manager
