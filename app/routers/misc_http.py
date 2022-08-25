@@ -21,6 +21,9 @@ async def fleet_names(
             user_name=Depends(get_user_from_header)
             ):
 
+    if not user_name:
+        raise HTTPException(status_code=403, detail="Unknown requester")
+
     all_fleets = session.get_all_fleets()
     fleet_list = [fleet.name
                   for fleet in all_fleets]
@@ -33,7 +36,7 @@ async def fleet_names(
 async def master_data(master_data_info: MasterDataInfo,
                       user_name=Depends(get_user_from_header)):
 
-    if user_name:
+    if not user_name:
         raise HTTPException(status_code=403, detail="Unknown requester")
 
     all_fleets = session.get_all_fleets()
@@ -64,19 +67,19 @@ async def master_data(master_data_info: MasterDataInfo,
 
     sample_sherpa_status = {}
     all_sherpa_status = session.get_all_sherpa_status()
-    sample_sherpa_status.update({all_sherpa_status[0].sherpa_name: all_sherpa_status[0].__dict})
-    sample_sherpa_status[all_sherpa_status[0].sherpa_name].update(all_sherpa_status[0].sherpa.__dict)
+    sample_sherpa_status.update({all_sherpa_status[0].sherpa_name: all_sherpa_status[0].__dict__})
+    sample_sherpa_status[all_sherpa_status[0].sherpa_name].update(all_sherpa_status[0].sherpa.__dict__)
     response.update({"sample_sherpa_status": sample_sherpa_status})
 
     sample_station_status = {}
     all_station_status = session.get_all_station_status()
     sample_station_status.update(
                     {all_station_status[0].station_name:
-                        all_station_status[0].__dict}
+                        all_station_status[0].__dict__}
                     )
 
     sample_station_status[all_station_status[0].station_name].update(
-                                    all_station_status[0].station.__dict)
+                                    all_station_status[0].station.__dict__)
 
     response.update({"sample_station_status": sample_station_status})
 
