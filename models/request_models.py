@@ -3,7 +3,7 @@ from enum import Enum
 from typing import List, Optional, Union, Dict
 
 
-from core.constants import MessageType, VisaAccessType, VisaType
+from core.constants import MessageType
 from pydantic import BaseModel
 
 from models.base_models import JsonMixin
@@ -25,12 +25,6 @@ class ConveyorReq(BaseModel):
 
 class DispatchButtonReq(BaseModel):
     value: bool
-
-
-class VisaReq(BaseModel):
-    zone_id: int
-    zone_name: str
-    visa_type: VisaType
 
 
 #################################################
@@ -69,14 +63,6 @@ class SherpaPeripheralsReq(SherpaReq):
     dispatch_button: DispatchButtonReq = None
     error_info: str = None
     type = MessageType.PERIPHERALS
-
-
-class ResourceReq(SherpaReq):
-    visa: VisaReq = None
-    parking_slot = None
-    charging_bay = None
-    access_type: VisaAccessType = None
-    type = MessageType.RESOURCE_ACCESS
 
 
 #################################################
