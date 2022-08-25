@@ -1,0 +1,5 @@
+services:
+  fleet_manager:
+    image: fleet_manager
+  postgres:
+    image: postgres
