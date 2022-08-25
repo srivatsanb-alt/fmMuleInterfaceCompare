@@ -1,11 +1,8 @@
 from dataclasses import dataclass
 from enum import Enum
 from typing import List, Optional, Union, Dict
-
-
 from core.constants import MessageType
 from pydantic import BaseModel
-
 from models.base_models import JsonMixin
 
 
@@ -26,6 +23,9 @@ class ConveyorReq(BaseModel):
 class DispatchButtonReq(BaseModel):
     value: bool
 
+
+class FMReq(BaseModel):
+    endpoint: str
 
 #################################################
 # Messages from sherpas
@@ -63,34 +63,6 @@ class SherpaPeripheralsReq(SherpaReq):
     dispatch_button: DispatchButtonReq = None
     error_info: str = None
     type = MessageType.PERIPHERALS
-
-
-#################################################
-# Messages from frontend
-
-class MasterDataInfo(BaseModel):
-    fleet_name: str
-
-
-class UserLogin(BaseModel):
-    name: str
-    password: str
-
-
-class TripsReq(BaseModel):
-    type: str
-
-
-class TripMsg(BaseModel):
-    route: List[str]
-    tasks: Optional[Dict[str, str]] = None
-    priority: Optional[int] = 0
-    metadata: Optional[Dict[str, str]] = None
-
-
-class BookingReq(TripsReq):
-    trips: List[TripMsg]
-    type: str = MessageType.BOOKING
 
 
 #################################################
@@ -143,13 +115,44 @@ class TripStatusMsg(JsonMixin):
     trip_info: TripInfo
     type: str = MessageType.TRIP_STATUS
 
+#################################################
+# Messages from frontend
+
+
+class MasterDataInfo(BaseModel):
+    fleet_name: str
+
+
+class UserLogin(BaseModel):
+    name: str
+    password: str
+
+
+class TripsReq(BaseModel):
+    type: str
+
+
+class TripMsg(BaseModel):
+    route: List[str]
+    tasks: Optional[Dict[str, str]] = None
+    priority: Optional[int] = 0
+    metadata: Optional[Dict[str, str]] = None
+
+
+class BookingReq(TripsReq):
+    trips: List[TripMsg]
+    type: str = MessageType.BOOKING
+
+
+class StartStopReq(FMReq):
+    start: bool
+
 
 #################################################
 # Messages to sherpas
 
-
-class FMReq(BaseModel):
-    endpoint: str
+class InitReq(FMReq):
+    endpoint: str = "init"
 
 
 class MoveReq(FMReq):
@@ -178,11 +181,29 @@ class VerifyFleetFilesResp(JsonMixin):
     files_info: List[MapFileInfo]
 
 
-class InitReq(FMReq):
-    endpoint: str = "init"
-
-
 @dataclass
 class InitResp(JsonMixin):
     display_name: str
     hwid: str
+
+
+class PauseResumeReq(FMReq):
+    endpoint: str = "pause_resume"
+    pause: bool
+
+
+class SwitchModeReq(FMReq):
+    endpoint: str = "switch_mode"
+    mode: str
+    #run_name: Optional[str]
+
+
+class ResetPoseReq(FMReq):
+    endpoint: str = "recovery"
+    fleet_station: str
+    pose: Optional[List[float]]
+
+
+class DiagnosticsReq(FMReq):
+    endpoint: str = "diagnostics"
+    sherpa_name: str

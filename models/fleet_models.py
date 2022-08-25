@@ -31,6 +31,7 @@ class Fleet(Base):
     customer = Column(String)
     site = Column(String)
     location = Column(String)
+    status = Column(String)
 
     map_id = Column(Integer, ForeignKey("maps.id"))
     map = relationship("Map")

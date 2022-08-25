@@ -48,6 +48,9 @@ class DBSession:
         self.add_to_session(trip_leg)
         return trip_leg
 
+    def get_fleet(self, fleet_name: str) -> Fleet:
+        return self.session.query(Fleet).filter(Fleet.name == fleet_name).one_or_none()
+
     def get_all_fleets(self) -> List[Fleet]:
         return self.session.query(Fleet).all()
 
@@ -56,7 +59,7 @@ class DBSession:
         return self.session.query(MapFile).filter(MapFile.map_id == fleet.map_id).all()
 
     def get_sherpa(self, name: str) -> Sherpa:
-        return self.session.query(Sherpa).filter(Sherpa.name == name).one()
+        return self.session.query(Sherpa).filter(Sherpa.name == name).one_or_none()
 
     def get_all_sherpas(self) -> List[Sherpa]:
         return self.session.query(Sherpa).all()
@@ -121,6 +124,22 @@ class DBSession:
             return self.session.query(TripLeg).filter(
                 TripLeg.id == ongoing_trip.trip_leg_id
             )
+
+    def update_fleet_status(self, fleet_name: str, status: str):
+        success = self.session.query(Fleet).filter(
+                      Fleet.name == fleet_name
+                      ).update({Fleet.status: status})
+
+        self.session.commit()
+        return self.session, success
+
+    def enable_disable_sherpa(self, sherpa_name: str, disable: bool):
+        success = self.session.query(SherpaStatus).filter(
+                       SherpaStatus.sherpa_name == sherpa_name
+                       ).update({SherpaStatus.disabled: disable})
+
+        self.session.commit()
+        return self.session, success
 
     def delete_pending_trip(self, pending_trip):
         self.session.delete(pending_trip)
