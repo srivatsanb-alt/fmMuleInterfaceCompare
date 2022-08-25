@@ -28,7 +28,7 @@ def get_fleet_status_msg(fleet):
                 station_status_update.update({station_status.station_name:
                                               station_status.__dict__})
 
-                sherpa_status_update[station_status.station_name].update(
+                station_status_update[station_status.station_name].update(
                                         station_status.station.__dict__)
 
     msg.update({"sherpa_status": sherpa_status_update})
