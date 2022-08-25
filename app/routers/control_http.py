@@ -21,9 +21,9 @@ router = APIRouter(
 )
 
 
-@router.get("/fleet/{entity_name}/start_stop")
+@router.post("/fleet/{entity_name}/start_stop")
 async def start_stop(
-            start_stop_req=StartStopReq,
+            start_stop_req:StartStopReq,
             entity_name=Union[str, None],
             user_name=Depends(get_user_from_header)
             ):
@@ -42,9 +42,9 @@ async def start_stop(
                      entity_name, "stop")
 
 
-@router.get("/fleet/{entity_name}/emergency_stop")
+@router.post("/fleet/{entity_name}/emergency_stop")
 async def emergnecy_stop(
-            pause_resume_req=PauseResumeReq,
+            pause_resume_req:PauseResumeReq,
             entity_name=Union[str, None],
             user_name=Depends(get_user_from_header)
             ):
@@ -69,9 +69,9 @@ async def emergnecy_stop(
             send_msg_to_sherpa(sherpa_status.sherpa, pause_resume_req)
 
 
-@router.get("/sherpa/{entity_name}/emergency_stop")
+@router.post("/sherpa/{entity_name}/emergency_stop")
 async def sherpa_emergnecy_stop(
-            pause_resume_req=PauseResumeReq,
+            pause_resume_req:PauseResumeReq,
             entity_name=Union[str, None],
             user_name=Depends(get_user_from_header)
             ):
@@ -92,7 +92,7 @@ async def sherpa_emergnecy_stop(
 
 @router.post("/sherpa/{entity_name}/switch_mode")
 async def switch_mode(
-            switch_mode_req=SwitchModeReq,
+            switch_mode_req:SwitchModeReq,
             entity_name=Union[str, None],
             user_name=Depends(get_user_from_header)
             ):
@@ -109,7 +109,7 @@ async def switch_mode(
 
 @router.post("/sherpa/{entity_name}/recovery")
 async def reset_pose(
-            reset_pose_req=ResetPoseReq,
+            reset_pose_req:ResetPoseReq,
             entity_name=Union[str, None],
             user_name=Depends(get_user_from_header)
             ):

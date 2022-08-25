@@ -200,7 +200,7 @@ class SwitchModeReq(FMReq):
 
 class ResetPoseReq(FMReq):
     endpoint: str = "recovery"
-    fleet_station: str
+    fleet_station: Optional[str]
     pose: Optional[List[float]]
 
 
