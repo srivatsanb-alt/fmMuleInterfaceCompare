@@ -86,7 +86,7 @@ def get_sherpa_availability(all_sherpas: List[SherpaStatus]):
 
 
 def find_best_sherpa():
-    all_sherpas: List[SherpaStatus] = session.get_all_sherpas()
+    all_sherpas: List[SherpaStatus] = session.get_all_sherpa_status()
     availability: Dict[str, str] = get_sherpa_availability(all_sherpas)
     get_logger().info(f"sherpa availability: {availability}")
 
