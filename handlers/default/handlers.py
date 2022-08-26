@@ -295,15 +295,15 @@ class Handlers:
 
     def handle_visa_release(self, req: VisaReq, sherpa_name):
         visa_type = req.visa_type
-        zone_id = req.zone_id
+        zone_name = req.zone_name
         if visa_type == VisaType.UNPARKING:
-            unlock_exclusion_zone(zone_id, "station", sherpa_name)
-            unlock_exclusion_zone(zone_id, "lane", sherpa_name)
+            unlock_exclusion_zone(zone_name, "station", sherpa_name)
+            unlock_exclusion_zone(zone_name, "lane", sherpa_name)
         elif visa_type == VisaType.TRANSIT:
-            unlock_exclusion_zone(zone_id, "lane", sherpa_name)
+            unlock_exclusion_zone(zone_name, "lane", sherpa_name)
 
         get_logger(sherpa_name).info(
-            f"{sherpa_name} released {visa_type} visa to zone {zone_id}"
+            f"{sherpa_name} released {visa_type} visa to zone {zone_name}"
         )
         response: ResourceResp = ResourceResp(
             granted=True, visa=req, access_type=AccessType.RELEASE
@@ -312,11 +312,11 @@ class Handlers:
 
     def handle_visa_request(self, req: VisaReq, sherpa_name):
         visa_type = req.visa_type
-        zone_id = req.zone_id
-        granted = maybe_grant_visa(zone_id, visa_type, sherpa_name)
+        zone_name = req.zone_name
+        granted = maybe_grant_visa(zone_name, visa_type, sherpa_name)
         granted_message = "granted" if granted else "not granted"
         get_logger(sherpa_name).info(
-            f"{sherpa_name} requested {visa_type} visa to zone {zone_id}: {granted_message}"
+            f"{sherpa_name} requested {visa_type} visa to zone {zone_name}: {granted_message}"
         )
         response: ResourceResp = ResourceResp(
             granted=granted, visa=req, access_type=AccessType.REQUEST
