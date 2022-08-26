@@ -82,7 +82,7 @@ class Station(Base):
     pose = Column(ARRAY(Float))
     properties = Column(ARRAY(Enum(StationProperties)))
     button_id = Column(String)
-    fleet_id = Column(Integer, ForeignKey("fleets.id"))
+    fleet_id = Column(Integer, ForeignKey("fleets.id"), nullable = False)
     fleet = relationship("Fleet", back_populates="stations")
 
 
