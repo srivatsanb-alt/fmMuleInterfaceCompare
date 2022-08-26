@@ -1,10 +1,8 @@
-from typing import List
 from models.db_session import session
 
 from core.logs import get_logger
 from models.fleet_models import Sherpa
 from models.request_models import VisaType
-from models.visa_models import ExclusionZone
 
 
 def lock_exclusion_zone(zone_name, zone_type, sherpa_name, exclusive=True, actual=True):
@@ -108,22 +106,21 @@ def clear_all_locks(sherpa_name):
 
 
 def maybe_grant_visa(zone_name, visa_type, sherpa_name):
-    zone_id = f"{zone_name}_{visa_type}"
-    sherpa: Sherpa = session.get_sherpa(sherpa_name)
+    # sherpa: Sherpa = session.get_sherpa(sherpa_name)
 
     ezone = session.get_exclusion_zone(zone_name, "lane")
 
-    other_zones: List[ExclusionZone] = sherpa.exclusion_zones
+    # other_zones: List[ExclusionZone] = sherpa.exclusion_zones
     linked_zones = get_linked_gates(ezone)
 
-    if len(other_zones) > 1 or (len(other_zones) > 0 and other_zones[0] != ezone):
-        visa_str = f"Foreign policy violation - sherpa {sherpa_name} asking for visa to zone {zone_id} while holding visa for other_zones"
-        get_logger(sherpa_name).warn(visa_str)
-        return False
+    # if len(other_zones) > 1 or (len(other_zones) > 0 and other_zones[0] != ezone):
+    # visa_str = f"Foreign policy violation - sherpa {sherpa_name} asking for visa to zone {zone_id} while holding visa for other_zones"
+    # get_logger(sherpa_name).warn(visa_str)
+    # return False
 
     if len(linked_zones) > 0:
         if visa_type != VisaType.TRANSIT:
-            visa_str = f"sherpa {sherpa_name} asking for non-transit visa_type {visa_type} at intersection-zone {zone_id}. Rejecting visa."
+            visa_str = f"sherpa {sherpa_name} asking for non-transit visa_type {visa_type} at intersection-zone {zone_name}. Rejecting visa."
             get_logger(sherpa_name).warn(visa_str)
             return False
         else:
@@ -138,7 +135,7 @@ def maybe_grant_visa(zone_name, visa_type, sherpa_name):
         ) and lock_exclusion_zone(zone_name, "lane", sherpa_name)
 
     if visa_type == VisaType.TRANSIT:
-        return lock_exclusion_zone(zone_name, "lane", sherpa_name)
+        return lock_exclusion_zone(zone_name, "lane", sherpa_name, exclusive=False)
 
 
 if __name__ == "__main__":
