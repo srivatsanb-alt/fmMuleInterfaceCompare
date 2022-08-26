@@ -3,15 +3,18 @@ from typing import Union
 from app.routers.dependencies import (
         get_user_from_header,
 )
-from utils.comms import send_msg_to_sherpa
+from utils.comms import send_msg_to_sherpa, get
 from models.db_session import session
 from fastapi import APIRouter, Depends, HTTPException
 from models.request_models import (
     PauseResumeReq,
     SwitchModeReq,
-    StartStopReq,
     DiagnosticsReq,
-    ResetPoseReq
+    ResetPoseReq,
+    PauseResumeCtrlReq,
+    SwitchModeCtrlReq,
+    ResetPoseCtrlReq,
+    StartStopCtrlReq
 )
 
 router = APIRouter(
@@ -23,10 +26,12 @@ router = APIRouter(
 
 @router.get("/fleet/{entity_name}/start_stop")
 async def start_stop(
-            start_stop_req=StartStopReq,
+            start_stop_ctrl_req=StartStopCtrlReq,
             entity_name=Union[str, None],
             user_name=Depends(get_user_from_header)
             ):
+
+    response = {}
 
     if not user_name:
         raise HTTPException(status_code=403, detail="Unknown requester")
@@ -34,20 +39,24 @@ async def start_stop(
     if not entity_name:
         raise HTTPException(status_code=403, detail="No entity name")
 
-    if start_stop_req.start:
+    if start_stop_ctrl_req.start:
         session, _ = session.update_fleet_status(
                      entity_name, "start")
     else:
         session, _ = session.update_fleet_status(
                      entity_name, "stop")
 
+    return response
+
 
 @router.get("/fleet/{entity_name}/emergency_stop")
 async def emergnecy_stop(
-            pause_resume_req=PauseResumeReq,
+            pause_resume_ctrl_req=PauseResumeCtrlReq,
             entity_name=Union[str, None],
             user_name=Depends(get_user_from_header)
             ):
+
+    response = {}
 
     if not user_name:
         raise HTTPException(status_code=403, detail="Unknown requester")
@@ -64,17 +73,21 @@ async def emergnecy_stop(
 
             session, _ = session.enable_disable_sherpa(
                                 sherpa_status.sherpa_name,
-                                disable=pause_resume_req.pause)
-
+                                disable=pause_resume_ctrl_req.pause)
+            pause_resume_req = PauseResumeReq(pause=pause_resume_ctrl_req.pause)
             send_msg_to_sherpa(sherpa_status.sherpa, pause_resume_req)
+
+    return response
 
 
 @router.get("/sherpa/{entity_name}/emergency_stop")
 async def sherpa_emergnecy_stop(
-            pause_resume_req=PauseResumeReq,
+            pause_resume_ctrl_req=PauseResumeCtrlReq,
             entity_name=Union[str, None],
             user_name=Depends(get_user_from_header)
             ):
+
+    response = {}
 
     if not user_name:
         raise HTTPException(status_code=403, detail="Unknown requester")
@@ -85,17 +98,22 @@ async def sherpa_emergnecy_stop(
     sherpa_status = session.get_sherpa_status(entity_name)
     session, _ = session.enable_disable_sherpa(
                         sherpa_status.sherpa_name,
-                        disable=pause_resume_req.pause)
+                        disable=pause_resume_ctrl_req.pause)
 
+    pause_resume_req = PauseResumeReq(pause=pause_resume_ctrl_req.pause)
     send_msg_to_sherpa(sherpa_status.sherpa, pause_resume_req)
+
+    return response
 
 
 @router.post("/sherpa/{entity_name}/switch_mode")
 async def switch_mode(
-            switch_mode_req=SwitchModeReq,
+            switch_mode_ctrl_req=SwitchModeCtrlReq,
             entity_name=Union[str, None],
             user_name=Depends(get_user_from_header)
             ):
+
+    response = {}
 
     if not user_name:
         raise HTTPException(status_code=403, detail="Unknown requester")
@@ -104,15 +122,20 @@ async def switch_mode(
         raise HTTPException(status_code=403, detail="No entity name")
 
     sherpa_status = session.get_sherpa_status(entity_name)
+    switch_mode_req = SwitchModeReq(mode=switch_mode_ctrl_req.mode)
     send_msg_to_sherpa(sherpa_status.sherpa, switch_mode_req)
+
+    return response
 
 
 @router.post("/sherpa/{entity_name}/recovery")
 async def reset_pose(
-            reset_pose_req=ResetPoseReq,
+            reset_pose_ctrl_req=ResetPoseCtrlReq,
             entity_name=Union[str, None],
             user_name=Depends(get_user_from_header)
             ):
+
+    response = {}
 
     if not user_name:
         raise HTTPException(status_code=403, detail="Unknown requester")
@@ -120,14 +143,39 @@ async def reset_pose(
     if not entity_name:
         raise HTTPException(status_code=403, detail="No entity name")
 
-    if not reset_pose_req.fleet_station:
+    if not reset_pose_ctrl_req.fleet_station:
         raise HTTPException(status_code=403, detail="No fleet staion detail")
 
     sherpa_status = session.get_sherpa_status(entity_name)
-    station = sesssion.get_station(reset_pose_req.fleet_station)
+    station = sesssion.get_station(reset_pose_ctrl_req.fleet_station)
 
     if not station:
         raise HTTPException(status_code=403, detail="bad fleet staion detail")
 
-    reset_pose_req.pose = station.pose
+    reset_pose_req = ResetPoseReq(pose=station.pose.to_lis)
     send_msg_to_sherpa(sherpa_status.sherpa, reset_pose_req)
+
+    return response
+
+
+@router.post("/sherpa/{entity_name}/diagnostics")
+async def diagnostics(
+            reset_pose_ctrl_req=ResetPoseCtrlReq,
+            entity_name=Union[str, None],
+            user_name=Depends(get_user_from_header)
+            ):
+
+    response = {}
+
+    if not user_name:
+        raise HTTPException(status_code=403, detail="Unknown requester")
+
+    if not entity_name:
+        raise HTTPException(status_code=403, detail="No entity name")
+
+    sherpa_status = session.get_sherpa_status(entity_name)
+
+    diagnostics_req = DiagnosticsReq()
+    response = get(sherpa_status.sherpa, diagnostics_req)
+
+    return response

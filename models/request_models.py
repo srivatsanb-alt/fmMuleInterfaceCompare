@@ -24,9 +24,6 @@ class DispatchButtonReq(BaseModel):
     value: bool
 
 
-class FMReq(BaseModel):
-    endpoint: str
-
 #################################################
 # Messages from sherpas
 
@@ -144,12 +141,29 @@ class BookingReq(TripsReq):
     type: str = MessageType.BOOKING
 
 
-class StartStopReq(FMReq):
+class StartStopCtrlReq(BaseModel):
     start: bool
+
+
+class PauseResumeCtrlReq(BaseModel):
+    pause: bool
+
+
+class SwitchModeCtrlReq(BaseModel):
+    mode: str
+
+
+class ResetPoseCtrlReq(BaseModel):
+    fleet_station: str
 
 
 #################################################
 # Messages to sherpas
+
+
+class FMReq(BaseModel):
+    endpoint: str
+
 
 class InitReq(FMReq):
     endpoint: str = "init"
@@ -169,6 +183,25 @@ class PeripheralsReq(FMReq):
     conveyor: Optional[ConveyorReq]
 
 
+class PauseResumeReq(FMReq):
+    endpoint: str = "pause_resume"
+    pause: bool
+
+
+class SwitchModeReq(FMReq):
+    endpoint: str = "switch_mode"
+    mode: str
+
+
+class ResetPoseReq(FMReq):
+    endpoint: str = "recovery"
+    pose: List[float]
+
+
+class DiagnosticsReq(FMReq):
+    endpoint: str = "diagnostics"
+
+
 @dataclass
 class MapFileInfo(JsonMixin):
     file_name: str
@@ -185,25 +218,3 @@ class VerifyFleetFilesResp(JsonMixin):
 class InitResp(JsonMixin):
     display_name: str
     hwid: str
-
-
-class PauseResumeReq(FMReq):
-    endpoint: str = "pause_resume"
-    pause: bool
-
-
-class SwitchModeReq(FMReq):
-    endpoint: str = "switch_mode"
-    mode: str
-    #run_name: Optional[str]
-
-
-class ResetPoseReq(FMReq):
-    endpoint: str = "recovery"
-    fleet_station: str
-    pose: Optional[List[float]]
-
-
-class DiagnosticsReq(FMReq):
-    endpoint: str = "diagnostics"
-    sherpa_name: str
