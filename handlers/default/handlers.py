@@ -104,7 +104,7 @@ class Handlers:
             self.assign_pending_trip(sherpa_name)
 
         ongoing_trip: OngoingTrip = session.get_ongoing_trip(sherpa_name)
-        if not ongoing_trip.finished_booked() and ongoing_trip.check_continue():
+        if ongoing_trip and not ongoing_trip.finished_booked() and ongoing_trip.check_continue():
             self.start_leg(ongoing_trip)
 
     def initialize_sherpa(self, sherpa_name):
