@@ -134,16 +134,6 @@ class Handlers:
                 f"no pre-actions performed since {sherpa_name} is not at a trip station"
             )
             return
-        station: Station = session.get_station(curr_station)
-        # if at hitch station send hitch command.
-        if StationProperties.AUTO_HITCH in station.properties:
-            get_logger(sherpa_name).info(f"{sherpa_name} reached an auto-hitch station")
-            hitch_msg = PeripheralsReq(auto_hitch=HitchReq(hitch=True))
-            response = send_msg_to_sherpa(ongoing_trip.trip.sherpa, hitch_msg)
-            get_logger(sherpa_name).info(
-                f"received from {sherpa_name}: status {response.status_code}"
-            )
-            ongoing_trip.states.append(TripState.WAITING_STATION_AUTO_HITCH_START)
 
     def do_post_actions(self, ongoing_trip: OngoingTrip):
         curr_station = ongoing_trip.curr_station()
@@ -154,6 +144,17 @@ class Handlers:
             )
             return
         station: Station = session.get_station(curr_station)
+
+        # if at hitch station send hitch command.
+        if StationProperties.AUTO_HITCH in station.properties:
+            get_logger(sherpa_name).info(f"{sherpa_name} reached an auto-hitch station")
+            hitch_msg = PeripheralsReq(auto_hitch=HitchReq(hitch=True))
+            response = send_msg_to_sherpa(ongoing_trip.trip.sherpa, hitch_msg)
+            get_logger(sherpa_name).info(
+                f"received from {sherpa_name}: status {response.status_code}"
+            )
+            ongoing_trip.states.append(TripState.WAITING_STATION_AUTO_HITCH_START)
+
         # if at unhitch station send unhitch command.
         if StationProperties.AUTO_UNHITCH in station.properties:
             get_logger(sherpa_name).info(f"{sherpa_name} reached an auto-unhitch station")
