@@ -8,6 +8,8 @@ from core.config import Config
 from models.request_models import (
     InitMsg,
     ReachedReq,
+    ResourceReq,
+    ResourceResp,
     SherpaPeripheralsReq,
     SherpaReq,
     VerifyFleetFilesResp,
@@ -33,6 +35,20 @@ def process_msg(msg: SherpaReq, sherpa: str):
     return enqueue(Queues.handler_queue, handle, handler_obj, msg)
 
 
+def process_msg_with_response(req: SherpaReq, sherpa: str):
+    job: Job = process_msg(req, sherpa)
+    redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
+    while True:
+        status = Job.fetch(job.id, connection=redis_conn).get_status(refresh=True)
+        if status == "finished":
+            response = Job.fetch(job.id, connection=redis_conn).result
+            break
+        if status == "failed":
+            raise HTTPException(status_code=500)
+        time.sleep(1)
+    return response
+
+
 @router.post("/init/")
 async def init_sherpa(init_msg: InitMsg, sherpa: str = Depends(get_sherpa)):
     process_msg(init_msg, sherpa)
@@ -50,20 +66,17 @@ async def peripherals(
     process_msg(peripherals_req, sherpa)
 
 
+@router.post("/access/resource/", response_model=ResourceResp)
+async def resource_access(resource_req: ResourceReq, sherpa: str = Depends(get_sherpa)):
+    response = process_msg_with_response(resource_req, sherpa)
+    return ResourceResp.from_json(response)
+
+
 @router.get("/verify_fleet_files", response_model=VerifyFleetFilesResp)
 async def verify_fleet_files(sherpa: str = Depends(get_sherpa)):
-    job: Job = process_msg(
+    response = process_msg_with_response(
         SherpaReq(type="verify_fleet_files", timestamp=time.time()), sherpa
     )
-    redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
-    while True:
-        status = Job.fetch(job.id, connection=redis_conn).get_status(refresh=True)
-        if status == "finished":
-            response = Job.fetch(job.id, connection=redis_conn).result
-            break
-        if status == "failed":
-            raise HTTPException(status_code=500)
-        time.sleep(1)
     return VerifyFleetFilesResp.from_json(response)
 
 

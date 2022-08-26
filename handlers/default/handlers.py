@@ -3,6 +3,7 @@ from models.base_models import StationProperties
 from models.db_session import session
 from models.fleet_models import Fleet, Sherpa, SherpaStatus, Station
 from models.request_models import (
+    AccessType,
     BookingReq,
     DispatchButtonReq,
     HitchReq,
@@ -11,11 +12,15 @@ from models.request_models import (
     MapFileInfo,
     PeripheralsReq,
     ReachedReq,
+    ResourceReq,
+    ResourceResp,
     SherpaPeripheralsReq,
     SherpaReq,
     SherpaStatusMsg,
     TripStatusMsg,
     VerifyFleetFilesResp,
+    VisaReq,
+    VisaType,
 )
 from models.trip_models import OngoingTrip, PendingTrip, Trip, TripState
 from requests import Response
@@ -23,6 +28,9 @@ from utils.comms import get, send_move_msg, send_msg_to_sherpa
 from utils.util import are_poses_close
 
 import handlers.default.handler_utils as hutils
+from utils.visa_utils import maybe_grant_visa, unlock_exclusion_zone
+
+assign_next_task = True
 
 
 class Handlers:
@@ -104,7 +112,11 @@ class Handlers:
             self.assign_pending_trip(sherpa_name)
 
         ongoing_trip: OngoingTrip = session.get_ongoing_trip(sherpa_name)
-        if ongoing_trip and not ongoing_trip.finished_booked() and ongoing_trip.check_continue():
+        if (
+            ongoing_trip
+            and not ongoing_trip.finished_booked()
+            and ongoing_trip.check_continue()
+        ):
             self.start_leg(ongoing_trip)
 
     def initialize_sherpa(self, sherpa_name):
@@ -281,6 +293,51 @@ class Handlers:
         )
         send_msg_to_sherpa(sherpa, req)
 
+    def handle_visa_release(self, req: VisaReq, sherpa_name):
+        visa_type = req.visa_type
+        zone_id = req.zone_id
+        if visa_type == VisaType.UNPARKING:
+            unlock_exclusion_zone(zone_id, "station", sherpa_name)
+            unlock_exclusion_zone(zone_id, "lane", sherpa_name)
+        elif visa_type == VisaType.TRANSIT:
+            unlock_exclusion_zone(zone_id, "lane", sherpa_name)
+
+        get_logger(sherpa_name).info(
+            f"{sherpa_name} released {visa_type} visa to zone {zone_id}"
+        )
+        response: ResourceResp = ResourceResp(
+            granted=True, visa=req, access_type=AccessType.RELEASE
+        )
+        return response.to_json()
+
+    def handle_visa_request(self, req: VisaReq, sherpa_name):
+        visa_type = req.visa_type
+        zone_id = req.zone_id
+        granted = maybe_grant_visa(zone_id, visa_type, sherpa_name)
+        granted_message = "granted" if granted else "not granted"
+        get_logger(sherpa_name).info(
+            f"{sherpa_name} requested {visa_type} visa to zone {zone_id}: {granted_message}"
+        )
+        response: ResourceResp = ResourceResp(
+            granted=granted, visa=req, access_type=AccessType.REQUEST
+        )
+        return response.to_json()
+
+    def handle_visa_access(self, req: VisaReq, access_type: AccessType, sherpa_name):
+        if access_type == AccessType.REQUEST:
+            return self.handle_visa_request(req, sherpa_name)
+        elif access_type == AccessType.RELEASE:
+            return self.handle_visa_release(req, sherpa_name)
+
+    def handle_resource_access(self, req: ResourceReq):
+        global assign_next_task
+        assign_next_task = False
+        sherpa_name = req.source
+        if not req.visa:
+            get_logger(sherpa_name).warning("requested access type not supported")
+            return None
+        return self.handle_visa_access(req.visa, req.access_type, sherpa_name)
+
     def handle(self, msg):
         if isinstance(msg, SherpaReq):
             get_logger(msg.source).info(f"got message: {msg}")
@@ -298,7 +355,7 @@ class Handlers:
 
         response = msg_handler(msg)
 
-        if isinstance(msg, SherpaReq):
+        if isinstance(msg, SherpaReq) and assign_next_task:
             self.assign_next_task(msg.source)
 
         return response

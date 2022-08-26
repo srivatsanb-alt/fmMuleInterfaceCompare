@@ -2,10 +2,7 @@ from sqlalchemy import (
     Boolean,
     Column,
     ForeignKey,
-    ForeignKeyConstraint,
-    Integer,
     String,
-    UniqueConstraint,
 )
 from sqlalchemy.orm import relationship
 
