@@ -24,7 +24,7 @@ router = APIRouter(
 )
 
 
-@router.get("/fleet/{entity_name}/start_stop")
+@router.post("/fleet/{entity_name}/start_stop")
 async def start_stop(
             start_stop_ctrl_req=StartStopCtrlReq,
             entity_name=Union[str, None],
@@ -49,7 +49,7 @@ async def start_stop(
     return response
 
 
-@router.get("/fleet/{entity_name}/emergency_stop")
+@router.post("/fleet/{entity_name}/emergency_stop")
 async def emergnecy_stop(
             pause_resume_ctrl_req=PauseResumeCtrlReq,
             entity_name=Union[str, None],
@@ -80,7 +80,7 @@ async def emergnecy_stop(
     return response
 
 
-@router.get("/sherpa/{entity_name}/emergency_stop")
+@router.post("/sherpa/{entity_name}/emergency_stop")
 async def sherpa_emergnecy_stop(
             pause_resume_ctrl_req=PauseResumeCtrlReq,
             entity_name=Union[str, None],
