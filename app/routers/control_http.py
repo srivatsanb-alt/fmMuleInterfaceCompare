@@ -199,9 +199,8 @@ async def reset_pose(
     return response
 
 
-@router.post("/sherpa/{entity_name}/diagnostics")
+@router.get("/sherpa/{entity_name}/diagnostics")
 async def diagnostics(
-            reset_pose_ctrl_req: ResetPoseCtrlReq,
             entity_name=Union[str, None],
             user_name=Depends(get_user_from_header),
             session=Depends(get_db_session)

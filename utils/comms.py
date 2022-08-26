@@ -46,7 +46,7 @@ def send_msg_to_sherpa(sherpa: Sherpa, msg: FMReq) -> Dict:
     body["timestamp"] = time.time()
     endpoint = body.pop("endpoint")
 
-    if msg.get("type", "no_type") == "pass_to_sherpa":
+    if body.get("type", "no_type") == "pass_to_sherpa":
         body.pop("type")
         body.pop("sherpa_name")
 
