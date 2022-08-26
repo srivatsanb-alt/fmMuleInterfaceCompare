@@ -276,8 +276,10 @@ class Handlers:
 
     def handle_pass_to_sherpa(self, req):
         sherpa: Sherpa = session.get_sherpa(req.sherpa_name)
-        send_msg_to_sherpa(shera, req)
-
+        get_logger(sherpa.name).info(
+            f"passing control request to sherpa {sherpa.name}, {req.dict()} "
+        )
+        send_msg_to_sherpa(sherpa, req)
 
     def handle(self, msg):
         if isinstance(msg, SherpaReq):
