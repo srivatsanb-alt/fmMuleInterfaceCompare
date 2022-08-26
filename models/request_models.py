@@ -24,6 +24,12 @@ class DispatchButtonReq(BaseModel):
     value: bool
 
 
+class VisaReq(BaseModel):
+    zone_id: int
+    zone_name: str
+    visa_type: VisaType
+
+
 #################################################
 # Messages from sherpas
 
@@ -60,6 +66,14 @@ class SherpaPeripheralsReq(SherpaReq):
     dispatch_button: DispatchButtonReq = None
     error_info: str = None
     type = MessageType.PERIPHERALS
+
+
+class ResourceReq(SherpaReq):
+    visa: VisaReq = None
+    parking_slot = None
+    charging_bay = None
+    access_type: VisaAccessType = None
+    type = MessageType.RESOURCE_ACCESS
 
 
 #################################################
@@ -111,6 +125,7 @@ class TripStatusMsg(JsonMixin):
     trip_leg_id: int
     trip_info: TripInfo
     type: str = MessageType.TRIP_STATUS
+
 
 #################################################
 # Messages from frontend
