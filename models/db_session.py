@@ -1,4 +1,5 @@
 from typing import List
+
 from core.db import session_maker
 from sqlalchemy.orm import Session
 from models.frontend_models import FrontendUser
@@ -51,10 +52,17 @@ class DBSession:
     def get_fleet(self, fleet_name: str) -> Fleet:
         return self.session.query(Fleet).filter(Fleet.name == fleet_name).one_or_none()
 
-    def create_exclusion_zone(self, zone_id, zone_type):
-        ezone = ExclusionZone(zone_id=zone_id, zone_type=zone_type)
+    def create_exclusion_zone(self, zone_name, zone_type):
+        zone_id = f"{zone_name}_{zone_type}"
+        ezone = ExclusionZone(zone_id=zone_id)
         self.add_to_session(ezone)
         return ezone
+
+    def add_linked_zone(self, zone_name, zone_type, linked_zone_name, linked_zone_type):
+        ezone = self.get_exclusion_zone(zone_name, zone_type)
+        linked_ezone = self.get_exclusion_zone(linked_zone_name, linked_zone_type)
+        ezone.prev_linked_gates.append(linked_ezone)
+        linked_ezone.next_linked_gates.append(ezone)
 
     def get_all_fleets(self) -> List[Fleet]:
         return self.session.query(Fleet).all()
@@ -151,12 +159,11 @@ class DBSession:
         self.session.commit()
         return self, success
 
-    def get_exclusion_zone(self, zone_id, zone_type) -> ExclusionZone:
+    def get_exclusion_zone(self, zone_name, zone_type) -> ExclusionZone:
+        zone_id = f"{zone_name}_{zone_type}"
         return (
             self.session.query(ExclusionZone)
-            .filter(
-                ExclusionZone.zone_id == zone_id and ExclusionZone.zone_type == zone_type
-            )
+            .filter(ExclusionZone.zone_id == zone_id)
             .one_or_none()
         )
 
