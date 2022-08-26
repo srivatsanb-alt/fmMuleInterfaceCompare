@@ -157,7 +157,7 @@ async def reset_pose(
     if not station:
         raise HTTPException(status_code=403, detail="bad fleet staion detail")
 
-    reset_pose_req = ResetPoseReq(pose=station.pose.to_lis)
+    reset_pose_req = ResetPoseReq(pose=station.pose)
     send_msg_to_sherpa(sherpa_status.sherpa, reset_pose_req)
 
     return response
