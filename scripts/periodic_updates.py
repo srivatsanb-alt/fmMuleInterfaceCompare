@@ -19,7 +19,7 @@ def get_table_as_dict(model, model_obj):
         logging.info(f"{col}")
         if col in ["created_at", "updated_at"]:
             pass
-        elif inspect.isclass(model_dict[col]): 
+        elif inspect.isclass(model_dict[col]):
             pass
         elif isinstance(model_dict[col], list):
             for item in model_dict[col]:
@@ -27,7 +27,7 @@ def get_table_as_dict(model, model_obj):
                     pass
         else:
             result.update({col: model_dict[col]})
-    
+
     logging.getLogger().info(f"{result}")
     return result
 
@@ -79,4 +79,4 @@ def send_periodic_updates():
             msg = get_fleet_status_msg(fleet)
             send_status_update(msg)
 
-        time.sleep(0.5)
+        time.sleep(1)
