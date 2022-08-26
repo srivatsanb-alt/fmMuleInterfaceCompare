@@ -1,9 +1,11 @@
 from typing import List
+
 from core.db import session_maker
 from sqlalchemy.orm import Session
 from models.frontend_models import FrontendUser
 from models.fleet_models import Fleet, MapFile, Sherpa, SherpaStatus, Station, StationStatus
 from models.trip_models import OngoingTrip, PendingTrip, Trip, TripLeg
+from models.visa_models import ExclusionZone
 
 
 class DBSession:
@@ -25,7 +27,6 @@ class DBSession:
         self.session.add(obj)
         self.session.flush()
         self.session.refresh(obj)
-
 
     def create_trip(self, route, priority=0, metadata=None):
         trip = Trip(route=route, priority=priority, metadata=metadata)
@@ -51,6 +52,18 @@ class DBSession:
     def get_fleet(self, fleet_name: str) -> Fleet:
         return self.session.query(Fleet).filter(Fleet.name == fleet_name).one_or_none()
 
+    def create_exclusion_zone(self, zone_name, zone_type):
+        zone_id = f"{zone_name}_{zone_type}"
+        ezone = ExclusionZone(zone_id=zone_id)
+        self.add_to_session(ezone)
+        return ezone
+
+    def add_linked_zone(self, zone_name, zone_type, linked_zone_name, linked_zone_type):
+        ezone = self.get_exclusion_zone(zone_name, zone_type)
+        linked_ezone = self.get_exclusion_zone(linked_zone_name, linked_zone_type)
+        ezone.prev_linked_gates.append(linked_ezone)
+        linked_ezone.next_linked_gates.append(ezone)
+
     def get_all_fleets(self) -> List[Fleet]:
         return self.session.query(Fleet).all()
 
@@ -74,8 +87,9 @@ class DBSession:
     def get_frontend_user(self, name: str, hashed_password: str) -> FrontendUser:
         return (
             self.session.query(FrontendUser)
-            .filter(FrontendUser.name == name,
-                    FrontendUser.hashed_password == hashed_password)
+            .filter(
+                FrontendUser.name == name, FrontendUser.hashed_password == hashed_password
+            )
             .one_or_none()
         )
 
@@ -84,9 +98,7 @@ class DBSession:
 
     def get_sherpa_status(self, name: str) -> SherpaStatus:
         return (
-            self.session.query(SherpaStatus)
-            .filter(SherpaStatus.sherpa_name == name)
-            .one()
+            self.session.query(SherpaStatus).filter(SherpaStatus.sherpa_name == name).one()
         )
 
     def get_station(self, name: str) -> Station:
@@ -121,25 +133,39 @@ class DBSession:
     def get_trip_leg(self, sherpa: str):
         ongoing_trip: OngoingTrip = self.ongoing_trip(sherpa)
         if ongoing_trip:
-            return self.session.query(TripLeg).filter(
-                TripLeg.id == ongoing_trip.trip_leg_id
+            return (
+                self.session.query(TripLeg)
+                .filter(TripLeg.id == ongoing_trip.trip_leg_id)
+                .one_or_none()
             )
 
     def update_fleet_status(self, fleet_name: str, status: str):
-        success = self.session.query(Fleet).filter(
-                      Fleet.name == fleet_name
-                      ).update({Fleet.status: status})
+        success = (
+            self.session.query(Fleet)
+            .filter(Fleet.name == fleet_name)
+            .update({Fleet.status: status})
+        )
 
         self.session.commit()
         return self, success
 
     def enable_disable_sherpa(self, sherpa_name: str, disable: bool):
-        success = self.session.query(SherpaStatus).filter(
-                       SherpaStatus.sherpa_name == sherpa_name
-                       ).update({SherpaStatus.disabled: disable})
+        success = (
+            self.session.query(SherpaStatus)
+            .filter(SherpaStatus.sherpa_name == sherpa_name)
+            .update({SherpaStatus.disabled: disable})
+        )
 
         self.session.commit()
         return self, success
+
+    def get_exclusion_zone(self, zone_name, zone_type) -> ExclusionZone:
+        zone_id = f"{zone_name}_{zone_type}"
+        return (
+            self.session.query(ExclusionZone)
+            .filter(ExclusionZone.zone_id == zone_id)
+            .one_or_none()
+        )
 
     def delete_pending_trip(self, pending_trip):
         self.session.delete(pending_trip)

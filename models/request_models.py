@@ -1,6 +1,10 @@
 from dataclasses import dataclass
 from enum import Enum
 from typing import List, Optional, Union, Dict
+
+import pydantic
+
+
 from core.constants import MessageType
 from pydantic import BaseModel
 from models.base_models import JsonMixin
@@ -15,6 +19,18 @@ class DirectionEnum(str, Enum):
     receive = "receive"
 
 
+class VisaType(str, Enum):
+    PARKING = "parking"
+    EXCLUSIVE_PARKING = "exclusive_parking"
+    UNPARKING = "unparking"
+    TRANSIT = "transit"
+
+
+class AccessType(str, Enum):
+    REQUEST = "request"
+    RELEASE = "release"
+
+
 class ConveyorReq(BaseModel):
     direction: DirectionEnum
     num_units: int
@@ -22,6 +38,13 @@ class ConveyorReq(BaseModel):
 
 class DispatchButtonReq(BaseModel):
     value: bool
+
+
+@pydantic.dataclasses.dataclass
+class VisaReq:
+    zone_id: str
+    zone_name: str
+    visa_type: VisaType
 
 
 #################################################
@@ -60,6 +83,15 @@ class SherpaPeripheralsReq(SherpaReq):
     dispatch_button: DispatchButtonReq = None
     error_info: str = None
     type = MessageType.PERIPHERALS
+
+
+class ResourceReq(SherpaReq):
+    visa: VisaReq = None
+    # TODO: define types for these
+    parking_slot: str = None
+    charging_bay: str = None
+    access_type: AccessType = None
+    type = MessageType.RESOURCE_ACCESS
 
 
 #################################################
@@ -111,6 +143,7 @@ class TripStatusMsg(JsonMixin):
     trip_leg_id: int
     trip_info: TripInfo
     type: str = MessageType.TRIP_STATUS
+
 
 #################################################
 # Messages from frontend
@@ -220,6 +253,15 @@ class MapFileInfo(JsonMixin):
 class VerifyFleetFilesResp(JsonMixin):
     fleet_name: str
     files_info: List[MapFileInfo]
+
+
+@dataclass
+class ResourceResp(JsonMixin):
+    granted: bool
+    visa: VisaReq = None
+    parking_slot = None
+    charging_bay = None
+    access_type: AccessType = None
 
 
 @dataclass
