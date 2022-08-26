@@ -131,7 +131,7 @@ class DBSession:
                       ).update({Fleet.status: status})
 
         self.session.commit()
-        return self.session, success
+        return self, success
 
     def enable_disable_sherpa(self, sherpa_name: str, disable: bool):
         success = self.session.query(SherpaStatus).filter(
@@ -139,7 +139,7 @@ class DBSession:
                        ).update({SherpaStatus.disabled: disable})
 
         self.session.commit()
-        return self.session, success
+        return self, success
 
     def delete_pending_trip(self, pending_trip):
         self.session.delete(pending_trip)

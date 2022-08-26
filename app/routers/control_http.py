@@ -152,7 +152,7 @@ async def reset_pose(
         raise HTTPException(status_code=403, detail="No fleet staion detail")
 
     sherpa_status = session.get_sherpa_status(entity_name)
-    station = sesssion.get_station(reset_pose_ctrl_req.fleet_station)
+    station = session.get_station(reset_pose_ctrl_req.fleet_station)
 
     if not station:
         raise HTTPException(status_code=403, detail="bad fleet staion detail")
