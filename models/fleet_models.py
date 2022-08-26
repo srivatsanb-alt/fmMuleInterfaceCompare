@@ -3,6 +3,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 
 from models.base_models import Base, StationProperties, TimestampMixin
+from models.visa_models import VisaAssignment
 
 
 class Map(TimestampMixin, Base):
@@ -53,7 +54,7 @@ class Sherpa(Base):
 
     status = relationship("SherpaStatus", back_populates="sherpa", uselist=False)
     exclusion_zones = relationship(
-        "ExclusionZone", secondary="visa_assignments", back_populates="sherpas"
+        "ExclusionZone", secondary=VisaAssignment.__table__, back_populates="sherpas"
     )
 
 
