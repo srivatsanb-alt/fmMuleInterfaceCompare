@@ -57,6 +57,8 @@ async def writer(websocket):
         message = await psub.get_message(ignore_subscribe_messages=True, timeout=5)
         if message:
             try:
-                await websocket.send_json(message["data"])
+                data = ast.literal_eval(message["data"])
+                await websocket.send_json(data)
             except Exception as e:
-                logging.info(f"unable to send a websocket update, exception {e}")
+                pass
+                #logging.info(f"unable to send a websocket update, exception {e}")
