@@ -218,7 +218,7 @@ async def diagnostics(
     if not sherpa_status:
         raise HTTPException(status_code=403, detail="Bad sherpa name")
 
-    diagnostics_req = DiagnosticsReq()
+    diagnostics_req = DiagnosticsReq(sherpa_name=entity_name)
     base_url = get_sherpa_url(sherpa_status.sherpa)
     url = f"{base_url}/{diagnostics_req.endpoint}"
     response = requests.get(url)

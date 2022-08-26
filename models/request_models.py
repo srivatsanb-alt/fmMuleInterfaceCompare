@@ -198,7 +198,7 @@ class SwitchModeReq(FMReq):
 
 
 class ResetPoseReq(FMReq):
-    endpoint: str = "recovery"
+    endpoint: str = "reset_pose"
     pose: List[float]
     sherpa_name: str
     type = MessageType.PASS_TO_SHERPA
