@@ -11,12 +11,12 @@ from models.fleet_models import (
 import time
 import inspect
 
+
 def get_table_as_dict(model, model_obj):
     cols = model.__table__.columns.keys()
     result = {}
     model_dict = model_obj.__dict__
     for col in cols:
-        logging.info(f"{col}")
         if col in ["created_at", "updated_at"]:
             pass
         elif inspect.isclass(model_dict[col]):
@@ -27,8 +27,6 @@ def get_table_as_dict(model, model_obj):
                     pass
         else:
             result.update({col: model_dict[col]})
-
-    logging.getLogger().info(f"{result}")
     return result
 
 
@@ -64,8 +62,6 @@ def get_fleet_status_msg(fleet):
     msg.update({"fleet_status": get_table_as_dict(Fleet, fleet)})
     msg.update({"fleet_name": fleet.name})
     msg.update({"type": "fleet_status"})
-
-    logging.getLogger().info(f"{msg}")
 
     return msg
 
