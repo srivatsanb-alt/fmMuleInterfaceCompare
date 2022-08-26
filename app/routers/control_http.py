@@ -222,5 +222,11 @@ async def diagnostics(
     base_url = get_sherpa_url(sherpa_status.sherpa)
     url = f"{base_url}/{diagnostics_req.endpoint}"
     response = requests.get(url)
+    
+    if response.status_code == 200:
+        response = response.json()
+    
+    else:
+        raise HTTPException(status_code=403, detail=f"Bad response from sherpa, {response.status_code}")
 
     return response
