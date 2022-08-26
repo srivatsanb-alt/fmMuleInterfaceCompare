@@ -274,6 +274,11 @@ class Handlers:
         )
         return response.to_json()
 
+    def handle_pass_to_sherpa(self, req):
+        sherpa: Sherpa = session.get_sherpa(req.sherpa_name)
+        send_msg_to_sherpa(shera, req)
+
+
     def handle(self, msg):
         if isinstance(msg, SherpaReq):
             get_logger(msg.source).info(f"got message: {msg}")

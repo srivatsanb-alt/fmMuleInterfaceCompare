@@ -186,20 +186,28 @@ class PeripheralsReq(FMReq):
 class PauseResumeReq(FMReq):
     endpoint: str = "pause_resume"
     pause: bool
+    sherpa_name: str
+    type = MessageType.PASS_TO_SHERPA
 
 
 class SwitchModeReq(FMReq):
     endpoint: str = "switch_mode"
     mode: str
+    sherpa_name: str
+    type = MessageType.PASS_TO_SHERPA
 
 
 class ResetPoseReq(FMReq):
     endpoint: str = "recovery"
     pose: List[float]
+    sherpa_name: str
+    type = MessageType.PASS_TO_SHERPA
 
 
 class DiagnosticsReq(FMReq):
     endpoint: str = "diagnostics"
+    sherpa_name: str
+    type = MessageType.PASS_TO_SHERPA
 
 
 @dataclass

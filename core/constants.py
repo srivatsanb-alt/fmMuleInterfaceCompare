@@ -5,3 +5,4 @@ class MessageType:
     SHERPA_STATUS = "sherpa_status"
     TRIP_STATUS = "trip_status"
     BOOKING = "book"
+    PASS_TO_SHERPA = "pass_to_sherpa"
