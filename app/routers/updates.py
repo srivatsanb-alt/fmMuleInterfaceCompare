@@ -56,7 +56,6 @@ async def writer(websocket):
     while True:
         message = await psub.get_message(ignore_subscribe_messages=True, timeout=5)
         if message:
-            #data = ast.literal_eval(message["data"])
             try:
                 await websocket.send_json(message["data"])
             except Exception as e:

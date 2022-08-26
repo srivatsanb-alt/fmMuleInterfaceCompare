@@ -53,3 +53,7 @@ def generate_jwt_token(username: str):
         algorithm="HS256",
     )
     return access_token
+
+
+def get_db_session():
+    return session

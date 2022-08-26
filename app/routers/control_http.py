@@ -2,9 +2,9 @@ import logging
 from typing import Union
 from app.routers.dependencies import (
         get_user_from_header,
+        get_db_session
 )
 from utils.comms import send_msg_to_sherpa, get
-from models.db_session import session
 from fastapi import APIRouter, Depends, HTTPException
 from models.request_models import (
     PauseResumeReq,
@@ -26,9 +26,10 @@ router = APIRouter(
 
 @router.post("/fleet/{entity_name}/start_stop")
 async def start_stop(
-            start_stop_ctrl_req=StartStopCtrlReq,
+            start_stop_ctrl_req: StartStopCtrlReq,
             entity_name=Union[str, None],
-            user_name=Depends(get_user_from_header)
+            user_name=Depends(get_user_from_header),
+            session=Depends(get_db_session)
             ):
 
     response = {}
@@ -51,9 +52,10 @@ async def start_stop(
 
 @router.post("/fleet/{entity_name}/emergency_stop")
 async def emergnecy_stop(
-            pause_resume_ctrl_req=PauseResumeCtrlReq,
+            pause_resume_ctrl_req: PauseResumeCtrlReq,
             entity_name=Union[str, None],
-            user_name=Depends(get_user_from_header)
+            user_name=Depends(get_user_from_header),
+            session=Depends(get_db_session)
             ):
 
     response = {}
@@ -82,9 +84,10 @@ async def emergnecy_stop(
 
 @router.post("/sherpa/{entity_name}/emergency_stop")
 async def sherpa_emergnecy_stop(
-            pause_resume_ctrl_req=PauseResumeCtrlReq,
+            pause_resume_ctrl_req: PauseResumeCtrlReq,
             entity_name=Union[str, None],
-            user_name=Depends(get_user_from_header)
+            user_name=Depends(get_user_from_header),
+            session=Depends(get_db_session)
             ):
 
     response = {}
@@ -108,9 +111,10 @@ async def sherpa_emergnecy_stop(
 
 @router.post("/sherpa/{entity_name}/switch_mode")
 async def switch_mode(
-            switch_mode_ctrl_req=SwitchModeCtrlReq,
+            switch_mode_ctrl_req: SwitchModeCtrlReq,
             entity_name=Union[str, None],
-            user_name=Depends(get_user_from_header)
+            user_name=Depends(get_user_from_header),
+            session=Depends(get_db_session)
             ):
 
     response = {}
@@ -130,9 +134,10 @@ async def switch_mode(
 
 @router.post("/sherpa/{entity_name}/recovery")
 async def reset_pose(
-            reset_pose_ctrl_req=ResetPoseCtrlReq,
+            reset_pose_ctrl_req: ResetPoseCtrlReq,
             entity_name=Union[str, None],
-            user_name=Depends(get_user_from_header)
+            user_name=Depends(get_user_from_header),
+            session=Depends(get_db_session)
             ):
 
     response = {}
@@ -160,9 +165,10 @@ async def reset_pose(
 
 @router.post("/sherpa/{entity_name}/diagnostics")
 async def diagnostics(
-            reset_pose_ctrl_req=ResetPoseCtrlReq,
+            reset_pose_ctrl_req: ResetPoseCtrlReq,
             entity_name=Union[str, None],
-            user_name=Depends(get_user_from_header)
+            user_name=Depends(get_user_from_header),
+            session=Depends(get_db_session)
             ):
 
     response = {}

@@ -89,4 +89,4 @@ def send_move_msg(sherpa: Sherpa, ongoing_trip: OngoingTrip, station: Station) -
 
 def send_status_update(msg):
     pub = redis.from_url(os.getenv("FM_REDIS_URI"), decode_responses=True)
-    pub.publish("channel:status_updates", json_dumps(msg))
+    pub.publish("channel:status_updates", str(msg))
