@@ -21,12 +21,18 @@ def get_table_as_dict(model, model_obj):
             pass
         elif inspect.isclass(model_dict[col]):
             pass
-        elif isinstance(model_dict[col], list):
-            for item in model_dict[col]:
-                if inspect.isclass(item):
-                    pass
         else:
+            if isinstance(model_dict[col], list):
+                skip = False
+                for item in model_dict[col]:
+                    if inspect.isclass(item):
+                        skip = True
+                        break
+                if skip:
+                    continue
+                    
             result.update({col: model_dict[col]})
+
     return result
 
 
