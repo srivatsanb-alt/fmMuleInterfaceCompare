@@ -65,7 +65,7 @@ def lock_linked_zones(zone_name, zone_type, sherpa_name):
     linked_gates = get_linked_gates(ezone)
     can_lock_linked_gates = []
     for lz in linked_gates:
-        lz_name, lz_type = lz.zone_id.split("_")
+        lz_name, lz_type = lz.zone_id.rsplit("_", 1)
         can_lock = lock_exclusion_zone(lz_name, lz_type, sherpa_name, actual=False)
         can_lock_linked_gates.append(can_lock)
 
