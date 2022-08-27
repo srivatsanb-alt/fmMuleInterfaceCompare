@@ -114,6 +114,8 @@ def add_map(fleet: str):
         fleet_id = fleet_obj.id
     add_map_files(fleet)
     grid_map_attributes_path = os.path.join(f"{os.environ['FM_MAP_DIR']}", f"{fleet}", "map", "grid_map_attributes.json")
+    if not os.path.exists(grid_map_attributes_path):
+        return
     with open(grid_map_attributes_path) as f:
         gmas =json.load(f)
         stations_info = gmas["stations_info"]
