@@ -2,7 +2,7 @@ import hashlib
 import os
 import secrets
 from core.db import engine
-import inspect
+import json
 import glob
 import sys
 import importlib
@@ -16,6 +16,11 @@ from models.fleet_models import (
     Station,
     StationStatus,
 )
+
+from models.base_models import (
+    StationProperties
+)
+
 from core.db import session_maker
 from sqlalchemy.exc import NoResultFound
 
@@ -63,6 +68,8 @@ def add_update_fleet(**kwargs):
             setattr(fleet, col, val)
         db.commit()
 
+    return fleet
+
 
 def add_sherpa_to_fleet(sherpa: str, fleet: str):
     if not fleet or not sherpa:
@@ -76,13 +83,14 @@ def add_sherpa_to_fleet(sherpa: str, fleet: str):
 
 def add_update_station(**kwargs):
     station_name = kwargs.get("name")
+    properties = kwargs.get("properties")
     if not station_name:
         raise ValueError("station name should not be null")
     with session_maker() as db:
         try:
             station: Station = db.query(Station).filter_by(name=station_name).one()
         except NoResultFound:
-            station = Station(properties=[])
+            station = Station(properties=properties)
             db.add(station)
             station_status = StationStatus(
                 station_name=station_name, disabled=False, arriving_sherpas=[]
@@ -102,10 +110,27 @@ def add_map(fleet: str):
         db.add(map)
         db.commit()
         db.refresh(map)
-    add_update_fleet(name=fleet, map_id=map.id)
+        fleet_obj: Fleet = db.query(Fleet).filter(Fleet.name == fleet).one()
+        fleet_id = fleet_obj.id
     add_map_files(fleet)
-
-
+    grid_map_attributes_path = os.path.join(f"{os.environ['FM_MAP_DIR']}", f"{fleet}", "map", "grid_map_attributes.json")
+    with open(grid_map_attributes_path) as f:
+        gmas =json.load(f)
+        stations_info = gmas["stations_info"]
+        for _, station_info in stations_info.items():
+            properties = []
+            for tag in station_info["station_tags"]:
+                try:
+                    properties.append(getattr(StationProperties, tag.upper()))
+                except Exception as e:
+                    print(f"unable to add station properties, {e}")
+                    pass
+            add_update_station(
+                        name=station_info["station_name"],
+                        pose=station_info["pose"],
+                        fleet_id=fleet_id,
+                        properties=properties
+                        )
 
 
 
@@ -137,7 +162,7 @@ def create_all_tables(drop=False):
             models.Base.metadata.create_all(bind=engine)
             print(f"created tables from {module}")
         except Exception as e:
-            print(f"failed to create tables from {module}")
+            print(f"failed to create tables from {module}, {e}")
 
 
 def create_table(model, drop=False):

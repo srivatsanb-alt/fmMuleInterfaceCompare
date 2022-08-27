@@ -38,3 +38,4 @@ class StationProperties(enum.Enum):
     AUTO_UNHITCH = 5
     DISPATCH_NOT_REQD = 6
     CHARGING = 7
+    EXCLUSIVE_PARKING = 8
