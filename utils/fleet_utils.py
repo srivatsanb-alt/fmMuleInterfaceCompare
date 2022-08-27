@@ -5,6 +5,7 @@ from core.db import engine
 import inspect
 import glob
 import sys
+import importlib
 
 from models.fleet_models import (
     Fleet,
@@ -130,24 +131,13 @@ def create_all_tables(drop=False):
     for file in all_files:
         module = file.split('.')[0]
         module = module.replace("/",".")
-        print(f"looking for models in module {module}")
+        print(f"looking for models in module: {module}")
         try:
-            class_defs = [cls_obj
-                          for cls_name, cls_obj in inspect.getmembers(
-                                                        sys.modules[module])
-                          if (inspect.isclass(cls_obj) and
-                              cls_obj.__module__ == module)
-                          ]
-            for class_def in class_defs:
-                if drop:
-                    class_def.__table__.drop(engine)
-                try:
-                    class_def.__table__.metadata.create_all(bind=engine)
-                    print(f"created table {class_def.__tablename__}")
-                except Exception as e:
-                    print(f"unable to create table {class_def.__tablename__}, {e}")
+            models = importlib.import_module(module)
+            models.Base.metadata.create_all(bind=engine)
+            print(f"created tables from {module}")
         except Exception as e:
-            print(f"unable to fetch models from {module}.py, {e}")
+            print(f"failed to create tables from {module}")
 
 
 def create_table(model, drop=False):

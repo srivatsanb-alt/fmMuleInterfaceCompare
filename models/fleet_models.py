@@ -49,7 +49,7 @@ class Sherpa(Base):
     ip_address = Column(String, unique=True)
     hashed_api_key = Column(String, unique=True, index=True)
 
-    fleet_id = Column(Integer, ForeignKey("fleets.id"))
+    fleet_id = Column(Integer, ForeignKey("fleets.id"), nullable = False)
     fleet = relationship("Fleet", back_populates="sherpas")
 
     status = relationship("SherpaStatus", back_populates="sherpa", uselist=False)
