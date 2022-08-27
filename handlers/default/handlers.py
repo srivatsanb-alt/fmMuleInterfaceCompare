@@ -30,8 +30,6 @@ from utils.util import are_poses_close
 import handlers.default.handler_utils as hutils
 from utils.visa_utils import maybe_grant_visa, unlock_exclusion_zone
 
-assign_next_task = True
-
 
 class Handlers:
     def should_handle_msg(self, msg):
@@ -112,8 +110,10 @@ class Handlers:
             self.assign_pending_trip(sherpa_name)
 
         ongoing_trip: OngoingTrip = session.get_ongoing_trip(sherpa_name)
+
         if (
             ongoing_trip
+            and ongoing_trip.trip_leg.finished()
             and not ongoing_trip.finished_booked()
             and ongoing_trip.check_continue()
         ):
@@ -331,8 +331,6 @@ class Handlers:
             return self.handle_visa_release(req, sherpa_name)
 
     def handle_resource_access(self, req: ResourceReq):
-        global assign_next_task
-        assign_next_task = False
         sherpa_name = req.source
         if not req.visa:
             get_logger(sherpa_name).warning("requested access type not supported")
@@ -356,7 +354,7 @@ class Handlers:
 
         response = msg_handler(msg)
 
-        if isinstance(msg, SherpaReq) and assign_next_task:
+        if isinstance(msg, SherpaReq):
             self.assign_next_task(msg.source)
 
         return response

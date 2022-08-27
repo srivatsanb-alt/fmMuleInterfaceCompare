@@ -120,6 +120,9 @@ class TripLeg(Base, TimestampMixin):
     def end(self):
         self.end_time = ts_to_str(time.time())
 
+    def finished(self):
+        return True if self.end_time else False
+
 
 class OngoingTrip(Base, TimestampMixin):
     __tablename__ = "ongoing_trips"
