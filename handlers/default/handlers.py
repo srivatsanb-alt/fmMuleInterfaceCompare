@@ -50,6 +50,20 @@ class Handlers:
         hutils.end_trip(ongoing_trip, success, session)
         get_logger(sherpa_name).info(f"trip {ongoing_trip.trip_id} finished")
 
+    def continue_leg(self, ongoing_trip: OngoingTrip):
+        trip: Trip = ongoing_trip.trip
+        sherpa_name: str = trip.sherpa_name
+        sherpa: Sherpa = trip.sherpa
+        next_station: Station = session.get_station(ongoing_trip.next_station())
+
+        get_logger(sherpa_name).info(
+            f"{sherpa_name} continuing leg of trip {trip.id} from {ongoing_trip.curr_station()} to {ongoing_trip.next_station()}"
+        )
+        response: Response = send_move_msg(sherpa, ongoing_trip, next_station)
+        get_logger(sherpa_name).info(
+            f"received from {sherpa_name}: status {response.status_code}"
+        )
+
     def start_leg(self, ongoing_trip: OngoingTrip):
         trip: Trip = ongoing_trip.trip
         sherpa_name: str = trip.sherpa_name
@@ -111,13 +125,27 @@ class Handlers:
 
         ongoing_trip: OngoingTrip = session.get_ongoing_trip(sherpa_name)
 
-        if (
-            ongoing_trip
-            and ongoing_trip.trip_leg.finished()
+        if self.check_continue_curr_leg(ongoing_trip) and ongoing_trip.check_continue():
+            self.continue_leg(ongoing_trip)
+        elif (
+            self.check_start_new_leg(ongoing_trip)
             and not ongoing_trip.finished_booked()
             and ongoing_trip.check_continue()
         ):
             self.start_leg(ongoing_trip)
+
+    def check_continue_curr_leg(self, ongoing_trip: OngoingTrip):
+        return (
+            ongoing_trip and ongoing_trip.trip_leg and not ongoing_trip.trip_leg.finished()
+        )
+
+    def check_start_new_leg(self, ongoing_trip: OngoingTrip):
+        if not ongoing_trip:
+            return False
+        if not ongoing_trip.trip_leg:
+            return True
+        if ongoing_trip.trip_leg.finished():
+            return True
 
     def initialize_sherpa(self, sherpa_name):
         sherpa_status: SherpaStatus = session.get_sherpa_status(sherpa_name)
@@ -253,6 +281,7 @@ class Handlers:
             get_logger(sherpa_name).error(
                 f"ignoring dispatch button press on {sherpa_name}"
             )
+            return
         get_logger(sherpa_name).info(f"dispatch button pressed on {sherpa_name}")
         ongoing_trip.add_state(TripState.WAITING_STATION_DISPATCH_END)
 
