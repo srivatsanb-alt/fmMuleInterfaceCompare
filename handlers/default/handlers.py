@@ -299,6 +299,8 @@ class Handlers:
                 return
             else:
                 self.start_trip(trip, sherpa)
+                ongoing_trip: OngoingTrip = session.get_ongoing_trip(sherpa)
+                self.start_leg(ongoing_trip)
 
     def handle_trip_status(self, req: TripStatusMsg):
         pass
