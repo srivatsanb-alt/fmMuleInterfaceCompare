@@ -31,6 +31,23 @@ import handlers.default.handler_utils as hutils
 from utils.visa_utils import maybe_grant_visa, unlock_exclusion_zone
 
 
+class RequestContext:
+    msg_type: str
+    sherpa_name: str
+    assign_next_task: bool
+    logger = None
+
+
+req_ctxt = RequestContext()
+
+
+def init_request_context(req):
+    req_ctxt.msg_type = req["type"]
+    req_ctxt.sherpa_name = req.source if isinstance(req, SherpaReq) else None
+    req_ctxt.assign_next_task = True
+    req_ctxt.logger = get_logger(req.source) if isinstance(req, SherpaReq) else get_logger()
+
+
 class Handlers:
     def should_handle_msg(self, msg):
         return True, None
@@ -101,27 +118,27 @@ class Handlers:
 
         self.do_post_actions(ongoing_trip)
 
-    def assign_pending_trip(self, sherpa_name: str):
+    def assign_new_trip(self, sherpa_name: str):
         pending_trip: PendingTrip = session.get_pending_trip()
         if not pending_trip:
-            get_logger(sherpa_name).info(f"no pending trip to assign to {sherpa_name}")
             return
 
+        get_logger(sherpa_name).info(f"found pending trip id {pending_trip.trip_id}")
         sherpa: SherpaStatus = session.get_sherpa_status(sherpa_name)
         if not hutils.is_sherpa_available(sherpa):
             get_logger(sherpa_name).info(f"{sherpa_name} not available for new trip")
             return
 
-        get_logger(sherpa_name).info(f"found pending trip id {pending_trip.trip_id}")
         self.start_trip(pending_trip.trip, sherpa_name)
         session.delete_pending_trip(pending_trip)
         get_logger(sherpa_name).info(f"deleted pending trip id {pending_trip.trip_id}")
 
+    # assigns next destination to sherpa
     def assign_next_task(self, sherpa_name):
         ongoing_trip: OngoingTrip = session.get_ongoing_trip(sherpa_name)
         if not ongoing_trip or ongoing_trip.finished():
             self.end_trip(ongoing_trip)
-            self.assign_pending_trip(sherpa_name)
+            self.assign_new_trip(sherpa_name)
 
         ongoing_trip: OngoingTrip = session.get_ongoing_trip(sherpa_name)
 
@@ -133,6 +150,22 @@ class Handlers:
             and ongoing_trip.check_continue()
         ):
             self.start_leg(ongoing_trip)
+
+    # iterates through pending trips and tries to assign each one to an available sherpa
+    def assign_pending_trips(self):
+        pending_trip: PendingTrip = session.get_pending_trip()
+        while pending_trip:
+            sherpa_name = hutils.find_best_sherpa()
+            if not sherpa_name:
+                get_logger().info(
+                    f"no sherpa available for trip {pending_trip.trip_id}, will assign later"
+                )
+                # assuming no sherpas available for one pending trip means no sherpas
+                # available at all.
+                return
+            self.assign_next_task(sherpa_name)
+            # get the next pending trip
+            pending_trip = session.get_pending_trip()
 
     def check_continue_curr_leg(self, ongoing_trip: OngoingTrip):
         return (
@@ -290,17 +323,7 @@ class Handlers:
             trip: Trip = session.create_trip(
                 trip_msg.route, trip_msg.priority, trip_msg.metadata
             )
-            sherpa: str = hutils.find_best_sherpa()
-            if not sherpa:
-                get_logger().info(
-                    f"no sherpa available for trip {trip.id}, will assign later"
-                )
-                session.create_pending_trip(trip.id)
-                return
-            else:
-                self.start_trip(trip, sherpa)
-                ongoing_trip: OngoingTrip = session.get_ongoing_trip(sherpa)
-                self.start_leg(ongoing_trip)
+            session.create_pending_trip(trip.id)
 
     def handle_trip_status(self, req: TripStatusMsg):
         pass
@@ -356,6 +379,8 @@ class Handlers:
         return response.to_json()
 
     def handle_visa_access(self, req: VisaReq, access_type: AccessType, sherpa_name):
+        # do not assign next destination after processing a visa request.
+        req_ctxt.assign_next_task = False
         if access_type == AccessType.REQUEST:
             return self.handle_visa_request(req, sherpa_name)
         elif access_type == AccessType.RELEASE:
@@ -369,15 +394,14 @@ class Handlers:
         return self.handle_visa_access(req.visa, req.access_type, sherpa_name)
 
     def handle(self, msg):
-        if isinstance(msg, SherpaReq):
-            get_logger(msg.source).info(f"got message: {msg}")
-        else:
-            get_logger().info(f"got message: {msg}")
+        init_request_context(msg)
+        req_ctxt.logger.info(f"got message: {msg}")
 
         handle_ok, reason = self.should_handle_msg(msg)
         if not handle_ok:
             get_logger().warning(f"message of type {msg.type} ignored, reason={reason}")
             return
+
         msg_handler = getattr(self, "handle_" + msg.type, None)
         if not msg_handler:
             get_logger().error(f"no handler defined for {msg.type}")
@@ -385,7 +409,9 @@ class Handlers:
 
         response = msg_handler(msg)
 
-        if isinstance(msg, SherpaReq):
-            self.assign_next_task(msg.source)
+        if req_ctxt.assign_next_task and req_ctxt.sherpa_name:
+            self.assign_next_task(req_ctxt.sherpa_name)
+
+        self.assign_pending_trips()
 
         return response
