@@ -42,7 +42,7 @@ req_ctxt = RequestContext()
 
 
 def init_request_context(req):
-    req_ctxt.msg_type = req["type"]
+    req_ctxt.msg_type = req.type
     req_ctxt.sherpa_name = req.source if isinstance(req, SherpaReq) else None
     req_ctxt.assign_next_task = True
     req_ctxt.logger = get_logger(req.source) if isinstance(req, SherpaReq) else get_logger()
