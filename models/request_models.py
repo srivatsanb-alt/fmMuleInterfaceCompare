@@ -112,6 +112,8 @@ class SherpaStatusMsg(JsonMixin):
 
 @dataclass
 class StoppageInfo(JsonMixin):
+    velocity_speed_factor: float
+    obstacle_speed_factor: float
     local_obstacle: List[float]
     time_elapsed_stoppages: float
     time_elapsed_obstacle_stoppages: float
@@ -130,6 +132,10 @@ class TripInfo(JsonMixin):
     current_pose: List[float]
     destination_pose: List[float]
     destination_name: str
+    total_route_length: float
+    remaining_route_length: float
+    cte: float
+    te: float
     eta_at_start: float
     eta: float
     progress: float
