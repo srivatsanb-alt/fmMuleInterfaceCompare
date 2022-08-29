@@ -13,6 +13,7 @@ import inspect
 
 
 def get_table_as_dict(model, model_obj):
+    all_valid_types = ['str', 'dict', 'list', 'int', 'float']
     cols = model.__table__.columns.keys()
     result = {}
     model_dict = model_obj.__dict__
@@ -21,16 +22,18 @@ def get_table_as_dict(model, model_obj):
             pass
         elif inspect.isclass(model_dict[col]):
             pass
+        elif type(model_dict[col]).__name__ not in all_valid_types:
+            pass
         else:
             if isinstance(model_dict[col], list):
                 skip = False
                 for item in model_dict[col]:
-                    if inspect.isclass(item):
+                    if type(item).__name__ not in all_valid_types:
                         skip = True
                         break
                 if skip:
                     continue
-                    
+
             result.update({col: model_dict[col]})
 
     return result
