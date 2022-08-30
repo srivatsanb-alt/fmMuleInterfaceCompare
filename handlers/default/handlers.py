@@ -14,6 +14,7 @@ from models.request_models import (
     ReachedReq,
     ResourceReq,
     ResourceResp,
+    SherpaMsg,
     SherpaPeripheralsReq,
     SherpaReq,
     SherpaStatusMsg,
@@ -26,9 +27,9 @@ from models.trip_models import OngoingTrip, PendingTrip, Trip, TripState
 from requests import Response
 from utils.comms import get, send_move_msg, send_msg_to_sherpa
 from utils.util import are_poses_close
+from utils.visa_utils import maybe_grant_visa, unlock_exclusion_zone
 
 import handlers.default.handler_utils as hutils
-from utils.visa_utils import maybe_grant_visa, unlock_exclusion_zone
 
 
 class RequestContext:
@@ -43,9 +44,15 @@ req_ctxt = RequestContext()
 
 def init_request_context(req):
     req_ctxt.msg_type = req.type
-    req_ctxt.sherpa_name = req.source if isinstance(req, SherpaReq) else None
+    if isinstance(req, SherpaReq) or isinstance(req, SherpaMsg):
+        req_ctxt.sherpa_name = req.source
+    else:
+        req_ctxt.sherpa_name = None
     req_ctxt.assign_next_task = True
-    req_ctxt.logger = get_logger(req.source) if isinstance(req, SherpaReq) else get_logger()
+    if isinstance(req, SherpaReq) or isinstance(req, SherpaMsg):
+        req_ctxt.logger = get_logger(req.source)
+    else:
+        req_ctxt.logger = get_logger()
 
 
 class Handlers:
@@ -137,9 +144,11 @@ class Handlers:
     def assign_next_task(self, sherpa_name):
         done = False
         ongoing_trip: OngoingTrip = session.get_ongoing_trip(sherpa_name)
+
         if not ongoing_trip or ongoing_trip.finished():
             self.end_trip(ongoing_trip)
             self.assign_new_trip(sherpa_name)
+            done = True
 
         ongoing_trip: OngoingTrip = session.get_ongoing_trip(sherpa_name)
 
@@ -165,6 +174,7 @@ class Handlers:
 
     # iterates through pending trips and tries to assign each one to an available sherpa
     def assign_pending_trips(self):
+        get_logger().info("trying to assign pending trips")
         pending_trip: PendingTrip = session.get_pending_trip()
         while pending_trip:
             sherpa_name = hutils.find_best_sherpa()
