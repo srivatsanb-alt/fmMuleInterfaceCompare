@@ -99,8 +99,14 @@ class ResourceReq(SherpaReq):
 
 
 @dataclass
-class SherpaStatusMsg(JsonMixin):
+class SherpaMsg(JsonMixin):
+    source: str
+    type: str
     timestamp: float
+
+
+@dataclass
+class SherpaStatusMsg(SherpaMsg, JsonMixin):
     sherpa_name: str
     current_pose: List[float]
     battery_status: float
@@ -142,8 +148,7 @@ class TripInfo(JsonMixin):
 
 
 @dataclass
-class TripStatusMsg(JsonMixin):
-    timestamp: float
+class TripStatusMsg(SherpaMsg, JsonMixin):
     trip_id: int
     trip_leg_id: int
     trip_info: TripInfo

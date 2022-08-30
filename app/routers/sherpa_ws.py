@@ -33,7 +33,7 @@ async def sherpa_status(websocket: WebSocket, sherpa=Depends(get_sherpa)):
     session.close()
 
     rw = [
-        asyncio.create_task(reader(websocket)),
+        asyncio.create_task(reader(websocket, sherpa)),
         asyncio.create_task(
             writer(websocket, sherpa),
         ),
@@ -46,7 +46,7 @@ async def sherpa_status(websocket: WebSocket, sherpa=Depends(get_sherpa)):
         [t.cancel() for t in rw]
 
 
-async def reader(websocket):
+async def reader(websocket, sherpa):
     handler_obj = Config.get_handler()
     while True:
         try:
@@ -59,13 +59,16 @@ async def reader(websocket):
 
         if msg_type == MessageType.TRIP_STATUS:
             send_status_update(msg)
+            msg.source = sherpa
             trip_status_msg = TripStatusMsg.from_dict(msg)
             enqueue(Queues.handler_queue, handle, handler_obj, trip_status_msg, ttl=2)
         elif msg_type == MessageType.SHERPA_STATUS:
+            msg.source = sherpa
             status_msg = SherpaStatusMsg.from_dict(msg)
             enqueue(Queues.handler_queue, handle, handler_obj, status_msg)
         else:
             logging.getLogger().error(f"Unsupported message type {msg_type}")
+
 
 async def writer(websocket, sherpa):
     redis = aioredis.Redis.from_url(
