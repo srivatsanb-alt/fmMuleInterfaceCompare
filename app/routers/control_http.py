@@ -1,13 +1,11 @@
 import requests
 from typing import Union
-from app.routers.dependencies import (
-        get_user_from_header,
-        get_db_session
-)
+from app.routers.dependencies import get_user_from_header, get_db_session
 from utils.comms import get_sherpa_url
 from utils.rq import Queues, enqueue
 from core.config import Config
 from fastapi import APIRouter, Depends, HTTPException
+
 from models.request_models import (
     PauseResumeReq,
     SwitchModeReq,
@@ -16,7 +14,7 @@ from models.request_models import (
     PauseResumeCtrlReq,
     SwitchModeCtrlReq,
     ResetPoseCtrlReq,
-    StartStopCtrlReq
+    StartStopCtrlReq,
 )
 
 
@@ -41,11 +39,11 @@ def handle(handler, msg):
 
 @router.post("/fleet/{entity_name}/start_stop")
 async def start_stop(
-            start_stop_ctrl_req: StartStopCtrlReq,
-            entity_name=Union[str, None],
-            user_name=Depends(get_user_from_header),
-            session=Depends(get_db_session)
-            ):
+    start_stop_ctrl_req: StartStopCtrlReq,
+    entity_name=Union[str, None],
+    user_name=Depends(get_user_from_header),
+    session=Depends(get_db_session),
+):
 
     response = {}
 
@@ -56,22 +54,20 @@ async def start_stop(
         raise HTTPException(status_code=403, detail="No entity name")
 
     if start_stop_ctrl_req.start:
-        session, _ = session.update_fleet_status(
-                     entity_name, "start")
+        session, _ = session.update_fleet_status(entity_name, "start")
     else:
-        session, _ = session.update_fleet_status(
-                     entity_name, "stop")
+        session, _ = session.update_fleet_status(entity_name, "stop")
 
     return response
 
 
 @router.post("/fleet/{entity_name}/emergency_stop")
 async def emergnecy_stop(
-            pause_resume_ctrl_req: PauseResumeCtrlReq,
-            entity_name=Union[str, None],
-            user_name=Depends(get_user_from_header),
-            session=Depends(get_db_session)
-            ):
+    pause_resume_ctrl_req: PauseResumeCtrlReq,
+    entity_name=Union[str, None],
+    user_name=Depends(get_user_from_header),
+    session=Depends(get_db_session),
+):
 
     response = {}
 
@@ -81,21 +77,19 @@ async def emergnecy_stop(
     if not entity_name:
         raise HTTPException(status_code=403, detail="No entity name")
 
-    session, _ = session.update_fleet_status(
-                     entity_name, "emergency_stop")
+    session, _ = session.update_fleet_status(entity_name, "emergency_stop")
 
     all_sherpa_status = session.get_all_sherpa_status()
     for sherpa_status in all_sherpa_status:
         if sherpa_status.sherpa.fleet.name == entity_name:
 
             session, _ = session.enable_disable_sherpa(
-                                sherpa_status.sherpa_name,
-                                disable=pause_resume_ctrl_req.pause)
+                sherpa_status.sherpa_name, disable=pause_resume_ctrl_req.pause
+            )
 
             pause_resume_req = PauseResumeReq(
-                               pause=pause_resume_ctrl_req.pause,
-                               sherpa_name=sherpa_status.sherpa_name
-                            )
+                pause=pause_resume_ctrl_req.pause, sherpa_name=sherpa_status.sherpa_name
+            )
 
             process_req(pause_resume_req, user_name)
 
@@ -104,11 +98,11 @@ async def emergnecy_stop(
 
 @router.post("/sherpa/{entity_name}/emergency_stop")
 async def sherpa_emergnecy_stop(
-            pause_resume_ctrl_req: PauseResumeCtrlReq,
-            entity_name=Union[str, None],
-            user_name=Depends(get_user_from_header),
-            session=Depends(get_db_session)
-            ):
+    pause_resume_ctrl_req: PauseResumeCtrlReq,
+    entity_name=Union[str, None],
+    user_name=Depends(get_user_from_header),
+    session=Depends(get_db_session),
+):
 
     response = {}
 
@@ -120,13 +114,12 @@ async def sherpa_emergnecy_stop(
 
     sherpa_status = session.get_sherpa_status(entity_name)
     session, _ = session.enable_disable_sherpa(
-                        sherpa_status.sherpa_name,
-                        disable=pause_resume_ctrl_req.pause)
+        sherpa_status.sherpa_name, disable=pause_resume_ctrl_req.pause
+    )
 
     pause_resume_req = PauseResumeReq(
-                       pause=pause_resume_ctrl_req.pause,
-                       sherpa_name=entity_name
-                    )
+        pause=pause_resume_ctrl_req.pause, sherpa_name=entity_name
+    )
 
     process_req(pause_resume_req, user_name)
 
@@ -135,11 +128,11 @@ async def sherpa_emergnecy_stop(
 
 @router.post("/sherpa/{entity_name}/switch_mode")
 async def switch_mode(
-            switch_mode_ctrl_req: SwitchModeCtrlReq,
-            entity_name=Union[str, None],
-            user_name=Depends(get_user_from_header),
-            session=Depends(get_db_session)
-            ):
+    switch_mode_ctrl_req: SwitchModeCtrlReq,
+    entity_name=Union[str, None],
+    user_name=Depends(get_user_from_header),
+    session=Depends(get_db_session),
+):
 
     response = {}
 
@@ -153,10 +146,7 @@ async def switch_mode(
     if not sherpa_status:
         raise HTTPException(status_code=403, detail="Bad sherpa name")
 
-    switch_mode_req = SwitchModeReq(
-                      mode=switch_mode_ctrl_req.mode,
-                      sherpa_name=entity_name
-                    )
+    switch_mode_req = SwitchModeReq(mode=switch_mode_ctrl_req.mode, sherpa_name=entity_name)
 
     process_req(switch_mode_req, user_name)
     return response
@@ -164,11 +154,11 @@ async def switch_mode(
 
 @router.post("/sherpa/{entity_name}/recovery")
 async def reset_pose(
-            reset_pose_ctrl_req: ResetPoseCtrlReq,
-            entity_name=Union[str, None],
-            user_name=Depends(get_user_from_header),
-            session=Depends(get_db_session)
-            ):
+    reset_pose_ctrl_req: ResetPoseCtrlReq,
+    entity_name=Union[str, None],
+    user_name=Depends(get_user_from_header),
+    session=Depends(get_db_session),
+):
 
     response = {}
 
@@ -191,9 +181,9 @@ async def reset_pose(
         raise HTTPException(status_code=403, detail="Bad fleet staion detail")
 
     reset_pose_req = ResetPoseReq(
-                     pose=station.pose,
-                     sherpa_name=entity_name,
-                    )
+        pose=station.pose,
+        sherpa_name=entity_name,
+    )
     process_req(reset_pose_req, user_name)
 
     return response
@@ -201,10 +191,10 @@ async def reset_pose(
 
 @router.get("/sherpa/{entity_name}/diagnostics")
 async def diagnostics(
-            entity_name=Union[str, None],
-            user_name=Depends(get_user_from_header),
-            session=Depends(get_db_session)
-            ):
+    entity_name=Union[str, None],
+    user_name=Depends(get_user_from_header),
+    session=Depends(get_db_session),
+):
 
     response = {}
 
@@ -222,11 +212,13 @@ async def diagnostics(
     base_url = get_sherpa_url(sherpa_status.sherpa)
     url = f"{base_url}/{diagnostics_req.endpoint}"
     response = requests.get(url)
-    
+
     if response.status_code == 200:
         response = response.json()
-    
+
     else:
-        raise HTTPException(status_code=403, detail=f"Bad response from sherpa, {response.status_code}")
+        raise HTTPException(
+            status_code=403, detail=f"Bad response from sherpa, {response.status_code}"
+        )
 
     return response
