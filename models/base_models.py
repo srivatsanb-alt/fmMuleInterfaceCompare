@@ -11,8 +11,15 @@ class JsonMixin:
     @classmethod
     def from_dict(cls, obj_dict):
         fields = [f.name for f in dataclasses.fields(cls)]
-        attribs = {k: v for (k, v) in obj_dict.items() if k in fields}
-        return cls(**attribs)
+        new_attribs = {}
+        for (k, v) in obj_dict.items():
+            if k not in fields:
+                continue
+            if isinstance(v, JsonMixin):
+                 new_attribs[k] = v.__class_.from_dict(v)
+            else:
+                 new_attribs[k] = v
+        return cls(**new_attribs)
 
     @classmethod
     def from_json(cls, obj_json):
