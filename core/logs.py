@@ -4,6 +4,7 @@ import os
 from .db import session_maker
 from models.fleet_models import Fleet, Sherpa
 
+logging.basicConfig(level=logging.INFO)
 FORMATTER = logging.Formatter("%(asctime)s %(levelname)s [%(funcName)s] %(message)s")
 loggers = {}
 
@@ -72,5 +73,5 @@ def setup_logger(fleet: str, logdir, name=None, level=logging.INFO):
 
 def get_logger(name=None):
     if name not in loggers:
-        return loggers["root"]
+        return loggers["root"] if "root" in loggers else logging.getLogger()
     return loggers[name]
