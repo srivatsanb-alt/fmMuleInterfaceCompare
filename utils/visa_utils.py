@@ -1,8 +1,10 @@
+from typing import List
 from models.db_session import session
 
 from core.logs import get_logger
 from models.fleet_models import Sherpa
 from models.request_models import VisaType
+from models.visa_models import ExclusionZone, LinkedGates
 
 
 def lock_exclusion_zone(zone_name, zone_type, sherpa_name, exclusive=True, actual=True):
@@ -53,19 +55,21 @@ def lock_exclusion_zone(zone_name, zone_type, sherpa_name, exclusive=True, actua
         return False
 
 
-def get_linked_gates(ezone):
-    linked_gates = ezone.prev_linked_gates
-    linked_gates.extend(ezone.next_linked_gates)
+def get_linked_gates(ezone: ExclusionZone):
+    return ezone.prev_linked_gates + ezone.next_linked_gates
 
-    return linked_gates
+
+def split_zone_id(zone_id: str):
+    return zone_id.rsplit("_", 1)
 
 
 def lock_linked_zones(zone_name, zone_type, sherpa_name):
     ezone = session.get_exclusion_zone(zone_name, zone_type)
-    linked_gates = get_linked_gates(ezone)
-    can_lock_linked_gates = []
+    linked_gates: List[ExclusionZone] = get_linked_gates(ezone)
+    can_lock_linked_gates: List[bool] = []
+
     for lz in linked_gates:
-        lz_name, lz_type = lz.zone_id.rsplit("_", 1)
+        lz_name, lz_type = split_zone_id(lz.zone_id)
         can_lock = lock_exclusion_zone(lz_name, lz_type, sherpa_name, actual=False)
         can_lock_linked_gates.append(can_lock)
 
@@ -101,7 +105,7 @@ def unlock_exclusion_zone(zone_name, zone_type, sherpa_name):
 def clear_all_locks(sherpa_name):
     sherpa: Sherpa = session.get_sherpa(sherpa_name)
     for ezone in sherpa.exclusion_zones:
-        zone_name, zone_type = ezone.zone_id.split("_")
+        zone_name, zone_type = split_zone_id(ezone.zone_id)
         unlock_exclusion_zone(zone_name, zone_type, sherpa_name)
 
 
@@ -111,7 +115,7 @@ def maybe_grant_visa(zone_name, visa_type, sherpa_name):
     ezone = session.get_exclusion_zone(zone_name, "lane")
 
     # other_zones: List[ExclusionZone] = sherpa.exclusion_zones
-    linked_zones = get_linked_gates(ezone)
+    linked_zones = get_linked_gates(ezone) if ezone else []
 
     # if len(other_zones) > 1 or (len(other_zones) > 0 and other_zones[0] != ezone):
     # visa_str = f"Foreign policy violation - sherpa {sherpa_name} asking for visa to zone {zone_id} while holding visa for other_zones"
