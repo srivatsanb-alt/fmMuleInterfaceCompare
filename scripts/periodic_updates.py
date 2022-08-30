@@ -1,6 +1,7 @@
 from utils.comms import send_status_update
 import logging
-from models.db_session import session
+from core.db import session_maker
+from models.db_session import DBSession
 from models.fleet_models import (
     SherpaStatus,
     Sherpa,
@@ -13,7 +14,7 @@ import inspect
 
 
 def get_table_as_dict(model, model_obj):
-    all_valid_types = ['str', 'dict', 'list', 'int', 'float']
+    all_valid_types = ['str', 'dict', 'list', 'int', 'float', 'bool']
     cols = model.__table__.columns.keys()
     result = {}
     model_dict = model_obj.__dict__
@@ -39,7 +40,7 @@ def get_table_as_dict(model, model_obj):
     return result
 
 
-def get_fleet_status_msg(fleet):
+def get_fleet_status_msg(session, fleet):
     msg = {}
     all_station_status = session.get_all_station_status()
     all_sherpa_status = session.get_all_sherpa_status()
@@ -77,11 +78,14 @@ def get_fleet_status_msg(fleet):
 
 def send_periodic_updates():
     logging.getLogger().info("starting periodic updates script")
-    time.sleep(5)
-    while True:
-        all_fleets = session.get_all_fleets()
-        for fleet in all_fleets:
-            msg = get_fleet_status_msg(fleet)
-            send_status_update(msg)
+    time.sleep(1)
 
-        time.sleep(1)
+    with DBSession() as session:
+        while True:
+            all_fleets = session.get_all_fleets()
+            for fleet in all_fleets:
+                msg = get_fleet_status_msg(session, fleet)
+                send_status_update(msg)
+  
+            #send_status_update(trip_status)
+            time.sleep(1)

@@ -16,6 +16,12 @@ class DBSession:
         # self.ongoing_trip: OngoingTrip = None
         # self.trip_leg: TripLeg = None
 
+    def __enter__(self):
+        return self 
+
+    def __exit__(self):
+        self.close()
+
     def close(self):
         self.session.commit()
         self.session.close()

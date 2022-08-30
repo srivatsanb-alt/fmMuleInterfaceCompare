@@ -81,8 +81,12 @@ async def emergnecy_stop(
     fleet_names = [fleet.name for fleet in fleets]
     if entity_name not in fleet_names:
         raise HTTPException(status_code=403, detail="Fleet not found")
+ 
+    if pause_resume_ctrl_req.pause:
+        session, _ = session.update_fleet_status(entity_name, "emergency_stop")
+    else:
+        session, _ = session.update_fleet_status(entity_name, "start")
 
-    session, _ = session.update_fleet_status(entity_name, "emergency_stop")
 
     all_sherpa_status = session.get_all_sherpa_status()
     for sherpa_status in all_sherpa_status:
@@ -121,7 +125,7 @@ async def sherpa_emergnecy_stop(
     if not sherpa_status:
         raise HTTPException(status_code=403, detail="Bad sherpa name")
 
-    fleet_name = sherpa_status.fleet.name
+    fleet_name = sherpa_status.sherpa.fleet.name
     fleet_status = session.get_fleet(fleet_name)
 
     if fleet_status.status == "emergency_stop":
