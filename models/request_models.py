@@ -101,7 +101,6 @@ class ResourceReq(SherpaReq):
 @dataclass
 class SherpaMsg(JsonMixin):
     source: str
-    type: str
     timestamp: float
 
 
