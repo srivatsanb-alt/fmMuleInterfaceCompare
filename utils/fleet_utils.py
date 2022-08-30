@@ -108,10 +108,13 @@ def add_map(fleet: str):
     with session_maker() as db:
         map: Map = Map(name=fleet)
         db.add(map)
-        db.commit()
+        db.flush()
         db.refresh(map)
         fleet_obj: Fleet = db.query(Fleet).filter(Fleet.name == fleet).one()
         fleet_id = fleet_obj.id
+        fleet_obj.map_id = map.id
+        db.commit()
+
     add_map_files(fleet)
     grid_map_attributes_path = os.path.join(f"{os.environ['FM_MAP_DIR']}", f"{fleet}", "map", "grid_map_attributes.json")
     if not os.path.exists(grid_map_attributes_path):
