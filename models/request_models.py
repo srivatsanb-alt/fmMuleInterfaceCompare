@@ -139,7 +139,6 @@ class TripInfo(JsonMixin):
     eta_at_start: float
     eta: float
     progress: float
-    stoppages: Stoppages = None
 
 
 @dataclass
@@ -148,6 +147,7 @@ class TripStatusMsg(JsonMixin):
     trip_id: int
     trip_leg_id: int
     trip_info: TripInfo
+    stoppages: Stoppages = None
     type: str = MessageType.TRIP_STATUS
 
 
