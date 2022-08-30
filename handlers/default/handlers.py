@@ -135,6 +135,8 @@ class Handlers:
 
     # assigns next destination to sherpa
     def assign_next_task(self, sherpa_name):
+        done = False
+        get_logger(sherpa_name).info(f"assigning next task to {sherpa_name}")
         ongoing_trip: OngoingTrip = session.get_ongoing_trip(sherpa_name)
         if not ongoing_trip or ongoing_trip.finished():
             self.end_trip(ongoing_trip)
@@ -143,13 +145,19 @@ class Handlers:
         ongoing_trip: OngoingTrip = session.get_ongoing_trip(sherpa_name)
 
         if self.check_continue_curr_leg(ongoing_trip) and ongoing_trip.check_continue():
+            get_logger(sherpa_name).info(f"{sherpa_name} continuing leg")
             self.continue_leg(ongoing_trip)
+            done = True
         elif (
             self.check_start_new_leg(ongoing_trip)
             and not ongoing_trip.finished_booked()
             and ongoing_trip.check_continue()
         ):
+            get_logger(sherpa_name).info(f"{sherpa_name} starting new leg")
             self.start_leg(ongoing_trip)
+            done = True
+        if not done:
+            get_logger(sherpa_name).info(f"{sherpa_name} not doing anything")
 
     # iterates through pending trips and tries to assign each one to an available sherpa
     def assign_pending_trips(self):
