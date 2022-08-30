@@ -59,11 +59,11 @@ async def reader(websocket, sherpa):
 
         if msg_type == MessageType.TRIP_STATUS:
             send_status_update(msg)
-            msg.source = sherpa
+            msg["source"] = sherpa
             trip_status_msg = TripStatusMsg.from_dict(msg)
             enqueue(Queues.handler_queue, handle, handler_obj, trip_status_msg, ttl=2)
         elif msg_type == MessageType.SHERPA_STATUS:
-            msg.source = sherpa
+            msg["source"] = sherpa
             status_msg = SherpaStatusMsg.from_dict(msg)
             enqueue(Queues.handler_queue, handle, handler_obj, status_msg)
         else:
