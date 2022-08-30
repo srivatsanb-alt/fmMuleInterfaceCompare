@@ -77,6 +77,11 @@ async def emergnecy_stop(
     if not entity_name:
         raise HTTPException(status_code=403, detail="No entity name")
 
+    fleets = session.get_all_fleets()
+    fleet_names = [fleet.name for fleet in fleets]
+    if entity_name not in fleet_names:
+        raise HTTPException(status_code=403, detail="Fleet not found")
+
     session, _ = session.update_fleet_status(entity_name, "emergency_stop")
 
     all_sherpa_status = session.get_all_sherpa_status()
@@ -113,6 +118,15 @@ async def sherpa_emergnecy_stop(
         raise HTTPException(status_code=403, detail="No entity name")
 
     sherpa_status = session.get_sherpa_status(entity_name)
+    if not sherpa_status:
+        raise HTTPException(status_code=403, detail="Bad sherpa name")
+
+    fleet_name = sherpa_status.fleet.name
+    fleet_status = session.get_fleet(fleet_name)
+
+    if fleet_status.status == "emergency_stop":
+        raise HTTPException(status_code=403, detail="Start/resume fleet fleet to resume/pause sherpas")
+
     session, _ = session.enable_disable_sherpa(
         sherpa_status.sherpa_name, disable=pause_resume_ctrl_req.pause
     )
@@ -143,6 +157,7 @@ async def switch_mode(
         raise HTTPException(status_code=403, detail="No entity name")
 
     sherpa_status = session.get_sherpa_status(entity_name)
+
     if not sherpa_status:
         raise HTTPException(status_code=403, detail="Bad sherpa name")
 
