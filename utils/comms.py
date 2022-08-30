@@ -1,15 +1,13 @@
-import json
+import os
 import time
 from typing import Dict
-import redis
 
+import redis
 import requests
-import os
-import asyncio
 from core.config import Config
 from core.logs import get_logger
-from models.request_models import FMReq, MoveReq
 from models.fleet_models import Sherpa, Station
+from models.request_models import FMReq, MoveReq
 from models.trip_models import OngoingTrip
 
 
@@ -60,6 +58,7 @@ def send_msg_to_sherpa(sherpa: Sherpa, msg: FMReq) -> Dict:
 
 def process_response_mock(response: requests.Response, json=False) -> Dict:
     from unittest.mock import Mock
+
     from requests.models import Response
 
     response = Mock(spec=Response)
@@ -92,5 +91,5 @@ def send_move_msg(sherpa: Sherpa, ongoing_trip: OngoingTrip, station: Station) -
 
 
 def send_status_update(msg):
-    pub = redis.from_url(os.getenv("FM_REDIS_URI"),decode_responses=True)
+    pub = redis.from_url(os.getenv("FM_REDIS_URI"), decode_responses=True)
     pub.publish("channel:status_updates", str(msg))
