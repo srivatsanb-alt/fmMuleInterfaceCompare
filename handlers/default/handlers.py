@@ -131,17 +131,19 @@ class Handlers:
     def assign_new_trip(self, sherpa_name: str):
         pending_trip: PendingTrip = session.get_pending_trip()
         if not pending_trip:
-            return
+            return False
 
         get_logger(sherpa_name).info(f"found pending trip id {pending_trip.trip_id}")
         sherpa: SherpaStatus = session.get_sherpa_status(sherpa_name)
         if not hutils.is_sherpa_available(sherpa):
             get_logger(sherpa_name).info(f"{sherpa_name} not available for new trip")
-            return
+            return False
 
         self.start_trip(pending_trip.trip, sherpa_name)
         session.delete_pending_trip(pending_trip)
         get_logger(sherpa_name).info(f"deleted pending trip id {pending_trip.trip_id}")
+
+        return True
 
     # assigns next destination to sherpa
     def assign_next_task(self, sherpa_name):
@@ -150,8 +152,7 @@ class Handlers:
 
         if not ongoing_trip or ongoing_trip.finished():
             self.end_trip(ongoing_trip)
-            self.assign_new_trip(sherpa_name)
-            done = True
+            done = self.assign_new_trip(sherpa_name)
 
         ongoing_trip: OngoingTrip = session.get_ongoing_trip(sherpa_name)
 
@@ -177,7 +178,7 @@ class Handlers:
             sherpa_status = session.get_sherpa_status(sherpa_name)
             sherpa_status.idle = False
         else:
-            get_logger(sherpa_name).info(f"{sherpa_name} not doing anything")
+            get_logger(sherpa_name).info(f"{sherpa_name} not assigned new task")
 
     # iterates through pending trips and tries to assign each one to an available sherpa
     def assign_pending_trips(self):
@@ -410,7 +411,6 @@ class Handlers:
 
     def handle_visa_access(self, req: VisaReq, access_type: AccessType, sherpa_name):
         # do not assign next destination after processing a visa request.
-        req_ctxt.assign_next_task = False
         if access_type == AccessType.REQUEST:
             return self.handle_visa_request(req, sherpa_name)
         elif access_type == AccessType.RELEASE:
@@ -439,7 +439,7 @@ class Handlers:
 
         response = msg_handler(msg)
 
-        if req_ctxt.assign_next_task and req_ctxt.sherpa_name:
+        if req_ctxt.sherpa_name:
             self.assign_next_task(req_ctxt.sherpa_name)
 
         self.assign_pending_trips()
