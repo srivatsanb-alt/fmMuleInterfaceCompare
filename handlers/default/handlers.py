@@ -36,6 +36,7 @@ class RequestContext:
     msg_type: str
     sherpa_name: str
     assign_next_task: bool
+    continue_curr_task: bool
     logger = None
 
 
@@ -49,6 +50,8 @@ def init_request_context(req):
     else:
         req_ctxt.sherpa_name = None
     req_ctxt.assign_next_task = True
+    # do not send a move to current destination, except if asked
+    req_ctxt.continue_curr_task = False
     if isinstance(req, SherpaReq) or isinstance(req, SherpaMsg):
         req_ctxt.logger = get_logger(req.source)
     else:
@@ -152,7 +155,11 @@ class Handlers:
 
         ongoing_trip: OngoingTrip = session.get_ongoing_trip(sherpa_name)
 
-        if self.check_continue_curr_leg(ongoing_trip) and ongoing_trip.check_continue():
+        if (
+            self.check_continue_curr_leg(ongoing_trip)
+            and ongoing_trip.check_continue()
+            and req_ctxt.continue_curr_task
+        ):
             get_logger(sherpa_name).info(f"{sherpa_name} continuing leg")
             self.continue_leg(ongoing_trip)
             done = True
@@ -174,9 +181,9 @@ class Handlers:
 
     # iterates through pending trips and tries to assign each one to an available sherpa
     def assign_pending_trips(self):
-        get_logger().info("trying to assign pending trips")
         pending_trip: PendingTrip = session.get_pending_trip()
         while pending_trip:
+            get_logger().info(f"trying to assign pending trip {pending_trip.trip_id}")
             sherpa_name = hutils.find_best_sherpa()
             if not sherpa_name:
                 get_logger().info(
@@ -361,6 +368,7 @@ class Handlers:
         response: VerifyFleetFilesResp = VerifyFleetFilesResp(
             fleet_name=fleet_name, files_info=map_file_info
         )
+        req_ctxt.continue_curr_task = True
         return response.to_json()
 
     def handle_pass_to_sherpa(self, req):
