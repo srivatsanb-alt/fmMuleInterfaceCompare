@@ -19,7 +19,7 @@ class DBSession:
     def __enter__(self):
         return self
 
-    def __exit__(self):
+    def __exit__(self, *args, **kwargs):
         self.close()
 
     def close(self):
@@ -99,12 +99,15 @@ class DBSession:
             .one_or_none()
         )
 
-    def get_all_sherpa_status(self, fleet_name) -> List[SherpaStatus]:
-        return (
-            self.session.query(SherpaStatus)
-            .filter(SherpaStatus.sherpa.fleet.name == fleet_name)
-            .all()
-        )
+    def get_all_sherpa_status(self, fleet_name=None) -> List[SherpaStatus]:
+        if fleet_name:
+            return (
+                self.session.query(SherpaStatus)
+                .filter(SherpaStatus.sherpa.fleet.name == fleet_name)
+                .all()
+            )
+        else:
+            return self.session.query(SherpaStatus).all()
 
     def get_sherpa_status(self, name: str) -> SherpaStatus:
         return (
