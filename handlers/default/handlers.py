@@ -1,3 +1,4 @@
+from core.constants import FleetStatus
 from core.logs import get_logger
 from models.base_models import StationProperties
 from models.db_session import session
@@ -60,6 +61,14 @@ def init_request_context(req):
 
 class Handlers:
     def should_handle_msg(self, msg):
+        sherpa_name = req_ctxt.sherpa_name
+        if not sherpa_name:
+            return True, None
+        sherpa: Sherpa = session.get_sherpa(sherpa_name)
+        fleet: Fleet = sherpa.fleet
+        if fleet.status == FleetStatus.PAUSED:
+            return False, f"fleet {fleet.name} is paused"
+
         return True, None
 
     def start_trip(self, trip: Trip, sherpa_name: str):
@@ -131,6 +140,15 @@ class Handlers:
     def assign_new_trip(self, sherpa_name: str):
         pending_trip: PendingTrip = session.get_pending_trip()
         if not pending_trip:
+            get_logger(sherpa_name).info(f"no pending trip to assign to {sherpa_name}")
+            return False
+
+        sherpa: Sherpa = session.get_sherpa(sherpa_name)
+        fleet: Fleet = sherpa.fleet
+        if fleet.status == FleetStatus.STOPPED:
+            get_logger(sherpa_name).info(
+                f"fleet {fleet.name} is stopped, not assigning new trip to {sherpa_name}"
+            )
             return False
 
         get_logger(sherpa_name).info(f"found pending trip id {pending_trip.trip_id}")
