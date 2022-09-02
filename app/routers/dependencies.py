@@ -3,19 +3,25 @@ import time
 
 import jwt
 from core.settings import settings
-from fastapi import Header
+from fastapi import Depends, Header
 from fastapi.param_functions import Query
 from models.db_session import session
 
 
-def get_sherpa(x_api_key: str = Header(None)):
+def get_db_session():
+    try:
+        yield session
+    finally:
+        session.close()
+
+
+def get_sherpa(x_api_key: str = Header(None), session=Depends(get_db_session)):
     if x_api_key is None:
         return None
 
     hashed_api_key = hashlib.sha256(x_api_key.encode("utf-8")).hexdigest()
     sherpa = session.get_sherpa_by_api_key(hashed_api_key)
     sherpa_name = sherpa.name if sherpa else None
-    session.close()
 
     return sherpa_name
 
@@ -53,7 +59,3 @@ def generate_jwt_token(username: str):
         algorithm="HS256",
     )
     return access_token
-
-
-def get_db_session():
-    return session

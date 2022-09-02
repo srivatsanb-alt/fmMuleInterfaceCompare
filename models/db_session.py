@@ -17,7 +17,7 @@ class DBSession:
         # self.trip_leg: TripLeg = None
 
     def __enter__(self):
-        return self 
+        return self
 
     def __exit__(self):
         self.close()
@@ -99,8 +99,12 @@ class DBSession:
             .one_or_none()
         )
 
-    def get_all_sherpa_status(self) -> List[SherpaStatus]:
-        return self.session.query(SherpaStatus).all()
+    def get_all_sherpa_status(self, fleet_name) -> List[SherpaStatus]:
+        return (
+            self.session.query(SherpaStatus)
+            .filter(SherpaStatus.sherpa.fleet.name == fleet_name)
+            .all()
+        )
 
     def get_sherpa_status(self, name: str) -> SherpaStatus:
         return (
@@ -144,26 +148,6 @@ class DBSession:
                 .filter(TripLeg.id == ongoing_trip.trip_leg_id)
                 .one_or_none()
             )
-
-    def update_fleet_status(self, fleet_name: str, status: str):
-        success = (
-            self.session.query(Fleet)
-            .filter(Fleet.name == fleet_name)
-            .update({Fleet.status: status})
-        )
-
-        self.session.commit()
-        return self, success
-
-    def enable_disable_sherpa(self, sherpa_name: str, disable: bool):
-        success = (
-            self.session.query(SherpaStatus)
-            .filter(SherpaStatus.sherpa_name == sherpa_name)
-            .update({SherpaStatus.disabled: disable})
-        )
-
-        self.session.commit()
-        return self, success
 
     def get_exclusion_zone(self, zone_name, zone_type) -> ExclusionZone:
         zone_id = f"{zone_name}_{zone_type}"

@@ -7,3 +7,9 @@ class MessageType:
     BOOKING = "book"
     PASS_TO_SHERPA = "pass_to_sherpa"
     RESOURCE_ACCESS = "resource_access"
+
+
+class FleetStatus:
+    STARTED = "started"
+    STOPPED = "stopped"
+    PAUSED = "paused"
