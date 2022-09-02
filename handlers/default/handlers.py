@@ -195,7 +195,12 @@ class Handlers:
                 return
             self.assign_next_task(sherpa_name)
             # get the next pending trip
-            pending_trip = session.get_pending_trip()
+            next_pending_trip = session.get_pending_trip()
+            if not next_pending_trip or next_pending_trip == pending_trip:
+                get_logger().info(f"no more pending trips to assign")
+                break
+            else:
+                pending_trip = next_pending_trip
 
     def check_continue_curr_leg(self, ongoing_trip: OngoingTrip):
         return (
@@ -216,6 +221,8 @@ class Handlers:
         sherpa_status.idle = True
         sherpa_status.disabled = False
         get_logger(sherpa_name).info(f"{sherpa_name} initialized")
+
+        req_ctxt.continue_curr_task = True
 
     def do_pre_actions(self, ongoing_trip: OngoingTrip):
         curr_station = ongoing_trip.curr_station()
@@ -369,7 +376,6 @@ class Handlers:
         response: VerifyFleetFilesResp = VerifyFleetFilesResp(
             fleet_name=fleet_name, files_info=map_file_info
         )
-        req_ctxt.continue_curr_task = True
         return response.to_json()
 
     def handle_pass_to_sherpa(self, req):
