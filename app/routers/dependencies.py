@@ -5,10 +5,11 @@ import jwt
 from core.settings import settings
 from fastapi import Depends, Header
 from fastapi.param_functions import Query
-from models.db_session import session
+from models.db_session import DBSession
 
 
 def get_db_session():
+    session = DBSession()
     try:
         yield session
     finally:
