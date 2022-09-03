@@ -58,7 +58,6 @@ async def reader(websocket, sherpa):
         msg_type = msg.get("type")
 
         if msg_type == MessageType.TRIP_STATUS:
-            send_status_update(msg)
             msg["source"] = sherpa
             trip_status_msg = TripStatusMsg.from_dict(msg)
             enqueue(Queues.handler_queue, handle, handler_obj, trip_status_msg, ttl=2)

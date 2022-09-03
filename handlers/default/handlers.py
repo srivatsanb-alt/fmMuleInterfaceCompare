@@ -1,4 +1,5 @@
 from core.constants import FleetStatus
+import dataclasses
 from core.logs import get_logger
 from models.base_models import StationProperties
 from models.db_session import session
@@ -20,13 +21,14 @@ from models.request_models import (
     SherpaReq,
     SherpaStatusMsg,
     TripStatusMsg,
+    TripStatusUpdate,
     VerifyFleetFilesResp,
     VisaReq,
     VisaType,
 )
 from models.trip_models import OngoingTrip, PendingTrip, Trip, TripState
 from requests import Response
-from utils.comms import get, send_move_msg, send_msg_to_sherpa
+from utils.comms import get, send_move_msg, send_msg_to_sherpa, send_status_update
 from utils.util import are_poses_close
 from utils.visa_utils import maybe_grant_visa, unlock_exclusion_zone
 
@@ -381,7 +383,19 @@ class Handlers:
             session.create_pending_trip(trip.id)
 
     def handle_trip_status(self, req: TripStatusMsg):
-        pass
+        sherpa_name = req.source
+        sherpa: Sherpa = session.get_sherpa(sherpa_name)
+        trip_status_update = {"sherpa_name": sherpa_name, "fleet_name": sherpa.fleet.name}
+
+        tsu_fields = [f.name for f in dataclasses.fields(TripStatusUpdate)]
+        tsm_fields = [f.name for f in dataclasses.fields(TripStatusMsg)]
+
+        for field in tsu_fields:
+            if field not in tsm_fields:
+                continue
+            trip_status_update[field] = getattr(req, field)
+
+        send_status_update(trip_status_update)
 
     def handle_verify_fleet_files(self, req: SherpaReq):
         sherpa_name = req.source

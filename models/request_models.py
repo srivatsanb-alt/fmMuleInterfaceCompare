@@ -278,3 +278,14 @@ class ResourceResp(JsonMixin):
 class InitResp(JsonMixin):
     display_name: str
     hwid: str
+
+
+# Messages to frontend
+@dataclass
+class TripStatusUpdate(JsonMixin):
+    sherpa_name: str
+    fleet_name: str
+    trip_id: int
+    trip_leg_id: int
+    trip_info: TripInfo
+    stoppages: Stoppages = None
