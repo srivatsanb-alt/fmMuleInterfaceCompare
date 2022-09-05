@@ -1,8 +1,7 @@
 import hashlib
 
-from app.routers.dependencies import generate_jwt_token
-from fastapi import APIRouter, HTTPException
-from models.db_session import session
+from app.routers.dependencies import generate_jwt_token, get_db_session
+from fastapi import APIRouter, Depends, HTTPException
 from models.request_models import UserLogin
 
 router = APIRouter(
@@ -13,7 +12,7 @@ router = APIRouter(
 
 
 @router.post("/login")
-async def login(user_login: UserLogin):
+async def login(user_login: UserLogin, session=Depends(get_db_session)):
 
     hashed_password = hashlib.sha256(user_login.password.encode("utf-8")).hexdigest()
 
@@ -24,7 +23,7 @@ async def login(user_login: UserLogin):
     role = "admin"
     response = {
         "access_token": generate_jwt_token(user_login.name),
-        "user_details": {"user_name": user_login.name, "role": role}
+        "user_details": {"user_name": user_login.name, "role": role},
     }
 
     return response

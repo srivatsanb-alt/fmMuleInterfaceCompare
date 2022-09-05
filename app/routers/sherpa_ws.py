@@ -4,12 +4,11 @@ import logging
 import os
 
 import aioredis
-from app.routers.dependencies import get_sherpa
+from app.routers.dependencies import get_db_session, get_sherpa
 from core.config import Config
 from core.constants import MessageType
 from models.request_models import SherpaStatusMsg, TripStatusMsg
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, status
-from models.db_session import session
 from utils.rq import Queues, enqueue
 from utils.comms import send_status_update
 
@@ -17,7 +16,9 @@ router = APIRouter()
 
 
 @router.websocket("/ws/api/v1/sherpa/")
-async def sherpa_status(websocket: WebSocket, sherpa=Depends(get_sherpa)):
+async def sherpa_status(
+    websocket: WebSocket, sherpa=Depends(get_sherpa), session=Depends(get_db_session)
+):
     if not sherpa:
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
@@ -30,7 +31,6 @@ async def sherpa_status(websocket: WebSocket, sherpa=Depends(get_sherpa)):
     if db_sherpa.ip_address != client_ip:
         # write IP address to sherpa table
         db_sherpa.ip_address = client_ip
-    session.close()
 
     rw = [
         asyncio.create_task(reader(websocket, sherpa)),
