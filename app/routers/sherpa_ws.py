@@ -4,7 +4,7 @@ import logging
 import os
 
 import aioredis
-from app.main import redis
+from redis import Redis
 from app.routers.dependencies import get_db_session, get_sherpa
 from core.config import Config
 from core.constants import MessageType
@@ -12,6 +12,7 @@ from models.request_models import SherpaStatusMsg, TripStatusMsg
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, status
 from utils.rq import Queues, enqueue
 
+redis = Redis.from_url(os.getenv("FM_REDIS_URI"))
 router = APIRouter()
 
 MSG_INVALID = "msg_invalid"

@@ -1,8 +1,6 @@
-import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from redis import Redis
 from .routers import (
     sherpa_http,
     sherpa_ws,
@@ -13,7 +11,6 @@ from .routers import (
     control_http,
 )
 
-redis = Redis.from_url(os.getenv("FM_REDIS_URI"))
 
 app = FastAPI()
 
