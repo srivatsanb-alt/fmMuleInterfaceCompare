@@ -4,15 +4,42 @@ import logging
 import os
 
 import aioredis
+from app.main import redis
 from app.routers.dependencies import get_db_session, get_sherpa
 from core.config import Config
 from core.constants import MessageType
 from models.request_models import SherpaStatusMsg, TripStatusMsg
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, status
 from utils.rq import Queues, enqueue
-from utils.comms import send_status_update
 
 router = APIRouter()
+
+MSG_INVALID = "msg_invalid"
+MSG_TYPE_REPEATED = "msg_type_repeated_within_time_window"
+MSG_TS_INVALID = "msg_timestamp_invalid"
+
+
+def accept_message(sherpa: str, msg):
+    msg_type = msg.get("type")
+    ts = msg.get("timestamp")
+    if not msg_type or not ts:
+        return False, MSG_INVALID
+
+    type_key = f"{sherpa}_{msg_type}"
+    ts_key = f"{sherpa}_ts"
+
+    if not redis.setnx(type_key, ""):
+        # same message type received less than 0.5 seconds ago
+        return False, MSG_TYPE_REPEATED
+    # set an expiry of 0.5 seconds
+    redis.expire(type_key, 0.5)
+
+    prev_ts = redis.hget(ts_key, msg_type)
+    # check if timestamp is valid
+    if ts <= prev_ts:
+        return False, MSG_TS_INVALID
+    redis.hset(ts_key, msg_type, ts)
+    return True, None
 
 
 @router.websocket("/ws/api/v1/sherpa/")
@@ -56,15 +83,23 @@ async def reader(websocket, sherpa):
             return
 
         msg_type = msg.get("type")
+        ts = msg.get("timestamp")
+
+        ok, reason = accept_message(sherpa, msg)
+        if not ok:
+            logging.warn(
+                f"message rejected type={msg_type},ts={ts},sherpa={sherpa},reason={reason}"
+            )
+            continue
 
         if msg_type == MessageType.TRIP_STATUS:
             msg["source"] = sherpa
             trip_status_msg = TripStatusMsg.from_dict(msg)
-            enqueue(Queues.handler_queue, handle, handler_obj, trip_status_msg, ttl=2)
+            enqueue(Queues.handler_queue, handle, handler_obj, trip_status_msg, ttl=1)
         elif msg_type == MessageType.SHERPA_STATUS:
             msg["source"] = sherpa
             status_msg = SherpaStatusMsg.from_dict(msg)
-            enqueue(Queues.handler_queue, handle, handler_obj, status_msg)
+            enqueue(Queues.handler_queue, handle, handler_obj, status_msg, ttl=1)
         else:
             logging.getLogger().error(f"Unsupported message type {msg_type}")
 

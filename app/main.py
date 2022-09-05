@@ -1,15 +1,20 @@
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from .routers import sherpa_http, sherpa_ws, trips_http, auth, updates, misc_http, control_http
-import logging
-
-
-logging.basicConfig(
-    format="{asctime} {levelname} [{funcName}] {message}",
-    style="{",
-    level=logging.INFO,
+from redis import Redis
+from .routers import (
+    sherpa_http,
+    sherpa_ws,
+    trips_http,
+    auth,
+    updates,
+    misc_http,
+    control_http,
 )
+
+redis = Redis.from_url(os.getenv("FM_REDIS_URI"))
+
 app = FastAPI()
 
 app.add_middleware(
