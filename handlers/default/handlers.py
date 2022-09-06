@@ -397,7 +397,7 @@ class Handlers:
 
         trip_status_update = TripStatusUpdate(**tsu)
 
-        send_status_update(trip_status_update)
+        send_status_update(dataclasses.asdict(trip_status_update))
 
     def handle_verify_fleet_files(self, req: SherpaReq):
         sherpa_name = req.source
