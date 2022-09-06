@@ -45,7 +45,7 @@ def process_msg_with_response(req: SherpaReq, sherpa: str):
             break
         if status == "failed":
             raise HTTPException(status_code=500)
-        time.sleep(1)
+        time.sleep(0.1)
     return response
 
 
