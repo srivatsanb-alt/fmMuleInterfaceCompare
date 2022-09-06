@@ -385,7 +385,7 @@ class Handlers:
     def handle_trip_status(self, req: TripStatusMsg):
         sherpa_name = req.source
         sherpa: Sherpa = session.get_sherpa(sherpa_name)
-        trip_status_update = {"sherpa_name": sherpa_name, "fleet_name": sherpa.fleet.name}
+        tsu = {"sherpa_name": sherpa_name, "fleet_name": sherpa.fleet.name}
 
         tsu_fields = [f.name for f in dataclasses.fields(TripStatusUpdate)]
         tsm_fields = [f.name for f in dataclasses.fields(TripStatusMsg)]
@@ -393,7 +393,9 @@ class Handlers:
         for field in tsu_fields:
             if field not in tsm_fields:
                 continue
-            trip_status_update[field] = getattr(req, field)
+            tsu[field] = getattr(req, field)
+
+        trip_status_update = TripStatusUpdate(**tsu)
 
         send_status_update(trip_status_update)
 

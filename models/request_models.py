@@ -289,3 +289,4 @@ class TripStatusUpdate(JsonMixin):
     trip_leg_id: int
     trip_info: TripInfo
     stoppages: Stoppages = None
+    type: str = MessageType.TRIP_STATUS
