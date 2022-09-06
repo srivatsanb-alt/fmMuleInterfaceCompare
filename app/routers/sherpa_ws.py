@@ -2,14 +2,15 @@ import ast
 import asyncio
 import logging
 import os
+from datetime import timedelta
 
 import aioredis
-from redis import Redis
 from app.routers.dependencies import get_db_session, get_sherpa
 from core.config import Config
 from core.constants import MessageType
-from models.request_models import SherpaStatusMsg, TripStatusMsg
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, status
+from models.request_models import SherpaStatusMsg, TripStatusMsg
+from redis import Redis
 from utils.rq import Queues, enqueue
 
 redis = Redis.from_url(os.getenv("FM_REDIS_URI"))
@@ -18,6 +19,8 @@ router = APIRouter()
 MSG_INVALID = "msg_invalid"
 MSG_TYPE_REPEATED = "msg_type_repeated_within_time_window"
 MSG_TS_INVALID = "msg_timestamp_invalid"
+
+expire_after_ms = timedelta(milliseconds=500)
 
 
 def accept_message(sherpa: str, msg):
@@ -33,7 +36,7 @@ def accept_message(sherpa: str, msg):
         # same message type received less than 0.5 seconds ago
         return False, MSG_TYPE_REPEATED
     # set an expiry of 0.5 seconds
-    redis.expire(type_key, 0.5)
+    redis.expire(type_key, expire_after_ms)
 
     prev_ts = redis.hget(ts_key, msg_type)
     # check if timestamp is valid
