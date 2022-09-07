@@ -7,7 +7,7 @@ from .routers import (
     sherpa_ws,
     trips_http,
     auth,
-    updates,
+    updates_ws,
     misc_http,
     control_http,
 )
@@ -37,7 +37,7 @@ app.mount("/api/static", StaticFiles(directory="static"), name="static")
 app.include_router(sherpa_http.router)
 app.include_router(sherpa_ws.router)
 app.include_router(trips_http.router)
-app.include_router(updates.router)
+app.include_router(updates_ws.router)
 app.include_router(auth.router)
 app.include_router(misc_http.router)
 app.include_router(control_http.router)
