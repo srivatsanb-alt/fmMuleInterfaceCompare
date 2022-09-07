@@ -2,7 +2,6 @@ import ast
 import asyncio
 import logging
 import os
-import json
 
 import aioredis
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, status
@@ -13,8 +12,7 @@ router = APIRouter()
 
 
 @router.websocket("/ws/api/v1/updates/{token}")
-async def sherpa_status(websocket: WebSocket,
-                        user_name=Depends(get_user_from_query)):
+async def sherpa_status(websocket: WebSocket, user_name=Depends(get_user_from_query)):
 
     if not user_name:
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
@@ -40,11 +38,7 @@ async def sherpa_status(websocket: WebSocket,
 
 async def reader(websocket):
     while True:
-        try:
-            msg = await websocket.receive_json()
-        except WebSocketDisconnect:
-            logging.info("websocket disconnected")
-            return
+        msg = await websocket.receive_json()
 
 
 async def writer(websocket):
@@ -56,9 +50,5 @@ async def writer(websocket):
     while True:
         message = await psub.get_message(ignore_subscribe_messages=True, timeout=5)
         if message:
-            try:
-                data = ast.literal_eval(message["data"])
-                await websocket.send_json(data)
-            except Exception as e:
-                pass
-                #logging.info(f"unable to send a websocket update, exception {e}")
+            data = ast.literal_eval(message["data"])
+            await websocket.send_json(data)
