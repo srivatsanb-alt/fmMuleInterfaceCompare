@@ -1,6 +1,7 @@
 import ast
 import asyncio
 import logging
+import math
 import os
 from datetime import timedelta
 
@@ -39,8 +40,9 @@ def accept_message(sherpa: str, msg):
     redis.expire(type_key, expire_after_ms)
 
     prev_ts = redis.hget(ts_key, msg_type)
+    prev_ts = float(prev_ts) if prev_ts else 0.0
     # check if timestamp is valid
-    if ts <= prev_ts:
+    if math.isclose(ts, prev_ts) or ts < prev_ts:
         return False, MSG_TS_INVALID
     redis.hset(ts_key, msg_type, ts)
     return True, None
