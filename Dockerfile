@@ -12,7 +12,9 @@ RUN cd /app
 RUN python3.7 -m pip install -U pip setuptools wheel && \
     python3.7 -m pip install -U poetry==1.1.12
 
+ARG FM_LOG_DIR
+
 RUN poetry lock && poetry install
 RUN chmod +x fleet_orchestrator.sh
 
-CMD exec ./fleet_orchestrator.sh
+CMD exec ./fleet_orchestrator.sh > $FM_LOG_DIR/fm_container.log 2>&1 &

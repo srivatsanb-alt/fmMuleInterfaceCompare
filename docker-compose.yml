@@ -1,5 +1,5 @@
 services:
-  fleet_manager:
+  fm_container:
     image: fleet_manager
     restart: always
     build: .
@@ -8,18 +8,18 @@ services:
     volumes:
       - ~/fleet_manager/logs:/logs
       - ~/fleet_manager/static:/static
-      - ~/fleet_manager/mule/config:/app/mule/config
+      - ~/fleet_manager/static/config:/app/mule/config
       - /tmp:/tmp
     depends_on:
-      - postgres
+      - psql_container
 
-  postgres:
+  psql_container:
     image: postgres
     restart: always
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
     ports:
-      - '5432:5432'
+      - '5400:5432'
     volumes:
-      - /tmp:/var/lib/postgresql/data
+      - ~/fleet_manager/static/db:/var/lib/postgresql/data
