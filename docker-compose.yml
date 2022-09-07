@@ -4,7 +4,7 @@ services:
     restart: always
     build: .
     ports:
-      - '8001:8001'
+      - $FM_PORT:$FM_PORT
     volumes:
       - ~/fleet_manager/logs:/logs
       - ~/fleet_manager/static:/static
@@ -20,6 +20,6 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
     ports:
-      - '5400:5432'
+      - $PSQL_PORT:5432
     volumes:
       - ~/fleet_manager/static/db:/var/lib/postgresql/data

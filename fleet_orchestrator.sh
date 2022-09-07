@@ -1,6 +1,6 @@
 #! /bin/bash
 
-source env.sh
+source docker_env.sh
 
 LOGS=$FM_LOG_DIR
 TS=$(date +'%H%M%S')
@@ -9,7 +9,7 @@ start() {
     echo "starting fleet manager"
     poetry run python main.py > $LOGS/fm.out 2>&1 &
     echo "starting uvicorn"
-    poetry run uvicorn app.main:app --host 0.0.0.0 > $LOGS/uvicorn.out 2>&1 &
+    poetry run uvicorn app.main:app --host 0.0.0.0 --port $FM_PORT > $LOGS/uvicorn.out 2>&1 &
 }
 
 save_fleet_log() {
