@@ -82,9 +82,9 @@ async def reader(websocket, sherpa):
     while True:
         try:
             msg = await websocket.receive_json()
-        except WebSocketDisconnect:
-            logging.info("websocket disconnected")
-            return
+        except WebSocketDisconnect as e:
+            logging.info(f"websocket with {websocket.client.host} disconnected")
+            raise e
 
         msg_type = msg.get("type")
         ts = msg.get("timestamp")
