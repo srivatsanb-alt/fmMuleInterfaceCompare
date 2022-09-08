@@ -17,4 +17,8 @@ ARG FM_LOG_DIR
 RUN poetry lock && poetry install
 RUN chmod +x fleet_orchestrator.sh
 
-CMD exec ./fleet_orchestrator.sh > $FM_LOG_DIR/fm_container.log 2>&1 &
+RUN mkdir /static
+RUN mkdir /app/logs
+
+CMD exec ./fleet_orchestrator.sh 
+#> /app/logs/fm_container.log 2>&1 & 

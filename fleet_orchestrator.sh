@@ -7,9 +7,9 @@ TS=$(date +'%H%M%S')
 
 start() {
     echo "starting fleet manager"
-    poetry run python main.py > $LOGS/fm.out 2>&1 &
+    poetry run python main.py > /app/logs/fm.out 2>&1 &
     echo "starting uvicorn"
-    poetry run uvicorn app.main:app --host 0.0.0.0 --port $FM_PORT > $LOGS/uvicorn.out 2>&1 &
+    poetry run uvicorn app.main:app --host 0.0.0.0 --port $FM_PORT > /app/logs/uvicorn.out 2>&1 &
 }
 
 save_fleet_log() {
@@ -23,12 +23,13 @@ save_fleet_log() {
 
 regenerate_mule_config() {
    echo "regeneraing mule config"  
-   poetry run python -m app.mule.ati.orchestrator.orchestrator.regenerate_config $ATI_CONFIG	
+   #poetry run python -m app.mule.ati.orchestrator.orchestrator.regenerate_config $ATI_CONFIG	
 }
 
-regenerate_mule_config
 save_fleet_log
+redis-cli -u $FM_REDIS_URI flushall
 start
+tail -f /dev/null
 
 
 

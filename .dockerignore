@@ -21,4 +21,5 @@ bazel-*
 .git
 .env
 .pytest_cache
-
+logs/
+static/

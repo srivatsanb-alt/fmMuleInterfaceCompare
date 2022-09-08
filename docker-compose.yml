@@ -4,15 +4,21 @@ services:
     restart: always
     build: .
     ports:
-      - $FM_PORT:$FM_PORT
+      - '8002:8002'
     volumes:
-      - ~/fleet_manager/logs:/logs
+      - ~/fleet_manager/logs:/app/logs
       - ~/fleet_manager/static:/static
       - ~/fleet_manager/static/config:/app/mule/config
       - /tmp:/tmp
     depends_on:
       - psql_container
-
+      - redis_container
+  redis_container:
+    image: redis
+    ports:
+      - '6370:6379'
+    volumes:
+      - ~/fleet_manager/static/redis:/data   
   psql_container:
     image: postgres
     restart: always
@@ -20,6 +26,6 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
     ports:
-      - $PSQL_PORT:5432
+      - '5400:5432'
     volumes:
       - ~/fleet_manager/static/db:/var/lib/postgresql/data
