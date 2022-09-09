@@ -1,0 +1,254 @@
+diff --git a/Dockerfile b/Dockerfile
+index fcb8037..5bc872d 100644
+--- a/Dockerfile
++++ b/Dockerfile
+@@ -1,24 +1,36 @@
+ From ubuntu:18.04
+ 
+ RUN apt-get update && apt install -y --no-install-recommends \
+-    curl unzip git openssh-client \
+-    python3.7-dev python3-pip && \
++    curl unzip git openssh-client postgresql-client \
++    python3.7-dev python3-pip \
++    redis && \
+     apt-get clean
+ 
+ WORKDIR /app
+ COPY . /app/
+ RUN cd /app
++RUN mkdir /app/logs
++RUN mkdir /static
++RUN mkdir /static/mule_config
+ 
+ RUN python3.7 -m pip install -U pip setuptools wheel && \
+     python3.7 -m pip install -U poetry==1.1.12
+ 
+-ARG FM_LOG_DIR
++ENV FM_INSTALL_DIR="/app" REDIS_PORT=6379   
++ 
++ENV FM_REDIS_URI="redis://localhost:$REDIS_PORT" \
++    FM_MAP_DIR="$FM_INSTALL_DIR/static/" \
++    FM_LOG_DIR="$FM_INSTALL_DIR/logs/" \
++    FM_CONFIG_DIR="$FM_INSTALL_DIR/static/config/" \
++    MULE_ROOT="$FM_INSTALL_DIR/mule" \
++    ATI_CONSOLIDATED_CONFIG="/static/mule_config/consolidated.toml"
++
++RUN echo $FM_LOG_DIR
+ 
++ARG IMAGE_ID 
+ RUN poetry lock && poetry install
+-RUN chmod +x fleet_orchestrator.sh
+ 
+-RUN mkdir /static
+-RUN mkdir /app/logs
++RUN chmod +x scripts/fleet_orchestrator.sh
++CMD exec scripts/fleet_orchestrator.sh 
++
+ 
+-CMD exec ./fleet_orchestrator.sh 
+-#> /app/logs/fm_container.log 2>&1 & 
+diff --git a/core/config.py b/core/config.py
+index 98a3f34..4d08daa 100644
+--- a/core/config.py
++++ b/core/config.py
+@@ -25,7 +25,7 @@ class Config:
+ 
+     @classmethod
+     def read_config(cls):
+-        return toml.load(os.getenv("FM_CONFIG_DIR") + "/config.toml")
++        return toml.load(os.path.join(os.getenv("FM_CONFIG_DIR"), "config.toml"))
+ 
+     @classmethod
+     def get_fleet_mode(cls):
+diff --git a/docker-compose.yml b/docker-compose.yml
+index 6514955..51a3e28 100644
+--- a/docker-compose.yml
++++ b/docker-compose.yml
+@@ -1,31 +1,31 @@
+ services:
+-  fm_container:
++  manager:
+     image: fleet_manager
+     restart: always
+     build: .
+     ports:
+       - '8002:8002'
+     volumes:
+-      - ~/fleet_manager/logs:/app/logs
+-      - ~/fleet_manager/static:/static
+-      - ~/fleet_manager/static/config:/app/mule/config
++      - ~/fleet_manager/docker_logs:/app/logs
++      - ~/fleet_manager/static:/static  
+       - /tmp:/tmp
++    environment:
++      PGHOST: psql_container 
++      PGPORT: 5432
++      PGUSER: postgres
++      PGPASSWORD: postgres
++    links:
++      - db
+     depends_on:
+-      - psql_container
+-      - redis_container
+-  redis_container:
+-    image: redis
+-    ports:
+-      - '6370:6379'
+-    volumes:
+-      - ~/fleet_manager/static/redis:/data   
+-  psql_container:
++      - db
++    network_mode: bridge
++
++  db:
+     image: postgres
+     restart: always
+     environment:
+       - POSTGRES_USER=postgres
+       - POSTGRES_PASSWORD=postgres
+-    ports:
+-      - '5400:5432'
+     volumes:
+       - ~/fleet_manager/static/db:/var/lib/postgresql/data
++    network_mode: bridge
+diff --git a/docker_env.sh b/docker_env.sh
+deleted file mode 100644
+index 20da71f..0000000
+--- a/docker_env.sh
++++ /dev/null
+@@ -1,10 +0,0 @@
+-export FM_INSTALL_DIR="/app"
+-export PSQL_PORT=5400
+-export FM_PORT=8002
+-export REDIS_PORT=6370
+-export FM_DATABASE_URI="postgresql://postgres:postgres@localhost:$PSQL_PORT"
+-export FM_REDIS_URI="redis://localhost:$REDIS_PORT"
+-export FM_MAP_DIR="$FM_INSTALL_DIR/static/"
+-export FM_LOG_DIR="$FM_INSTALL_DIR/logs/"
+-export FM_CONFIG_DIR="$FM_INSTALL_DIR/config/"
+-export ATI_CONFIG="$FM_INSTALL_DIR/static/config/consolidated.toml"
+diff --git a/regenerate_config.py b/regenerate_config.py
+new file mode 100644
+index 0000000..17eae0c
+--- /dev/null
++++ b/regenerate_config.py
+@@ -0,0 +1,20 @@
++import sys
++sys.path.append("/app/mule")
++from ati.common.config import load_mule_config
++import toml
++import os
++
++def regenerate_config():
++    with open(os.getenv("ATI_CONSOLIDATED_CONFIG"), "w") as f:
++        toml.dump(load_mule_config(os.getenv("ATI_CONFIG")), f)
++    os.environ["ATI_CONFIG"] = os.environ["ATI_CONSOLIDATED_CONFIG"]
++
++regenerate_config()
++config_path = os.environ["ATI_CONFIG"]
++print(f"will use {config_path} as ATI_CONFIG")
++
++
++
++
++
++
+diff --git a/fleet_orchestrator.sh b/scripts/fleet_orchestrator.sh
+similarity index 53%
+rename from fleet_orchestrator.sh
+rename to scripts/fleet_orchestrator.sh
+index a0be61d..9dbc599 100644
+--- a/fleet_orchestrator.sh
++++ b/scripts/fleet_orchestrator.sh
+@@ -1,17 +1,15 @@
+ #! /bin/bash
+-
+-source docker_env.sh
+-
+ LOGS=$FM_LOG_DIR
+ TS=$(date +'%H%M%S')
+ 
+ start() {
+     echo "starting fleet manager"
+-    poetry run python main.py > /app/logs/fm.out 2>&1 &
++    poetry run python /app/main.py > $LOGS/fm.out 2>&1 &
+     echo "starting uvicorn"
+-    poetry run uvicorn app.main:app --host 0.0.0.0 --port $FM_PORT > /app/logs/uvicorn.out 2>&1 &
++    poetry run uvicorn app.main:app --host 0.0.0.0 --port $FM_PORT > $LOGS/uvicorn.out 2>&1 &
+ }
+ 
++
+ save_fleet_log() {
+     echo "saving old fleet manager logs"
+     mkdir -p $LOGS/backup
+@@ -21,13 +19,25 @@ save_fleet_log() {
+     done
+ }
+ 
++
+ regenerate_mule_config() {
+    echo "regeneraing mule config"  
+-   #poetry run python -m app.mule.ati.orchestrator.orchestrator.regenerate_config $ATI_CONFIG	
++   #poetry run python regenerate_config.py
+ }
+ 
++
++set_postgres_uri() {
++   echo "finding postgres uri"
++   network_ip=docker inspect --format '{{ .NetworkSettings.IPAddress }}' fleet_manager_1	
++   export FM_DATABASE_URI="postgresql://$PGUSER:$PGPASSWORD@$network_ip:$PGPORT"
++}
++
++set_postgres_uri
++regenerate_mule_config
+ save_fleet_log
+-redis-cli -u $FM_REDIS_URI flushall
++redis-server > $LOGS/redis.log 2>&1 &
++redis-cli flushall
++
+ start
+ tail -f /dev/null
+ 
+diff --git a/push.sh b/scripts/push.sh
+similarity index 64%
+rename from push.sh
+rename to scripts/push.sh
+index ad7fecb..6bee860 100755
+--- a/push.sh
++++ b/scripts/push.sh
+@@ -1,9 +1,6 @@
+ #!/bin/bash
+ set -e
+-
+-# export DOCKER_HOST=ssh://ati@$1
+ # export DOCKER_HOST=ssh://ati@$1
+-
+ echo "Pushing to $1"
+ 
+ IMAGE_ID=$(docker images --format '{{.ID}} {{.Repository}} {{.Tag}}' fleet_manager)
+@@ -15,9 +12,9 @@ echo "IMAGE_ID: $IMAGE_ID"
+ 
+ echo "Building fleet manager docker image"
+ 
+-docker image build --build-arg IMAGE_ID="${IMAGE_ID}" --build-arg FM_LOG_DIR="${FM_LOG_DIR}" -t fleet_manager -f Dockerfile .
++docker image build --build-arg IMAGE_ID="${IMAGE_ID}" -t fleet_manager -f Dockerfile .
+ 
+ echo "Running docker image on the server $1"
+-docker-compose -p fm  up -d
++docker-compose -p fleet up 
++
+ 
+-#docker exec -it 0f5dc2961b40 pg_dump -U postgres < /tmp/fm_db.dump
+diff --git a/utils/fleet_utils.py b/utils/fleet_utils.py
+index 14a118e..712cb90 100644
+--- a/utils/fleet_utils.py
++++ b/utils/fleet_utils.py
+@@ -140,7 +140,7 @@ def add_map(fleet: str):
+ 
+ 
+ def add_map_files(fleet_name: str):
+-    path_prefix = f"{os.environ['FM_MAP_DIR']}/{fleet_name}/map"
++    path_prefix = os.path.join(os.environ['FM_MAP_DIR'], f"{fleet_name}/map")
+     with open(f"{path_prefix}/map_files.txt") as f:
+         map_files = f.readlines()
+ 

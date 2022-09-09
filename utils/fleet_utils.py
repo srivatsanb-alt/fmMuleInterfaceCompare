@@ -140,7 +140,7 @@ def add_map(fleet: str):
 
 
 def add_map_files(fleet_name: str):
-    path_prefix = f"{os.environ['FM_MAP_DIR']}/{fleet_name}/map"
+    path_prefix = os.path.join(os.environ['FM_MAP_DIR'], f"{fleet_name}/map")
     with open(f"{path_prefix}/map_files.txt") as f:
         map_files = f.readlines()
 

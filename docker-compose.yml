@@ -1,5 +1,5 @@
 services:
-  fm_container:
+  manager:
     image: fleet_manager
     restart: always
     build: .
@@ -7,25 +7,25 @@ services:
       - '8002:8002'
     volumes:
       - ~/fleet_manager/logs:/app/logs
-      - ~/fleet_manager/static:/static
-      - ~/fleet_manager/static/config:/app/mule/config
+      - ~/fleet_manager/static:/static  
       - /tmp:/tmp
+    environment:
+      PGHOST: psql_container 
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: postgres
+    links:
+      - db
     depends_on:
-      - psql_container
-      - redis_container
-  redis_container:
-    image: redis
-    ports:
-      - '6370:6379'
-    volumes:
-      - ~/fleet_manager/static/redis:/data   
-  psql_container:
+      - db
+    network_mode: bridge
+
+  db:
     image: postgres
     restart: always
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
-    ports:
-      - '5400:5432'
     volumes:
       - ~/fleet_manager/static/db:/var/lib/postgresql/data
+    network_mode: bridge
