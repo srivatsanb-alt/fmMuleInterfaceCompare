@@ -19,6 +19,14 @@ class DirectionEnum(str, Enum):
     receive = "receive"
 
 
+class SoundEnum(str, Enum):
+    wait_for_dispatch = "wait_for_dispatch"
+
+
+class PatternEnum(str, Enum):
+    wait_for_dispatch = "wait_for_dispatch"
+
+
 class VisaType(str, Enum):
     PARKING = "parking"
     EXCLUSIVE_PARKING = "exclusive_parking"
@@ -34,6 +42,16 @@ class AccessType(str, Enum):
 class ConveyorReq(BaseModel):
     direction: DirectionEnum
     num_units: int
+
+
+class SpeakerReq(BaseModel):
+    sound: SoundEnum
+    play: bool
+
+
+class IndicatorReq(BaseModel):
+    pattern: PatternEnum
+    activate: bool
 
 
 class DispatchButtonReq(BaseModel):
@@ -224,6 +242,8 @@ class PeripheralsReq(FMReq):
     endpoint: str = "peripherals"
     auto_hitch: Optional[HitchReq]
     conveyor: Optional[ConveyorReq]
+    speakers: Optional[SpeakerReq]
+    indicators: Optional[IndicatorReq]
 
 
 class PauseResumeReq(FMReq):

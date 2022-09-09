@@ -20,6 +20,8 @@ from models.request_models import (
     SherpaPeripheralsReq,
     SherpaReq,
     SherpaStatusMsg,
+    SoundEnum,
+    SpeakerReq,
     TripStatusMsg,
     TripStatusUpdate,
     VerifyFleetFilesResp,
@@ -217,7 +219,7 @@ class Handlers:
             # get the next pending trip
             next_pending_trip = session.get_pending_trip()
             if not next_pending_trip or next_pending_trip == pending_trip:
-                get_logger().info(f"no more pending trips to assign")
+                get_logger().info("no more pending trips to assign")
                 break
             else:
                 pending_trip = next_pending_trip
@@ -286,6 +288,14 @@ class Handlers:
         if StationProperties.DISPATCH_NOT_REQD not in station.properties:
             get_logger(sherpa_name).info(f"{sherpa_name} reached a dispatch station")
             ongoing_trip.add_state(TripState.WAITING_STATION_DISPATCH_START)
+            # ask sherpa to play a sound
+            sound_msg = PeripheralsReq(
+                speakers=SpeakerReq(sound=SoundEnum.wait_for_dispatch, play=True)
+            )
+            response = send_msg_to_sherpa(ongoing_trip.trip.sherpa, sound_msg)
+            get_logger(sherpa_name).info(
+                f"sent speaker request to {sherpa_name}: response status {response.status_code}"
+            )
 
     def handle_reached(self, msg: ReachedReq):
         sherpa_name = msg.source
@@ -374,6 +384,14 @@ class Handlers:
             return
         get_logger(sherpa_name).info(f"dispatch button pressed on {sherpa_name}")
         ongoing_trip.add_state(TripState.WAITING_STATION_DISPATCH_END)
+        # ask sherpa to stop playing the sound
+        sound_msg = PeripheralsReq(
+            speakers=SpeakerReq(sound=SoundEnum.wait_for_dispatch, play=False)
+        )
+        response = send_msg_to_sherpa(ongoing_trip.trip.sherpa, sound_msg)
+        get_logger(sherpa_name).info(
+            f"sent speaker request to {sherpa_name}: response status {response.status_code}"
+        )
 
     def handle_book(self, req: BookingReq):
         for trip_msg in req.trips:
