@@ -1,3 +1,4 @@
+import time
 from typing import Dict, List
 from core.logs import get_logger
 from models.db_session import DBSession, session
@@ -96,3 +97,20 @@ def find_best_sherpa():
             return name
 
     return None
+
+
+def get_epoch_time(hh: int, mm: int) -> float:
+    """Will convert time from hh:mm format to epoch time"""
+    tn = time.localtime()
+    new_time = time.struct_time(
+        tm_year=tn.tm_year,
+        tm_mon=tn.tm_mon,
+        tm_mday=tn.tm_mday,
+        tm_hour=hh,
+        tm_min=mm,
+        tm_sec=0,
+        tm_wday=tn.tm_wday,
+        tm_yday=tn.tm_yday,
+        tm_isdst=tn.tm_isdst,
+    )
+    return time.mktime(new_time)
