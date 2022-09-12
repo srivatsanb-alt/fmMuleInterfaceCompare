@@ -1,5 +1,5 @@
 from typing import List
-
+import time
 from core.db import session_maker
 from sqlalchemy.orm import Session
 from models.frontend_models import FrontendUser
@@ -134,7 +134,12 @@ class DBSession:
         return self.session.query(Trip).filter(Trip.id == trip_id).one()
 
     def get_pending_trip(self):
-        return self.session.query(PendingTrip).first()
+        pending_trips = self.session.query(PendingTrip).all()
+        for trip in pending_trips:
+            if trip.start_time > time.time():
+                continue
+            return trip
+        return None
 
     def get_ongoing_trip(self, sherpa: str):
         return (
