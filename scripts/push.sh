@@ -1,6 +1,6 @@
 #!/bin/bash
 set -e
-# export DOCKER_HOST=ssh://ati@$1
+export DOCKER_HOST=ssh://ati@$1
 echo "Pushing to $1"
 
 IMAGE_ID=$(docker images --format '{{.ID}} {{.Repository}} {{.Tag}}' fleet_manager)
