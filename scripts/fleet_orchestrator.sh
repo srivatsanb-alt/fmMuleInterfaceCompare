@@ -19,21 +19,24 @@ save_fleet_log() {
     done
 }
 
-
-regenerate_mule_config() {
+fm_init() {
    echo "regeneraing mule config"  
-   #poetry run python regenerate_config.py
+   cd /app/mule
+   make build
+   cd /app
+   poetry run python fm_init.py
 }
 
 
 set_postgres_uri() {
    echo "finding postgres uri"
-   network_ip=docker inspect --format '{{ .NetworkSettings.IPAddress }}' fleet_manager_1	
-   export FM_DATABASE_URI="postgresql://$PGUSER:$PGPASSWORD@$network_ip:$PGPORT"
+   network_ip=$(ifconfig eth0 | grep -e inet | awk '{print $2}')	
+   export FM_DATABASE_URI="postgresql://$PGUSER:$PGPASSWORD@$PGHOST"
+   echo "postgres uri set to $FM_DATABASE_URI"
 }
 
 set_postgres_uri
-regenerate_mule_config
+fm_init
 save_fleet_log
 redis-server > $LOGS/redis.log 2>&1 &
 redis-cli flushall
