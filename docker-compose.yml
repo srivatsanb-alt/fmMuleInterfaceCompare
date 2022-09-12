@@ -1,12 +1,13 @@
 services:
-  manager:
+  fleet_manager:
     image: fleet_manager
+    container_name: fleet_manager
     restart: always
     build: .
     ports:
       - '8002:8002'
     volumes:
-      - ~/fleet_manager/logs:/app/logs
+      - ~/fleet_manager/logs:/logs
       - ~/fleet_manager/static:/static  
       - /tmp:/tmp
     environment:
@@ -22,6 +23,7 @@ services:
 
   db:
     image: postgres
+    container_name: fleet_db
     restart: always
     environment:
       - POSTGRES_USER=postgres
