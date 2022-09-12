@@ -30,7 +30,10 @@ keepalive_kwargs = {
 
 
 def connect():
-    return psycopg2.connect(settings.FM_DATABASE_URI, **keepalive_kwargs)
+    return psycopg2.connect(host=os.getenv("PGHOST"),
+                            user=os.getenv("PGUSER"),
+                            password=os.getenv("PGPASSWORD")
+                            , **keepalive_kwargs)
 
 
 engine = create_engine(
