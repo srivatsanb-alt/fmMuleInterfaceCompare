@@ -4,10 +4,9 @@ from sqlalchemy import ARRAY, Column, DateTime, ForeignKey, Integer, String
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 from sqlalchemy.orm.attributes import flag_modified
-from utils.util import ts_to_str
+from utils.util import ts_to_str, get_epoch_time
 
 from models.base_models import Base, TimestampMixin
-from handlers.default import handler_utils as hu
 
 START = "start"
 END = "end"
@@ -33,8 +32,8 @@ class TripState:
 
 class MilkRunTrip:
     def __init__(self, metadata):
-        self.start_time = hu.get_epoch_time(metadata["milk_run_start_time"])
-        self.end_time = hu.get_epoch_time(metadata["milk_run_end_time"])
+        self.start_time = get_epoch_time(metadata["milk_run_start_time"])
+        self.end_time = get_epoch_time(metadata["milk_run_end_time"])
         self.trip_diff_time = metadata["trip_diff_time"]
 
 

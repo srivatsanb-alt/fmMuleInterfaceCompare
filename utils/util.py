@@ -1,5 +1,5 @@
 from datetime import datetime
-
+import time
 import numpy as np
 
 
@@ -17,3 +17,20 @@ def are_poses_close(pose1, pose2, threshold=0.8):
     # theta_close = np.abs(normalize(pose1[2] - pose2[2])) <= 0.1
     # return xy_close and theta_close
     return xy_close
+
+
+def get_epoch_time(hh: int, mm: int) -> float:
+    """Will convert time from hh:mm format to epoch time"""
+    tn = time.localtime()
+    new_time = time.struct_time(
+        tm_year=tn.tm_year,
+        tm_mon=tn.tm_mon,
+        tm_mday=tn.tm_mday,
+        tm_hour=hh,
+        tm_min=mm,
+        tm_sec=0,
+        tm_wday=tn.tm_wday,
+        tm_yday=tn.tm_yday,
+        tm_isdst=tn.tm_isdst,
+    )
+    return time.mktime(new_time)
