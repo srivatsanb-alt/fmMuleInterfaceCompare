@@ -2,4 +2,9 @@
 mode="default"
 handler_package="handlers.default.handlers"
 handler_class="Handlers"
-sherpa_port=0
+sherpa_port=5000
+fleet_names = []
+customer = ""
+site = ""
+location = ""
+~                   
