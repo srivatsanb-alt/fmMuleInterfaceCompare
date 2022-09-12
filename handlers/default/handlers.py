@@ -33,6 +33,7 @@ from requests import Response
 from utils.comms import get, send_move_msg, send_msg_to_sherpa, send_status_update
 from utils.util import are_poses_close
 from utils.visa_utils import maybe_grant_visa, unlock_exclusion_zone
+import time
 
 import handlers.default.handler_utils as hutils
 
@@ -162,9 +163,21 @@ class Handlers:
             return False
 
         self.start_trip(pending_trip.trip, sherpa_name)
+        if pending_trip.trip.milkrun:
+            if pending_trip.trip.milk_run.end_time < time.time():
+                pending_trip.start_time = (
+                    time.time() + pending_trip.trip.milkrun.trip_diff_time
+                )
+                session.create_trip(
+                    pending_trip.trip.route,
+                    pending_trip.trip.trip_msg.priority,
+                    pending_trip.trip.trip_msg.metadata,
+                )
+                get_logger(sherpa_name).info(
+                    f"Creating a new copy of the same trip, since milkrun pending {pending_trip.trip_id, pending_trip.trip.metadata}"
+                )
         session.delete_pending_trip(pending_trip)
         get_logger(sherpa_name).info(f"deleted pending trip id {pending_trip.trip_id}")
-
         return True
 
     # assigns next destination to sherpa
