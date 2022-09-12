@@ -22,6 +22,8 @@ from models.request_models import (
     SherpaStatusMsg,
     SoundEnum,
     SpeakerReq,
+    IndicatorReq,
+    PatternEnum,
     TripStatusMsg,
     TripStatusUpdate,
     VerifyFleetFilesResp,
@@ -303,11 +305,12 @@ class Handlers:
             ongoing_trip.add_state(TripState.WAITING_STATION_DISPATCH_START)
             # ask sherpa to play a sound
             sound_msg = PeripheralsReq(
-                speakers=SpeakerReq(sound=SoundEnum.wait_for_dispatch, play=True)
+                speakers=SpeakerReq(sound=SoundEnum.wait_for_dispatch, play=True),
+                indicators=IndicatorReq(pattern=PatternEnum.wait_for_dispatch, activate=True)
             )
             response = send_msg_to_sherpa(ongoing_trip.trip.sherpa, sound_msg)
             get_logger(sherpa_name).info(
-                f"sent speaker request to {sherpa_name}: response status {response.status_code}"
+                f"sent speaker and indicator request to {sherpa_name}: response status {response.status_code}"
             )
 
     def handle_reached(self, msg: ReachedReq):
