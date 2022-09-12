@@ -82,15 +82,16 @@ def get_fleet_status_msg(session, fleet):
 
 
 def send_periodic_updates():
-    logging.getLogger().info("starting periodic updates script")
-    time.sleep(1)
+    while True:
+        try:
+            logging.getLogger().info("starting periodic updates script")
+            with DBSession() as session:
+                while True:
+                    all_fleets = session.get_all_fleets()
+                    for fleet in all_fleets:
+                        msg = get_fleet_status_msg(session, fleet)
+                        send_status_update(msg)
+                    time.sleep(1)
+        except Exception as e:
+            logging.getLogger().info("exception in periodic updates script {e}")
 
-    with DBSession() as session:
-        while True:
-            all_fleets = session.get_all_fleets()
-            for fleet in all_fleets:
-                msg = get_fleet_status_msg(session, fleet)
-                send_status_update(msg)
-
-            # send_status_update(trip_status)
-            time.sleep(1)
