@@ -7,6 +7,7 @@ from sqlalchemy.orm.attributes import flag_modified
 from utils.util import ts_to_str
 
 from models.base_models import Base, TimestampMixin
+from handlers.default import handler_utils as hu
 
 START = "start"
 END = "end"
@@ -30,11 +31,17 @@ class TripState:
     WAITING_STATION_DISPATCH_END = "waiting_station_dispatch_end"
 
 
+class MilkRunTrip:
+    def __init__(self, metadata):
+        self.start_time = hu.get_epoch_time(metadata["milk_run_start_time"])
+        self.end_time = hu.get_epoch_time(metadata["milk_run_end_time"])
+        self.trip_diff_time = metadata["trip_diff_time"]
+
+
 class Trip(Base, TimestampMixin):
     __tablename__ = "trips"
 
     id = Column(Integer, primary_key=True, index=True)
-
     # sherpa doing the trip
     sherpa_name = Column(String, ForeignKey("sherpas.name"))
     sherpa = relationship("Sherpa")
@@ -69,7 +76,10 @@ class Trip(Base, TimestampMixin):
         self.route = route
         self.status = TripStatus.BOOKED
         self.priority = priority
-        self.trip_metadata = metadata
+        self.milkrun = None
+        self.metadata = metadata
+        if metadata.get("milkrun"):
+            self.milkrun = MilkRunTrip(metadata)
         self.augmented_route = route
         self.aug_idxs_booked = list(range(len(self.augmented_route)))
 
@@ -90,6 +100,7 @@ class Trip(Base, TimestampMixin):
 
 class PendingTrip(Base, TimestampMixin):
     __tablename__ = "pending_trips"
+    start_time = time.time()
     trip_id = Column(Integer, ForeignKey("trips.id"), primary_key=True)
     trip = relationship("Trip")
 
