@@ -218,6 +218,12 @@ class ResetPoseCtrlReq(BaseModel):
     fleet_station: str
 
 
+class GiveRouteWPS(BaseModel):
+    start_pose: List = None  # Start station pose
+    to_poses: List = None  # end station pose(s). can be more than 1 station
+    sherpa_name: str = None  # only for Live monitoring: Route from current pose to next destination, None for route-preview
+
+
 #################################################
 # Messages to sherpas
 
@@ -300,6 +306,7 @@ class InitResp(JsonMixin):
     hwid: str
 
 
+#################################################
 # Messages to frontend
 @dataclass
 class TripStatusUpdate(JsonMixin):
@@ -310,3 +317,8 @@ class TripStatusUpdate(JsonMixin):
     trip_info: TripInfo
     stoppages: Stoppages = None
     type: str = MessageType.TRIP_STATUS
+
+
+@dataclass
+class RouteWPS(JsonMixin):
+    route_wps: List
