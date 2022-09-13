@@ -16,9 +16,9 @@ class JsonMixin:
             if k not in fields:
                 continue
             if isinstance(v, JsonMixin):
-                 new_attribs[k] = v.__class_.from_dict(v)
+                new_attribs[k] = v.__class_.from_dict(v)
             else:
-                 new_attribs[k] = v
+                new_attribs[k] = v
         return cls(**new_attribs)
 
     @classmethod
