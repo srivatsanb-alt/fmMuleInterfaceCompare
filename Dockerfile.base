@@ -1,0 +1,16 @@
+From ubuntu:18.04
+RUN apt-get update && apt install -y --no-install-recommends \
+    curl make net-tools unzip git openssh-client postgresql-client \
+    python3.7-dev python3-pip \
+    redis && \
+    apt-get clean
+
+WORKDIR /app
+
+RUN python3.7 -m pip install -U pip setuptools wheel && \
+    python3.7 -m pip install -U poetry==1.1.12
+
+COPY pyproject.toml poetry.lock /app/
+RUN poetry install
+
+

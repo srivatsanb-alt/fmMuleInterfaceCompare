@@ -10,7 +10,7 @@ class Map(TimestampMixin, Base):
     __tablename__ = "maps"
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String)
+    name = Column(String, unique=True)
     files = relationship("MapFile", back_populates="map")
 
 

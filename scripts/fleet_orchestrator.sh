@@ -20,22 +20,13 @@ save_fleet_log() {
 }
 
 fm_init() {
-   echo "regeneraing mule config"  
+   echo "regeneraing mule config"
    cd /app/mule
-   make build
+   #make build
    cd /app
    poetry run python fm_init.py
 }
 
-
-set_postgres_uri() {
-   echo "finding postgres uri"
-   network_ip=$(ifconfig eth0 | grep -e inet | awk '{print $2}')	
-   export FM_DATABASE_URI="postgresql://$PGUSER:$PGPASSWORD@$PGHOST"
-   echo "postgres uri set to $FM_DATABASE_URI"
-}
-
-set_postgres_uri
 fm_init
 save_fleet_log
 redis-server > $LOGS/redis.log 2>&1 &
@@ -43,6 +34,3 @@ redis-cli flushall
 
 start
 tail -f /dev/null
-
-
-

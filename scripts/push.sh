@@ -11,7 +11,7 @@ IMAGE_ID="$IMAGE_ID built on $USER@$(hostname)_from $GIT_TAG branch $BRANCH_$(da
 echo "IMAGE_ID: $IMAGE_ID"
 
 echo "Building fleet manager docker image"
-
+#docker image build --build-arg IMAGE_ID="${IMAGE_ID}" -t fleet_manager_base -f Dockerfile.base .
 docker image build --build-arg IMAGE_ID="${IMAGE_ID}" -t fleet_manager -f Dockerfile .
 
 echo "Running docker image on the server $1"

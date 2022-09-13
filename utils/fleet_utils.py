@@ -104,18 +104,21 @@ def add_update_station(**kwargs):
         db.commit()
 
 
-def add_map(fleet: str):
+def add_update_map(fleet: str):
     with session_maker() as db:
-        map: Map = Map(name=fleet)
-        db.add(map)
-        db.flush()
-        db.refresh(map)
+        try:
+            map: Map = db.query(Map).filter_by(name=fleet).one()
+        except NoResultFound:
+            map: Map = Map(name=fleet)
+            db.add(map)
+            db.flush()
+            db.refresh(map)
         fleet_obj: Fleet = db.query(Fleet).filter(Fleet.name == fleet).one()
         fleet_id = fleet_obj.id
         fleet_obj.map_id = map.id
         db.commit()
 
-    add_map_files(fleet)
+    add_update_map_files(fleet)
     grid_map_attributes_path = os.path.join(f"{os.environ['FM_MAP_DIR']}", f"{fleet}", "map", "grid_map_attributes.json")
     if not os.path.exists(grid_map_attributes_path):
         return
@@ -138,8 +141,7 @@ def add_map(fleet: str):
                         )
 
 
-
-def add_map_files(fleet_name: str):
+def add_update_map_files(fleet_name: str):
     path_prefix = os.path.join(os.environ['FM_MAP_DIR'], f"{fleet_name}/map")
     with open(f"{path_prefix}/map_files.txt") as f:
         map_files = f.readlines()
@@ -151,8 +153,12 @@ def add_map_files(fleet_name: str):
             map_file_name = map_file_name.rstrip()
             map_file_path = f"{path_prefix}/{map_file_name}"
             sha1 = compute_sha1_hash(map_file_path)
-            map_file = MapFile(map_id=map_id, filename=map_file_name, file_hash=sha1)
-            db.add(map_file)
+            try:
+                map_file: MapFile = db.query(MapFile).filter_by(map_id=map_id).filter_by(filename=map_file_name).one()
+                map_file.file_hash = sha1
+            except NoResultFound:
+                map_file = MapFile(map_id=map_id, filename=map_file_name, file_hash=sha1)
+                db.add(map_file)
         db.commit()
 
 
