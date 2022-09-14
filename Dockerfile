@@ -13,6 +13,7 @@ ENV FM_REDIS_URI="redis://localhost:$REDIS_PORT" \
 ARG IMAGE_ID
 COPY . /app/
 
+RUN mkdir /app/logs
 RUN cd /app
 RUN chmod +x scripts/fleet_orchestrator.sh
 CMD exec scripts/fleet_orchestrator.sh 
