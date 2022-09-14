@@ -1,6 +1,5 @@
 from utils.comms import send_status_update
 import logging
-from core.db import session_maker
 from models.db_session import DBSession
 from models.fleet_models import SherpaStatus, Sherpa, Fleet, Station, StationStatus
 import time
