@@ -1,11 +1,13 @@
 from typing import List
 import time
 from core.db import session_maker
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from models.frontend_models import FrontendUser
 from models.fleet_models import Fleet, MapFile, Sherpa, SherpaStatus, Station, StationStatus
 from models.trip_models import OngoingTrip, PendingTrip, Trip, TripLeg
 from models.visa_models import ExclusionZone
+from utils.util import ts_to_str
 
 
 class DBSession:
@@ -34,8 +36,8 @@ class DBSession:
         self.session.flush()
         self.session.refresh(obj)
 
-    def create_trip(self, route, priority=0, metadata=None):
-        trip = Trip(route=route, priority=priority, metadata=metadata)
+    def create_trip(self, route, priority=0, metadata=None, booking_id=None):
+        trip = Trip(route=route, priority=priority, metadata=metadata, booking_id=None)
         self.add_to_session(trip)
         return trip
 
@@ -54,6 +56,12 @@ class DBSession:
         trip_leg = TripLeg(trip_id, curr_station, next_station)
         self.add_to_session(trip_leg)
         return trip_leg
+
+    def get_new_booking_id(self):
+        booking_id = self.session.query(func.max(Trip.id)).first()
+        if booking_id:
+            return booking_id + 1
+        return 1
 
     def get_fleet(self, fleet_name: str) -> Fleet:
         return self.session.query(Fleet).filter(Fleet.name == fleet_name).one_or_none()
@@ -133,12 +141,14 @@ class DBSession:
     def get_trip(self, trip_id):
         return self.session.query(Trip).filter(Trip.id == trip_id).one()
 
-    def get_pending_trip(self):
+    def get_pending_trip(self, sherpa_name: str):
         pending_trips = self.session.query(PendingTrip).all()
-        for trip in pending_trips:
-            if trip.start_time > time.time():
+        for pending_trip in pending_trips:
+            if pending_trip.trip.start_time > ts_to_str(time.time()):
                 continue
-            return trip
+            elif pending_trip.sherpa_name and sherpa_name != pending_trip.sherpa_name:
+                continue
+            return pending_trip
         return None
 
     def get_ongoing_trip(self, sherpa: str):

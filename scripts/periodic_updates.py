@@ -93,5 +93,4 @@ def send_periodic_updates():
                         send_status_update(msg)
                     time.sleep(1)
         except Exception as e:
-            logging.getLogger().info("exception in periodic updates script {e}")
-
+            logging.getLogger().info(f"exception in periodic updates script {e}")

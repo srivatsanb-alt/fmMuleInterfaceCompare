@@ -33,10 +33,9 @@ from models.request_models import (
 from models.trip_models import OngoingTrip, PendingTrip, Trip, TripState
 from requests import Response
 from utils.comms import get, send_move_msg, send_msg_to_sherpa, send_status_update
-from utils.util import are_poses_close
+from utils.util import are_poses_close, str_to_ts, ts_to_str
 from utils.visa_utils import maybe_grant_visa, unlock_exclusion_zone
 import time
-
 import handlers.default.handler_utils as hutils
 
 
@@ -145,11 +144,10 @@ class Handlers:
         self.do_post_actions(ongoing_trip)
 
     def assign_new_trip(self, sherpa_name: str):
-        pending_trip: PendingTrip = session.get_pending_trip()
+        pending_trip: PendingTrip = session.get_pending_trip(sherpa_name)
         if not pending_trip:
             get_logger(sherpa_name).info(f"no pending trip to assign to {sherpa_name}")
             return False
-
         sherpa: Sherpa = session.get_sherpa(sherpa_name)
         fleet: Fleet = sherpa.fleet
         if fleet.status == FleetStatus.STOPPED:
@@ -164,20 +162,28 @@ class Handlers:
             get_logger(sherpa_name).info(f"{sherpa_name} not available for new trip")
             return False
 
-        self.start_trip(pending_trip.trip, sherpa_name)
         if pending_trip.trip.milkrun:
-            if pending_trip.trip.milk_run.end_time < time.time():
-                pending_trip.start_time = (
-                    time.time() + pending_trip.trip.milkrun.trip_diff_time
+            if pending_trip.trip.end_time < ts_to_str(time.time()):
+                get_logger(sherpa_name).info(
+                    f"recreating trip {pending_trip.trip.id}, milkrun needs to be continued"
+                )
+                get_logger(sherpa_name).info(
+                    f"milkrun_end_time: {pending_trip.trip.end_time}, current_time: {ts_to_str(time.time())}"
+                )
+                new_metadata = pending_trip.trip.metadata
+                time_period = new_metadata["milkrun_time_period"]
+                milkrun_start_time = str_to_ts(new_metadata["milkrun_start_time"])
+                new_metadata["milkrun_start_time"] += ts_to_str(
+                    milkrun_start_time + time_period
                 )
                 session.create_trip(
                     pending_trip.trip.route,
                     pending_trip.trip.trip_msg.priority,
                     pending_trip.trip.trip_msg.metadata,
+                    pending_trip.trip.booking_id,
                 )
-                get_logger(sherpa_name).info(
-                    f"Creating a new copy of the same trip, since milkrun pending {pending_trip.trip_id, pending_trip.trip.metadata}"
-                )
+
+        self.start_trip(pending_trip.trip, sherpa_name)
         session.delete_pending_trip(pending_trip)
         get_logger(sherpa_name).info(f"deleted pending trip id {pending_trip.trip_id}")
         return True
@@ -305,8 +311,10 @@ class Handlers:
             ongoing_trip.add_state(TripState.WAITING_STATION_DISPATCH_START)
             # ask sherpa to play a sound
             sound_msg = PeripheralsReq(
-                speakers=SpeakerReq(sound=SoundEnum.wait_for_dispatch, play=True),
-                indicators=IndicatorReq(pattern=PatternEnum.wait_for_dispatch, activate=True)
+                speaker=SpeakerReq(sound=SoundEnum.wait_for_dispatch, play=True),
+                indicator=IndicatorReq(
+                    pattern=PatternEnum.wait_for_dispatch, activate=True
+                ),
             )
             response = send_msg_to_sherpa(ongoing_trip.trip.sherpa, sound_msg)
             get_logger(sherpa_name).info(
@@ -411,8 +419,9 @@ class Handlers:
 
     def handle_book(self, req: BookingReq):
         for trip_msg in req.trips:
+            booking_id = session.get_new_booking_id()
             trip: Trip = session.create_trip(
-                trip_msg.route, trip_msg.priority, trip_msg.metadata
+                trip_msg.route, trip_msg.priority, trip_msg.metadata, booking_id
             )
             session.create_pending_trip(trip.id)
 

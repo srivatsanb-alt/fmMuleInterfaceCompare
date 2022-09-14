@@ -1,6 +1,6 @@
 import time
 
-from sqlalchemy import ARRAY, Column, DateTime, ForeignKey, Integer, String
+from sqlalchemy import ARRAY, Column, DateTime, ForeignKey, Integer, String, Boolean
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 from sqlalchemy.orm.attributes import flag_modified
@@ -30,17 +30,12 @@ class TripState:
     WAITING_STATION_DISPATCH_END = "waiting_station_dispatch_end"
 
 
-class MilkRunTrip:
-    def __init__(self, metadata):
-        self.start_time = get_epoch_time(metadata["milk_run_start_time"])
-        self.end_time = get_epoch_time(metadata["milk_run_end_time"])
-        self.trip_diff_time = metadata["trip_diff_time"]
-
-
 class Trip(Base, TimestampMixin):
     __tablename__ = "trips"
 
     id = Column(Integer, primary_key=True, index=True)
+    booking_id = Column(Integer)
+
     # sherpa doing the trip
     sherpa_name = Column(String, ForeignKey("sherpas.name"))
     sherpa = relationship("Sherpa")
@@ -63,6 +58,9 @@ class Trip(Base, TimestampMixin):
     # BOOKED, ASSIGNED, WAITING_STATION, EN_ROUTE, SUCCEEDED, FAILED
     status = Column(String)
 
+    milkrun = Column(Boolean)
+    time_period = Column(Integer)
+
     # these come from the booking request
     priority = Column(Integer)
     trip_metadata = Column(JSONB)
@@ -70,15 +68,24 @@ class Trip(Base, TimestampMixin):
     # other details we may want to store about the trip
     other_info = Column(JSONB)
 
-    def __init__(self, route, priority=0, metadata=None):
+    def __init__(self, route, priority=0, metadata=None, booking_id=None):
+        self.booking_id = booking_id
         self.booking_time = ts_to_str(time.time())
         self.route = route
         self.status = TripStatus.BOOKED
         self.priority = priority
-        self.milkrun = None
-        self.metadata = metadata
+        self.milkrun = False
+        self.time_period = 0
+
+        # set all milkrun trip details
         if metadata.get("milkrun"):
-            self.milkrun = MilkRunTrip(metadata)
+            start_ts = get_epoch_time(metadata["milkrun_start_time"])
+            end_ts = get_epoch_time(metadata["milkrun_end_time"])
+            self.milkrun = True
+            self.start_time = ts_to_str(start_ts)
+            self.end_time = ts_to_str(end_ts)
+            self.time_period = metadata["milkrun_time_period"]
+
         self.augmented_route = route
         self.aug_idxs_booked = list(range(len(self.augmented_route)))
 
@@ -99,8 +106,8 @@ class Trip(Base, TimestampMixin):
 
 class PendingTrip(Base, TimestampMixin):
     __tablename__ = "pending_trips"
-    start_time = time.time()
     trip_id = Column(Integer, ForeignKey("trips.id"), primary_key=True)
+    sherpa_name = Column(String)
     trip = relationship("Trip")
 
 

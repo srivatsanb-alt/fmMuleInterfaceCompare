@@ -7,7 +7,11 @@ TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
 
 
 def ts_to_str(ts):
-    return (datetime.strftime(datetime.fromtimestamp(ts), TIME_FORMAT),)
+    return datetime.strftime(datetime.fromtimestamp(ts), TIME_FORMAT)
+
+
+def str_to_ts(dt_str):
+    return datetime.strftime(dt_str, TIME_FORMAT).timestamp()
 
 
 def are_poses_close(pose1, pose2, threshold=0.8):
