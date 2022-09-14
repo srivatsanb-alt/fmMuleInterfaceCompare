@@ -49,7 +49,7 @@ class Sherpa(Base):
     ip_address = Column(String, unique=True)
     hashed_api_key = Column(String, unique=True, index=True)
 
-    fleet_id = Column(Integer, ForeignKey("fleets.id"), nullable = False)
+    fleet_id = Column(Integer, ForeignKey("fleets.id"), nullable=False)
     fleet = relationship("Fleet", back_populates="sherpas")
 
     status = relationship("SherpaStatus", back_populates="sherpa", uselist=False)
@@ -66,6 +66,7 @@ class SherpaStatus(TimestampMixin, Base):
 
     initialized = Column(Boolean)
     disabled = Column(Boolean)
+    disabled_reason = Column(String)
     idle = Column(Boolean)
     error = Column(String)
 
@@ -87,7 +88,7 @@ class Station(Base):
     pose = Column(ARRAY(Float))
     properties = Column(ARRAY(Enum(StationProperties)))
     button_id = Column(String)
-    fleet_id = Column(Integer, ForeignKey("fleets.id"), nullable = False)
+    fleet_id = Column(Integer, ForeignKey("fleets.id"), nullable=False)
     fleet = relationship("Fleet", back_populates="stations")
 
 

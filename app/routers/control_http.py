@@ -1,7 +1,11 @@
 import requests
+import redis
+import os
+import time
+from rq.job import Job
 from typing import Union
 from app.routers.dependencies import get_user_from_header, get_db_session
-from core.constants import FleetStatus
+from core.constants import FleetStatus, DisabledReason
 from models.fleet_models import Fleet, SherpaStatus
 from utils.comms import get_sherpa_url
 from utils.rq import Queues, enqueue
@@ -32,7 +36,21 @@ def process_req(req, user: str):
         raise HTTPException(status_code=403, detail="Unknown user")
 
     handler_obj = Config.get_handler()
-    enqueue(Queues.handler_queue, handle, handler_obj, req)
+    return enqueue(Queues.handler_queue, handle, handler_obj, req)
+
+
+def process_req_with_response(req, user: str):
+    job: Job = process_req(req, user)
+    redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
+    while True:
+        status = Job.fetch(job.id, connection=redis_conn).get_status(refresh=True)
+        if status == "finished":
+            response = Job.fetch(job.id, connection=redis_conn).result
+            break
+        if status == "failed":
+            raise HTTPException(status_code=500)
+        time.sleep(0.1)
+    return response
 
 
 def handle(handler, msg):
@@ -91,10 +109,15 @@ async def emergency_stop(
     all_sherpa_status = session.get_all_sherpa_status()
     for sherpa_status in all_sherpa_status:
         sherpa_status.disabled = pause_resume_ctrl_req.pause
+        sherpa_status.disabled_reason = DisabledReason.emergency_stop
         pause_resume_req = PauseResumeReq(
             pause=pause_resume_ctrl_req.pause, sherpa_name=sherpa_status.sherpa_name
         )
-        process_req(pause_resume_req, user_name)
+        sherpa_response = process_req_with_response(pause_resume_req, user_name)
+        if sherpa_response.status_code != 200:
+            raise HTTPException(
+                status_code=sherpa_response.status_code, detail="couldn't be processed"
+            )
 
     return response
 
@@ -128,12 +151,17 @@ async def sherpa_emergency_stop(
         )
 
     sherpa_status.disabled = pause_resume_ctrl_req.pause
+    sherpa_status.disabled_reason = DisabledReason.emergency_stop
 
     pause_resume_req = PauseResumeReq(
         pause=pause_resume_ctrl_req.pause, sherpa_name=entity_name
     )
 
-    process_req(pause_resume_req, user_name)
+    sherpa_response = process_req_with_response(pause_resume_req, user_name)
+    if sherpa_response.status_code != 200:
+        raise HTTPException(
+            status_code=sherpa_response.status_code, detail="couldn't be processed"
+        )
 
     return response
 
@@ -197,7 +225,12 @@ async def reset_pose(
         pose=station.pose,
         sherpa_name=entity_name,
     )
-    process_req(reset_pose_req, user_name)
+
+    sherpa_response = process_req_with_response(reset_pose_req, user_name)
+    if sherpa_response.status_code != 200:
+        raise HTTPException(
+            status_code=sherpa_response.status_code, detail="couldn't be processed"
+        )
 
     return response
 

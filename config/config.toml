@@ -2,9 +2,15 @@
 mode="default"
 handler_package="handlers.default.handlers"
 handler_class="Handlers"
-sherpa_port=5000
+sherpa_port=""
 fleet_names = []
 customer = ""
 site = ""
 location = ""
+
+[fleet_sherpas.<sherpa_name>]
+hwid=""
+api_key=""
+fleet_name=""
+
 ~                   

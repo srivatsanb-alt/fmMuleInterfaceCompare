@@ -13,3 +13,7 @@ class FleetStatus:
     STARTED = "started"
     STOPPED = "stopped"
     PAUSED = "paused"
+
+
+class DisabledReason:
+    EMERGENCY_STOP = "emergency_stop"
