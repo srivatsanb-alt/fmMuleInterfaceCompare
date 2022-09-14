@@ -32,7 +32,7 @@ async def add_process_time_header(request: Request, call_next):
     response.headers["X-Process-Time"] = str(process_time)
     return response
 
-app.mount("/api/static", StaticFiles(directory="/static"), name="static")
+app.mount("/api/static", StaticFiles(directory="/app/static"), name="static")
 
 app.include_router(sherpa_http.router)
 app.include_router(sherpa_ws.router)

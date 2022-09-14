@@ -25,7 +25,7 @@ class Config:
 
     @classmethod
     def read_config(cls):
-        return toml.load(os.path.join(os.getenv("FM_CONFIG_DIR"), "config.toml"))
+        return toml.load(os.path.join(os.getenv("FM_CONFIG_DIR"), "fleet_config.toml"))
 
     @classmethod
     def get_fleet_mode(cls):

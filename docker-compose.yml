@@ -6,10 +6,6 @@ services:
     build: .
     ports:
       - '8002:8002'
-    volumes:
-      - ~/fleet_manager/logs:/logs
-      - ~/fleet_manager/static:/static  
-      - /tmp:/tmp
     environment:
       PGHOST: db
       PGPORT: 5432
@@ -28,8 +24,6 @@ services:
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
-    volumes:
-      - ~/fleet_manager/static/db:/var/lib/postgresql/data
     expose:
       - 5432
     network_mode: bridge
