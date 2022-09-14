@@ -11,6 +11,7 @@ services:
       PGPORT: 5432
       PGUSER: postgres
       PGPASSWORD: postgres
+      FM_DATABASE_URI: postgresql://postgres:postgres@db
     links:
       - db
     depends_on:
