@@ -59,8 +59,8 @@ class DBSession:
 
     def get_new_booking_id(self):
         booking_id = self.session.query(func.max(Trip.id)).first()
-        if booking_id:
-            return booking_id + 1
+        if booking_id[0]:
+            return booking_id[0] + 1
         return 1
 
     def get_fleet(self, fleet_name: str) -> Fleet:
@@ -144,8 +144,11 @@ class DBSession:
     def get_pending_trip(self, sherpa_name: str):
         pending_trips = self.session.query(PendingTrip).all()
         for pending_trip in pending_trips:
-            if pending_trip.trip.start_time > ts_to_str(time.time()):
+            if pending_trip is None:
                 continue
+            elif pending_trip.trip.milkrun:
+                if pending_trip.trip.start_time > ts_to_str(time.time()):
+                    continue
             elif pending_trip.sherpa_name and sherpa_name != pending_trip.sherpa_name:
                 continue
             return pending_trip

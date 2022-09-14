@@ -225,7 +225,7 @@ class Handlers:
 
     # iterates through pending trips and tries to assign each one to an available sherpa
     def assign_pending_trips(self):
-        pending_trip: PendingTrip = session.get_pending_trip()
+        pending_trip: PendingTrip = session.get_pending_trip(sherpa_name=None)
         while pending_trip:
             get_logger().info(f"trying to assign pending trip {pending_trip.trip_id}")
             sherpa_name = hutils.find_best_sherpa()
@@ -238,7 +238,7 @@ class Handlers:
                 return
             self.assign_next_task(sherpa_name)
             # get the next pending trip
-            next_pending_trip = session.get_pending_trip()
+            next_pending_trip = session.get_pending_trip(sherpa_name=None)
             if not next_pending_trip or next_pending_trip == pending_trip:
                 get_logger().info("no more pending trips to assign")
                 break
@@ -294,7 +294,7 @@ class Handlers:
             get_logger(sherpa_name).info(
                 f"received from {sherpa_name}: status {response.status_code}"
             )
-            ongoing_trip.states.append(TripState.WAITING_STATION_AUTO_HITCH_START)
+            ongoing_trip.add_state(TripState.WAITING_STATION_AUTO_HITCH_START)
 
         # if at unhitch station send unhitch command.
         if StationProperties.AUTO_UNHITCH in station.properties:
@@ -410,7 +410,7 @@ class Handlers:
         ongoing_trip.add_state(TripState.WAITING_STATION_DISPATCH_END)
         # ask sherpa to stop playing the sound
         sound_msg = PeripheralsReq(
-            speakers=SpeakerReq(sound=SoundEnum.wait_for_dispatch, play=False)
+            speaker=SpeakerReq(sound=SoundEnum.wait_for_dispatch, play=False)
         )
         response = send_msg_to_sherpa(ongoing_trip.trip.sherpa, sound_msg)
         get_logger(sherpa_name).info(

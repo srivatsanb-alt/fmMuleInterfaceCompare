@@ -18,7 +18,7 @@ def regenerate_config():
 fu.create_all_tables()
 
 # create fleet, update map details
-fleet_config = toml.load(os.path.join(os.getenv("FM_CONFIG_DIR"), "fleeet_config.toml"))["fleet"]
+fleet_config = toml.load(os.path.join(os.getenv("FM_CONFIG_DIR"), "fleet_config.toml"))["fleet"]
 fleet_names = fleet_config["fleet_names"]
 customer = fleet_config["customer"]
 site = fleet_config["site"]

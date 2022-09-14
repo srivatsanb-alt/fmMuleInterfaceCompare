@@ -99,6 +99,8 @@ class SherpaPeripheralsReq(SherpaReq):
     auto_hitch: HitchReq = None
     conveyor: ConveyorReq = None
     dispatch_button: DispatchButtonReq = None
+    speaker: SpeakerReq = None
+    indicator: IndicatorReq = None
     error_info: str = None
     type = MessageType.PERIPHERALS
 
@@ -248,8 +250,8 @@ class PeripheralsReq(FMReq):
     endpoint: str = "peripherals"
     auto_hitch: Optional[HitchReq]
     conveyor: Optional[ConveyorReq]
-    speakers: Optional[SpeakerReq]
-    indicators: Optional[IndicatorReq]
+    speaker: Optional[SpeakerReq]
+    indicator: Optional[IndicatorReq]
 
 
 class PauseResumeReq(FMReq):

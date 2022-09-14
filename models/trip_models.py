@@ -79,8 +79,12 @@ class Trip(Base, TimestampMixin):
 
         # set all milkrun trip details
         if metadata.get("milkrun"):
-            start_ts = get_epoch_time(metadata["milkrun_start_time"])
-            end_ts = get_epoch_time(metadata["milkrun_end_time"])
+            start_ts = get_epoch_time(
+                metadata["milkrun_start_time"][0], metadata["milkrun_start_time"][1]
+            )
+            end_ts = get_epoch_time(
+                metadata["milkrun_end_time"][0], metadata["milkrun_end_time"][1]
+            )
             self.milkrun = True
             self.start_time = ts_to_str(start_ts)
             self.end_time = ts_to_str(end_ts)
