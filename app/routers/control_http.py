@@ -109,7 +109,7 @@ async def emergency_stop(
     all_sherpa_status = session.get_all_sherpa_status()
     for sherpa_status in all_sherpa_status:
         sherpa_status.disabled = pause_resume_ctrl_req.pause
-        sherpa_status.disabled_reason = DisabledReason.emergency_stop
+        sherpa_status.disabled_reason = DisabledReason.EMERGENCY_STOP
         pause_resume_req = PauseResumeReq(
             pause=pause_resume_ctrl_req.pause, sherpa_name=sherpa_status.sherpa_name
         )
@@ -151,7 +151,7 @@ async def sherpa_emergency_stop(
         )
 
     sherpa_status.disabled = pause_resume_ctrl_req.pause
-    sherpa_status.disabled_reason = DisabledReason.emergency_stop
+    sherpa_status.disabled_reason = DisabledReason.EMERGENCY_STOP
 
     pause_resume_req = PauseResumeReq(
         pause=pause_resume_ctrl_req.pause, sherpa_name=entity_name
