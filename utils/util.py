@@ -6,6 +6,10 @@ import numpy as np
 TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
 
 
+def check_if_timestamp_has_passed(dt_str):
+    return dt_str < datetime.now()
+
+
 def ts_to_str(ts):
     return datetime.strftime(datetime.fromtimestamp(ts), TIME_FORMAT)
 

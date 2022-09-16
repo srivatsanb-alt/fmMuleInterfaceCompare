@@ -33,9 +33,10 @@ from models.request_models import (
 from models.trip_models import OngoingTrip, PendingTrip, Trip, TripState
 from requests import Response
 from utils.comms import get, send_move_msg, send_msg_to_sherpa, send_status_update
-from utils.util import are_poses_close, str_to_ts, ts_to_str
+from utils.util import are_poses_close, str_to_ts, ts_to_str, check_if_timestamp_has_passed
 from utils.visa_utils import maybe_grant_visa, unlock_exclusion_zone
 import time
+from datetime import datetime
 import handlers.default.handler_utils as hutils
 
 
@@ -163,7 +164,7 @@ class Handlers:
             return False
 
         if pending_trip.trip.milkrun:
-            if pending_trip.trip.end_time < ts_to_str(time.time()):
+            if check_if_timestamp_has_passed(pending_trip.trip.end_time):
                 get_logger(sherpa_name).info(
                     f"recreating trip {pending_trip.trip.id}, milkrun needs to be continued"
                 )
