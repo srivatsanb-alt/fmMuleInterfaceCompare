@@ -172,7 +172,7 @@ def add_exclusion_zones(fleet):
                 print(f"EZ gate {lane_zone_id} exists!")
             except Exception as E:
                 print(f"{E} Adding new EZ gate {lane_zone_id}")
-                ezone_lane = ExclusionZone(lane_zone_id)
+                ezone_lane = ExclusionZone(zone_id=lane_zone_id)
                 db.add(ezone_lane)
                 db.flush()
                 db.refresh(ezone_lane)
@@ -183,7 +183,7 @@ def add_exclusion_zones(fleet):
                 print(f"EZ gate {station_zone_id} exists!")
             except Exception as E:
                 print(f"{E} Adding new EZ gate {station_zone_id}")
-                ezone_station = ExclusionZone(station_zone_id)
+                ezone_station = ExclusionZone(zone_id=station_zone_id)
                 db.add(ezone_station)
                 db.flush()
                 db.refresh(ezone_station)
@@ -196,7 +196,7 @@ def add_update_map_files(fleet_name: str):
         map_files = f.readlines()
 
     with session_maker() as db:
-        fleet: Fleet = db.query(Fleet).filter_by(Fleet.name == fleet_name).one()
+        fleet: Fleet = db.query(Fleet).filter(Fleet.name == fleet_name).one()
         map_id = fleet.map_id
         for map_file_name in map_files:
             map_file_name = map_file_name.rstrip()
@@ -221,17 +221,16 @@ def add_update_map_files(fleet_name: str):
 def add_frontend_user(user_name: str, hashed_password: str):
     with session_maker() as db:
         try:
-            user: FrontendUser = db.query(FrontendUser).filter_by(FrontendUser.name=user_name).one()
+            user: FrontendUser = (
+                db.query(FrontendUser).filter(FrontendUser.name == user_name).one()
+            )
             user.hashed_password = hashed_password
         except NoResultFound:
-            user = FrontendUser(name = user_name,
-                               hashed_password = hashed_password
-                            )
+            user = FrontendUser(name=user_name, hashed_password=hashed_password)
             db.add(user)
             db.flush()
             db.refresh(user)
     db.commit()
-
 
 
 def create_all_tables(drop=False):
