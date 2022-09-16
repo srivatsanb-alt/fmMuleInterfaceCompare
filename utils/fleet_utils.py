@@ -17,7 +17,7 @@ from models.fleet_models import (
 )
 
 from models.visa_models import ExclusionZone
-
+from models.frontend_models import FrontendUser
 from models.base_models import StationProperties
 
 from core.db import session_maker
@@ -196,7 +196,7 @@ def add_update_map_files(fleet_name: str):
         map_files = f.readlines()
 
     with session_maker() as db:
-        fleet: Fleet = db.query(Fleet).filter(Fleet.name == fleet_name).one()
+        fleet: Fleet = db.query(Fleet).filter_by(Fleet.name == fleet_name).one()
         map_id = fleet.map_id
         for map_file_name in map_files:
             map_file_name = map_file_name.rstrip()
@@ -213,7 +213,25 @@ def add_update_map_files(fleet_name: str):
             except NoResultFound:
                 map_file = MapFile(map_id=map_id, filename=map_file_name, file_hash=sha1)
                 db.add(map_file)
+                db.flush()
+                db.refresh(map_file)
         db.commit()
+
+
+def add_frontend_user(user_name: str, hashed_password: str):
+    with session_maker() as db:
+        try:
+            user: FrontendUser = db.query(FrontendUser).filter_by(FrontendUser.name=user_name).one()
+            user.hashed_password = hashed_password
+        except NoResultFound:
+            user = FrontendUser(name = user_name,
+                               hashed_password = hashed_password
+                            )
+            db.add(user)
+            db.flush()
+            db.refresh(user)
+    db.commit()
+
 
 
 def create_all_tables(drop=False):
