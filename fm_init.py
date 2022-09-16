@@ -16,6 +16,7 @@ def regenerate_config():
 # create all tables
 fu.create_all_tables()
 
+
 # create fleet, update map details
 fleet_config = toml.load(os.path.join(os.getenv("FM_CONFIG_DIR"), "fleet_config.toml"))[
     "fleet"
@@ -24,6 +25,11 @@ fleet_names = fleet_config["fleet_names"]
 customer = fleet_config["customer"]
 site = fleet_config["site"]
 location = fleet_config["location"]
+frontenduser = fleet_config["frontenduser"]
+
+for user_name, user_details in frontenduser.items():
+    fu.add_frontend_user(user_name, user_details["hashed_password"])
+
 for fleet_name in fleet_names:
     try:
         print(f"trying to update db tables for fleet : {fleet_name}")
