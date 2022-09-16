@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum
-from typing import List, Optional, Union, Dict
+from typing import List, Optional, Union, Dict, Tuple
 
 import pydantic
 
@@ -196,7 +196,7 @@ class TripMsg(BaseModel):
     route: List[str]
     tasks: Optional[Dict[str, str]] = None
     priority: Optional[int] = 0
-    metadata: Optional[Dict[str, str]] = None
+    metadata: Optional[Dict[str, Union[List[int], bool, str, int]]] = None
 
 
 class BookingReq(TripsReq):

@@ -1,5 +1,4 @@
 from typing import List
-import time
 from core.db import session_maker
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -7,7 +6,7 @@ from models.frontend_models import FrontendUser
 from models.fleet_models import Fleet, MapFile, Sherpa, SherpaStatus, Station, StationStatus
 from models.trip_models import OngoingTrip, PendingTrip, Trip, TripLeg
 from models.visa_models import ExclusionZone
-from utils.util import ts_to_str
+from utils.util import check_if_timestamp_has_passed
 
 
 class DBSession:
@@ -143,7 +142,7 @@ class DBSession:
             if pending_trip is None:
                 continue
             elif pending_trip.trip.milkrun:
-                if pending_trip.trip.start_time > ts_to_str(time.time()):
+                if not check_if_timestamp_has_passed(pending_trip.trip.start_time):
                     continue
             elif pending_trip.sherpa_name and sherpa_name != pending_trip.sherpa_name:
                 continue
