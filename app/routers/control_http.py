@@ -1,6 +1,7 @@
 import requests
 import redis
 import os
+import datetime
 import time
 from rq.job import Job
 from typing import Union
@@ -42,13 +43,19 @@ def process_req(req, user: str):
 def process_req_with_response(req, user: str):
     job: Job = process_req(req, user)
     redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
+    n_attempt = 1
     while True:
         status = Job.fetch(job.id, connection=redis_conn).get_status(refresh=True)
         if status == "finished":
             response = Job.fetch(job.id, connection=redis_conn).result
             break
         if status == "failed":
-            raise HTTPException(status_code=500)
+            time.sleep(0.2)
+            job: Job = process_req(req, user)
+            RETRY_ATTEMPTS = Config.get_rq_job_params()["http_retry_attempts"]
+            if n_attempt > RETRY_ATTEMPTS:
+                raise HTTPException(status_code=500, detail="rq job failed multiple times")
+            n_attempt = n_attempt + 1
         time.sleep(0.1)
     return response
 
@@ -109,14 +116,25 @@ async def emergency_stop(
     all_sherpa_status = session.get_all_sherpa_status()
     for sherpa_status in all_sherpa_status:
         sherpa_status.disabled = pause_resume_ctrl_req.pause
-        sherpa_status.disabled_reason = DisabledReason.EMERGENCY_STOP
+        if pause_resume_ctrl_req.pause:
+            sherpa_status.disabled_reason = DisabledReason.EMERGENCY_STOP
+        else:
+            sherpa_status.disabled_reason = None
+
         pause_resume_req = PauseResumeReq(
             pause=pause_resume_ctrl_req.pause, sherpa_name=sherpa_status.sherpa_name
         )
+
+        last_sherpa_update = sherpa_status.updated_at - datetime.datetime.now()
+        MULE_HEARTBEAT_INTERVAL = Config.get_fleet_comms_params()["mule_heartbeat_interval"]
+        if last_sherpa_update.seconds > MULE_HEARTBEAT_INTERVAL:
+            continue
+
         sherpa_response = process_req_with_response(pause_resume_req, user_name)
         if sherpa_response.status_code != 200:
             raise HTTPException(
-                status_code=sherpa_response.status_code, detail="couldn't be processed"
+                status_code=403,
+                detail=f"couldn't pass emergency_stop message to {sherpa_status.sherpa_name}",
             )
 
     return response
@@ -150,8 +168,19 @@ async def sherpa_emergency_stop(
             status_code=403, detail="Start/resume fleet to resume/pause sherpas"
         )
 
+    last_sherpa_update = sherpa_status.updated_at - datetime.datetime.now()
+    MULE_HEARTBEAT_INTERVAL = Config.get_fleet_comms_params()["mule_heartbeat_interval"]
+    if last_sherpa_update.seconds > MULE_HEARTBEAT_INTERVAL:
+        raise HTTPException(
+            status_code=403,
+            detail=f"Sherpa not connected, last update from sherpa was {last_sherpa_update.seconds} seconds ago",
+        )
+
     sherpa_status.disabled = pause_resume_ctrl_req.pause
-    sherpa_status.disabled_reason = DisabledReason.EMERGENCY_STOP
+    if pause_resume_ctrl_req.pause:
+        sherpa_status.disabled_reason = DisabledReason.EMERGENCY_STOP
+    else:
+        sherpa_status.disabled_reason = None
 
     pause_resume_req = PauseResumeReq(
         pause=pause_resume_ctrl_req.pause, sherpa_name=entity_name

@@ -1,8 +1,6 @@
 import os
 import time
-
 import redis
-
 from app.routers.dependencies import get_sherpa
 from core.config import Config
 from models.request_models import (
@@ -38,14 +36,19 @@ def process_msg(msg: SherpaReq, sherpa: str):
 def process_msg_with_response(req: SherpaReq, sherpa: str):
     job: Job = process_msg(req, sherpa)
     redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
+    n_attempt = 1
     while True:
         status = Job.fetch(job.id, connection=redis_conn).get_status(refresh=True)
         if status == "finished":
             response = Job.fetch(job.id, connection=redis_conn).result
             break
         if status == "failed":
-            raise HTTPException(status_code=500)
-            time.sleep(1)
+            time.sleep(0.2)
+            job: Job = process_msg(req, sherpa)
+            RETRY_ATTEMPTS = Config.get_rq_job_params()["http_retry_attempts"]
+            if n_attempt > RETRY_ATTEMPTS:
+                raise HTTPException(status_code=500, detail="rq job failed multiple times")
+            n_attempt = n_attempt + 1
         time.sleep(0.1)
     return response
 

@@ -67,6 +67,18 @@ class Config:
             cls.config = cls.read_config()
         return cls.config["fleet"].get("api_version", "v1")
 
+    @classmethod
+    def get_fleet_comms_params(cls):
+        if not cls.config:
+            cls.config = cls.read_config()
+        return cls.config["fleet"]["comms"]
+
+    @classmethod
+    def get_rq_job_params(cls):
+        if not cls.config:
+            cls.config = cls.read_config()
+        return cls.config["rq"]["jobs"]
+
 
 if __name__ == "__main__":
     d = {"a": [1, 2, 3], "b": {"c": 2, "d": {"e": 3}, "f": {"g": [4, 5]}}}

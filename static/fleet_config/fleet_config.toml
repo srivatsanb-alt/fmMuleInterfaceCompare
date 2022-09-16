@@ -8,6 +8,12 @@ customer = ""
 site = ""
 location = ""
 
+[rq.jobs]
+http_retry_attempts = 3
+
+[fleet.comms]
+mule_heartbeat_interval = 60
+
 [fleet_sherpas.<sherpa_name>]
 hwid=""
 api_key=""
