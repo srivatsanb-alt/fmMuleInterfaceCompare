@@ -25,7 +25,10 @@ fleet_names = fleet_config["fleet_names"]
 customer = fleet_config["customer"]
 site = fleet_config["site"]
 location = fleet_config["location"]
-frontenduser = fleet_config["frontenduser"]
+
+frontenduser = toml.load(os.path.join(os.getenv("FM_CONFIG_DIR"), "fleet_config.toml"))[
+    "frontenduser"
+]
 
 for user_name, user_details in frontenduser.items():
     fu.add_frontend_user(user_name, user_details["hashed_password"])
