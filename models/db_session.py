@@ -13,10 +13,6 @@ from utils.util import ts_to_str
 class DBSession:
     def __init__(self):
         self.session: Session = session_maker()
-        # self.trip: Trip = None
-        # self.pending_trip: PendingTrip = None
-        # self.ongoing_trip: OngoingTrip = None
-        # self.trip_leg: TripLeg = None
 
     def __enter__(self):
         return self

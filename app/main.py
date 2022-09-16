@@ -24,6 +24,7 @@ app.add_middleware(
     expose_headers=["X-Process-Time"],
 )
 
+
 @app.middleware("http")
 async def add_process_time_header(request: Request, call_next):
     start_time = time.time()
@@ -31,6 +32,7 @@ async def add_process_time_header(request: Request, call_next):
     process_time = time.time() - start_time
     response.headers["X-Process-Time"] = str(process_time)
     return response
+
 
 app.mount("/api/static", StaticFiles(directory="/app/static"), name="static")
 

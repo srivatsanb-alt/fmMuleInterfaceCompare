@@ -12,6 +12,7 @@ from utils.rq import Queues
 
 from scripts.periodic_updates import send_periodic_updates
 
+
 def init_fleet_manager(config):
     init_logging()
     if Config.get_fleet_mode() == "flipkart":
@@ -43,7 +44,7 @@ if __name__ == "__main__":
         process = Process(target=start, args=(q,))
         process.start()
 
-    #send periodic status update
+    # send periodic status update
     Process(target=send_periodic_updates).start()
 
     logging.info("Ati Fleet Manager started")

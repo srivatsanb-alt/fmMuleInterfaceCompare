@@ -5,7 +5,6 @@ from ati.common.config import load_mule_config
 import toml
 import os
 import utils.fleet_utils as fu
-import glob
 
 
 def regenerate_config():
@@ -18,7 +17,9 @@ def regenerate_config():
 fu.create_all_tables()
 
 # create fleet, update map details
-fleet_config = toml.load(os.path.join(os.getenv("FM_CONFIG_DIR"), "fleet_config.toml"))["fleet"]
+fleet_config = toml.load(os.path.join(os.getenv("FM_CONFIG_DIR"), "fleet_config.toml"))[
+    "fleet"
+]
 fleet_names = fleet_config["fleet_names"]
 customer = fleet_config["customer"]
 site = fleet_config["site"]
@@ -40,7 +41,7 @@ fleet_sherpas = toml.load(os.path.join(os.getenv("FM_CONFIG_DIR"), "fleet_config
     "fleet_sherpas"
 ]
 for sherpa_name, sherpa_detail in fleet_sherpas.items():
-    fu.add_sherpa(
+    fu.add_update_sherpa(
         sherpa_name=sherpa_name,
         hwid=sherpa_detail["hwid"],
         api_key=sherpa_detail["api_key"],

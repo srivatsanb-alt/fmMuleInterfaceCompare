@@ -4,7 +4,7 @@ import logging
 import os
 
 import aioredis
-from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, status
+from fastapi import APIRouter, Depends, WebSocket, status
 
 from app.routers.dependencies import get_user_from_query
 
@@ -38,7 +38,7 @@ async def sherpa_status(websocket: WebSocket, user_name=Depends(get_user_from_qu
 
 async def reader(websocket):
     while True:
-        msg = await websocket.receive_json()
+        _ = await websocket.receive_json()
 
 
 async def writer(websocket):
