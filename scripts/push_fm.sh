@@ -57,7 +57,7 @@ fi
 if [ $copy_static ] ; then
 {
   echo "Copying static folder enmasse from the FM docker container in server $DOCKER_HOST"
-  docker cp fleet_manager:/app/static .
+  docker cp fleet_manager:/app/static/* static/
 }
 else
 {
