@@ -37,6 +37,8 @@ from utils.util import are_poses_close, str_to_ts, ts_to_str, check_if_timestamp
 from utils.visa_utils import maybe_grant_visa, unlock_exclusion_zone
 import time
 from datetime import datetime
+from core.config import Config
+from core.constants import DisabledReason
 import handlers.default.handler_utils as hutils
 
 
@@ -133,6 +135,13 @@ class Handlers:
         get_logger(sherpa_name).info(
             f"received from {sherpa_name}: status {response.status_code}"
         )
+
+    def check_sherpa_status(self):
+        MULE_HEARTBEAT_INTERVAL = Config.get_fleet_comms_params()["mule_heartbeat_interval"]
+        stale_sherpas_status = session.get_all_stale_sherpa_status(MULE_HEARTBEAT_INTERVAL)
+        for stale_sherpa_status in stale_sherpas_status:
+            stale_sherpa_status.disabled = True
+            stale_sherpa_status.disabled_reason = DisabledReason.STALE_HEARTBEAT
 
     def end_leg(self, ongoing_trip: OngoingTrip):
         trip: Trip = ongoing_trip.trip
@@ -364,6 +373,10 @@ class Handlers:
             sherpa.hwid = init_resp.hwid
             self.initialize_sherpa(sherpa_name)
 
+        if status.disabled and status.disabled_reason == DisabledReason.STALE_HEARTBEAT:
+            status.disabled = True
+            status.disabled_reason = None
+
     def handle_peripherals(self, req: SherpaPeripheralsReq):
         sherpa_name = req.source
         ongoing_trip: OngoingTrip = session.get_ongoing_trip(sherpa_name)
@@ -534,5 +547,6 @@ class Handlers:
             self.assign_next_task(req_ctxt.sherpa_name)
 
         self.assign_pending_trips()
+        self.check_sherpa_status()
 
         return response

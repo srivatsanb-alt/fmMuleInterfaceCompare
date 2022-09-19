@@ -7,6 +7,7 @@ from models.fleet_models import Fleet, MapFile, Sherpa, SherpaStatus, Station, S
 from models.trip_models import OngoingTrip, PendingTrip, Trip, TripLeg
 from models.visa_models import ExclusionZone
 from utils.util import check_if_timestamp_has_passed
+import datetime
 
 
 class DBSession:
@@ -31,8 +32,16 @@ class DBSession:
         self.session.flush()
         self.session.refresh(obj)
 
-    def create_trip(self, route, priority=0, metadata=None, booking_id=None):
-        trip = Trip(route=route, priority=priority, metadata=metadata, booking_id=None)
+    def create_trip(
+        self, route, priority=0, metadata=None, booking_id=None, fleet_name=None
+    ):
+        trip = Trip(
+            route=route,
+            priority=priority,
+            metadata=metadata,
+            fleet_name=fleet_name,
+            booking_id=None,
+        )
         self.add_to_session(trip)
         return trip
 
@@ -112,6 +121,16 @@ class DBSession:
         else:
             return self.session.query(SherpaStatus).all()
 
+    def get_all_stale_sherpa_status(self, heartbeat_interval):
+        filter_time = datetime.datetime.now() + datetime.timedelta(
+            seconds=-heartbeat_interval
+        )
+        return (
+            self.session.query(SherpaStatus)
+            .filter(SherpaStatus.updated_at > filter_time)
+            .all()
+        )
+
     def get_sherpa_status(self, name: str) -> SherpaStatus:
         return (
             self.session.query(SherpaStatus).filter(SherpaStatus.sherpa_name == name).one()
@@ -152,12 +171,11 @@ class DBSession:
 
     def get_pending_trip(self, sherpa_name: str):
         sherpa = session.get_sherpa(sherpa_name)
-        fleet_name = sherpa.fleet.name
-        pending_trips = (
-            self.session.query(PendingTrip)
-            .filter(PendingTrip.trip.fleet_name == fleet_name)
-            .all()
-        )
+        fleet_name = None
+        if sherpa:
+            fleet_name = sherpa.fleet.name
+
+        pending_trips = self.session.query(PendingTrip).all()
         for pending_trip in pending_trips:
             if pending_trip is None:
                 continue
@@ -166,6 +184,9 @@ class DBSession:
                     continue
             elif pending_trip.sherpa_name and sherpa_name != pending_trip.sherpa_name:
                 continue
+            elif fleet_name and pending_trip.trip.fleet_name != fleet_name:
+                continue
+
             return pending_trip
         return None
 
