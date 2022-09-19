@@ -57,7 +57,7 @@ fi
 if [ $copy_static ] ; then
 {
   echo "Copying static folder from fm docker container in server $DOCKER_HOST"
-  docker cp fleet_manager:/app/static .
+  #docker cp fleet_manager:/app/static .
 }
 else
 {
@@ -78,8 +78,8 @@ IMAGE_ID="Image built on $USER@$(hostname)_from $GIT_TAG branch $BRANCH_$(date)"
 echo "IMAGE_ID: $IMAGE_ID"
 
 echo "Building fleet manager docker image"
-docker image build --build-arg IMAGE_ID="${IMAGE_ID}" -t fleet_manager_base -f Dockerfile.base .
-docker image build --build-arg IMAGE_ID="${IMAGE_ID}" -t fleet_manager -f Dockerfile .
+docker image build --build-arg IMAGE_ID="${IMAGE_ID}" -t fleet_manager_base:dev -f Dockerfile.base .
+docker image build --build-arg IMAGE_ID="${IMAGE_ID}" -t fleet_manager:dev -f Dockerfile .
 
 if [ $clean_repo ] ; then
 {
