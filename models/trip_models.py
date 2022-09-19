@@ -40,6 +40,10 @@ class Trip(Base, TimestampMixin):
     sherpa_name = Column(String, ForeignKey("sherpas.name"))
     sherpa = relationship("Sherpa")
 
+    # relate fleet table
+    fleet_name = Column(Integer, ForeignKey("fleets.name"))
+    fleet = relationship("Fleet")
+
     # when trip was booked
     booking_time = Column(DateTime)
     # when trip started
@@ -68,7 +72,8 @@ class Trip(Base, TimestampMixin):
     # other details we may want to store about the trip
     other_info = Column(JSONB)
 
-    def __init__(self, route, priority=0, metadata=None, booking_id=None):
+    def __init__(self, route, priority=0, metadata=None, booking_id=None, fleet_name=None):
+        self.fleet_name = fleet_name
         self.booking_id = booking_id
         self.booking_time = ts_to_str(time.time())
         self.route = route

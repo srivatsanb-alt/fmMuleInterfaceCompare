@@ -13,7 +13,7 @@ ENV FM_REDIS_URI="redis://localhost:$REDIS_PORT" \
 ARG IMAGE_ID
 COPY . /app/
 
-RUN apt-get install vim -y
+RUN apt-get update && apt-get install vim -y
 RUN mkdir /app/logs
 RUN cd /app
 RUN chmod +x scripts/fleet_orchestrator.sh

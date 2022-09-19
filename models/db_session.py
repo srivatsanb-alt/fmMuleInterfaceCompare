@@ -133,11 +133,31 @@ class DBSession:
     def get_all_station_status(self) -> List[StationStatus]:
         return self.session.query(StationStatus).all()
 
+    def get_fleet_name_from_route(self, route: List):
+        prev_fleet_name = None
+        fleet_name = None
+        for station_name in route:
+            station = self.session.query(Station).filter(Station.name == station_name).one()
+            fleet_name = station.fleet.name
+            if prev_fleet_name and prev_fleet_name != fleet_name:
+                raise Exception(
+                    "invalid route, all stations should belong to the same fleet"
+                )
+            prev_fleet_name = fleet_name
+
+        return fleet_name
+
     def get_trip(self, trip_id):
         return self.session.query(Trip).filter(Trip.id == trip_id).one()
 
     def get_pending_trip(self, sherpa_name: str):
-        pending_trips = self.session.query(PendingTrip).all()
+        sherpa = session.get_sherpa(sherpa_name)
+        fleet_name = sherpa.fleet.name
+        pending_trips = (
+            self.session.query(PendingTrip)
+            .filter(PendingTrip.trip.fleet_name == fleet_name)
+            .all()
+        )
         for pending_trip in pending_trips:
             if pending_trip is None:
                 continue

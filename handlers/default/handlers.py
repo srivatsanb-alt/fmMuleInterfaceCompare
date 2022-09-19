@@ -182,6 +182,7 @@ class Handlers:
                     pending_trip.trip.trip_msg.priority,
                     pending_trip.trip.trip_msg.metadata,
                     pending_trip.trip.booking_id,
+                    pending_trip.trip.fleet_name,
                 )
 
         self.start_trip(pending_trip.trip, sherpa_name)
@@ -421,10 +422,16 @@ class Handlers:
     def handle_book(self, req: BookingReq):
         for trip_msg in req.trips:
             booking_id = session.get_new_booking_id()
-            trip: Trip = session.create_trip(
-                trip_msg.route, trip_msg.priority, trip_msg.metadata, booking_id
-            )
-            session.create_pending_trip(trip.id)
+            fleet_name = session.get_fleet_name_from_route(trip_msg.route)
+            if fleet_name:
+                trip: Trip = session.create_trip(
+                    trip_msg.route,
+                    trip_msg.priority,
+                    trip_msg.metadata,
+                    booking_id,
+                    fleet_name,
+                )
+                session.create_pending_trip(trip.id)
 
     def handle_trip_status(self, req: TripStatusMsg):
         sherpa_name = req.source
