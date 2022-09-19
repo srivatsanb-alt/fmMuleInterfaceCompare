@@ -53,6 +53,11 @@ def process_msg_with_response(req: SherpaReq, sherpa: str):
     return response
 
 
+@router.get("/check_connection")
+async def check_connection():
+    return {"uvicorn": "I am alive"}
+
+
 @router.post("/init/")
 async def init_sherpa(init_msg: InitMsg, sherpa: str = Depends(get_sherpa)):
     process_msg(init_msg, sherpa)
