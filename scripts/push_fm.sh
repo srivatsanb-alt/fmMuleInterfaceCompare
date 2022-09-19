@@ -7,12 +7,12 @@ copy_static=1
 Help()
 {
   # Display Help
-  echo "Program to push fleet_manager repo to destination server!"
+  echo "Program to push fleet_manager repo to the FM server!"
   echo
   echo "Args: [-i/W|c|h]"
   echo "options:"
-  echo "i     Give IP address of destination server, default is localhost"
-  echo "W     WILL NOT copy the static files from the destination server. Copies the contents of static folder on local machine directly to server."
+  echo "i     Give IP address of the FM server, default is localhost"
+  echo "W     WILL NOT copy the static files from the FM server. Copies the contents of static folder on local machine directly to the FM server."
   echo "c     Checksout the local directory static to its current git commit after the push is successful"
   echo "h     Display help"
 }
@@ -48,25 +48,25 @@ done
 export DOCKER_HOST=ssh://ati@$IP_ADDRESS
 read -p "Pls confirm the above IP_ADDRESS is right? (Correct/Cancel). Cancel if not sure! " RESP
 if [ "$RESP" = "Correct" ]; then
-  echo "Pushing to $IP_ADDRESS"
+  echo "Preparing to push docker to $IP_ADDRESS"
 else
-  echo "Will stop this push process. Try again!"
+  echo "Incorrect response. Will stop this push process. Try again!"
   exit
 fi
 
 if [ $copy_static ] ; then
 {
-  echo "Copying static folder from fm docker container in server $DOCKER_HOST"
+  echo "Copying static folder enmasse from the FM docker container in server $DOCKER_HOST"
   docker cp fleet_manager:/app/static .
 }
 else
 {
   echo "You chose NOT TO copy static folder from fm docker container!"
-  read -p "Are you sure you want to continue? (I AM SURE/Cancel). Cancel if not sure! " RESP
-  if [ "$RESP" = "I AM SURE" ]; then
+  read -p "Are you sure you want to continue? (I Am SuRe/Cancel). Cancel if not sure! " RESP
+  if [ "$RESP" = "I Am SuRe" ]; then
     echo "Pushing to $IP_ADDRESS"
   else
-    echo "Will stop this push process. Try again!"
+    echo "Incorrect response. Will stop this push process. Try again!"
     exit;
   fi
 }
