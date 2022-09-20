@@ -21,10 +21,15 @@ class DirectionEnum(str, Enum):
 
 class SoundEnum(str, Enum):
     wait_for_dispatch = "wait_for_dispatch"
+    free = "free"
+    pause = "pause"
 
 
 class PatternEnum(str, Enum):
     wait_for_dispatch = "wait_for_dispatch"
+    free = "free"
+    pause = "pause"
+    default = "default"
 
 
 class VisaType(str, Enum):
