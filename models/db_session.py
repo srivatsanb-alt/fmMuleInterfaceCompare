@@ -111,15 +111,8 @@ class DBSession:
             .one_or_none()
         )
 
-    def get_all_sherpa_status(self, fleet_name=None) -> List[SherpaStatus]:
-        if fleet_name:
-            return (
-                self.session.query(SherpaStatus)
-                .filter(SherpaStatus.sherpa.fleet.name == fleet_name)
-                .all()
-            )
-        else:
-            return self.session.query(SherpaStatus).all()
+    def get_all_sherpa_status(self) -> List[SherpaStatus]:
+        return self.session.query(SherpaStatus).all()
 
     def get_all_stale_sherpa_status(self, heartbeat_interval):
         filter_time = datetime.datetime.now() + datetime.timedelta(
@@ -127,7 +120,7 @@ class DBSession:
         )
         return (
             self.session.query(SherpaStatus)
-            .filter(SherpaStatus.updated_at > filter_time)
+            .filter(SherpaStatus.updated_at < filter_time)
             .all()
         )
 
@@ -170,10 +163,13 @@ class DBSession:
         return self.session.query(Trip).filter(Trip.id == trip_id).one()
 
     def get_pending_trip(self, sherpa_name: str):
-        sherpa = session.get_sherpa(sherpa_name)
         fleet_name = None
-        if sherpa:
-            fleet_name = sherpa.fleet.name
+        sherpa = None
+
+        if sherpa_name:
+            sherpa = session.get_sherpa(sherpa_name)
+            if sherpa:
+                fleet_name = sherpa.fleet.name
 
         pending_trips = self.session.query(PendingTrip).all()
         for pending_trip in pending_trips:

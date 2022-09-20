@@ -10,10 +10,13 @@ ENV FM_REDIS_URI="redis://localhost:$REDIS_PORT" \
     ATI_CONFIG="/app/static/mule_config/config.toml" \
     ATI_CONSOLIDATED_CONFIG="/app/static/mule_config/consolidated.toml"
 
+
+RUN apt update
+
+
 ARG IMAGE_ID
 COPY . /app/
-
-RUN apt-get update && apt-get install vim -y
+RUN apt-get install vim -y 
 RUN mkdir /app/logs
 RUN cd /app
 RUN chmod +x scripts/fleet_orchestrator.sh

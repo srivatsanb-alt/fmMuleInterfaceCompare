@@ -27,6 +27,7 @@ expire_after_ms = timedelta(milliseconds=500)
 def accept_message(sherpa: str, msg):
     msg_type = msg.get("type")
     ts = msg.get("timestamp")
+
     if not msg_type or not ts:
         return False, MSG_INVALID
 
@@ -60,10 +61,12 @@ async def sherpa_status(
     logging.getLogger().info(f"websocket connection started for {sherpa}")
 
     client_ip = websocket.client.host
+    logging.getLogger().info(f"websocket connection started for {client_ip}")
+
     db_sherpa = session.get_sherpa(sherpa)
-    if db_sherpa.ip_address != client_ip:
-        # write IP address to sherpa table
-        db_sherpa.ip_address = client_ip
+    db_sherpa.ip_address = client_ip
+    logging.getLogger().info(f"modified sherpa details {db_sherpa.__dict__}")
+    session.close()
 
     rw = [
         asyncio.create_task(reader(websocket, sherpa)),

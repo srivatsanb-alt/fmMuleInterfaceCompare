@@ -43,7 +43,7 @@ def process_msg_with_response(req: SherpaReq, sherpa: str):
             response = Job.fetch(job.id, connection=redis_conn).result
             break
         if status == "failed":
-            time.sleep(0.2)
+            time.sleep(1)
             job: Job = process_msg(req, sherpa)
             RETRY_ATTEMPTS = Config.get_rq_job_params()["http_retry_attempts"]
             if n_attempt > RETRY_ATTEMPTS:

@@ -13,6 +13,7 @@ def assign_sherpa(trip: Trip, sherpa: str, session: DBSession):
     trip.assign_sherpa(sherpa)
     sherpa_status = session.get_sherpa_status(sherpa)
     sherpa_status.idle = False
+    sherpa_status.trip_id = trip.id
     get_logger(sherpa).info(f"assigned trip id {trip.id} to {sherpa}")
     return ongoing_trip
 

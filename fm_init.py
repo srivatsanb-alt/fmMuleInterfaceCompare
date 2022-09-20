@@ -30,6 +30,7 @@ frontenduser = toml.load(os.path.join(os.getenv("FM_CONFIG_DIR"), "fleet_config.
     "frontenduser"
 ]
 
+print(f"frontend user details in config {frontenduser}")
 for user_name, user_details in frontenduser.items():
     fu.add_frontend_user(user_name, user_details["hashed_password"])
 

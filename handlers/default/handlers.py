@@ -1,4 +1,4 @@
-from core.constants import FleetStatus
+from core.constants import FleetStatus, DisabledReason
 import dataclasses
 from core.logs import get_logger
 from models.base_models import StationProperties
@@ -138,10 +138,15 @@ class Handlers:
 
     def check_sherpa_status(self):
         MULE_HEARTBEAT_INTERVAL = Config.get_fleet_comms_params()["mule_heartbeat_interval"]
-        stale_sherpas_status = session.get_all_stale_sherpa_status(MULE_HEARTBEAT_INTERVAL)
+        stale_sherpas_status: SherpaStatus = session.get_all_stale_sherpa_status(
+            MULE_HEARTBEAT_INTERVAL
+        )
+        get_logger().info(f"all stale sherpas {stale_sherpas_status}")
+
         for stale_sherpa_status in stale_sherpas_status:
-            stale_sherpa_status.disabled = True
-            stale_sherpa_status.disabled_reason = DisabledReason.STALE_HEARTBEAT
+            if not stale_sherpa_status.disabled:
+                stale_sherpa_status.disabled = True
+                stale_sherpa_status.disabled_reason = DisabledReason.STALE_HEARTBEAT
 
     def end_leg(self, ongoing_trip: OngoingTrip):
         trip: Trip = ongoing_trip.trip
@@ -172,26 +177,35 @@ class Handlers:
             get_logger(sherpa_name).info(f"{sherpa_name} not available for new trip")
             return False
 
+        get_logger(sherpa_name).info(
+            f"is pending trip {pending_trip.trip_id} a milkrun?? {pending_trip.trip.milkrun}"
+        )
         if pending_trip.trip.milkrun:
-            if check_if_timestamp_has_passed(pending_trip.trip.end_time):
+            if not check_if_timestamp_has_passed(pending_trip.trip.end_time):
                 get_logger(sherpa_name).info(
                     f"recreating trip {pending_trip.trip.id}, milkrun needs to be continued"
                 )
-                get_logger(sherpa_name).info(
-                    f"milkrun_end_time: {pending_trip.trip.end_time}, current_time: {ts_to_str(time.time())}"
-                )
-                new_metadata = pending_trip.trip.metadata
+
+                new_metadata = pending_trip.trip.trip_metadata
                 time_period = new_metadata["milkrun_time_period"]
-                milkrun_start_time = str_to_ts(new_metadata["milkrun_start_time"])
-                new_metadata["milkrun_start_time"] += ts_to_str(
-                    milkrun_start_time + time_period
-                )
-                session.create_trip(
+                new_metadata["epoch_time"] = True
+                new_metadata["milkrun_start_time"] = time.time() + int(time_period)
+                new_metadata["milkrun_end_time"] = pending_trip.trip.end_time.timestamp()
+                new_metadata["milkrun_time_period"] = pending_trip.trip.time_period
+
+                get_logger(sherpa_name).info(f"milkrun new metadata {new_metadata}")
+                new_trip: Trip = session.create_trip(
                     pending_trip.trip.route,
-                    pending_trip.trip.trip_msg.priority,
-                    pending_trip.trip.trip_msg.metadata,
+                    pending_trip.trip.priority,
+                    new_metadata,
                     pending_trip.trip.booking_id,
                     pending_trip.trip.fleet_name,
+                )
+                session.create_pending_trip(new_trip.id)
+
+            else:
+                get_logger(sherpa_name).info(
+                    f"will not recreate trip {pending_trip.trip.id}, milkrun_end_time past current time"
                 )
 
         self.start_trip(pending_trip.trip, sherpa_name)
@@ -248,6 +262,7 @@ class Handlers:
                 # available at all.
                 return
             self.assign_next_task(sherpa_name)
+
             # get the next pending trip
             next_pending_trip = session.get_pending_trip(sherpa_name=None)
             if not next_pending_trip or next_pending_trip == pending_trip:
@@ -275,7 +290,6 @@ class Handlers:
         sherpa_status.idle = True
         sherpa_status.disabled = False
         get_logger(sherpa_name).info(f"{sherpa_name} initialized")
-
         req_ctxt.continue_curr_task = True
 
     def do_pre_actions(self, ongoing_trip: OngoingTrip):
@@ -374,7 +388,7 @@ class Handlers:
             self.initialize_sherpa(sherpa_name)
 
         if status.disabled and status.disabled_reason == DisabledReason.STALE_HEARTBEAT:
-            status.disabled = True
+            status.disabled = False
             status.disabled_reason = None
 
     def handle_peripherals(self, req: SherpaPeripheralsReq):

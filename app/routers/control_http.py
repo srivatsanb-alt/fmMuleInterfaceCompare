@@ -50,7 +50,7 @@ def process_req_with_response(req, user: str):
             response = Job.fetch(job.id, connection=redis_conn).result
             break
         if status == "failed":
-            time.sleep(0.2)
+            time.sleep(1)
             job: Job = process_req(req, user)
             RETRY_ATTEMPTS = Config.get_rq_job_params()["http_retry_attempts"]
             if n_attempt > RETRY_ATTEMPTS:
@@ -115,6 +115,13 @@ async def emergency_stop(
 
     all_sherpa_status = session.get_all_sherpa_status()
     for sherpa_status in all_sherpa_status:
+
+        # if (
+        #     sherpa_status.disabled
+        #     and sherpa_status.disabled_reason == DisabledReason.STALE_HEARTBEAT
+        # ):
+        #     continue
+
         sherpa_status.disabled = pause_resume_ctrl_req.pause
         if pause_resume_ctrl_req.pause:
             sherpa_status.disabled_reason = DisabledReason.EMERGENCY_STOP
@@ -125,17 +132,7 @@ async def emergency_stop(
             pause=pause_resume_ctrl_req.pause, sherpa_name=sherpa_status.sherpa_name
         )
 
-        last_sherpa_update = sherpa_status.updated_at - datetime.datetime.now()
-        MULE_HEARTBEAT_INTERVAL = Config.get_fleet_comms_params()["mule_heartbeat_interval"]
-        if last_sherpa_update.seconds > MULE_HEARTBEAT_INTERVAL:
-            continue
-
         sherpa_response = process_req_with_response(pause_resume_req, user_name)
-        if sherpa_response.status_code != 200:
-            raise HTTPException(
-                status_code=403,
-                detail=f"couldn't pass emergency_stop message to {sherpa_status.sherpa_name}",
-            )
 
     return response
 
@@ -168,13 +165,14 @@ async def sherpa_emergency_stop(
             status_code=403, detail="Start/resume fleet to resume/pause sherpas"
         )
 
-    last_sherpa_update = sherpa_status.updated_at - datetime.datetime.now()
-    MULE_HEARTBEAT_INTERVAL = Config.get_fleet_comms_params()["mule_heartbeat_interval"]
-    if last_sherpa_update.seconds > MULE_HEARTBEAT_INTERVAL:
-        raise HTTPException(
-            status_code=403,
-            detail=f"Sherpa not connected, last update from sherpa was {last_sherpa_update.seconds} seconds ago",
-        )
+    # if (
+    #     sherpa_status.disabled
+    #     and sherpa_status.disabled_reason == DisabledReason.STALE_HEARTBEAT
+    # ):
+    # raise HTTPException(
+    #     status_code=403,
+    #     detail=f"Sherpa not connected, last update from sherpa was {last_sherpa_update.seconds} seconds ago",
+    # )
 
     sherpa_status.disabled = pause_resume_ctrl_req.pause
     if pause_resume_ctrl_req.pause:
@@ -187,10 +185,6 @@ async def sherpa_emergency_stop(
     )
 
     sherpa_response = process_req_with_response(pause_resume_req, user_name)
-    if sherpa_response.status_code != 200:
-        raise HTTPException(
-            status_code=sherpa_response.status_code, detail="couldn't be processed"
-        )
 
     return response
 

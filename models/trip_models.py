@@ -81,19 +81,27 @@ class Trip(Base, TimestampMixin):
         self.priority = priority
         self.milkrun = False
         self.time_period = 0
+        self.trip_metadata = metadata
 
         # set all milkrun trip details
         if metadata.get("milkrun"):
-            start_ts = get_epoch_time(
-                metadata["milkrun_start_time"][0], metadata["milkrun_start_time"][1]
-            )
-            end_ts = get_epoch_time(
-                metadata["milkrun_end_time"][0], metadata["milkrun_end_time"][1]
-            )
+
+            if metadata.get("epoch_time"):
+                start_ts = metadata["milkrun_start_time"]
+                end_ts = metadata["milkrun_end_time"]
+
+            else:
+                start_ts = get_epoch_time(
+                    metadata["milkrun_start_time"][0], metadata["milkrun_start_time"][1]
+                )
+                end_ts = get_epoch_time(
+                    metadata["milkrun_end_time"][0], metadata["milkrun_end_time"][1]
+                )
+
             self.milkrun = True
             self.start_time = ts_to_str(start_ts)
             self.end_time = ts_to_str(end_ts)
-            self.time_period = metadata["milkrun_time_period"]
+            self.time_period = int(metadata["milkrun_time_period"])
 
         self.augmented_route = route
         self.aug_idxs_booked = list(range(len(self.augmented_route)))

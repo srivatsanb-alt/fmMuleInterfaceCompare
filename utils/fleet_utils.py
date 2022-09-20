@@ -44,7 +44,7 @@ def add_update_sherpa(
             sherpa.ip_address = ip_address
             sherpa.hashed_api_key = hashed_api_key
             sherpa.fleet_id = fleet_id
-            print(f"Updated sherpa details: {sherpa}")
+            print(f"Updated sherpa details: {sherpa.__dict__}")
         except NoResultFound:
             sherpa = Sherpa(
                 name=sherpa_name,
@@ -225,12 +225,14 @@ def add_frontend_user(user_name: str, hashed_password: str):
                 db.query(FrontendUser).filter(FrontendUser.name == user_name).one()
             )
             user.hashed_password = hashed_password
+            print(f"added frontend user successfully {user.__dict__}")
         except NoResultFound:
             user = FrontendUser(name=user_name, hashed_password=hashed_password)
             db.add(user)
             db.flush()
             db.refresh(user)
-    db.commit()
+            print(f"added frontend user successfully {user.__dict__}")
+        db.commit()
 
 
 def create_all_tables(drop=False):

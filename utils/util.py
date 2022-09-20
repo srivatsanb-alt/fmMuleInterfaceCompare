@@ -15,7 +15,7 @@ def ts_to_str(ts):
 
 
 def str_to_ts(dt_str):
-    return datetime.strftime(dt_str, TIME_FORMAT).timestamp()
+    return datetime.strptime(dt_str, TIME_FORMAT).timestamp()
 
 
 def are_poses_close(pose1, pose2, threshold=0.8):
