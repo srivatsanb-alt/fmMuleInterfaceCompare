@@ -1,8 +1,9 @@
 #!/bin/bash
 set -e
 
-clean_repo=0
+clean_static_dir=0
 copy_static=1
+clear_db=0
 
 Help()
 {
@@ -12,6 +13,7 @@ Help()
   echo "Args: [-i/W|c|h]"
   echo "options:"
   echo "i     Give IP address of the FM server, default is localhost"
+  echo "D     Clears existing db tables - Will reset trips state"
   echo "W     WILL NOT copy the static files from the FM server. Copies the contents of static folder on local machine directly to the FM server."
   echo "c     Checksout the local directory static to its current git commit after the push is successful"
   echo "h     Display help"
@@ -21,6 +23,17 @@ clean_static()
 {
   rm -r static
   git checkout static
+}
+
+clear_db_on_fm_server()
+{
+  {volume_id=$(docker inspect fleet_db | awk '/volumes/ {split($2, array, "/"); print array[6]}')
+  docker stop fleet_db
+  docker rm fleet_db
+  docker volume rm volume_id} ||
+  {
+    echo "couldn't clear cb on fm server"
+  }
 }
 
 # Set variables
@@ -36,9 +49,11 @@ while getopts "hi:c" option; do
       IP_ADDRESS=$OPTARG
       echo $IP_ADDRESS;;
     c) # clean dirty directory, static
-      clean_repo=1;;
+      clean_static_dir=1;;
     W) # WILL NOT copy from the remote folder
       copy_static=0;;
+    D) # Will clear existing db tables
+      clear_db=1;;
     ?/) # Invalid option
       echo "Error: Invalid option"
       exit;;
@@ -60,8 +75,8 @@ if [ $copy_static ] ; then
   {
 	  docker cp fleet_manager_q:/app/static/* static/
   } || {
-   
-	  echo "couldn't find fleet_manager container, cannot copy static files"  
+
+	  echo "couldn't find fleet_manager container, cannot copy static files"
   }
 }
 else
@@ -77,6 +92,12 @@ else
 }
 fi
 
+if [ $clean_db ] ; then
+{
+  clear_db_on_fm_server
+}
+fi
+
 BRANCH=$(git rev-parse --abbrev-ref HEAD)
 GIT_TAG="$(git rev-parse HEAD) $(git diff --quiet || echo 'dirty')"
 IMAGE_ID="Image built on $USER@$(hostname)_from $GIT_TAG branch $BRANCH_$(date)"
@@ -86,8 +107,13 @@ echo "Building fleet manager docker image"
 docker image build --build-arg IMAGE_ID="${IMAGE_ID}" -t fleet_manager_base:dev -f Dockerfile.base .
 docker image build --build-arg IMAGE_ID="${IMAGE_ID}" -t fleet_manager:dev -f Dockerfile .
 
-if [ $clean_repo ] ; then
+if [ $clean_static_dir ] ; then
 {
+  echo "Restoring the directory \"static\" to its clean state! "
   clean_static
+}
+else
+{
+  echo "Pls note that the directory \"static\" is modified and hence your repo is not \"clean\" now! "
 }
 fi
