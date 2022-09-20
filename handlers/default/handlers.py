@@ -425,7 +425,8 @@ class Handlers:
         ongoing_trip.add_state(TripState.WAITING_STATION_DISPATCH_END)
         # ask sherpa to stop playing the sound
         sound_msg = PeripheralsReq(
-            speaker=SpeakerReq(sound=SoundEnum.wait_for_dispatch, play=False)
+            speaker=SpeakerReq(sound=SoundEnum.wait_for_dispatch, play=False),
+            indicator=IndicatorReq(pattern=PatternEnum.free, activate=True)
         )
         response = send_msg_to_sherpa(ongoing_trip.trip.sherpa, sound_msg)
         get_logger(sherpa_name).info(
