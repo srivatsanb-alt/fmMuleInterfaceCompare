@@ -4,6 +4,7 @@ set -e
 clean_static_dir=0
 copy_static=1
 clear_db=0
+server=0
 
 Help()
 {
@@ -27,12 +28,13 @@ clean_static()
 
 clear_db_on_fm_server()
 {
-  volume_id=$(docker inspect fleet_db | awk '/volumes/ {split($2, array, "/"); i=1; while (i!=-1) { if (array[i] == "volumes") {print array[i+1]; break;} else i=i+1}}')
-  echo "will stop fleet_db, delete docker volume $volume_id"
-  docker stop fleet_db
-  docker rm fleet_db
-  docker volume rm volume_id} ||
-  {
+  {  
+	volume_id=$(docker inspect fleet_db | awk '/volumes/ {split($2, array, "/"); i=1; while (i!=-1) { if (array[i] == "volumes") {print array[i+1]; break;} else i=i+1}}')
+  	echo "will stop fleet_db, delete docker volume $volume_id"
+  	docker stop fleet_db
+  	docker rm fleet_db
+  	docker volume rm $volume_id  
+  }  ||  {
     echo "couldn't clear cb on fm server"
   }
 }
@@ -41,14 +43,14 @@ clear_db_on_fm_server()
 IP_ADDRESS="localhost"
 
 # Get the options
-while getopts "hi:c" option; do
+while getopts "hi:cWD" option; do
   case $option in
     h) # display Help
       Help
       exit;;
     i) # Enter a name
       IP_ADDRESS=$OPTARG
-      echo $IP_ADDRESS;;
+      echo $IP_ADDRESS;server=1;;
     c) # clean dirty directory, static
       clean_static_dir=1;;
     W) # WILL NOT copy from the remote folder
@@ -61,7 +63,12 @@ while getopts "hi:c" option; do
   esac
 done
 
-#export DOCKER_HOST=ssh://ati@$IP_ADDRESS
+if [ $server == 1 ]; then
+	export DOCKER_HOST=ssh://ati@$IP_ADDRESS
+	echo "docker host $DOCKER_HOST"
+fi
+
+
 read -p "Pls confirm the above IP_ADDRESS is right? (Correct/Cancel). Cancel if not sure! " RESP
 if [ "$RESP" = "Correct" ]; then
   echo "Preparing to push docker to $IP_ADDRESS"
@@ -70,7 +77,7 @@ else
   exit
 fi
 
-if [ $copy_static ] ; then
+if [ $copy_static == 1 ] ; then
 {
   echo "Copying static folder enmasse from the FM docker container in server $DOCKER_HOST"
   {
@@ -93,8 +100,9 @@ else
 }
 fi
 
-if [ $clean_db ] ; then
+if [ $clear_db == 1 ] ; then
 {
+  echo "clear db $clear_db"
   clear_db_on_fm_server
 }
 fi
@@ -108,10 +116,10 @@ echo "Building fleet manager docker image"
 docker image build --build-arg IMAGE_ID="${IMAGE_ID}" -t fleet_manager_base:dev -f Dockerfile.base .
 docker image build --build-arg IMAGE_ID="${IMAGE_ID}" -t fleet_manager:dev -f Dockerfile .
 
-if [ $clean_static_dir ] ; then
+if [ $clean_static_dir == 1 ] ; then
 {
   echo "Restoring the directory \"static\" to its clean state! "
-  clean_static
+  #clean_static
 }
 else
 {

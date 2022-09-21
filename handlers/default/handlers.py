@@ -370,6 +370,10 @@ class Handlers:
         status.battery_status = msg.battery_status
         status.error = msg.error_info if msg.error else None
 
+        if status.disabled and status.disabled_reason == DisabledReason.STALE_HEARTBEAT:
+            status.disabled = False
+            status.disabled_reason = None
+
         if msg.mode == status.mode:
             return
 
@@ -387,10 +391,6 @@ class Handlers:
             get_logger(sherpa_name).info(f"received from {sherpa_name}: {init_resp}")
             sherpa.hwid = init_resp.hwid
             self.initialize_sherpa(sherpa_name)
-
-        if status.disabled and status.disabled_reason == DisabledReason.STALE_HEARTBEAT:
-            status.disabled = False
-            status.disabled_reason = None
 
     def handle_peripherals(self, req: SherpaPeripheralsReq):
         sherpa_name = req.source
