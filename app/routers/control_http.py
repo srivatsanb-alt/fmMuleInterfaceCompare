@@ -237,11 +237,7 @@ async def reset_pose(
         sherpa_name=entity_name,
     )
 
-    sherpa_response = process_req_with_response(reset_pose_req, user_name)
-    if sherpa_response.status_code != 200:
-        raise HTTPException(
-            status_code=sherpa_response.status_code, detail="couldn't be processed"
-        )
+    _ = process_req_with_response(reset_pose_req, user_name)
 
     return response
 
