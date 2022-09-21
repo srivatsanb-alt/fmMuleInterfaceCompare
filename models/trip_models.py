@@ -204,6 +204,8 @@ class OngoingTrip(Base, TimestampMixin):
             self.trip.end(success=True)
 
     def finished(self):
+        if not self.check_continue():
+            return False
         return self.next_idx_aug >= len(self.trip.augmented_route)
 
     def finished_booked(self):

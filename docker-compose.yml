@@ -12,6 +12,7 @@ services:
       PGUSER: postgres
       PGPASSWORD: postgres
       PGDATABASE: ati_fleet
+      PGTZ: Asia/Kolkata
       FM_DATABASE_URI: postgresql://postgres:postgres@db
     links:
       - db
@@ -24,9 +25,10 @@ services:
     container_name: fleet_db
     restart: always
     environment:
+      - TZ=Asia/Kolkata
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DATABASE=ati_fleet
+      - POSTGRES_DB=ati_fleet
     expose:
       - 5432
     network_mode: bridge

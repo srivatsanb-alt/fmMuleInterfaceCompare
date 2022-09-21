@@ -17,7 +17,6 @@ def init_fleet_manager(config):
     init_logging()
     if Config.get_fleet_mode() == "flipkart":
         # TODO: load globals
-        # TODO: load_ez_data
         pass
 
 

@@ -141,12 +141,13 @@ class Handlers:
         stale_sherpas_status: SherpaStatus = session.get_all_stale_sherpa_status(
             MULE_HEARTBEAT_INTERVAL
         )
-        get_logger().info(f"all stale sherpas {stale_sherpas_status}")
-
         for stale_sherpa_status in stale_sherpas_status:
             if not stale_sherpa_status.disabled:
                 stale_sherpa_status.disabled = True
                 stale_sherpa_status.disabled_reason = DisabledReason.STALE_HEARTBEAT
+            get_logger().info(
+                f"stale heartbeat from sherpa {stale_sherpa_status.sherpa_name}"
+            )
 
     def end_leg(self, ongoing_trip: OngoingTrip):
         trip: Trip = ongoing_trip.trip
@@ -440,7 +441,7 @@ class Handlers:
         # ask sherpa to stop playing the sound
         sound_msg = PeripheralsReq(
             speaker=SpeakerReq(sound=SoundEnum.wait_for_dispatch, play=False),
-            indicator=IndicatorReq(pattern=PatternEnum.free, activate=True)
+            indicator=IndicatorReq(pattern=PatternEnum.free, activate=True),
         )
         response = send_msg_to_sherpa(ongoing_trip.trip.sherpa, sound_msg)
         get_logger(sherpa_name).info(

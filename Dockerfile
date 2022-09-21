@@ -1,4 +1,4 @@
-FROM fleet_manager_base:latest
+FROM fleet_manager_base:dev
 
 ENV FM_INSTALL_DIR="/app" REDIS_PORT=6379 FM_PORT=8002   
  
@@ -10,9 +10,10 @@ ENV FM_REDIS_URI="redis://localhost:$REDIS_PORT" \
     ATI_CONFIG="/app/static/mule_config/config.toml" \
     ATI_CONSOLIDATED_CONFIG="/app/static/mule_config/consolidated.toml"
 
-
-RUN apt update
-
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive TZ=Asia/Kolkata apt-get install -yq tzdata && \
+    ln -fs /usr/share/zoneinfo/Asia/Kolkata /etc/localtime && \
+    dpkg-reconfigure -f noninteractive tzdata
 
 ARG IMAGE_ID
 COPY . /app/

@@ -114,14 +114,8 @@ async def emergency_stop(
     )
 
     all_sherpa_status = session.get_all_sherpa_status()
+    unconnected_sherpas = []
     for sherpa_status in all_sherpa_status:
-
-        # if (
-        #     sherpa_status.disabled
-        #     and sherpa_status.disabled_reason == DisabledReason.STALE_HEARTBEAT
-        # ):
-        #     continue
-
         sherpa_status.disabled = pause_resume_ctrl_req.pause
         if pause_resume_ctrl_req.pause:
             sherpa_status.disabled_reason = DisabledReason.EMERGENCY_STOP
@@ -132,7 +126,10 @@ async def emergency_stop(
             pause=pause_resume_ctrl_req.pause, sherpa_name=sherpa_status.sherpa_name
         )
 
-        sherpa_response = process_req_with_response(pause_resume_req, user_name)
+        try:
+            _ = process_req_with_response(pause_resume_req, user_name)
+        except Exception as e:
+            unconnected_sherpas.append([sherpa_status.sherpa_name, e])
 
     return response
 
@@ -165,15 +162,6 @@ async def sherpa_emergency_stop(
             status_code=403, detail="Start/resume fleet to resume/pause sherpas"
         )
 
-    # if (
-    #     sherpa_status.disabled
-    #     and sherpa_status.disabled_reason == DisabledReason.STALE_HEARTBEAT
-    # ):
-    # raise HTTPException(
-    #     status_code=403,
-    #     detail=f"Sherpa not connected, last update from sherpa was {last_sherpa_update.seconds} seconds ago",
-    # )
-
     sherpa_status.disabled = pause_resume_ctrl_req.pause
     if pause_resume_ctrl_req.pause:
         sherpa_status.disabled_reason = DisabledReason.EMERGENCY_STOP
@@ -184,7 +172,7 @@ async def sherpa_emergency_stop(
         pause=pause_resume_ctrl_req.pause, sherpa_name=entity_name
     )
 
-    sherpa_response = process_req_with_response(pause_resume_req, user_name)
+    _ = process_req_with_response(pause_resume_req, user_name)
 
     return response
 

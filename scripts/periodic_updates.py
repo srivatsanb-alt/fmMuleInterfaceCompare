@@ -90,6 +90,7 @@ def send_periodic_updates():
                     for fleet in all_fleets:
                         msg = get_fleet_status_msg(session, fleet)
                         send_status_update(msg)
-                    time.sleep(1)
+                    time.sleep(2)
         except Exception as e:
             logging.getLogger().info(f"exception in periodic updates script {e}")
+            time.sleep(2)

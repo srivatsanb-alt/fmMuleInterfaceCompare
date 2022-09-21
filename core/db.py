@@ -1,7 +1,7 @@
 import os
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
-
+from sqlalchemy.pool import NullPool
 import aioredis
 import psycopg2
 import redis
@@ -30,17 +30,22 @@ keepalive_kwargs = {
 
 
 def connect():
-    return psycopg2.connect(host=os.getenv("PGHOST"),
-                            user=os.getenv("PGUSER"),
-                            password=os.getenv("PGPASSWORD")
-                            , **keepalive_kwargs)
+    return psycopg2.connect(
+        host=os.getenv("PGHOST"),
+        user=os.getenv("PGUSER"),
+        password=os.getenv("PGPASSWORD"),
+        **keepalive_kwargs
+    )
 
 
+# don't pool - multiprocessing
 engine = create_engine(
     settings.FM_DATABASE_URI,
-    pool_pre_ping=True,
-    pool_size=20,
-    max_overflow=40,
+    poolclass=NullPool,
+    # pool_pre_ping=True,
+    # pool_size=100,
+    # max_overflow=30,
     creator=connect,
 )
+
 session_maker = sessionmaker(autocommit=False, autoflush=True, bind=engine)
