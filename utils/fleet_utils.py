@@ -215,7 +215,7 @@ def add_update_map_files(fleet_name: str):
                 db.add(map_file)
                 db.flush()
                 db.refresh(map_file)
-        db.commit()
+            db.commit()
 
 
 def add_frontend_user(user_name: str, hashed_password: str):
