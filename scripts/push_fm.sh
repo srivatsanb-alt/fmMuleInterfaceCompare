@@ -64,7 +64,7 @@ while getopts "hi:cWD" option; do
 done
 
 if [ $server == 1 ]; then
-	export DOCKER_HOST=ssh://ati@$IP_ADDRESS
+	export DOCKER_HOST=ssh://$IP_ADDRESS
 	echo "docker host $DOCKER_HOST"
 fi
 
