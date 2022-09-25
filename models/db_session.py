@@ -3,7 +3,15 @@ from core.db import session_maker
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 from models.frontend_models import FrontendUser
-from models.fleet_models import Fleet, MapFile, Sherpa, SherpaStatus, Station, StationStatus
+from models.fleet_models import (
+    Fleet,
+    MapFile,
+    Sherpa,
+    SherpaStatus,
+    Station,
+    StationStatus,
+    SherpaEvent,
+)
 from models.trip_models import OngoingTrip, PendingTrip, Trip, TripLeg
 from models.visa_models import ExclusionZone
 from utils.util import check_if_timestamp_has_passed
@@ -127,6 +135,14 @@ class DBSession:
     def get_sherpa_status(self, name: str) -> SherpaStatus:
         return (
             self.session.query(SherpaStatus).filter(SherpaStatus.sherpa_name == name).one()
+        )
+
+    def get_sherpa_events(self, sherpa_name: str, num_events=10) -> List[SherpaEvent]:
+        return (
+            self.session.query(SherpaEvent)
+            .filter(SherpaEvent.sherpa_name == sherpa_name)
+            .order_by(SherpaEvent.id.desc())
+            .limit(num_events)
         )
 
     def get_station(self, name: str) -> Station:

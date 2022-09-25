@@ -5,6 +5,7 @@ from core.db import engine
 import json
 import glob
 import importlib
+import inspect
 
 from models.fleet_models import (
     Fleet,
@@ -22,6 +23,33 @@ from models.base_models import StationProperties
 
 from core.db import session_maker
 from sqlalchemy.exc import NoResultFound
+
+
+def get_table_as_dict(model, model_obj):
+    all_valid_types = ["str", "dict", "list", "int", "float", "bool"]
+    cols = [(c.name, c.type.python_type.__name__) for c in model.__table__.columns]
+    result = {}
+    model_dict = model_obj.__dict__
+    for col, col_type in cols:
+        if col in ["created_at", "updated_at"]:
+            pass
+        elif inspect.isclass(model_dict[col]):
+            pass
+        elif col_type not in all_valid_types:
+            pass
+        else:
+            if isinstance(model_dict[col], list):
+                skip = False
+                for item in model_dict[col]:
+                    if type(item).__name__ not in all_valid_types:
+                        skip = True
+                        break
+                if skip:
+                    continue
+
+            result.update({col: model_dict[col]})
+
+    return result
 
 
 def gen_api_key(hwid):
@@ -53,7 +81,7 @@ def add_update_sherpa(
                 hashed_api_key=hashed_api_key,
                 fleet_id=fleet_id,
             )
-            print(f"Added sherpa: {sherpa}")
+            print(f"Added sherpa: {sherpa.__dict__}")
             sherpa_status = SherpaStatus(sherpa_name=sherpa_name)
             db.add(sherpa)
             db.add(sherpa_status)
@@ -253,6 +281,12 @@ def create_table(model, drop=False):
     if drop:
         model.__table__.drop(engine)
     model.__table__.metadata(bind=engine)
+
+
+def delete_table_contents(Model):
+    with session_maker() as db:
+        _ = db.query(Model).delete()
+        db.commit()
 
 
 BUF_SIZE = 65536

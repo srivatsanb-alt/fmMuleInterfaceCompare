@@ -47,6 +47,7 @@ class Sherpa(Base):
     name = Column(String, unique=True, index=True)
     hwid = Column(String, unique=True)
     ip_address = Column(String, unique=True)
+    port = Column(String)
     hashed_api_key = Column(String, unique=True, index=True)
 
     fleet_id = Column(Integer, ForeignKey("fleets.id"), nullable=False)
@@ -56,6 +57,15 @@ class Sherpa(Base):
     exclusion_zones = relationship(
         "ExclusionZone", secondary=VisaAssignment.__table__, back_populates="sherpas"
     )
+
+
+class SherpaEvent(TimestampMixin, Base):
+    __tablename__ = "sherpa_events"
+
+    id = Column(Integer, primary_key=True, index=True)
+    sherpa_name = Column(String)
+    msg_type = Column(String)
+    context = Column(String)
 
 
 class SherpaStatus(TimestampMixin, Base):

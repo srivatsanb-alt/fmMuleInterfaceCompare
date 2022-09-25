@@ -1,8 +1,9 @@
 import os
 import time
 from typing import Dict
-
 import redis
+import json
+import datetime
 import requests
 from core.config import Config
 from core.logs import get_logger
@@ -11,11 +12,14 @@ from models.request_models import FMReq, MoveReq
 from models.trip_models import OngoingTrip
 
 
+redis_db = redis.from_url(os.getenv("FM_REDIS_URI"))
+
+
 def get_sherpa_url(
     sherpa: Sherpa,
 ):
     version = Config.get_api_version()
-    port = Config.get_sherpa_port()
+    port = sherpa.port if sherpa.port else Config.get_sherpa_port()
     return f"http://{sherpa.ip_address}:{port}/api/{version}/fm"
 
 
@@ -40,6 +44,7 @@ def get(sherpa: Sherpa, req: FMReq) -> Dict:
 
 
 def send_msg_to_sherpa(sherpa: Sherpa, msg: FMReq) -> Dict:
+
     body = msg.dict()
     body["timestamp"] = time.time()
     endpoint = body.pop("endpoint")
@@ -53,6 +58,15 @@ def send_msg_to_sherpa(sherpa: Sherpa, msg: FMReq) -> Dict:
 
     get_logger(sherpa.name).info(f"msg to {sherpa.name}: {body}")
     get_logger(sherpa.name).info(f"msg url: {url}")
+
+    # add to redis
+    sherpa_events = redis_db.get("sherpa_events")
+    if not sherpa_events:
+        sherpa_events = b"[]"
+    sherpa_events = json.loads(sherpa_events)
+    sherpa_events.append([sherpa.name, endpoint, "sent to sherpa"])
+    redis_db.set("sherpa_events", json.dumps(sherpa_events))
+
     return post(url, body)
 
 

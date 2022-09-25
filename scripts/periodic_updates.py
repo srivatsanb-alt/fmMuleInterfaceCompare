@@ -1,36 +1,9 @@
 from utils.comms import send_status_update
+import utils.fleet_utils as fu
 import logging
 from models.db_session import DBSession
 from models.fleet_models import SherpaStatus, Sherpa, Fleet, Station, StationStatus
 import time
-import inspect
-
-
-def get_table_as_dict(model, model_obj):
-    all_valid_types = ["str", "dict", "list", "int", "float", "bool"]
-    cols = [(c.name, c.type.python_type.__name__) for c in model.__table__.columns]
-    result = {}
-    model_dict = model_obj.__dict__
-    for col, col_type in cols:
-        if col in ["created_at", "updated_at"]:
-            pass
-        elif inspect.isclass(model_dict[col]):
-            pass
-        elif col_type not in all_valid_types:
-            pass
-        else:
-            if isinstance(model_dict[col], list):
-                skip = False
-                for item in model_dict[col]:
-                    if type(item).__name__ not in all_valid_types:
-                        skip = True
-                        break
-                if skip:
-                    continue
-
-            result.update({col: model_dict[col]})
-
-    return result
 
 
 def get_fleet_status_msg(session, fleet):
@@ -46,14 +19,14 @@ def get_fleet_status_msg(session, fleet):
             if sherpa_status.sherpa.fleet.name == fleet.name:
                 sherpa_status_update.update(
                     {
-                        sherpa_status.sherpa_name: get_table_as_dict(
+                        sherpa_status.sherpa_name: fu.get_table_as_dict(
                             SherpaStatus, sherpa_status
                         )
                     }
                 )
 
                 sherpa_status_update[sherpa_status.sherpa_name].update(
-                    get_table_as_dict(Sherpa, sherpa_status.sherpa)
+                    fu.get_table_as_dict(Sherpa, sherpa_status.sherpa)
                 )
 
     if all_station_status:
@@ -61,19 +34,19 @@ def get_fleet_status_msg(session, fleet):
             if station_status.station.fleet.name == fleet.name:
                 station_status_update.update(
                     {
-                        station_status.station_name: get_table_as_dict(
+                        station_status.station_name: fu.get_table_as_dict(
                             StationStatus, station_status
                         )
                     }
                 )
 
                 station_status_update[station_status.station_name].update(
-                    get_table_as_dict(Station, station_status.station)
+                    fu.get_table_as_dict(Station, station_status.station)
                 )
 
     msg.update({"sherpa_status": sherpa_status_update})
     msg.update({"station_status": station_status_update})
-    msg.update({"fleet_status": get_table_as_dict(Fleet, fleet)})
+    msg.update({"fleet_status": fu.get_table_as_dict(Fleet, fleet)})
     # logging.getLogger().info(f"fleet msg 2 {fleet.__dict__}")
     msg.update({"fleet_name": fleet.name})
     msg.update({"type": "fleet_status"})

@@ -3,7 +3,7 @@ import dataclasses
 from core.logs import get_logger
 from models.base_models import StationProperties
 from models.db_session import session
-from models.fleet_models import Fleet, Sherpa, SherpaStatus, Station
+from models.fleet_models import Fleet, Sherpa, SherpaStatus, Station, SherpaEvent
 from models.request_models import (
     AccessType,
     BookingReq,
@@ -36,6 +36,9 @@ from utils.comms import get, send_move_msg, send_msg_to_sherpa, send_status_upda
 from utils.util import are_poses_close, str_to_ts, ts_to_str, check_if_timestamp_has_passed
 from utils.visa_utils import maybe_grant_visa, unlock_exclusion_zone
 import time
+import redis
+import os
+import json
 from datetime import datetime
 from core.config import Config
 from core.constants import DisabledReason
@@ -148,6 +151,26 @@ class Handlers:
             get_logger().info(
                 f"stale heartbeat from sherpa {stale_sherpa_status.sherpa_name}"
             )
+
+    def add_sherpa_events(self):
+        redis_db = redis.from_url(os.getenv("FM_REDIS_URI"))
+        sherpa_events = redis_db.get("sherpa_events")
+        if sherpa_events:
+            sherpa_events = json.loads(sherpa_events)
+            for event in sherpa_events:
+                self.add_sherpa_event(
+                    sherpa_name=event[0], msg_type=event[1], context=event[2]
+                )
+        # clear sherpa events
+        redis_db.delete("sherpa_events")
+
+    def add_sherpa_event(self, sherpa_name, msg_type, context):
+        sherpa_event: SherpaEvent = SherpaEvent(
+            sherpa_name=sherpa_name,
+            msg_type=msg_type,
+            context="sent by sherpa",
+        )
+        session.add_to_session(sherpa_event)
 
     def end_leg(self, ongoing_trip: OngoingTrip):
         trip: Trip = ongoing_trip.trip
@@ -343,6 +366,7 @@ class Handlers:
                 ),
             )
             response = send_msg_to_sherpa(ongoing_trip.trip.sherpa, sound_msg)
+
             get_logger(sherpa_name).info(
                 f"sent speaker and indicator request to {sherpa_name}: response status {response.status_code}"
             )
@@ -547,6 +571,10 @@ class Handlers:
         init_request_context(msg)
         req_ctxt.logger.info(f"got message: {msg}")
 
+        if req_ctxt.sherpa_name:
+            if msg.type not in ["trip_status", "sherpa_status"]:
+                self.add_sherpa_event(req_ctxt.sherpa_name, msg.type, "sent by sherpa")
+
         handle_ok, reason = self.should_handle_msg(msg)
         if not handle_ok:
             get_logger().warning(f"message of type {msg.type} ignored, reason={reason}")
@@ -564,5 +592,6 @@ class Handlers:
 
         self.assign_pending_trips()
         self.check_sherpa_status()
+        self.add_sherpa_events()
 
         return response

@@ -1,10 +1,13 @@
 import sys
-
-sys.path.append("/app/mule")
-from ati.common.config import load_mule_config
+import time
 import toml
 import os
 import utils.fleet_utils as fu
+from models.frontend_models import FrontendUser
+from models.fleet_models import MapFile
+
+sys.path.append("/app/mule")
+from ati.common.config import load_mule_config
 
 
 def regenerate_config():
@@ -13,8 +16,14 @@ def regenerate_config():
     os.environ["ATI_CONFIG"] = os.environ["ATI_CONSOLIDATED_CONFIG"]
 
 
+time.sleep(5)
+
 # create all tables
 fu.create_all_tables()
+
+# clear all the data that has no state information
+fu.delete_table_contents(MapFile)
+fu.delete_table_contents(FrontendUser)
 
 
 # create fleet, update map details
@@ -40,7 +49,6 @@ for fleet_name in fleet_names:
         fu.add_update_fleet(
             name=fleet_name, site=site, customer=customer, location=location
         )
-
         fu.add_update_map(fleet_name)
     except Exception as e:
         print(f"failed to update db tables for fleet {fleet_name}: {e}")
