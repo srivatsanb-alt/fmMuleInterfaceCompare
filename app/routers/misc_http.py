@@ -1,6 +1,11 @@
 from app.routers.dependencies import get_db_session, get_user_from_header
 from models.request_models import MasterDataInfo
 from fastapi import APIRouter, Depends, HTTPException
+from models.fleet_models import SherpaEvent, Sherpa, SherpaStatus
+import utils.fleet_utils as fu
+import datetime
+from models.db_session import session
+from typing import List
 
 router = APIRouter(
     responses={404: {"description": "Not found"}},
@@ -93,5 +98,39 @@ async def master_data(
     #             )
     #
     # response.update({"sample_trip_status": sample_trip_status})
+    return response
+
+
+@router.get("/api/v1/sherpa_summary/{sherpa_name}")
+async def sherpa_summary(sherpa_name: str, user_name=Depends(get_user_from_header)):
+    response = {}
+
+    try:
+        recent_events: List[SherpaEvent] = session.get_sherpa_events(sherpa_name)
+        result = []
+        for recent_event in recent_events:
+            temp = recent_event.__dict__
+            del temp["_sa_instance_state"]
+            del temp["updated_at"]
+            temp["created_at"] = datetime.datetime.strftime(
+                temp["created_at"], "%Y-%m-%d %H:%M:%S"
+            )
+            result.append(temp)
+        response.update({"recent_events": {"events": result}})
+    except Exception as e:
+        response.update({"recent_events": {"error": e}})
+
+    try:
+        sherpa: Sherpa = session.get_sherpa(sherpa_name)
+        response.update({"sherpa": fu.get_table_as_dict(Sherpa, sherpa)})
+    except Exception as e:
+        response.update({"sherpa": {"error": e}})
+    try:
+        sherpa_status: SherpaStatus = session.get_sherpa_status(sherpa_name)
+        response.update(
+            {"sherpa_status": fu.get_table_as_dict(SherpaStatus, sherpa_status)}
+        )
+    except Exception as e:
+        response.update({"sherpa_status": {"error": e}})
 
     return response
