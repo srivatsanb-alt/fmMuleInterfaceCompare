@@ -5,6 +5,7 @@ import os
 import utils.fleet_utils as fu
 from models.frontend_models import FrontendUser
 from models.fleet_models import MapFile
+from models.visa_models import LinkedGates
 
 sys.path.append("/app/mule")
 from ati.common.config import load_mule_config
@@ -24,7 +25,7 @@ fu.create_all_tables()
 # clear all the data that has no state information
 fu.delete_table_contents(MapFile)
 fu.delete_table_contents(FrontendUser)
-
+fu.delete_table_contents(LinkedGates)
 
 # create fleet, update map details
 fleet_config = toml.load(os.path.join(os.getenv("FM_CONFIG_DIR"), "fleet_config.toml"))[
