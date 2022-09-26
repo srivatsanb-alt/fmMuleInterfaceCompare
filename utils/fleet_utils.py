@@ -17,7 +17,7 @@ from models.fleet_models import (
     StationStatus,
 )
 
-from models.visa_models import ExclusionZone
+from models.visa_models import ExclusionZone, LinkedGates
 from models.frontend_models import FrontendUser
 from models.base_models import StationProperties
 
@@ -180,6 +180,7 @@ def add_update_map(fleet: str):
                 properties=properties,
             )
     add_exclusion_zones(fleet)
+    add_linked_gates_table(fleet)
 
 
 def add_exclusion_zones(fleet):
@@ -193,6 +194,7 @@ def add_exclusion_zones(fleet):
             gate_name = gate["name"]
             lane_zone_id = f"{gate_name}_lane"
             station_zone_id = f"{gate_name}_station"
+            exclusivity = gate["exclusive_parking"]
             try:
                 ezone_lane: ExclusionZone = (
                     db.query(ExclusionZone).filter_by(zone_id=lane_zone_id).one()
@@ -208,14 +210,45 @@ def add_exclusion_zones(fleet):
                 ezone_station: ExclusionZone = (
                     db.query(ExclusionZone).filter_by(zone_id=station_zone_id).one()
                 )
+                ezone_station.exclusivity = exclusivity
                 print(f"EZ gate {station_zone_id} exists!")
             except Exception as E:
                 print(f"{E} Adding new EZ gate {station_zone_id}")
-                ezone_station = ExclusionZone(zone_id=station_zone_id)
+                ezone_station = ExclusionZone(
+                    zone_id=station_zone_id, exclusivity=exclusivity
+                )
                 db.add(ezone_station)
                 db.flush()
                 db.refresh(ezone_station)
         db.commit()
+
+
+def add_linked_gates_table(fleet):
+    ez_path = os.path.join(f"{os.environ['FM_MAP_DIR']}", f"{fleet}", "map", "ez.json")
+    if not os.path.exists(ez_path):
+        return
+    with open(ez_path, "r") as f:
+        ez_gates = json.load(f)
+    with session_maker() as db:
+        gates_dict = ez_gates["ez_gates"]
+        for gate in gates_dict.values():
+            print(f"Current gate {gate}!")
+            prev_zone_id = gate["name"] + "_lane"
+            linked_gates = gate["linked_gates_ids"]
+            print(f"Adding linked gates for {prev_zone_id}!")
+            print(f"linked_gates are {linked_gates}!")
+            for linked_gate in linked_gates:
+                linked_gate_id = gates_dict[str(linked_gate)]["name"] + "_lane"
+                print(f"linked_gate_id is {linked_gate_id}!")
+                new_linked_gate = LinkedGates(
+                    prev_zone_id=prev_zone_id, next_zone_id=linked_gate_id
+                )
+                db.add(new_linked_gate)
+                db.flush()
+                db.refresh(new_linked_gate)
+                print(f"Added the linkedgate {new_linked_gate}!")
+        db.commit()
+    return
 
 
 def add_update_map_files(fleet_name: str):
