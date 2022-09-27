@@ -1,62 +1,31 @@
 #!/bin/bash
 set -e
 
+source ./scripts/push_utils.sh
+
 clean_static_dir=0
 copy_static=1
 clear_db=0
 server=0
 
-Help()
-{
-  # Display Help
-  echo "Program to push fleet_manager repo to the FM server!"
-  echo
-  echo "Args: [-i/W|c|h]"
-  echo "options:"
-  echo "i     Give IP address of the FM server, default is localhost"
-  echo "D     Clears existing db tables - Will reset trips state"
-  echo "W     WILL NOT copy the static files from the FM server. Copies the contents of static folder on local machine directly to the FM server."
-  echo "c     Checksout the local directory static to its current git commit after the push is successful"
-  echo "h     Display help"
-}
-
-clean_static()
-{
-  rm -r static
-  git checkout static
-}
-
-clear_db_on_fm_server()
-{
-  {
-	volume_id=$(docker inspect fleet_db | awk '/volumes/ {split($2, array, "/"); i=1; while (i!=-1) { if (array[i] == "volumes") {print array[i+1]; break;} else i=i+1}}')
-  	echo "will stop fleet_db, delete docker volume $volume_id"
-  	docker stop fleet_db
-  	docker rm fleet_db
-  	docker volume rm $volume_id
-  }  ||  {
-    echo "couldn't clear cb on fm server"
-  }
-}
-
 # Set variables
 IP_ADDRESS="localhost"
 
 # Get the options
-while getopts "hi:cWD" option; do
+while getopts "i:hcWD" option; do
   case $option in
     h) # display Help
       Help
       exit;;
-    i) # Enter a name
-      IP_ADDRESS=$OPTARG
-      echo $IP_ADDRESS;server=1;;
     c) # clean dirty directory, static
       clean_static_dir=1;;
     W) # WILL NOT copy from the remote folder
       copy_static=0;;
     D) # Will clear existing db tables
       clear_db=1;;
+    i) # Enter a name
+      IP_ADDRESS=$OPTARG
+      echo $IP_ADDRESS;server=1;;
     ?/) # Invalid option
       echo "Error: Invalid option"
       exit;;
@@ -65,9 +34,8 @@ done
 
 if [ $server == 1 ]; then
 	export DOCKER_HOST=ssh://$IP_ADDRESS
-	echo "docker host $DOCKER_HOST"
+	echo "DOCKER_HOST $DOCKER_HOST"
 fi
-
 
 read -p "Pls confirm the above IP_ADDRESS is right? (Correct/Cancel). Cancel if not sure! " RESP
 if [ "$RESP" = "Correct" ]; then
@@ -79,11 +47,10 @@ fi
 
 if [ $copy_static == 1 ] ; then
 {
-  echo "Copying static folder enmasse from the FM docker container in server $DOCKER_HOST"
+  echo "Copying \"static\" folder from the FM docker container in server $DOCKER_HOST"
   {
-	  docker cp fleet_manager_q:/app/static/* static/
+	  rsync -azP $IP_ADDRESS:static/* static/.
   } || {
-
 	  echo "couldn't find fleet_manager container, cannot copy static files"
   }
 }
@@ -99,6 +66,8 @@ else
   fi
 }
 fi
+
+create_static_backup $IP_ADDRESS # function defined in push_utils
 
 if [ $clear_db == 1 ] ; then
 {
@@ -119,7 +88,7 @@ docker image build --build-arg IMAGE_ID="${IMAGE_ID}" -t fleet_manager:dev -f Do
 if [ $clean_static_dir == 1 ] ; then
 {
   echo "Restoring the directory \"static\" to its clean state! "
-  #clean_static
+  clean_static
 }
 else
 {
