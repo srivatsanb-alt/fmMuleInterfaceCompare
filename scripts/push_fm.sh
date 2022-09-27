@@ -47,7 +47,7 @@ fi
 
 if [ $copy_static == 1 ] ; then
 {
-  echo "Copying \"static\" folder from the FM docker container in server $DOCKER_HOST"
+  echo "Copying \"static\" folder from the FM server $DOCKER_HOST"
   {
 	  rsync -azP $IP_ADDRESS:static/* static/.
   } || {
@@ -56,7 +56,7 @@ if [ $copy_static == 1 ] ; then
 }
 else
 {
-  echo "You chose NOT TO copy static folder from fm docker container!"
+  echo "You chose NOT TO copy static folder from FM server!"
   read -p "Are you sure you want to continue? (I Am SuRe/Cancel). Cancel if not sure! " RESP
   if [ "$RESP" = "I Am SuRe" ]; then
     echo "Pushing to $IP_ADDRESS"
