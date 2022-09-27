@@ -7,12 +7,13 @@ clean_static_dir=0
 copy_static=1
 clear_db=0
 server=0
+build_base=1
 
 # Set variables
 IP_ADDRESS="localhost"
 
 # Get the options
-while getopts "i:hcWD" option; do
+while getopts "i:hcWDb" option; do
   case $option in
     h) # display Help
       Help
@@ -23,9 +24,11 @@ while getopts "i:hcWD" option; do
       copy_static=0;;
     D) # Will clear existing db tables
       clear_db=1;;
-    i) # Enter a name
+    i) # input IP_ADDRESS
       IP_ADDRESS=$OPTARG
       echo $IP_ADDRESS;server=1;;
+    b) # WILL NOT create base image
+      build_base=0;;
     ?/) # Invalid option
       echo "Error: Invalid option"
       exit;;
@@ -84,7 +87,16 @@ IMAGE_ID="Image built on $USER@$(hostname)_from $GIT_TAG branch $BRANCH_$(date)"
 echo "IMAGE_ID: $IMAGE_ID"
 
 echo "Building fleet manager docker image"
-docker image build --build-arg IMAGE_ID="${IMAGE_ID}" -t fleet_manager_base:dev -f Dockerfile.base .
+if [ $build_base == 1 ] ; then
+{
+  echo "Will build base image!"
+  docker image build --build-arg IMAGE_ID="${IMAGE_ID}" -t fleet_manager_base:dev -f Dockerfile.base .
+}
+else
+{
+  echo "Skipping base image build step!"
+}
+fi
 docker image build --build-arg IMAGE_ID="${IMAGE_ID}" -t fleet_manager:dev -f Dockerfile .
 
 if [ $clean_static_dir == 1 ] ; then

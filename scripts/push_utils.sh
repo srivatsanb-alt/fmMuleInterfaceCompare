@@ -9,6 +9,7 @@ Help()
   echo "D     Clears existing db tables - Will reset trips state"
   echo "W     WILL NOT copy the static files from the FM server. Copies the contents of static folder on local machine directly to the FM server."
   echo "c     Checksout the local directory static to its current git commit after the push is successful"
+  echo "b     WILL NOT build the base image"
   echo "h     Display help"
 }
 
