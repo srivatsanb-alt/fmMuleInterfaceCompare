@@ -48,7 +48,7 @@ class DBSession:
             priority=priority,
             metadata=metadata,
             fleet_name=fleet_name,
-            booking_id=None,
+            booking_id=booking_id,
         )
         self.add_to_session(trip)
         return trip
@@ -178,6 +178,9 @@ class DBSession:
     def get_trip(self, trip_id):
         return self.session.query(Trip).filter(Trip.id == trip_id).one()
 
+    def get_trips_with_booking_id(self, booking_id):
+        return self.session.query(Trip).filter(Trip.booking_id == booking_id).all()
+
     def get_pending_trip(self, sherpa_name: str):
         fleet_name = None
         sherpa = None
@@ -209,8 +212,36 @@ class DBSession:
             .one_or_none()
         )
 
+    def get_ongoing_trip_with_trip_id(self, trip_id):
+        return (
+            self.session.query(OngoingTrip)
+            .filter(OngoingTrip.trip_id == trip_id)
+            .one_or_none()
+        )
+
+    def get_trip_with_booking_id(self, booking_id):
+        return self.session.query(Trip).filter(Trip.booking_id == booking_id).all()
+
+    def get_trip_ids_with_timestamp(self, booked_from, booked_till):
+        return (
+            self.session.query(Trip)
+            .filter(Trip.booking_time > booked_from)
+            .filter(Trip.booking_time < booked_till)
+            .all()
+        )
+
+    def get_last_n_trips(self, last_n=10):
+        return self.session.query(Trip).order_by(Trip.id.desc()).limit(last_n)
+
+    def get_pending_trip_with_trip_id(self, trip_id):
+        return (
+            self.session.query(PendingTrip)
+            .filter(PendingTrip.trip_id == trip_id)
+            .one_or_none()
+        )
+
     def get_trip_leg(self, sherpa: str):
-        ongoing_trip: OngoingTrip = self.ongoing_trip(sherpa)
+        ongoing_trip: OngoingTrip = self.get_ongoing_trip(sherpa)
         if ongoing_trip:
             return (
                 self.session.query(TripLeg)

@@ -6,6 +6,8 @@ import utils.fleet_utils as fu
 import datetime
 from models.db_session import session
 from typing import List
+import pandas as pd
+from fastapi.responses import HTMLResponse
 
 router = APIRouter(
     responses={404: {"description": "Not found"}},
@@ -101,8 +103,10 @@ async def master_data(
     return response
 
 
-@router.get("/api/v1/sherpa_summary/{sherpa_name}")
-async def sherpa_summary(sherpa_name: str, user_name=Depends(get_user_from_header)):
+@router.get("/api/v1/sherpa_summary/{sherpa_name}/{viewable}")
+async def sherpa_summary(
+    sherpa_name: str, viewable: int, user_name=Depends(get_user_from_header)
+):
     response = {}
 
     try:
@@ -132,5 +136,13 @@ async def sherpa_summary(sherpa_name: str, user_name=Depends(get_user_from_heade
         )
     except Exception as e:
         response.update({"sherpa_status": {"error": e}})
+
+    # temporary addition for first release
+    # TODO : remove viewable code after frontend is enabled to read sherpa_summary
+    if viewable:
+        df = pd.DataFrame(data=response)
+        df = df.fillna(" ")
+        response = df.to_html()
+        return HTMLResponse(content=response, status_code=200)
 
     return response

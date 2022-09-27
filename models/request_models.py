@@ -225,6 +225,12 @@ class ResetPoseCtrlReq(BaseModel):
     fleet_station: str
 
 
+class TripStatusReq(BaseModel):
+    booked_from: Optional[List[int]]
+    booked_till: Optional[List[int]]
+    trip_ids: Optional[List[int]]
+
+
 class GiveRouteWPS(BaseModel):
     start_pose: List = None  # Start station pose
     to_poses: List = None  # end station pose(s). can be more than 1 station
