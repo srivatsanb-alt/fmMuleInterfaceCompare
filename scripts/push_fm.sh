@@ -45,7 +45,7 @@ else
   exit
 fi
 
-if [ $copy_static == 1 ] ; then
+if [[ $copy_static == 1 ]] && [[ $server == 1 ]] ; then
 {
   echo "Copying \"static\" folder from the FM server $DOCKER_HOST"
   {
@@ -67,7 +67,9 @@ else
 }
 fi
 
-create_static_backup $IP_ADDRESS # function defined in push_utils
+if [ $server == 1 ] ; then
+  create_static_backup $IP_ADDRESS # function defined in push_utils
+fi
 
 if [ $clear_db == 1 ] ; then
 {
