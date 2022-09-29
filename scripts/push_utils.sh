@@ -20,7 +20,7 @@ create_static_backup()
   ip_address=`echo $1 | cut -d@ -f2`
   echo "usr_name $usr_name"
   echo "ip_address $ip_address"
-  if ! ssh $1 '[ -d /home/$usr_name/static_old ]'
+  if ! ssh $1 "[ -d /home/$usr_name/static_old ]"
   then
     echo "Creating directory static_old"
     ssh $usr_name@$ip_address "mkdir /home/$usr_name/static_old"
@@ -28,7 +28,7 @@ create_static_backup()
     echo "Directory static_old already exists"
   fi
 
-  if ! ssh $usr_name@$ip_address '[ -d /home/$usr_name/static ]'
+  if ! ssh $usr_name@$ip_address "[ -d /home/$usr_name/static ]"
   then
     echo "Creating directory static"
     ssh $usr_name@$ip_address "mkdir /home/$usr_name/static"
@@ -36,7 +36,7 @@ create_static_backup()
     echo "Directory static already exists"
   fi
 
-  ssh $usr_name@$ip_address 'rsync -aP /home/$usr_name//static/. /home/$usr_name/static_old/.'
+  ssh $usr_name@$ip_address "rsync -aP /home/$usr_name/static/. /home/$usr_name/static_old/."
   rsync -azP ./static/* $usr_name@$ip_address:/home/$usr_name/static/.
 }
 
