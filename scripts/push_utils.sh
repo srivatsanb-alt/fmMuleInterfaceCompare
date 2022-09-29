@@ -16,24 +16,28 @@ Help()
 create_static_backup()
 {
   echo $1
-  if ! ssh $1 '[ -d static_old ]'
+  usr_name=`echo $1 | cut -d@ -f1`
+  ip_address=`echo $1 | cut -d@ -f2`
+  echo "usr_name $usr_name"
+  echo "ip_address $ip_address"
+  if ! ssh $1 '[ -d /home/$usr_name/static_old ]'
   then
     echo "Creating directory static_old"
-    ssh $1 "mkdir /home/ati/static_old"
+    ssh $usr_name@$ip_address "mkdir /home/$usr_name/static_old"
   else
     echo "Directory static_old already exists"
   fi
 
-  if ! ssh $1 '[ -d static ]'
+  if ! ssh $usr_name@$ip_address '[ -d /home/$usr_name/static ]'
   then
     echo "Creating directory static"
-    ssh $1 "mkdir static"
+    ssh $usr_name@$ip_address "mkdir /home/$usr_name/static"
   else
     echo "Directory static already exists"
   fi
 
-  ssh $1 'rsync -aP /home/ati/static/. /home/ati/static_old/.'
-  rsync -azP ./static/* $1:static/.
+  ssh $usr_name@$ip_address 'rsync -aP /home/$usr_name//static/. /home/$usr_name/static_old/.'
+  rsync -azP ./static/* $usr_name@$ip_address:/home/$usr_name/static/.
 }
 
 clean_static()

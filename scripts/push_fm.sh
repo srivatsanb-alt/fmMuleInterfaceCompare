@@ -40,6 +40,7 @@ if [ $server == 1 ]; then
 	echo "DOCKER_HOST $DOCKER_HOST"
 fi
 
+printf "\n \n \n"
 read -p "Pls confirm the above IP_ADDRESS is right? (Correct/Cancel). Cancel if not sure! " RESP
 if [ "$RESP" = "Correct" ]; then
   echo "Preparing to push docker to $IP_ADDRESS"
@@ -50,6 +51,7 @@ fi
 
 if [[ $copy_static == 1 ]] && [[ $server == 1 ]] ; then
 {
+  printf "\n \n \n"
   echo "Copying \"static\" folder from the FM server $DOCKER_HOST"
   {
 	  rsync -azP $IP_ADDRESS:static/* static/.
@@ -59,6 +61,7 @@ if [[ $copy_static == 1 ]] && [[ $server == 1 ]] ; then
 }
 else
 {
+  printf "\n \n \n"
   echo "You chose NOT TO copy static folder from FM server!"
   read -p "Are you sure you want to continue? (I Am SuRe/Cancel). Cancel if not sure! " RESP
   if [ "$RESP" = "I Am SuRe" ]; then
