@@ -194,12 +194,12 @@ class DBSession:
         for pending_trip in pending_trips:
             if pending_trip is None:
                 continue
-            elif pending_trip.trip.milkrun:
+            if pending_trip.trip.milkrun:
                 if not check_if_timestamp_has_passed(pending_trip.trip.start_time):
                     continue
-            elif pending_trip.sherpa_name and sherpa_name != pending_trip.sherpa_name:
+            if pending_trip.sherpa_name and sherpa_name != pending_trip.sherpa_name:
                 continue
-            elif fleet_name and pending_trip.trip.fleet_name != fleet_name:
+            if fleet_name and pending_trip.trip.fleet_name != fleet_name:
                 continue
 
             return pending_trip
