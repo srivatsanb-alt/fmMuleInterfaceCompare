@@ -1,12 +1,8 @@
 import logging
 import os
-
 import redis
 from core.config import Config
-from core.db import session_maker
-from models.fleet_models import Fleet, Sherpa
 from models.db_session import session
-
 from rq import Queue
 
 
@@ -15,37 +11,27 @@ class Queues:
     redis_conn = redis.from_url(
         os.getenv("FM_REDIS_URI"), encoding="utf-8", decode_responses=True
     )
-    from_frontend_queue = Queue("from_frontend", connection=redis_conn)
-    to_frontend_queue = Queue("to_frontend", connection=redis_conn)
-    to_sherpa_queue = Queue("to_sherpa", connection=redis_conn)
-    handler_queue = Queue("to_handlers", connection=redis_conn)
-    queues = [
-        "from_frontend",
-        "to_frontend",
-        "to_sherpa",
-        "to_handlers",
-    ]
 
-    @classmethod
-    def add_all_queues(cls, config):
-        with session_maker() as db:
-            db_fleets = db.query(Fleet).all()
+    queues_dict = {}
+    all_sherpas = Config.get_all_sherpas()
+    all_fleets = Config.get_all_fleets()
 
-        fleet_mode = Config.get_fleet_mode()
+    for sherpa in all_sherpas.keys():
+        queues_dict.update(
+            {
+                f"{sherpa}_update_handler": Queue(
+                    f"{sherpa}_update_handler", connection=redis_conn
+                )
+            }
+        )
 
-        with session_maker() as db:
-            for fleet in db_fleets:
-                db_sherpas = db.query(Sherpa).filter(Sherpa.fleet_id == fleet.id).all()
-                for sherpa in db_sherpas:
-                    cls.add_queue("from_sherpa_" + sherpa.name)
-            if fleet_mode == "flipkart":
-                # TODO: add conveyor queues.
-                pass
+    queues_dict.update({"resource_handler": Queue("visa_handler", connection=redis_conn)})
+    queues_dict.update({"generic_handler": Queue("generic_handler", connection=redis_conn)})
+    queues = [q_name for q_name in queues_dict.keys()]
 
     @classmethod
     def add_queue(cls, name):
-        queue = Queue(name, connection=cls.redis_conn)
-        setattr(cls, name, queue)
+        cls.queues_dict.update({name: Queue(name, connection=cls.redis_conn)})
         cls.queues.append(name)
 
     @classmethod

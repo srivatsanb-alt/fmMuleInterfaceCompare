@@ -42,9 +42,11 @@ def accept_message(sherpa: str, msg):
 
     prev_ts = redis.hget(ts_key, msg_type)
     prev_ts = float(prev_ts) if prev_ts else 0.0
+
     # check if timestamp is valid
     if math.isclose(ts, prev_ts, rel_tol=1e-10) or ts < prev_ts:
         return False, MSG_TS_INVALID
+
     redis.hset(ts_key, msg_type, ts)
     return True, None
 
@@ -101,14 +103,18 @@ async def reader(websocket, sherpa):
             )
             continue
 
+        sherpa_update_q = Queues.queues_dict[f"{sherpa}_update_handler"]
+        logging.info(f"shq : {sherpa_update_q}")
+
         if msg_type == MessageType.TRIP_STATUS:
             msg["source"] = sherpa
             trip_status_msg = TripStatusMsg.from_dict(msg)
-            enqueue(Queues.handler_queue, handle, handler_obj, trip_status_msg, ttl=1)
+            enqueue(sherpa_update_q, handle, handler_obj, trip_status_msg, ttl=1)
+
         elif msg_type == MessageType.SHERPA_STATUS:
             msg["source"] = sherpa
             status_msg = SherpaStatusMsg.from_dict(msg)
-            enqueue(Queues.handler_queue, handle, handler_obj, status_msg, ttl=1)
+            enqueue(sherpa_update_q, handle, handler_obj, status_msg, ttl=1)
         else:
             logging.getLogger().error(f"Unsupported message type {msg_type}")
 
