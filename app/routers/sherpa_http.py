@@ -1,8 +1,5 @@
-import os
 import time
-import redis
-from app.routers.dependencies import get_sherpa
-from core.config import Config
+from app.routers.dependencies import get_sherpa, process_req, process_req_with_response
 from models.request_models import (
     InitMsg,
     ReachedReq,
@@ -12,9 +9,9 @@ from models.request_models import (
     SherpaReq,
     VerifyFleetFilesResp,
 )
-from fastapi import APIRouter, Depends, HTTPException
-from rq.job import Job
-from utils.rq import Queues, enqueue
+from fastapi import Depends, APIRouter
+from utils.rq import Queues
+
 
 router = APIRouter(
     prefix="/api/v1/sherpa",
@@ -24,35 +21,6 @@ router = APIRouter(
 )
 
 
-def process_msg(msg: SherpaReq, sherpa: str):
-    if sherpa is None:
-        raise HTTPException(status_code=403, detail="Unknown sherpa")
-    handler_obj = Config.get_handler()
-    msg.source = sherpa
-
-    return enqueue(Queues.handler_queue, handle, handler_obj, msg)
-
-
-def process_msg_with_response(req: SherpaReq, sherpa: str):
-    job: Job = process_msg(req, sherpa)
-    redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
-    n_attempt = 1
-    while True:
-        status = Job.fetch(job.id, connection=redis_conn).get_status(refresh=True)
-        if status == "finished":
-            response = Job.fetch(job.id, connection=redis_conn).result
-            break
-        if status == "failed":
-            time.sleep(1)
-            job: Job = process_msg(req, sherpa)
-            RETRY_ATTEMPTS = Config.get_rq_job_params()["http_retry_attempts"]
-            if n_attempt > RETRY_ATTEMPTS:
-                raise HTTPException(status_code=500, detail="rq job failed multiple times")
-            n_attempt = n_attempt + 1
-        time.sleep(0.1)
-    return response
-
-
 @router.get("/check_connection")
 async def check_connection():
     return {"uvicorn": "I am alive"}
@@ -60,34 +28,31 @@ async def check_connection():
 
 @router.post("/init/")
 async def init_sherpa(init_msg: InitMsg, sherpa: str = Depends(get_sherpa)):
-    process_msg(init_msg, sherpa)
+    process_req(None, init_msg, sherpa)
 
 
 @router.post("/trip/reached/")
 async def reached(reached_msg: ReachedReq, sherpa: str = Depends(get_sherpa)):
-    process_msg(reached_msg, sherpa)
+    process_req(None, reached_msg, sherpa)
 
 
 @router.post("/peripherals/")
 async def peripherals(
     peripherals_req: SherpaPeripheralsReq, sherpa: str = Depends(get_sherpa)
 ):
-    process_msg(peripherals_req, sherpa)
+    process_req(None, peripherals_req, sherpa)
 
 
 @router.post("/access/resource/", response_model=ResourceResp)
 async def resource_access(resource_req: ResourceReq, sherpa: str = Depends(get_sherpa)):
-    response = process_msg_with_response(resource_req, sherpa)
+    queue = Queues.queues_dict["resource_handlers"]
+    response = process_req_with_response(queue, resource_req, sherpa)
     return ResourceResp.from_json(response)
 
 
 @router.get("/verify_fleet_files", response_model=VerifyFleetFilesResp)
 async def verify_fleet_files(sherpa: str = Depends(get_sherpa)):
-    response = process_msg_with_response(
-        SherpaReq(type="verify_fleet_files", timestamp=time.time()), sherpa
+    response = process_req_with_response(
+        None, SherpaReq(type="verify_fleet_files", timestamp=time.time()), sherpa
     )
     return VerifyFleetFilesResp.from_json(response)
-
-
-def handle(handler, msg):
-    return handler.handle(msg)

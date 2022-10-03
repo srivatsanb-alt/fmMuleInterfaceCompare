@@ -7,6 +7,8 @@ class MessageType:
     BOOKING = "book"
     PASS_TO_SHERPA = "pass_to_sherpa"
     RESOURCE_ACCESS = "resource_access"
+    DELETE_ONGOING_TRIP = "delete_ongoing_trip"
+    INDUCT_SHERPA = "induct_sherpa"
 
 
 class FleetStatus:

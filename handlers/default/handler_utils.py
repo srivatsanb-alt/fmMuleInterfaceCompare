@@ -65,10 +65,8 @@ def update_leg_next_station(next_station_name: str, sherpa: str, session: DBSess
 
 def is_sherpa_available(sherpa):
     reason = None
-    if not reason and not sherpa.initialized:
-        reason = "not init"
-    if not reason and sherpa.disabled:
-        reason = "disabled"
+    if not reason and not sherpa.inducted:
+        reason = "out of fleet"
     if not reason and not sherpa.idle:
         reason = "not idle"
     if not reason:

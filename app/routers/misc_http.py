@@ -3,7 +3,7 @@ from models.request_models import MasterDataInfo, RoutePreview
 from fastapi import APIRouter, Depends, HTTPException
 from models.fleet_models import SherpaEvent, Sherpa, SherpaStatus
 import utils.fleet_utils as fu
-import datetime
+from utils.util import dt_to_str
 from models.db_session import session
 from typing import List
 import pandas as pd
@@ -89,20 +89,11 @@ async def master_data(
 
     response.update({"sample_station_status": sample_station_status})
 
-    # sample_trip_status = {}
-    # data = None
-    # try:
-    #     data = session.query(Trip).first()
-    #     sample_trip_status.update({data.id: data.__dict__})
-    # except Exception as e:
-    #     logging.get_logger().info(
-    #             f"no trip data found, cannot send a sample_trip_status, {e}"
-    #             )
-    #
-    # response.update({"sample_trip_status": sample_trip_status})
     return response
 
 
+# temporary addition for first release
+# TODO : remove viewable code after frontend is enabled to read sherpa_summary
 @router.get("/api/v1/sherpa_summary/{sherpa_name}/{viewable}")
 async def sherpa_summary(
     sherpa_name: str, viewable: int, user_name=Depends(get_user_from_header)
@@ -116,11 +107,11 @@ async def sherpa_summary(
             temp = recent_event.__dict__
             del temp["_sa_instance_state"]
             del temp["updated_at"]
-            temp["created_at"] = datetime.datetime.strftime(
-                temp["created_at"], "%Y-%m-%d %H:%M:%S"
-            )
+            temp["created_at"] = dt_to_str(temp["created_at"])
+
             result.append(temp)
         response.update({"recent_events": {"events": result}})
+
     except Exception as e:
         response.update({"recent_events": {"error": e}})
 
@@ -137,8 +128,6 @@ async def sherpa_summary(
     except Exception as e:
         response.update({"sherpa_status": {"error": e}})
 
-    # temporary addition for first release
-    # TODO : remove viewable code after frontend is enabled to read sherpa_summary
     if viewable:
         df = pd.DataFrame(data=response)
         df = df.fillna(" ")

@@ -2,8 +2,8 @@ import os
 import time
 from typing import Dict
 import redis
-import json
-import datetime
+from models.db_session import session
+from models.fleet_models import SherpaEvent
 import requests
 from core.config import Config
 from core.logs import get_logger
@@ -59,13 +59,12 @@ def send_msg_to_sherpa(sherpa: Sherpa, msg: FMReq) -> Dict:
     get_logger(sherpa.name).info(f"msg to {sherpa.name}: {body}")
     get_logger(sherpa.name).info(f"msg url: {url}")
 
-    # add to redis
-    sherpa_events = redis_db.get("sherpa_events")
-    if not sherpa_events:
-        sherpa_events = b"[]"
-    sherpa_events = json.loads(sherpa_events)
-    sherpa_events.append([sherpa.name, endpoint, "sent to sherpa"])
-    redis_db.set("sherpa_events", json.dumps(sherpa_events))
+    sherpa_event: SherpaEvent = SherpaEvent(
+        sherpa_name=sherpa.name,
+        msg_type=endpoint,
+        context="sent to sherpa",
+    )
+    session.add_to_session(sherpa_event)
 
     return post(url, body)
 

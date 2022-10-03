@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum
-from typing import List, Optional, Union, Dict, Tuple
-
+from typing import List, Optional, Union, Dict
 import pydantic
 
 
@@ -214,6 +213,17 @@ class BookingReq(TripsReq):
     type: str = MessageType.BOOKING
 
 
+class DeleteTripReq(BaseModel):
+    booking_id: int
+    type: str = MessageType.DELETE_ONGOING_TRIP
+
+
+class SherpaInductReq(BaseModel):
+    induct: bool
+    sherpa_name: Optional[str]
+    type: str = MessageType.INDUCT_SHERPA
+
+
 class StartStopCtrlReq(BaseModel):
     start: bool
 
@@ -260,6 +270,12 @@ class MoveReq(FMReq):
     trip_leg_id: int
     destination_pose: List[float]
     destination_name: str
+
+
+class TerminateTripReq(FMReq):
+    endpoint: str = "terminate_trip"
+    trip_id: int
+    trip_leg_id: int
 
 
 class PeripheralsReq(FMReq):

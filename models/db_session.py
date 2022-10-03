@@ -141,7 +141,7 @@ class DBSession:
         return (
             self.session.query(SherpaEvent)
             .filter(SherpaEvent.sherpa_name == sherpa_name)
-            .order_by(SherpaEvent.id.desc())
+            .order_by(SherpaEvent.created_at.desc())
             .limit(num_events)
         )
 
@@ -182,25 +182,16 @@ class DBSession:
         return self.session.query(Trip).filter(Trip.booking_id == booking_id).all()
 
     def get_pending_trip(self, sherpa_name: str):
-        fleet_name = None
-        sherpa = None
+        pending_trip = (
+            self.session.query(PendingTrip)
+            .filter(PendingTrip.sherpa_name == sherpa_name)
+            .one_or_none()
+        )
+        if pending_trip.trip.milkrun:
+            if not check_if_timestamp_has_passed(pending_trip.trip.start_time):
+                return None
 
-        if sherpa_name:
-            sherpa = session.get_sherpa(sherpa_name)
-            if sherpa:
-                fleet_name = sherpa.fleet.name
-
-        pending_trips = self.session.query(PendingTrip).all()
-        for pending_trip in pending_trips:
-            if pending_trip is None:
-                continue
-            if pending_trip.trip.milkrun:
-                if not check_if_timestamp_has_passed(pending_trip.trip.start_time):
-                    continue
-            if fleet_name and pending_trip.trip.fleet_name != fleet_name:
-                continue
-            return pending_trip
-        return None
+        return pending_trip
 
     def get_ongoing_trip(self, sherpa: str):
         return (

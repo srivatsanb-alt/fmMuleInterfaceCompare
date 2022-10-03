@@ -79,6 +79,24 @@ class Config:
             cls.config = cls.read_config()
         return cls.config["rq"]["jobs"]
 
+    @classmethod
+    def get_all_fleets(cls):
+        if not cls.config:
+            cls.config = cls.read_config()
+        return cls.config["fleet"]["fleet_names"]
+
+    @classmethod
+    def get_all_sherpas(cls):
+        if not cls.config:
+            cls.config = cls.read_config()
+        return cls.config["fleet_sherpas"]
+
+    @classmethod
+    def get_misc_details(cls):
+        if not cls.config:
+            cls.config = cls.read_config()
+        return cls.config["misc"]["details"]
+
 
 if __name__ == "__main__":
     d = {"a": [1, 2, 3], "b": {"c": 2, "d": {"e": 3}, "f": {"g": [4, 5]}}}

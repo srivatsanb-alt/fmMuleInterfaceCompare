@@ -1,25 +1,24 @@
 from models.trip_models import Trip, OngoingTrip
 from models.db_session import session
-import datetime
+from utils import util
 
 
 def get_trip_status(trip: Trip):
     ongoing_trip: OngoingTrip = session.get_ongoing_trip_with_trip_id(trip.id)
+
     booking_time = None
     end_time = None
     start_time = None
     updated_at = None
     trip_leg = None
-
     if trip.booking_time:
-        booking_time = datetime.datetime.strftime(trip.booking_time, "%Y-%m-%d %H:%M:%S")
+        booking_time = util.dt_to_str(trip.booking_time)
     if trip.start_time:
-        start_time = datetime.datetime.strftime(trip.start_time, "%Y-%m-%d %H:%M:%S")
+        start_time = util.dt_to_str(trip.start_time)
     if trip.end_time:
-        end_time = datetime.datetime.strftime(trip.end_time, "%Y-%m-%d %H:%M:%S")
-
+        end_time = util.dt_to_str(trip.end_time)
     if trip.updated_at:
-        updated_at = datetime.datetime.strftime(trip.updated_at, "%Y-%m-%d %H:%M:%S")
+        updated_at = util.dt_to_str(trip.updated_at)
 
     if ongoing_trip:
         trip_leg = session.get_trip_leg(ongoing_trip.sherpa_name)

@@ -20,6 +20,7 @@ from models.request_models import (
     SherpaPeripheralsReq,
     SherpaReq,
     SherpaStatusMsg,
+    SherpaInductReq,
     SoundEnum,
     SpeakerReq,
     IndicatorReq,
@@ -29,19 +30,19 @@ from models.request_models import (
     VerifyFleetFilesResp,
     VisaReq,
     VisaType,
+    DeleteTripReq,
+    TerminateTripReq,
 )
-from models.trip_models import OngoingTrip, PendingTrip, Trip, TripState
+from models.trip_models import OngoingTrip, PendingTrip, Trip, TripState, TripStatus
 from requests import Response
 from utils.comms import get, send_move_msg, send_msg_to_sherpa, send_status_update
-from utils.util import are_poses_close, str_to_ts, ts_to_str, check_if_timestamp_has_passed
+from utils.util import are_poses_close, check_if_timestamp_has_passed
 from utils.visa_utils import maybe_grant_visa, unlock_exclusion_zone
-import time
 import redis
 import os
 import json
-from datetime import datetime
+import datetime
 from core.config import Config
-from core.constants import DisabledReason
 import handlers.default.handler_utils as hutils
 
 
@@ -206,16 +207,17 @@ class Handlers:
         )
         if pending_trip.trip.milkrun:
             if not check_if_timestamp_has_passed(pending_trip.trip.end_time):
+
                 get_logger(sherpa_name).info(
                     f"recreating trip {pending_trip.trip.id}, milkrun needs to be continued"
                 )
 
                 new_metadata = pending_trip.trip.trip_metadata
                 time_period = new_metadata["milkrun_time_period"]
-                new_metadata["epoch_time"] = True
-                new_metadata["milkrun_start_time"] = time.time() + int(time_period)
-                new_metadata["milkrun_end_time"] = pending_trip.trip.end_time.timestamp()
-                new_metadata["milkrun_time_period"] = pending_trip.trip.time_period
+                # modify start time
+                new_metadata[
+                    "milkrun_start_time"
+                ] = datetime.datetime.now() + datetime.timedelta(seconds=time_period)
 
                 get_logger(sherpa_name).info(f"milkrun new metadata {new_metadata}")
                 new_trip: Trip = session.create_trip(
@@ -244,6 +246,9 @@ class Handlers:
 
         if not ongoing_trip or ongoing_trip.finished():
             self.end_trip(ongoing_trip)
+            sherpa = session.get_sherpa(sherpa_name)
+            sherpa.trip_id = None
+            sherpa.trip_leg_id = None
             done = self.assign_new_trip(sherpa_name)
 
         ongoing_trip: OngoingTrip = session.get_ongoing_trip(sherpa_name)
@@ -272,29 +277,6 @@ class Handlers:
         else:
             get_logger(sherpa_name).info(f"{sherpa_name} not assigned new task")
 
-    # iterates through pending trips and tries to assign each one to an available sherpa
-    def assign_pending_trips(self):
-        pending_trip: PendingTrip = session.get_pending_trip(sherpa_name=None)
-        while pending_trip:
-            get_logger().info(f"trying to assign pending trip {pending_trip.trip_id}")
-            sherpa_name = hutils.find_best_sherpa()
-            if not sherpa_name:
-                get_logger().info(
-                    f"no sherpa available for trip {pending_trip.trip_id}, will assign later"
-                )
-                # assuming no sherpas available for one pending trip means no sherpas
-                # available at all.
-                return
-            self.assign_next_task(sherpa_name)
-
-            # get the next pending trip
-            next_pending_trip = session.get_pending_trip(sherpa_name=None)
-            if not next_pending_trip or next_pending_trip == pending_trip:
-                get_logger().info("no more pending trips to assign")
-                break
-            else:
-                pending_trip = next_pending_trip
-
     def check_continue_curr_leg(self, ongoing_trip: OngoingTrip):
         return (
             ongoing_trip and ongoing_trip.trip_leg and not ongoing_trip.trip_leg.finished()
@@ -312,7 +294,6 @@ class Handlers:
         sherpa_status: SherpaStatus = session.get_sherpa_status(sherpa_name)
         sherpa_status.initialized = True
         sherpa_status.idle = True
-        sherpa_status.disabled = False
         get_logger(sherpa_name).info(f"{sherpa_name} initialized")
         req_ctxt.continue_curr_task = True
 
@@ -371,6 +352,21 @@ class Handlers:
                 f"sent speaker and indicator request to {sherpa_name}: response status {response.status_code}"
             )
 
+    def delete_ongoing_trip(self, req: DeleteTripReq):
+        trips = session.get_trip_with_booking_id(req.booking_id)
+        for trip in trips:
+            trip.status = TripStatus.CANCELLED
+            ongoing_trip: OngoingTrip = session.get_ongoing_trip_with_trip_id(trip.id)
+            sherpa: Sherpa = session.get_sherpa(ongoing_trip.sherpa_name)
+            sherpa.status.trip_id = None
+            sherpa.status.trip_leg_id = None
+            terminate_trip_msg = TerminateTripReq(
+                trip_id=ongoing_trip.trip_id, trip_leg_id=ongoing_trip.trip_leg_id
+            )
+            response = send_msg_to_sherpa(sherpa, terminate_trip_msg)
+            session.delete_ongoing_trip(ongoing_trip)
+        return response
+
     def handle_reached(self, msg: ReachedReq):
         sherpa_name = msg.source
         sherpa: SherpaStatus = session.get_sherpa_status(sherpa_name)
@@ -415,6 +411,10 @@ class Handlers:
             get_logger(sherpa_name).info(f"received from {sherpa_name}: {init_resp}")
             sherpa.hwid = init_resp.hwid
             self.initialize_sherpa(sherpa_name)
+
+    def handle_induct_sherpa(self, req: SherpaInductReq):
+        sherpa: Sherpa = session.get_sherpa(req.sherpa_name)
+        sherpa.status.induct = req.induct
 
     def handle_peripherals(self, req: SherpaPeripheralsReq):
         sherpa_name = req.source
@@ -473,6 +473,7 @@ class Handlers:
         )
 
     def handle_book(self, req: BookingReq):
+        response = {}
         for trip_msg in req.trips:
             booking_id = session.get_new_booking_id()
             fleet_name = session.get_fleet_name_from_route(trip_msg.route)
@@ -485,6 +486,11 @@ class Handlers:
                     fleet_name,
                 )
                 session.create_pending_trip(trip.id)
+        return response
+
+    def handle_delete_ongoing_trip(self, req: DeleteTripReq):
+        response = self.delete_ongoing_trip(req)
+        return response
 
     def handle_trip_status(self, req: TripStatusMsg):
         sherpa_name = req.source
@@ -590,8 +596,6 @@ class Handlers:
         if req_ctxt.sherpa_name:
             self.assign_next_task(req_ctxt.sherpa_name)
 
-        self.assign_pending_trips()
         self.check_sherpa_status()
-        self.add_sherpa_events()
 
         return response

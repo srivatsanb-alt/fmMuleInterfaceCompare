@@ -6,7 +6,7 @@ import json
 import glob
 import importlib
 import inspect
-
+from utils.util import dt_to_str
 from models.fleet_models import (
     Fleet,
     Map,
@@ -16,7 +16,7 @@ from models.fleet_models import (
     Station,
     StationStatus,
 )
-
+import datetime
 from models.visa_models import ExclusionZone, LinkedGates
 from models.frontend_models import FrontendUser
 from models.base_models import StationProperties
@@ -31,8 +31,8 @@ def get_table_as_dict(model, model_obj):
     result = {}
     model_dict = model_obj.__dict__
     for col, col_type in cols:
-        if col in ["created_at", "updated_at"]:
-            pass
+        if isinstance(model_dict[col], datetime.datetime):
+            result.update({col: dt_to_str(model_dict[col])})
         elif inspect.isclass(model_dict[col]):
             pass
         elif col_type not in all_valid_types:
@@ -46,9 +46,7 @@ def get_table_as_dict(model, model_obj):
                         break
                 if skip:
                     continue
-
             result.update({col: model_dict[col]})
-
     return result
 
 
@@ -232,21 +230,22 @@ def add_linked_gates_table(fleet):
     with session_maker() as db:
         gates_dict = ez_gates["ez_gates"]
         for gate in gates_dict.values():
-            print(f"Current gate {gate}!")
-            prev_zone_id = gate["name"] + "_lane"
-            linked_gates = gate["linked_gates_ids"]
-            print(f"Adding linked gates for {prev_zone_id}!")
-            print(f"linked_gates are {linked_gates}!")
-            for linked_gate in linked_gates:
-                linked_gate_id = gates_dict[str(linked_gate)]["name"] + "_lane"
-                print(f"linked_gate_id is {linked_gate_id}!")
-                new_linked_gate = LinkedGates(
-                    prev_zone_id=prev_zone_id, next_zone_id=linked_gate_id
-                )
-                db.add(new_linked_gate)
-                db.flush()
-                db.refresh(new_linked_gate)
-                print(f"Added the linkedgate {new_linked_gate}!")
+            if gate["linked_gate"]:
+                print(f"Current gate {gate}!")
+                prev_zone_id = gate["name"] + "_lane"
+                linked_gates = gate["linked_gates_ids"]
+                print(f"Adding linked gates for {prev_zone_id}!")
+                print(f"linked_gates are {linked_gates}!")
+                for linked_gate in linked_gates:
+                    linked_gate_id = gates_dict[str(linked_gate)]["name"] + "_lane"
+                    print(f"linked_gate_id is {linked_gate_id}!")
+                    new_linked_gate = LinkedGates(
+                        prev_zone_id=prev_zone_id, next_zone_id=linked_gate_id
+                    )
+                    db.add(new_linked_gate)
+                    db.flush()
+                    db.refresh(new_linked_gate)
+                    print(f"Added the linkedgate {new_linked_gate}!")
         db.commit()
     return
 

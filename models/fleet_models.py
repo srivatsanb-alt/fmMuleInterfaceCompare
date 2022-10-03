@@ -77,9 +77,9 @@ class SherpaStatus(TimestampMixin, Base):
     initialized = Column(Boolean)
     disabled = Column(Boolean)
     disabled_reason = Column(String)
+    inducted = Column(Boolean)
     idle = Column(Boolean)
     error = Column(String)
-
     pose = Column(ARRAY(Float))
     battery_status = Column(Float)
     mode = Column(String)

@@ -33,7 +33,10 @@ class FleetSimulator:
         os.environ["ATI_SUB"] = "ipc:////app/out/zmq_sub"
         os.environ["ATI_PUB"] = "ipc:////app/out/zmq_sub"
         redis_db = redis.from_url(os.getenv("FM_REDIS_URI"))
-        redis_db.set("control_init", json.loads(True))
+
+        # mule looks for control_init to accept move_to req
+        redis_db.set("control_init", json.dumps(True))
+
         from mule.ati.fastapi.mule_app import mule_app
 
         port = 5001
@@ -57,6 +60,9 @@ class FleetSimulator:
             proc.kill()
 
     def send_sherpa_status(self, sherpa_name, mode=None, pose=None, battery_status=None):
+        sherpa_update_q = Queues.queues_dict[f"{sherpa_name}_update_handler"]
+        print(f"shq {sherpa_update_q}")
+
         sherpa: Sherpa = session.get_sherpa(sherpa_name)
         msg = {}
         msg["type"] = "sherpa_status"
@@ -70,4 +76,4 @@ class FleetSimulator:
 
         if msg["type"] == "sherpa_status":
             msg = SherpaStatusMsg.from_dict(msg)
-            enqueue(Queues.handler_queue, self.handle, self.handler_obj, msg, ttl=1)
+            enqueue(sherpa_update_q, self.handle, self.handler_obj, msg, ttl=1)

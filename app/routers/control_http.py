@@ -1,18 +1,15 @@
 import requests
-import redis
-import os
-import datetime
-import time
-from rq.job import Job
 from typing import Union
-from app.routers.dependencies import get_user_from_header, get_db_session
+from app.routers.dependencies import (
+    get_user_from_header,
+    process_req,
+    process_req_with_response,
+)
 from core.constants import FleetStatus, DisabledReason
-from models.fleet_models import Fleet, SherpaStatus
+from models.fleet_models import Fleet, SherpaStatus, Sherpa
 from utils.comms import get_sherpa_url
-from utils.rq import Queues, enqueue
-from core.config import Config
 from fastapi import APIRouter, Depends, HTTPException
-
+from models.db_session import session
 from models.request_models import (
     PauseResumeReq,
     SwitchModeReq,
@@ -22,6 +19,7 @@ from models.request_models import (
     SwitchModeCtrlReq,
     ResetPoseCtrlReq,
     StartStopCtrlReq,
+    SherpaInductReq,
 )
 
 
@@ -30,34 +28,6 @@ router = APIRouter(
     tags=["control"],
     responses={404: {"description": "Not found"}},
 )
-
-
-def process_req(req, user: str):
-    if not user:
-        raise HTTPException(status_code=403, detail="Unknown user")
-
-    handler_obj = Config.get_handler()
-    return enqueue(Queues.handler_queue, handle, handler_obj, req)
-
-
-def process_req_with_response(req, user: str):
-    job: Job = process_req(req, user)
-    redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
-    n_attempt = 1
-    while True:
-        status = Job.fetch(job.id, connection=redis_conn).get_status(refresh=True)
-        if status == "finished":
-            response = Job.fetch(job.id, connection=redis_conn).result
-            break
-        if status == "failed":
-            time.sleep(1)
-            job: Job = process_req(req, user)
-            RETRY_ATTEMPTS = Config.get_rq_job_params()["http_retry_attempts"]
-            if n_attempt > RETRY_ATTEMPTS:
-                raise HTTPException(status_code=500, detail="rq job failed multiple times")
-            n_attempt = n_attempt + 1
-        time.sleep(0.1)
-    return response
 
 
 def handle(handler, msg):
@@ -69,7 +39,6 @@ async def start_stop(
     start_stop_ctrl_req: StartStopCtrlReq,
     entity_name=Union[str, None],
     user_name=Depends(get_user_from_header),
-    session=Depends(get_db_session),
 ):
 
     response = {}
@@ -85,6 +54,7 @@ async def start_stop(
         raise HTTPException(status_code=403, detail="Fleet not found")
 
     fleet.status = FleetStatus.STARTED if start_stop_ctrl_req.start else FleetStatus.STOPPED
+    session.close()
 
     return response
 
@@ -94,7 +64,6 @@ async def emergency_stop(
     pause_resume_ctrl_req: PauseResumeCtrlReq,
     entity_name=Union[str, None],
     user_name=Depends(get_user_from_header),
-    session=Depends(get_db_session),
 ):
 
     response = {}
@@ -127,9 +96,11 @@ async def emergency_stop(
         )
 
         try:
-            _ = process_req_with_response(pause_resume_req, user_name)
+            _ = process_req_with_response(None, pause_resume_req, user_name)
         except Exception as e:
             unconnected_sherpas.append([sherpa_status.sherpa_name, e])
+
+    session.close()
 
     return response
 
@@ -139,7 +110,6 @@ async def sherpa_emergency_stop(
     pause_resume_ctrl_req: PauseResumeCtrlReq,
     entity_name=Union[str, None],
     user_name=Depends(get_user_from_header),
-    session=Depends(get_db_session),
 ):
 
     response = {}
@@ -172,7 +142,9 @@ async def sherpa_emergency_stop(
         pause=pause_resume_ctrl_req.pause, sherpa_name=entity_name
     )
 
-    _ = process_req_with_response(pause_resume_req, user_name)
+    _ = process_req_with_response(None, pause_resume_req, user_name)
+
+    session.close()
 
     return response
 
@@ -182,7 +154,6 @@ async def switch_mode(
     switch_mode_ctrl_req: SwitchModeCtrlReq,
     entity_name=Union[str, None],
     user_name=Depends(get_user_from_header),
-    session=Depends(get_db_session),
 ):
 
     response = {}
@@ -200,7 +171,10 @@ async def switch_mode(
 
     switch_mode_req = SwitchModeReq(mode=switch_mode_ctrl_req.mode, sherpa_name=entity_name)
 
-    process_req(switch_mode_req, user_name)
+    process_req(None, switch_mode_req, user_name)
+
+    session.close()
+
     return response
 
 
@@ -209,7 +183,6 @@ async def reset_pose(
     reset_pose_ctrl_req: ResetPoseCtrlReq,
     entity_name=Union[str, None],
     user_name=Depends(get_user_from_header),
-    session=Depends(get_db_session),
 ):
 
     response = {}
@@ -237,16 +210,38 @@ async def reset_pose(
         sherpa_name=entity_name,
     )
 
-    _ = process_req_with_response(reset_pose_req, user_name)
+    _ = process_req_with_response(None, reset_pose_req, user_name)
+
+    session.close()
 
     return response
+
+
+@router.get("/sherpa/{sherpa_name}/induct")
+async def induct_sherpa(
+    sherpa_name: str,
+    sherpa_induct_req: SherpaInductReq,
+    user_name=Depends(get_user_from_header),
+):
+    sherpa_induct_req.sherpa_name = sherpa_name
+    sherpa = session.get_sherpa(sherpa_name)
+    trip = session.get_trip(sherpa.trip_id)
+
+    if sherpa.trip_id:
+        raise HTTPException(
+            status_code=403,
+            detail=f"delete the ongoing trip with booking_id: {trip.booking_id}, to induct {sherpa_name} out of fleet",
+        )
+
+    _ = process_req_with_response(None, sherpa_induct_req, user_name)
+
+    session.close()
 
 
 @router.get("/sherpa/{entity_name}/diagnostics")
 async def diagnostics(
     entity_name=Union[str, None],
     user_name=Depends(get_user_from_header),
-    session=Depends(get_db_session),
 ):
 
     response = {}

@@ -1,10 +1,9 @@
-import time
-
+import datetime
 from sqlalchemy import ARRAY, Column, DateTime, ForeignKey, Integer, String, Boolean
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 from sqlalchemy.orm.attributes import flag_modified
-from utils.util import ts_to_str, get_epoch_time
+from utils.util import str_to_dt
 
 from models.base_models import Base, TimestampMixin
 
@@ -19,6 +18,7 @@ class TripStatus:
     EN_ROUTE = "en_route"
     SUCCEEDED = "succeeded"
     FAILED = "failed"
+    CANCELLED = "cancelled"
 
 
 class TripState:
@@ -75,7 +75,7 @@ class Trip(Base, TimestampMixin):
     def __init__(self, route, priority=0, metadata=None, fleet_name=None, booking_id=None):
         self.fleet_name = fleet_name
         self.booking_id = booking_id
-        self.booking_time = ts_to_str(time.time())
+        self.booking_time = datetime.datetime.now()
         self.route = route
         self.status = TripStatus.BOOKED
         self.priority = priority
@@ -85,22 +85,9 @@ class Trip(Base, TimestampMixin):
 
         # set all milkrun trip details
         if metadata.get("milkrun"):
-
-            if metadata.get("epoch_time"):
-                start_ts = metadata["milkrun_start_time"]
-                end_ts = metadata["milkrun_end_time"]
-
-            else:
-                start_ts = get_epoch_time(
-                    metadata["milkrun_start_time"][0], metadata["milkrun_start_time"][1]
-                )
-                end_ts = get_epoch_time(
-                    metadata["milkrun_end_time"][0], metadata["milkrun_end_time"][1]
-                )
-
             self.milkrun = True
-            self.start_time = ts_to_str(start_ts)
-            self.end_time = ts_to_str(end_ts)
+            self.start_time = str_to_dt(metadata["milkrun_start_time"])
+            self.end_time = str_to_dt(metadata["milkrun_end_time"])
             self.time_period = int(metadata["milkrun_time_period"])
 
         self.augmented_route = route
@@ -111,10 +98,10 @@ class Trip(Base, TimestampMixin):
         self.status = TripStatus.ASSIGNED
 
     def start(self):
-        self.start_time = ts_to_str(time.time())
+        self.start_time = datetime.datetime.now()
 
     def end(self, success):
-        self.end_time = ts_to_str(time.time())
+        self.end_time = datetime.datetime.now()
         self.status = TripStatus.SUCCEEDED if success else TripStatus.FAILED
 
     def __repr__(self):
@@ -147,12 +134,12 @@ class TripLeg(Base, TimestampMixin):
 
     def __init__(self, trip_id, from_station, to_station):
         self.trip_id = trip_id
-        self.start_time = ts_to_str(time.time())
-        self.from_station = from_station
+        self.start_time = datetime.datetime.now()
+        self.from_station = datetime.datetime.now()
         self.to_station = to_station
 
     def end(self):
-        self.end_time = ts_to_str(time.time())
+        self.end_time = datetime.datetime.now()
 
     def finished(self):
         return True if self.end_time else False
