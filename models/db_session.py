@@ -197,11 +197,8 @@ class DBSession:
             if pending_trip.trip.milkrun:
                 if not check_if_timestamp_has_passed(pending_trip.trip.start_time):
                     continue
-            if pending_trip.sherpa_name and sherpa_name != pending_trip.sherpa_name:
-                continue
             if fleet_name and pending_trip.trip.fleet_name != fleet_name:
                 continue
-
             return pending_trip
         return None
 
