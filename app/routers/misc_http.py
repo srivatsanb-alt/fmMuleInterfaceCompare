@@ -1,5 +1,5 @@
 from app.routers.dependencies import get_db_session, get_user_from_header
-from models.request_models import MasterDataInfo
+from models.request_models import MasterDataInfo, RoutePreview
 from fastapi import APIRouter, Depends, HTTPException
 from models.fleet_models import SherpaEvent, Sherpa, SherpaStatus
 import utils.fleet_utils as fu
@@ -146,3 +146,19 @@ async def sherpa_summary(
         return HTMLResponse(content=response, status_code=200)
 
     return response
+
+
+@router.get("/api/v1/trips/get_route_wps")
+async def get_route_wps(
+    route_preview_req: RoutePreview,
+    user_name=Depends(get_user_from_header),
+):
+    if not user_name:
+        raise HTTPException(status_code=403, detail="Unknown requester")
+    stations_poses = []
+    fleet_name = route_preview_req.fleet_name
+    for station_name in route_preview_req.route:
+        station = session.get_station(station_name)
+        stations_poses.append(station.pose)
+
+    pass

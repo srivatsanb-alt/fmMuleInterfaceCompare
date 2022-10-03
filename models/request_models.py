@@ -204,6 +204,11 @@ class TripMsg(BaseModel):
     metadata: Optional[Dict[str, Union[List[int], bool, str, int]]] = None
 
 
+class RoutePreview(BaseModel):
+    route: List[str]
+    fleet_name: str
+
+
 class BookingReq(TripsReq):
     trips: List[TripMsg]
     type: str = MessageType.BOOKING
