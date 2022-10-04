@@ -225,9 +225,9 @@ async def induct_sherpa(
 ):
     sherpa_induct_req.sherpa_name = sherpa_name
     sherpa = session.get_sherpa(sherpa_name)
-    trip = session.get_trip(sherpa.trip_id)
 
     if sherpa.trip_id:
+        trip = session.get_trip(sherpa.trip_id)
         raise HTTPException(
             status_code=403,
             detail=f"delete the ongoing trip with booking_id: {trip.booking_id}, to induct {sherpa_name} out of fleet",

@@ -145,6 +145,7 @@ class Handlers:
         stale_sherpas_status: SherpaStatus = session.get_all_stale_sherpa_status(
             MULE_HEARTBEAT_INTERVAL
         )
+
         for stale_sherpa_status in stale_sherpas_status:
             if not stale_sherpa_status.disabled:
                 stale_sherpa_status.disabled = True
@@ -183,60 +184,68 @@ class Handlers:
 
         self.do_post_actions(ongoing_trip)
 
+    def recreate_milkrun(pending_trip: PendingTrip):
+        if not check_if_timestamp_has_passed(pending_trip.trip.end_time):
+            get_logger().info(
+                f"recreating trip {pending_trip.trip.id}, milkrun needs to be continued"
+            )
+            new_metadata = pending_trip.trip.trip_metadata
+            time_period = new_metadata["milkrun_time_period"]
+            # modify start time
+            new_metadata[
+                "milkrun_start_time"
+            ] = datetime.datetime.now() + datetime.timedelta(seconds=time_period)
+
+            get_logger().info(f"milkrun new metadata {new_metadata}")
+            new_trip: Trip = session.create_trip(
+                pending_trip.trip.route,
+                pending_trip.trip.priority,
+                new_metadata,
+                pending_trip.trip.booking_id,
+                pending_trip.trip.fleet_name,
+            )
+            session.create_pending_trip(new_trip.id)
+        else:
+            get_logger().info(
+                f"will not recreate trip {pending_trip.trip.id}, milkrun_end_time past current time"
+            )
+
     def assign_new_trip(self, sherpa_name: str):
-        pending_trip: PendingTrip = session.get_pending_trip(sherpa_name)
-        if not pending_trip:
-            get_logger(sherpa_name).info(f"no pending trip to assign to {sherpa_name}")
-            return False
+
         sherpa: Sherpa = session.get_sherpa(sherpa_name)
         fleet: Fleet = sherpa.fleet
+
         if fleet.status == FleetStatus.STOPPED:
             get_logger(sherpa_name).info(
                 f"fleet {fleet.name} is stopped, not assigning new trip to {sherpa_name}"
             )
             return False
 
-        get_logger(sherpa_name).info(f"found pending trip id {pending_trip.trip_id}")
-        sherpa: SherpaStatus = session.get_sherpa_status(sherpa_name)
-        if not hutils.is_sherpa_available(sherpa):
-            get_logger(sherpa_name).info(f"{sherpa_name} not available for new trip")
+        pending_trip: PendingTrip = session.get_pending_trip(sherpa_name)
+
+        if not pending_trip:
+            get_logger(sherpa_name).info(f"no pending trip to assign to {sherpa_name}")
             return False
 
         get_logger(sherpa_name).info(
-            f"is pending trip {pending_trip.trip_id} a milkrun?? {pending_trip.trip.milkrun}"
+            f"found pending trip id {pending_trip.trip_id}, route: {pending_trip.trip.route}"
         )
+
+        sherpa_status: SherpaStatus = session.get_sherpa_status(sherpa_name)
+
+        if not hutils.is_sherpa_available(sherpa_status):
+            get_logger(sherpa_name).info(
+                f"{sherpa_name} not available for {pending_trip.trip_id}"
+            )
+            return False
+
         if pending_trip.trip.milkrun:
-            if not check_if_timestamp_has_passed(pending_trip.trip.end_time):
-
-                get_logger(sherpa_name).info(
-                    f"recreating trip {pending_trip.trip.id}, milkrun needs to be continued"
-                )
-
-                new_metadata = pending_trip.trip.trip_metadata
-                time_period = new_metadata["milkrun_time_period"]
-                # modify start time
-                new_metadata[
-                    "milkrun_start_time"
-                ] = datetime.datetime.now() + datetime.timedelta(seconds=time_period)
-
-                get_logger(sherpa_name).info(f"milkrun new metadata {new_metadata}")
-                new_trip: Trip = session.create_trip(
-                    pending_trip.trip.route,
-                    pending_trip.trip.priority,
-                    new_metadata,
-                    pending_trip.trip.booking_id,
-                    pending_trip.trip.fleet_name,
-                )
-                session.create_pending_trip(new_trip.id)
-
-            else:
-                get_logger(sherpa_name).info(
-                    f"will not recreate trip {pending_trip.trip.id}, milkrun_end_time past current time"
-                )
+            self.recreate_milkrun(pending_trip)
 
         self.start_trip(pending_trip.trip, sherpa_name)
         session.delete_pending_trip(pending_trip)
         get_logger(sherpa_name).info(f"deleted pending trip id {pending_trip.trip_id}")
+
         return True
 
     # assigns next destination to sherpa

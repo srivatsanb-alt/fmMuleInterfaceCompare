@@ -182,16 +182,18 @@ class DBSession:
         return self.session.query(Trip).filter(Trip.booking_id == booking_id).all()
 
     def get_pending_trip(self, sherpa_name: str):
-        pending_trip = (
+        pending_trips = (
             self.session.query(PendingTrip)
             .filter(PendingTrip.sherpa_name == sherpa_name)
-            .one_or_none()
+            .all()
         )
-        if pending_trip.trip.milkrun:
-            if not check_if_timestamp_has_passed(pending_trip.trip.start_time):
-                return None
 
-        return pending_trip
+        for pending_trip in pending_trips:
+            if pending_trip.trip.milkrun:
+                if not check_if_timestamp_has_passed(pending_trip.trip.start_time):
+                    continue
+            return pending_trip
+        return None
 
     def get_ongoing_trip(self, sherpa: str):
         return (
@@ -212,7 +214,7 @@ class DBSession:
 
     def get_trip_ids_with_timestamp(self, booked_from, booked_till):
         return (
-            self.session.query(Trip)
+            self.session.query(Trip.id)
             .filter(Trip.booking_time > booked_from)
             .filter(Trip.booking_time < booked_till)
             .all()

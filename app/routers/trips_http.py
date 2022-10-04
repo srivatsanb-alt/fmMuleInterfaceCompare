@@ -69,11 +69,9 @@ async def trip_status(
         trip_status_req.booked_from = str_to_dt(trip_status_req.booked_from)
         trip_status_req.booked_till = str_to_dt(trip_status_req.booked_till)
 
-        trip_ids = session.get_trip_ids_with_timestamp(
+        trip_status_req.trip_ids = session.get_trip_ids_with_timestamp(
             trip_status_req.booked_from, trip_status_req.booked_till
         )
-
-        trip_status_req.trip_ids = trip_ids
 
     if not trip_status_req.trip_ids:
         raise HTTPException(
