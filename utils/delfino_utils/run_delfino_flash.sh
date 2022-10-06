@@ -12,8 +12,8 @@ echo "Stopping docker container before flashing delfino firmware..."
 docker stop mule || true
 echo "Starting flash: Vehicle type '$VEHICLE_TYPE' IP: $1"
 echo "..."
-ssh ati@$1 'rsync -aP flash_v2.sh ../../opt/ati/uniflash'
-ssh ati@$1 'rsync -aP program_v2.sh ../../opt/ati/uniflash/ti'
+rsync -aP flash_v2.sh ati@$1:../../opt/ati/uniflash
+rsync -aP program_v2.sh ati@$1:../../opt/ati/uniflash/ti
 ssh ati@$1 "cd ../../opt/ati/uniflash && sudo bash flash_v2.sh $2"
 echo "Completed flash!"
 echo "Restarting docker container..."
