@@ -223,6 +223,7 @@ async def induct_sherpa(
     sherpa_induct_req: SherpaInductReq,
     user_name=Depends(get_user_from_header),
 ):
+    respone = {}
     sherpa_induct_req.sherpa_name = sherpa_name
     sherpa = session.get_sherpa(sherpa_name)
 
@@ -236,6 +237,8 @@ async def induct_sherpa(
     _ = process_req_with_response(None, sherpa_induct_req, user_name)
 
     session.close()
+
+    return respone
 
 
 @router.get("/sherpa/{entity_name}/diagnostics")

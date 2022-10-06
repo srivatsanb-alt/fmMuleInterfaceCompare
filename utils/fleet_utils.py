@@ -15,6 +15,7 @@ from models.fleet_models import (
     SherpaStatus,
     Station,
     StationStatus,
+    AvailableSherpas,
 )
 import datetime
 from models.visa_models import ExclusionZone, LinkedGates
@@ -83,8 +84,29 @@ def add_update_sherpa(
             sherpa_status = SherpaStatus(sherpa_name=sherpa_name)
             db.add(sherpa)
             db.add(sherpa_status)
-            db.commit()
+        db.commit()
     return api_key
+
+
+def add_update_sherpa_availability(sherpa_name: str, fleet_name: str, available):
+    with session_maker() as db:
+        try:
+            sherpa_availability: AvailableSherpas = (
+                db.query(AvailableSherpas)
+                .filter(AvailableSherpas.sherpa_name == sherpa_name)
+                .one()
+            )
+            sherpa_availability.fleet_name = fleet_name
+            sherpa_availability.available = available
+
+        except NoResultFound:
+            sherpa_availability = AvailableSherpas(
+                sherpa_name=sherpa_name,
+                fleet_name=fleet_name,
+                available=available,
+            )
+            db.add(sherpa_availability)
+        db.commit()
 
 
 def add_update_fleet(**kwargs):

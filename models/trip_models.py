@@ -1,5 +1,5 @@
 import datetime
-from sqlalchemy import ARRAY, Column, DateTime, ForeignKey, Integer, String, Boolean
+from sqlalchemy import ARRAY, Column, DateTime, ForeignKey, Integer, String, Boolean, Float
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 from sqlalchemy.orm.attributes import flag_modified
@@ -61,6 +61,7 @@ class Trip(Base, TimestampMixin):
 
     # BOOKED, ASSIGNED, WAITING_STATION, EN_ROUTE, SUCCEEDED, FAILED
     status = Column(String)
+    etas = Column(ARRAY(Float))
 
     milkrun = Column(Boolean)
     time_period = Column(Integer)

@@ -11,6 +11,7 @@ from models.fleet_models import (
     Station,
     StationStatus,
     SherpaEvent,
+    AvailableSherpas,
 )
 from models.trip_models import OngoingTrip, PendingTrip, Trip, TripLeg
 from models.visa_models import ExclusionZone
@@ -107,6 +108,13 @@ class DBSession:
         return (
             self.session.query(Sherpa)
             .filter(Sherpa.hashed_api_key == hashed_api_key)
+            .one_or_none()
+        )
+
+    def get_sherpa_availability(self, sherpa_name: str):
+        return (
+            self.session.query(AvailableSherpas)
+            .filter(AvailableSherpas.sherpa_name == sherpa_name)
             .one_or_none()
         )
 

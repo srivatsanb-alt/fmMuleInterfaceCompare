@@ -111,3 +111,9 @@ class StationStatus(TimestampMixin, Base):
     disabled = Column(Boolean)
     arriving_sherpas = Column(ARRAY(String))
     sherpa_at_station = Column(String)
+
+
+class AvailableSherpas(TimestampMixin, Base):
+    sherpa_name = Column(String)
+    fleet_name = Column(String)
+    available = Column(Boolean)

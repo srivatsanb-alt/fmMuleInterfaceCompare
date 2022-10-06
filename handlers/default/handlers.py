@@ -176,6 +176,8 @@ class Handlers:
 
     def end_leg(self, ongoing_trip: OngoingTrip):
         trip: Trip = ongoing_trip.trip
+        trip.etas[ongoing_trip.next_idx_aug] = 0
+
         sherpa_name = trip.sherpa_name
         get_logger(sherpa_name).info(
             f"{sherpa_name} finished leg of trip {trip.id} from {ongoing_trip.curr_station()} to {ongoing_trip.next_station()}"
@@ -424,6 +426,8 @@ class Handlers:
     def handle_induct_sherpa(self, req: SherpaInductReq):
         sherpa: Sherpa = session.get_sherpa(req.sherpa_name)
         sherpa.status.induct = req.induct
+        sherpa_availability = session.get_sherpa_availability(req.sherpa_name)
+        sherpa_availability.available = req.induct
 
     def handle_peripherals(self, req: SherpaPeripheralsReq):
         sherpa_name = req.source
@@ -514,6 +518,8 @@ class Handlers:
                 continue
             tsu[field] = getattr(req, field)
 
+        ongoing_trip: OngoingTrip = session.get_ongoing_trip_with_trip_id(req.trip_id)
+        ongoing_trip.trip.etas[ongoing_trip.next_idx_aug] = TripStatusMsg.TripInfo.eta
         trip_status_update = TripStatusUpdate(**tsu)
 
         send_status_update(dataclasses.asdict(trip_status_update))

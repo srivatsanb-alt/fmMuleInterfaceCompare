@@ -25,8 +25,7 @@ def get_trip_status(trip: Trip):
 
     trip_details = {
         "status": trip.status,
-        "eta_at_start": None,
-        "eta": None,
+        "eta": trip.etas,
         "trip_leg_id": trip_leg.id if trip_leg else None,
         "trip_leg_from_station": trip_leg.from_station if trip_leg else None,
         "trip_leg_to_station": trip_leg.to_station if trip_leg else None,

@@ -19,6 +19,8 @@ def assign_sherpa(trip: Trip, sherpa: str, session: DBSession):
 
 
 def start_trip(ongoing_trip: OngoingTrip, session: DBSession):
+    # TODO populate with proper etas
+    ongoing_trip.trip.etas = [0] * len(ongoing_trip.trip.augmented_route)
     ongoing_trip.trip.start()
 
 
