@@ -17,6 +17,25 @@ def regenerate_config():
     os.environ["ATI_CONFIG"] = os.environ["ATI_CONSOLIDATED_CONFIG"]
 
 
+FLEET_CONFIG = toml.load(os.path.join(os.getenv("FM_CONFIG_DIR"), "fleet_config.toml"))[
+    "fleet"
+]
+
+frontenduser = toml.load(os.path.join(os.getenv("FM_CONFIG_DIR"), "fleet_config.toml"))[
+    "frontenduser"
+]
+
+print(f"frontend user details in config {frontenduser}")
+
+
+def set_env_vars():
+    os.environ["FM_SERVER_IP"] = FLEET_CONFIG["server_ip"]
+    docker_registry_config = FLEET_CONFIG["docker_registry"]
+    os.environ["DOCKER_REGISTRY_PORT"] = docker_registry_config["port"]
+    print(f"frontend user details in config {frontenduser}")
+    return
+
+
 time.sleep(5)
 
 # create all tables
@@ -27,28 +46,19 @@ fu.delete_table_contents(MapFile)
 fu.delete_table_contents(FrontendUser)
 fu.delete_table_contents(LinkedGates)
 
-# create fleet, update map details
-fleet_config = toml.load(os.path.join(os.getenv("FM_CONFIG_DIR"), "fleet_config.toml"))[
-    "fleet"
-]
-fleet_names = fleet_config["fleet_names"]
-customer = fleet_config["customer"]
-site = fleet_config["site"]
-location = fleet_config["location"]
-
-frontenduser = toml.load(os.path.join(os.getenv("FM_CONFIG_DIR"), "fleet_config.toml"))[
-    "frontenduser"
-]
-
-print(f"frontend user details in config {frontenduser}")
 for user_name, user_details in frontenduser.items():
     fu.add_frontend_user(user_name, user_details["hashed_password"])
 
+# create fleet, update map details
+fleet_names = FLEET_CONFIG["fleet_names"]
 for fleet_name in fleet_names:
     try:
         print(f"trying to update db tables for fleet : {fleet_name}")
         fu.add_update_fleet(
-            name=fleet_name, site=site, customer=customer, location=location
+            name=fleet_name,
+            site=FLEET_CONFIG["site"],
+            customer=FLEET_CONFIG["customer"],
+            location=FLEET_CONFIG["location"],
         )
         fu.add_update_map(fleet_name)
     except Exception as e:
