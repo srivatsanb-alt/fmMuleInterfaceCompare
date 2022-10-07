@@ -13,8 +13,9 @@ build_base=1
 IP_ADDRESS="localhost"
 
 # Get the options
-while getopts "i:hcWDb" option; do
-  case $option in
+while getopts i:hcWDb flag;
+do
+  case "${flag}" in
     h) # display Help
       Help
       exit;;
