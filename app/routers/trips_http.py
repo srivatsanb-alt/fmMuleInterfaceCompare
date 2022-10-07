@@ -4,7 +4,7 @@ from app.routers.dependencies import (
 )
 from fastapi import APIRouter, Depends, HTTPException
 from models.request_models import BookingReq, TripStatusReq, DeleteTripReq
-from models.trip_models import TripStatus, PendingTrip, Trip
+from models.trip_models import TripStatus, PendingTrip, Trip, TripAnalytics
 from fastapi.responses import HTMLResponse
 from models.db_session import session
 from utils.util import str_to_dt
@@ -84,6 +84,38 @@ async def trip_status(
         if not trip:
             raise HTTPException(status_code=403, detail="invalid trip id")
         response.update({trip_id: tu.get_trip_status(trip)})
+    return response
+
+
+@router.post("/analytics")
+async def trip_analytics(
+    trip_analytics_req: TripStatusReq, user_name=Depends(get_user_from_header)
+):
+    if not user_name:
+        raise HTTPException(status_code=403, detail="Unknown requester")
+
+    response = {}
+    if trip_analytics_req.booked_from and trip_analytics_req.booked_till:
+        trip_analytics_req.booked_from = str_to_dt(trip_analytics_req.booked_from)
+        trip_analytics_req.booked_till = str_to_dt(trip_analytics_req.booked_till)
+
+        trip_analytics_req.trip_ids = session.get_trip_ids_with_timestamp(
+            trip_analytics_req.booked_from, trip_analytics_req.booked_till
+        )
+
+    if not trip_analytics_req.trip_ids:
+        raise HTTPException(
+            status_code=403,
+            detail="no trip id given/available in the given timeframe",
+        )
+
+    for trip_id in trip_analytics_req.trip_ids:
+        trip_legs_id = session.get_all_trip_legs(trip_id)
+        for trip_leg_id in trip_legs_id:
+            trip_analytics: TripAnalytics = session.get_trip_analytics(trip_leg_id)
+            if not trip_analytics:
+                raise HTTPException(status_code=403, detail="invalid trip_leg_id")
+            response.update({trip_leg_id: tu.get_trip_analytics(trip_analytics)})
     return response
 
 

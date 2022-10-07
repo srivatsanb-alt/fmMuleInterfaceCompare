@@ -1,6 +1,7 @@
-from models.trip_models import Trip, OngoingTrip
+from models.trip_models import Trip, OngoingTrip, TripAnalytics
 from models.db_session import session
 from utils import util
+from utils.fleet_utils import get_table_as_dict
 
 
 def get_trip_status(trip: Trip):
@@ -47,3 +48,7 @@ def get_trip_status(trip: Trip):
     }
 
     return trip_status
+
+
+def get_trip_analytics(trip_analytics: TripAnalytics):
+    return get_table_as_dict(TripAnalytics, trip_analytics)

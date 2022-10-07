@@ -114,6 +114,7 @@ class StationStatus(TimestampMixin, Base):
 
 
 class AvailableSherpas(TimestampMixin, Base):
-    sherpa_name = Column(String)
+    __tablename__ = "available_sherpas"
+    sherpa_name = Column(String, primary_key=True, index=True)
     fleet_name = Column(String)
     available = Column(Boolean)

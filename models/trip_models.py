@@ -30,6 +30,22 @@ class TripState:
     WAITING_STATION_DISPATCH_END = "waiting_station_dispatch_end"
 
 
+class TripAnalytics(Base, TimestampMixin):
+    __tablename__ = "trip_analytics"
+    sherpa_name = Column(String)
+    trip_id = Column(Integer)
+    trip_leg_id = Column(Integer)
+    from_station = Column(String)
+    to_station = Column(String)
+    cte = Column(Float)
+    te = Column(Float)
+    expected_trip_time = Column(Float)
+    actual_trip_time = Column(Float)
+    time_elapsed_obstacle_stoppages = Column(Float)
+    time_elapsed_visa_stoppages = Column(Float)
+    time_elapsed_other_stoppages = Column(Float)
+
+
 class Trip(Base, TimestampMixin):
     __tablename__ = "trips"
 
@@ -61,6 +77,7 @@ class Trip(Base, TimestampMixin):
 
     # BOOKED, ASSIGNED, WAITING_STATION, EN_ROUTE, SUCCEEDED, FAILED
     status = Column(String)
+    etas_at_start = Column(ARRAY(Float))
     etas = Column(ARRAY(Float))
 
     milkrun = Column(Boolean)

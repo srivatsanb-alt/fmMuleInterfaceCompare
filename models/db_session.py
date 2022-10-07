@@ -13,7 +13,8 @@ from models.fleet_models import (
     SherpaEvent,
     AvailableSherpas,
 )
-from models.trip_models import OngoingTrip, PendingTrip, Trip, TripLeg
+from models.trip_models import OngoingTrip, PendingTrip, Trip, TripLeg, TripAnalytics
+
 from models.visa_models import ExclusionZone
 from utils.util import check_if_timestamp_has_passed
 import datetime
@@ -217,6 +218,13 @@ class DBSession:
             .one_or_none()
         )
 
+    def get_pending_trip_with_trip_id(self, trip_id):
+        return (
+            self.session.query(PendingTrip)
+            .filter(PendingTrip.trip_id == trip_id)
+            .one_or_none()
+        )
+
     def get_trip_with_booking_id(self, booking_id):
         return self.session.query(Trip).filter(Trip.booking_id == booking_id).all()
 
@@ -228,15 +236,15 @@ class DBSession:
             .all()
         )
 
-    def get_last_n_trips(self, last_n=10):
-        return self.session.query(Trip).order_by(Trip.id.desc()).limit(last_n)
-
-    def get_pending_trip_with_trip_id(self, trip_id):
+    def get_trip_analytics(self, trip_leg_id):
         return (
-            self.session.query(PendingTrip)
-            .filter(PendingTrip.trip_id == trip_id)
+            self.session.query(TripAnalytics)
+            .filter(TripAnalytics.trip_leg_id == trip_leg_id)
             .one_or_none()
         )
+
+    def get_last_n_trips(self, last_n=10):
+        return self.session.query(Trip).order_by(Trip.id.desc()).limit(last_n)
 
     def get_trip_leg(self, sherpa: str):
         ongoing_trip: OngoingTrip = self.get_ongoing_trip(sherpa)
@@ -246,6 +254,9 @@ class DBSession:
                 .filter(TripLeg.id == ongoing_trip.trip_leg_id)
                 .one_or_none()
             )
+
+    def get_all_trip_legs(self, trip_id: int):
+        return self.session.query(TripLeg.id).filter(TripLeg.trip_id == trip_id).all()
 
     def get_exclusion_zone(self, zone_name, zone_type) -> ExclusionZone:
         zone_id = f"{zone_name}_{zone_type}"

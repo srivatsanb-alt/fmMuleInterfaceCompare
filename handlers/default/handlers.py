@@ -1,5 +1,6 @@
 from core.constants import FleetStatus, DisabledReason
 import dataclasses
+import numpy as np
 from core.logs import get_logger
 from models.base_models import StationProperties
 from models.db_session import session
@@ -33,7 +34,15 @@ from models.request_models import (
     DeleteTripReq,
     TerminateTripReq,
 )
-from models.trip_models import OngoingTrip, PendingTrip, Trip, TripState, TripStatus
+from models.trip_models import (
+    OngoingTrip,
+    PendingTrip,
+    Trip,
+    TripState,
+    TripStatus,
+    TripAnalytics,
+)
+
 from requests import Response
 from utils.comms import get, send_move_msg, send_msg_to_sherpa, send_status_update
 from utils.util import are_poses_close, check_if_timestamp_has_passed
@@ -44,6 +53,7 @@ import json
 import datetime
 from core.config import Config
 import handlers.default.handler_utils as hutils
+from sqlalchemy.exc import NoResultFound
 
 
 class RequestContext:
@@ -177,6 +187,11 @@ class Handlers:
     def end_leg(self, ongoing_trip: OngoingTrip):
         trip: Trip = ongoing_trip.trip
         trip.etas[ongoing_trip.next_idx_aug] = 0
+
+        trip_analytics = session.get_trip_analytics(ongoing_trip.trip_leg_id)
+        if trip_analytics:
+            time_delta = ongoing_trip.trip_leg.end_time - ongoing_trip.trip_leg.start_time
+            trip_analytics.actual_trip_time = time_delta.seconds
 
         sherpa_name = trip.sherpa_name
         get_logger(sherpa_name).info(
@@ -518,11 +533,45 @@ class Handlers:
                 continue
             tsu[field] = getattr(req, field)
 
+        # send to frontend
+        trip_status_update = TripStatusUpdate(**tsu)
+        send_status_update(dataclasses.asdict(trip_status_update))
+
         ongoing_trip: OngoingTrip = session.get_ongoing_trip_with_trip_id(req.trip_id)
         ongoing_trip.trip.etas[ongoing_trip.next_idx_aug] = TripStatusMsg.TripInfo.eta
-        trip_status_update = TripStatusUpdate(**tsu)
 
-        send_status_update(dataclasses.asdict(trip_status_update))
+        try:
+            trip_analytics = session.get_trip_analytics(ongoing_trip.trip_leg_id)
+            trip_analytics.cte = TripStatusMsg.trip_info.cte
+            trip_analytics.te = TripStatusMsg.trip_info.te
+            trip_analytics.time_elapsed_visa_stoppages = (
+                TripStatusMsg.stoppages.extra_info.time_elapsed_visa_stoppages
+            )
+            trip_analytics.time_elapsed_obstacle_stoppages = (
+                TripStatusMsg.stoppages.extra_info.time_elapsed_obstacle_stoppages
+            )
+            trip_analytics.time_elapsed_other_stoppages = (
+                TripStatusMsg.stoppages.extra_info.time_elapsed_other_stoppages
+            )
+
+        except NoResultFound:
+            trip_analytics: TripAnalytics = TripAnalytics(
+                sherpa_name=sherpa_name,
+                trip_id=ongoing_trip.trip_id,
+                trip_leg_id=ongoing_trip.trip_leg_id,
+                from_station=ongoing_trip.trip_leg.from_station,
+                to_station=ongoing_trip.trip_leg.to_station,
+                expected_trip_time=ongoing_trip.trip.etas_at_start[
+                    ongoing_trip.next_idx_aug
+                ],
+                actual_trip_time=None,
+                cte=TripStatusMsg.trip_info.cte,
+                te=TripStatusMsg.trip_info.te,
+                time_elapsed_visa_stoppages=TripStatusMsg.stoppages.extra_info.time_elapsed_visa_stoppages,
+                time_elapsed_obstacle_stoppages=TripStatusMsg.stoppages.extra_info.time_elapsed_obstacle_stoppages,
+                time_elapsed_other_stoppages=TripStatusMsg.stoppages.extra_info.time_elapsed_other_stoppages,
+            )
+            session.add_to_session(trip_analytics)
 
     def handle_verify_fleet_files(self, req: SherpaReq):
         sherpa_name = req.source
