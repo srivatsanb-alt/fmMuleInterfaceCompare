@@ -7,6 +7,7 @@ fleet_names = []
 customer = ""
 site = ""
 location = ""
+server_ip=""
 
 [rq.jobs]
 http_retry_attempts = 3
@@ -21,3 +22,6 @@ fleet_name=""
 
 [frontenduser.<user_name>]
 hashed_password = ""
+
+[docker_registry]
+port=0
