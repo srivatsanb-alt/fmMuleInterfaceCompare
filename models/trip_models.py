@@ -34,7 +34,7 @@ class TripAnalytics(Base, TimestampMixin):
     __tablename__ = "trip_analytics"
     sherpa_name = Column(String)
     trip_id = Column(Integer)
-    trip_leg_id = Column(Integer)
+    trip_leg_id = Column(Integer, primary_key=True, index=True)
     from_station = Column(String)
     to_station = Column(String)
     cte = Column(Float)
