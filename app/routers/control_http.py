@@ -217,7 +217,7 @@ async def reset_pose(
     return response
 
 
-@router.get("/sherpa/{sherpa_name}/induct")
+@router.post("/sherpa/{sherpa_name}/induct")
 async def induct_sherpa(
     sherpa_name: str,
     sherpa_induct_req: SherpaInductReq,
@@ -227,7 +227,7 @@ async def induct_sherpa(
     sherpa_induct_req.sherpa_name = sherpa_name
     sherpa = session.get_sherpa(sherpa_name)
 
-    if sherpa.trip_id:
+    if sherpa.status.trip_id and not sherpa_induct_req.induct:
         trip = session.get_trip(sherpa.trip_id)
         raise HTTPException(
             status_code=403,

@@ -84,7 +84,7 @@ def is_sherpa_available_for_new_trip(sherpa):
     reason = None
     if not reason and not sherpa.inducted:
         reason = "out of fleet"
-    if not reason and sherpa.trip_id:
+    if not reason and sherpa.status.trip_id:
         reason = "not idle"
     if not reason and not sherpa.initialized:
         reason = "not initialized"

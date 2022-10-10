@@ -152,6 +152,7 @@ class DBSession:
             .filter(SherpaEvent.sherpa_name == sherpa_name)
             .order_by(SherpaEvent.created_at.desc())
             .limit(num_events)
+            .all()
         )
 
     def get_station(self, name: str) -> Station:
@@ -251,7 +252,7 @@ class DBSession:
         )
 
     def get_last_n_trips(self, last_n=10):
-        return self.session.query(Trip).order_by(Trip.id.desc()).limit(last_n)
+        return self.session.query(Trip).order_by(Trip.id.desc()).limit(last_n).all()
 
     def get_trip_leg(self, sherpa: str):
         ongoing_trip: OngoingTrip = self.get_ongoing_trip(sherpa)

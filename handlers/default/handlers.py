@@ -275,8 +275,8 @@ class Handlers:
         if not ongoing_trip or ongoing_trip.finished():
             self.end_trip(ongoing_trip)
             sherpa = session.get_sherpa(sherpa_name)
-            sherpa.trip_id = None
-            sherpa.trip_leg_id = None
+            sherpa.status.trip_id = None
+            sherpa.status.trip_leg_id = None
             done = self.assign_new_trip(sherpa_name)
 
         ongoing_trip: OngoingTrip = session.get_ongoing_trip(sherpa_name)
@@ -437,7 +437,7 @@ class Handlers:
             response: Response = get(sherpa, init_req)
             init_resp: InitResp = InitResp.from_dict(response.json())
             get_logger(sherpa_name).info(f"received from {sherpa_name}: {init_resp}")
-            sherpa.hwid = init_resp.hwid
+            # sherpa.hwid = init_resp.hwid
             self.initialize_sherpa(sherpa_name)
 
     def handle_induct_sherpa(self, req: SherpaInductReq):
