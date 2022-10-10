@@ -27,10 +27,19 @@ fm_init() {
    poetry run python fm_init.py
 }
 
+run_simulator() {
+  poetry run python debug.py host_all_mule_app > $LOGS/sherpa_apps.out 2>&1 &
+  poetry run python debug.py simulate > $LOGS/simulator.out 2>&1 &
+}
+
 fm_init
 save_fleet_log
 redis-server > $LOGS/redis.log 2>&1 &
 redis-cli flushall
-
 start
+
+#will be run only if simulate is set to true in fleet_config
+run_simulator
+
+#to keep the docker alive - run a never ending process
 tail -f /dev/null

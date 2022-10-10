@@ -92,10 +92,10 @@ class Config:
         return cls.config["fleet_sherpas"]
 
     @classmethod
-    def get_misc_details(cls):
+    def get_simulator_config(cls):
         if not cls.config:
             cls.config = cls.read_config()
-        return cls.config["misc"]["details"]
+        return cls.config["fleet"]["simulator"]
 
 
 if __name__ == "__main__":

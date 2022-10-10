@@ -10,7 +10,13 @@ from app.routers.dependencies import get_db_session, get_sherpa
 from core.config import Config
 from core.constants import MessageType
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, status
-from models.request_models import SherpaStatusMsg, TripStatusMsg
+from models.request_models import (
+    SherpaStatusMsg,
+    TripStatusMsg,
+    TripInfo,
+    Stoppages,
+    StoppageInfo,
+)
 from redis import Redis
 from utils.rq import Queues, enqueue
 
@@ -109,6 +115,12 @@ async def reader(websocket, sherpa):
         if msg_type == MessageType.TRIP_STATUS:
             msg["source"] = sherpa
             trip_status_msg = TripStatusMsg.from_dict(msg)
+            trip_status_msg.trip_info = TripInfo.from_dict(msg["trip_info"])
+            trip_status_msg.stoppages = Stoppages.from_dict(msg["trip_info"]["stoppages"])
+            trip_status_msg.stoppages.extra_info = StoppageInfo.from_dict(
+                msg["trip_info"]["stoppages"]["extra_info"]
+            )
+
             enqueue(sherpa_update_q, handle, handler_obj, trip_status_msg, ttl=1)
 
         elif msg_type == MessageType.SHERPA_STATUS:

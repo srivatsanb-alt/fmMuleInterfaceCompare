@@ -27,6 +27,9 @@ from models.request_models import (
     IndicatorReq,
     PatternEnum,
     TripStatusMsg,
+    TripInfo,
+    Stoppages,
+    StoppageInfo,
     TripStatusUpdate,
     VerifyFleetFilesResp,
     VisaReq,
@@ -45,7 +48,7 @@ from models.trip_models import (
 
 from requests import Response
 from utils.comms import get, send_move_msg, send_msg_to_sherpa, send_status_update
-from utils.util import are_poses_close, check_if_timestamp_has_passed
+from utils.util import are_poses_close, check_if_timestamp_has_passed, get_table_as_dict
 from utils.visa_utils import maybe_grant_visa, unlock_exclusion_zone
 import redis
 import os
@@ -190,6 +193,7 @@ class Handlers:
 
         trip_analytics = session.get_trip_analytics(ongoing_trip.trip_leg_id)
         if trip_analytics:
+            trip_analytics.end_time = ongoing_trip.trip_leg.end_time
             time_delta = ongoing_trip.trip_leg.end_time - ongoing_trip.trip_leg.start_time
             trip_analytics.actual_trip_time = time_delta.seconds
 
@@ -437,7 +441,6 @@ class Handlers:
             response: Response = get(sherpa, init_req)
             init_resp: InitResp = InitResp.from_dict(response.json())
             get_logger(sherpa_name).info(f"received from {sherpa_name}: {init_resp}")
-            # sherpa.hwid = init_resp.hwid
             self.initialize_sherpa(sherpa_name)
 
     def handle_induct_sherpa(self, req: SherpaInductReq):
@@ -525,55 +528,58 @@ class Handlers:
     def handle_trip_status(self, req: TripStatusMsg):
         sherpa_name = req.source
         sherpa: Sherpa = session.get_sherpa(sherpa_name)
-        tsu = {"sherpa_name": sherpa_name, "fleet_name": sherpa.fleet.name}
-
-        tsu_fields = [f.name for f in dataclasses.fields(TripStatusUpdate)]
-        tsm_fields = [f.name for f in dataclasses.fields(TripStatusMsg)]
-
-        for field in tsu_fields:
-            if field not in tsm_fields:
-                continue
-            tsu[field] = getattr(req, field)
-
-        # send to frontend
-        trip_status_update = TripStatusUpdate(**tsu)
-        send_status_update(dataclasses.asdict(trip_status_update))
 
         ongoing_trip: OngoingTrip = session.get_ongoing_trip_with_trip_id(req.trip_id)
-        ongoing_trip.trip.etas[ongoing_trip.next_idx_aug] = TripStatusMsg.TripInfo.eta
+        ongoing_trip.trip.etas[ongoing_trip.next_idx_aug] = req.trip_info.eta
 
-        try:
-            trip_analytics = session.get_trip_analytics(ongoing_trip.trip_leg_id)
-            trip_analytics.cte = TripStatusMsg.trip_info.cte
-            trip_analytics.te = TripStatusMsg.trip_info.te
+        trip_analytics = session.get_trip_analytics(ongoing_trip.trip_leg_id)
+
+        if trip_analytics:
+            trip_analytics.cte = req.trip_info.cte
+            trip_analytics.te = req.trip_info.te
             trip_analytics.time_elapsed_visa_stoppages = (
-                TripStatusMsg.stoppages.extra_info.time_elapsed_visa_stoppages
+                req.stoppages.extra_info.time_elapsed_visa_stoppages
             )
             trip_analytics.time_elapsed_obstacle_stoppages = (
-                TripStatusMsg.stoppages.extra_info.time_elapsed_obstacle_stoppages
+                req.stoppages.extra_info.time_elapsed_obstacle_stoppages
             )
             trip_analytics.time_elapsed_other_stoppages = (
-                TripStatusMsg.stoppages.extra_info.time_elapsed_other_stoppages
+                req.stoppages.extra_info.time_elapsed_other_stoppages
             )
-
-        except NoResultFound:
+        else:
             trip_analytics: TripAnalytics = TripAnalytics(
                 sherpa_name=sherpa_name,
                 trip_id=ongoing_trip.trip_id,
                 trip_leg_id=ongoing_trip.trip_leg_id,
+                start_time=ongoing_trip.trip_leg.start_time,
                 from_station=ongoing_trip.trip_leg.from_station,
                 to_station=ongoing_trip.trip_leg.to_station,
                 expected_trip_time=ongoing_trip.trip.etas_at_start[
-                    ongoing_trip.next_idx_aug
+                    ongoing_trip.next_idx_aug - 1
                 ],
                 actual_trip_time=None,
-                cte=TripStatusMsg.trip_info.cte,
-                te=TripStatusMsg.trip_info.te,
-                time_elapsed_visa_stoppages=TripStatusMsg.stoppages.extra_info.time_elapsed_visa_stoppages,
-                time_elapsed_obstacle_stoppages=TripStatusMsg.stoppages.extra_info.time_elapsed_obstacle_stoppages,
-                time_elapsed_other_stoppages=TripStatusMsg.stoppages.extra_info.time_elapsed_other_stoppages,
+                cte=req.trip_info.cte,
+                te=req.trip_info.te,
+                time_elapsed_visa_stoppages=req.stoppages.extra_info.time_elapsed_visa_stoppages,
+                time_elapsed_obstacle_stoppages=req.stoppages.extra_info.time_elapsed_obstacle_stoppages,
+                time_elapsed_other_stoppages=req.stoppages.extra_info.time_elapsed_other_stoppages,
             )
             session.add_to_session(trip_analytics)
+
+        trip_status_update = {}
+
+        # send to frontend
+        trip_status_update.update(
+            {
+                "type": "trip_status",
+                "sherpa_name": sherpa_name,
+                "fleet_name": sherpa.fleet.name,
+            }
+        )
+
+        trip_status_update.update(get_table_as_dict(TripAnalytics, trip_analytics))
+        trip_status_update.update({"stoppages": {"type": req.stoppages.type}})
+        send_status_update(trip_status_update)
 
     def handle_verify_fleet_files(self, req: SherpaReq):
         sherpa_name = req.source

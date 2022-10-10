@@ -58,7 +58,8 @@ class OptimalDispatch:
     def update_sherpa_q(self, dbsession, fleet_name):
         self.sherpa_q = {}
         available_sherpas = dbsession.session.get_all_available_sherpas(fleet_name)
-        for available_sherpa in available_sherpas:
+        for available_sherpa_name in available_sherpas:
+            available_sherpa = dbsession.session.get_sherpa(available_sherpa_name)
             trip_id = available_sherpas.sherpa.trip_id
             pose = available_sherpa.sherpa.status.pose
             remaining_eta = 0

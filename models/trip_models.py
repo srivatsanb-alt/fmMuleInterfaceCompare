@@ -35,6 +35,8 @@ class TripAnalytics(Base, TimestampMixin):
     sherpa_name = Column(String)
     trip_id = Column(Integer)
     trip_leg_id = Column(Integer, primary_key=True, index=True)
+    start_time = Column(DateTime)
+    end_time = Column(DateTime)
     from_station = Column(String)
     to_station = Column(String)
     cte = Column(Float)
@@ -153,8 +155,8 @@ class TripLeg(Base, TimestampMixin):
     def __init__(self, trip_id, from_station, to_station):
         self.trip_id = trip_id
         self.start_time = datetime.datetime.now()
-        self.from_station = datetime.datetime.now()
         self.to_station = to_station
+        self.from_station = from_station
 
     def end(self):
         self.end_time = datetime.datetime.now()

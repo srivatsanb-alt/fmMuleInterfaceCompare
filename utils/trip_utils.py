@@ -33,6 +33,7 @@ def get_trip_status(trip: Trip):
         "route": trip.augmented_route,
         "priority": trip.priority,
         "milkrun": trip.milkrun,
+        "time_period": trip.time_period,
         "booking_id": trip.booking_id,
         "booking_time": booking_time,
         "start_time": start_time,
