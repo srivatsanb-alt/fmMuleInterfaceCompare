@@ -4,7 +4,7 @@ import toml
 import os
 import utils.fleet_utils as fu
 from models.frontend_models import FrontendUser
-from models.fleet_models import MapFile
+from models.fleet_models import MapFile, AvailableSherpas
 from models.visa_models import LinkedGates
 
 sys.path.append("/app/mule")
@@ -45,6 +45,8 @@ fu.create_all_tables()
 fu.delete_table_contents(MapFile)
 fu.delete_table_contents(FrontendUser)
 fu.delete_table_contents(LinkedGates)
+fu.delete_table_contents(AvailableSherpas)
+
 
 for user_name, user_details in frontenduser.items():
     fu.add_frontend_user(user_name, user_details["hashed_password"])
