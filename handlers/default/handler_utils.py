@@ -19,9 +19,23 @@ def assign_sherpa(trip: Trip, sherpa: str, session: DBSession):
 
 
 def start_trip(ongoing_trip: OngoingTrip, session: DBSession):
-    # TODO populate with proper etas
-    ongoing_trip.trip.etas_at_start = [0] * len(ongoing_trip.trip.augmented_route)
-    ongoing_trip.trip.etas = [0] * len(ongoing_trip.trip.augmented_route)
+
+    # populate trip etas, need not be imported for every request
+    from utils.router_utils import AllRouterModules
+
+    rm = AllRouterModules.get_router_module(ongoing_trip.trip.fleet_name)
+    sherpa_status: SherpaStatus = session.get_sherpa_status(ongoing_trip.sherpa_name)
+
+    ongoing_trip.trip.eta_at_start = []
+    start_pose = sherpa_status.pose
+    for station in ongoing_trip.trip.augmented_route:
+        end_pose = session.get_station(station).pose
+        route_length = rm.get_route_length(start_pose, end_pose)
+        ongoing_trip.trip.eta_at_start.append(route_length)
+        start_pose = session.get_station(station).pose
+
+    ongoing_trip.trip.etas = ongoing_trip.trip.eta_at_start
+
     ongoing_trip.trip.start()
 
 
@@ -66,12 +80,14 @@ def update_leg_next_station(next_station_name: str, sherpa: str, session: DBSess
     next_station_status.arriving_sherpas.append(sherpa)
 
 
-def is_sherpa_available(sherpa):
+def is_sherpa_available_for_new_trip(sherpa):
     reason = None
     if not reason and not sherpa.inducted:
         reason = "out of fleet"
     if not reason and sherpa.trip_id:
         reason = "not idle"
+    if not reason and not sherpa.initialized:
+        reason = "not initialized"
     if not reason:
         reason = AVAILABLE
     return reason == AVAILABLE, reason
@@ -81,7 +97,7 @@ def get_sherpa_availability(all_sherpas: List[SherpaStatus]):
     availability = {}
 
     for sherpa in all_sherpas:
-        available, reason = is_sherpa_available(sherpa)
+        available, reason = is_sherpa_available_for_new_trip(sherpa)
         availability[sherpa.sherpa_name] = available, reason
 
     return availability

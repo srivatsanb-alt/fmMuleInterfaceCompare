@@ -241,8 +241,8 @@ class ResetPoseCtrlReq(BaseModel):
 
 
 class TripStatusReq(BaseModel):
-    booked_from: Optional[List[int]]
-    booked_till: Optional[List[int]]
+    booked_from: Optional[str]
+    booked_till: Optional[str]
     trip_ids: Optional[List[int]]
 
 

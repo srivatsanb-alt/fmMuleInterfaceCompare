@@ -229,12 +229,19 @@ class DBSession:
         return self.session.query(Trip).filter(Trip.booking_id == booking_id).all()
 
     def get_trip_ids_with_timestamp(self, booked_from, booked_till):
-        return (
+
+        temp = (
             self.session.query(Trip.id)
             .filter(Trip.booking_time > booked_from)
             .filter(Trip.booking_time < booked_till)
             .all()
         )
+        trip_ids = []
+
+        for vals in temp:
+            trip_ids.append(vals[0])
+
+        return trip_ids
 
     def get_trip_analytics(self, trip_leg_id):
         return (

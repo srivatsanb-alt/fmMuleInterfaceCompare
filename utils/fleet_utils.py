@@ -106,6 +106,16 @@ def add_update_sherpa_availability(sherpa_name: str, fleet_name: str, available)
                 available=available,
             )
             db.add(sherpa_availability)
+
+        try:
+            sherpa_status: SherpaStatus = (
+                db.query(SherpaStatus).filter(SherpaStatus.sherpa_name == sherpa_name).one()
+            )
+            sherpa_status.inducted = available
+
+        except NoResultFound:
+            print(f"unable to populate sherpa status for {sherpa_name}")
+
         db.commit()
 
 

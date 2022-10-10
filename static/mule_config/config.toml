@@ -1,5 +1,8 @@
 parent = "/app/mule/std_configs/site_configs/default_tug.toml"
 
+[control.policy]
+enforce_visa = false
+
 [fleet]
 ws_url= "xyz"
 fm_ip = "xyz"

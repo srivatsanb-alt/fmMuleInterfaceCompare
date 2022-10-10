@@ -46,7 +46,7 @@ class Sherpa(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, unique=True, index=True)
     hwid = Column(String, unique=True)
-    ip_address = Column(String, unique=True)
+    ip_address = Column(String)
     port = Column(String)
     hashed_api_key = Column(String, unique=True, index=True)
 

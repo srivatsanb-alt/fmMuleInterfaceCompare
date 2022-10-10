@@ -1,9 +1,21 @@
+import sys
+import os
+from core.config import Config
+
+sys.path.append(os.environ["MULE_ROOT"])
 from mule.ati.control.bridge.router_planner_interface import RoutePlannerInterface
+import mule.ati.control.dynamic_router.grid_route_library as grl
+
+
+def get_dense_path(final_route):
+    return grl.get_dense_path(final_route)
 
 
 class RouterModule:
-    def __init__(self, gmaj_path=None):
-        self.router = RoutePlannerInterface(gmaj_path).router()
+    def __init__(self, map_path):
+        self.gmaj_path = os.path.join(map_path, "grid_map_attributes.json")
+        os.environ["ATI_MAP"] = map_path
+        self.router = RoutePlannerInterface(self.gmaj_path).router
 
     def get_path_wps(self, start_pose, dest_poses):
         return self.router.generate_path_wps_for_viz(start_pose, dest_poses)
@@ -13,3 +25,15 @@ class RouterModule:
 
     def get_route(self, start_pose, end_pose):
         return self.router.solve_route(start_pose, end_pose)
+
+
+class AllRouterModules:
+    fleet_names = Config.get_all_fleets()
+    router_modules = {}
+    for fleet_name in fleet_names:
+        map_path = os.path.join(os.environ["FM_MAP_DIR"], f"{fleet_name}/map/")
+        router_modules.update({fleet_name: RouterModule(map_path)})
+
+    @classmethod
+    def get_router_module(cls, fleet_name: str):
+        return cls.router_modules[fleet_name]

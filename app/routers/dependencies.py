@@ -95,11 +95,13 @@ def process_req_with_response(queue, req, user: str):
         if status == "failed":
 
             # for recovery
-            rq_fails = redis.get("rq_fails")
+            rq_fails = redis_conn.get("rq_fails")
             if not rq_fails:
                 rq_fails = b"[]"
+
             rq_fails = json.loads(rq_fails)
-            rq_fails.append([user, req])
+            rq_fails.append([user, req.__dict__])
+            redis_conn.set("rq_fails", json.dumps(rq_fails))
 
             raise HTTPException(status_code=500, detail="rq job failed")
 

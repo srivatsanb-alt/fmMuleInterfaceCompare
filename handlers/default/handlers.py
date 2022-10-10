@@ -202,12 +202,14 @@ class Handlers:
         self.do_post_actions(ongoing_trip)
 
     def recreate_milkrun(pending_trip: PendingTrip):
+
         if not check_if_timestamp_has_passed(pending_trip.trip.end_time):
             get_logger().info(
                 f"recreating trip {pending_trip.trip.id}, milkrun needs to be continued"
             )
             new_metadata = pending_trip.trip.trip_metadata
             time_period = new_metadata["milkrun_time_period"]
+
             # modify start time
             new_metadata[
                 "milkrun_start_time"
@@ -250,7 +252,7 @@ class Handlers:
 
         sherpa_status: SherpaStatus = session.get_sherpa_status(sherpa_name)
 
-        if not hutils.is_sherpa_available(sherpa_status):
+        if not hutils.is_sherpa_available_for_new_trip(sherpa_status):
             get_logger(sherpa_name).info(
                 f"{sherpa_name} not available for {pending_trip.trip_id}"
             )
