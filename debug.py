@@ -1,5 +1,5 @@
 import sys
-from fleet_simulator import FleetSimulator
+from fleet_simulator import FleetSimulator, MuleAPP
 
 
 if __name__ == "__main__":
@@ -9,7 +9,8 @@ if __name__ == "__main__":
         getattr(fs, sys.argv[1])(sys.argv[2])
 
     if sys.argv[1] == "host_all_mule_app":
-        getattr(fs, sys.argv[1])()
+        mule_app = MuleAPP()
+        getattr(mule_app, sys.argv[1])()
         while True:
             pass
 

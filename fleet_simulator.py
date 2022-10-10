@@ -32,18 +32,14 @@ def should_trip_msg_be_sent(sherpa_events):
     return move_to_flag and not reached_flag
 
 
-class FleetSimulator:
-    def __init__(self):
-        self.handler_obj = Config.get_handler()
-        self.sherpa_apps = []
-        self.fleet_names = Config.get_all_fleets()
-        self.router_modules = {}
-        for fleet_name in self.fleet_names:
-            map_path = os.path.join(os.environ["FM_MAP_DIR"], f"{fleet_name}/map")
-            self.router_modules.update({fleet_name: RouterModule(map_path)})
+def handle(handler, msg):
+    handler.handle(msg)
 
-    def handle(self, handler, msg):
-        handler.handle(msg)
+
+class MuleAPP:
+    def __init__(self):
+        self.sherpa_apps = []
+        self.host_all_mule_app()
 
     def host_uvicorn(self, config):
         server = uvicorn.Server(config)
@@ -83,6 +79,16 @@ class FleetSimulator:
         for proc in self.sherpa_apps:
             proc.kill()
 
+
+class FleetSimulator:
+    def __init__(self):
+        self.handler_obj = Config.get_handler()
+        self.fleet_names = Config.get_all_fleets()
+        self.router_modules = {}
+        for fleet_name in self.fleet_names:
+            map_path = os.path.join(os.environ["FM_MAP_DIR"], f"{fleet_name}/map")
+            self.router_modules.update({fleet_name: RouterModule(map_path)})
+
     def initialize_sherpas(self):
         sherpas: List[Sherpa] = session.get_all_sherpas()
         stations: List[Station] = session.get_all_stations()
@@ -112,7 +118,7 @@ class FleetSimulator:
 
         if msg["type"] == "sherpa_status":
             msg = SherpaStatusMsg.from_dict(msg)
-            enqueue(sherpa_update_q, self.handle, self.handler_obj, msg, ttl=1)
+            enqueue(sherpa_update_q, handle, self.handler_obj, msg, ttl=1)
 
     def send_trip_status(self, sherpa_name):
         sherpa_update_q = Queues.queues_dict[f"{sherpa_name}_update_handler"]
@@ -179,9 +185,7 @@ class FleetSimulator:
             }
             trip_status_msg["source"] = sherpa.name
             final_trip_status_msg = TripStatusMsg.from_dict(trip_status_msg)
-            enqueue(
-                sherpa_update_q, self.handle, self.handler_obj, final_trip_status_msg, ttl=1
-            )
+            enqueue(sherpa_update_q, handle, self.handler_obj, final_trip_status_msg, ttl=1)
 
         dest_pose = np.array([x_vals[-1], y_vals[-1], t_vals[-1]])
         self.send_sherpa_status(sherpa.name, mode="fleet", pose=dest_pose)
@@ -208,26 +212,30 @@ class FleetSimulator:
             ongoing_trip_simulations = []
             for sherpa in sherpas:
                 sherpa_events = session.get_sherpa_events(sherpa.name)
+                if sherpa_events:
+                    if (
+                        sherpa_events[-1].msg_type == "reached"
+                        and sherpa.name in ongoing_trip_simulations
+                    ):
+                        print(f"stopping trip simulation for sherpa {sherpa.name}")
+                        ongoing_trip_simulations.remove(sherpa.name)
 
-                if (
-                    sherpa_events[-1].msg_type == "reached"
-                    and sherpa.name in ongoing_trip_simulations
-                ):
-                    print(f"stopping trip simulation for sherpa {sherpa.name}")
-                    ongoing_trip_simulations.remove(sherpa.name)
+                    if (
+                        should_trip_msg_be_sent(sherpa_events)
+                        and sherpa.name not in ongoing_trip_simulations
+                    ):
+                        print(f"starting trip simulation for sherpa {sherpa.name}")
+                        t = threading.Thread(
+                            target=self.send_trip_status, args=[sherpa.name]
+                        )
+                        t.daemon = True
+                        t.start()
+                        ongoing_trip_simulations.append(sherpa.name)
 
-                if (
-                    should_trip_msg_be_sent(sherpa_events)
-                    and sherpa.name not in ongoing_trip_simulations
-                ):
-                    print(f"starting trip simulation for sherpa {sherpa.name}")
-                    t = threading.Thread(target=self.send_trip_status, args=[sherpa.name])
-                    t.daemon = True
-                    t.start()
-                    ongoing_trip_simulations.append(sherpa.name)
-
+                    else:
+                        print(f"sending sherpa status for sherpa {sherpa.name}")
+                        self.send_sherpa_status(sherpa.name)
                 else:
-                    print(f"sending sherpa status for sherpa {sherpa.name}")
-                    self.send_sherpa_status(sherpa.name)
+                    print(f"no sherpa events for {sherpa.name}")
 
             time.sleep(5)
