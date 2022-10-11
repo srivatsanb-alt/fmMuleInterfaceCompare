@@ -5,8 +5,8 @@ TAG="latest"
 MULE_USER_NAME="ati"
 
 ###### DELETE later
-# export FM_SERVER_IP="192.168.6.11"
-# export DOCKER_REGISTRY_PORT=5000
+export FM_SERVER_IP="192.168.6.11"
+export DOCKER_REGISTRY_PORT=5000
 
 Help()
 {
@@ -54,6 +54,8 @@ if [ $id_fm = $id_mule ]; then
   echo "Mule has the right image! No need to update!!"
 else
   echo "Starting the docker image push process!!"
+  echo "killing mule docker!!"
+  ssh $MULE_USER_NAME@"$MULE_NAME.local" docker stop mule
   echo "Pushing domain.crt files to mule $MULE_NAME from $FM_SERVER_IP!!"
   ssh $MULE_USER_NAME@"$MULE_NAME.local" sudo mkdir -p /etc/docker/certs.d/"$FM_SERVER_IP:$DOCKER_REGISTRY_PORT"
   rsync ~/certs/domain.crt $MULE_USER_NAME@"$MULE_NAME.local":

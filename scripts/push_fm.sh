@@ -87,21 +87,27 @@ fi
 
 BRANCH=$(git rev-parse --abbrev-ref HEAD)
 GIT_TAG="$(git rev-parse HEAD) $(git diff --quiet || echo 'dirty')"
-IMAGE_ID="Image built on $USER@$(hostname)_from $GIT_TAG branch $BRANCH_$(date)"
-echo "IMAGE_ID: $IMAGE_ID"
+FM_IMAGE_INFO="Image built on $USER@$(hostname)_from $GIT_TAG branch $BRANCH_$(date)"
+echo "FM_IMAGE_INFO: $FM_IMAGE_INFO"
 
 echo "Building fleet manager docker image"
 if [ $build_base == 1 ] ; then
 {
   echo "Will build base image!"
-  docker image build --build-arg IMAGE_ID="${IMAGE_ID}" -t fleet_manager_base:dev -f Dockerfile.base .
+  docker image build -t fleet_manager_base:dev -f Dockerfile.base .
 }
 else
 {
   echo "Skipping base image build step!"
 }
 fi
-docker image build --build-arg IMAGE_ID="${IMAGE_ID}" -t fleet_manager:dev -f Dockerfile .
+
+
+MULE_IMAGE_ID=$(docker images --format {{.ID}} mule)
+docker image build --build-arg FM_IMAGE_INFO="${FM_IMAGE_INFO}" -t fleet_manager:dev -f Dockerfile .
+
+FM_IMAGE_ID=$(docker images --format {{.ID}} fleet_manager:dev)
+echo "Successfully built FM Image $FM_IMAGE_ID!"
 
 if [ $clean_static_dir == 1 ] ; then
 {
