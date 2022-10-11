@@ -21,7 +21,7 @@ services:
     network_mode: bridge
 
   db:
-    image: postgres
+    image: postgres:12.1
     container_name: fleet_db
     restart: always
     environment:
