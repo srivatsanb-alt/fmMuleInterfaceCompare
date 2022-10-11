@@ -119,6 +119,14 @@ class DBSession:
             .one_or_none()
         )
 
+    def get_all_available_sherpas(self, fleet_name: str):
+        return (
+            self.session.query(AvailableSherpas)
+            .filter(AvailableSherpas.fleet_name == fleet_name)
+            .filter(AvailableSherpas.available.is_(True))
+            .all()
+        )
+
     def get_frontend_user(self, name: str, hashed_password: str) -> FrontendUser:
         return (
             self.session.query(FrontendUser)

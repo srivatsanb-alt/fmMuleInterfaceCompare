@@ -1,6 +1,4 @@
 from core.constants import FleetStatus, DisabledReason
-import dataclasses
-import numpy as np
 from core.logs import get_logger
 from models.base_models import StationProperties
 from models.db_session import session
@@ -455,7 +453,7 @@ class Handlers:
 
     def handle_induct_sherpa(self, req: SherpaInductReq):
         sherpa: Sherpa = session.get_sherpa(req.sherpa_name)
-        sherpa.status.induct = req.induct
+        sherpa.status.inducted = req.induct
         sherpa_availability = session.get_sherpa_availability(req.sherpa_name)
         sherpa_availability.available = req.induct
 
@@ -671,7 +669,7 @@ class Handlers:
             self.add_sherpa_event(req_ctxt.sherpa_name, msg.type, "sent by sherpa")
 
         if req_ctxt.sherpa_name and msg.type in ["trip_status", "sherpa_status"]:
-            pass
+            get_logger("status_updates").info(f"{req_ctxt.sherpa_name} :  {msg}")
         else:
             req_ctxt.logger.info(f"got message: {msg}")
 

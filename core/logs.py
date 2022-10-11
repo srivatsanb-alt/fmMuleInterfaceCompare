@@ -21,6 +21,10 @@ def init_logging():
     for fleet in db_fleets:
         init_logging_for_fleet(fleet, logdir)
 
+    # misc loggers
+    setup_logger(logdir, "optimal_dispatch")
+    setup_logger(logdir, "status_updates")
+
 
 def init_logging_for_fleet(fleet: Fleet, logdir):
     fleet_name = fleet.name
@@ -31,12 +35,13 @@ def init_logging_for_fleet(fleet: Fleet, logdir):
         pass
 
     # set up fleet-level logger.
-    setup_logger(fleet_name, logdir)
+    setup_logger_for_fleet(fleet_name, logdir)
+
     with session_maker() as db:
         db_sherpas = db.query(Sherpa).filter(Sherpa.fleet_id == fleet_id).all()
         for sherpa in db_sherpas:
             # set up sherpa-level logger.
-            setup_logger(fleet_name, logdir, sherpa.name)
+            setup_logger_for_fleet(fleet_name, logdir, sherpa.name)
 
 
 def setup_root_logger(logdir, level=logging.INFO):
@@ -50,7 +55,20 @@ def setup_root_logger(logdir, level=logging.INFO):
     loggers["root"] = logger
 
 
-def setup_logger(fleet: str, logdir, name=None, level=logging.INFO):
+def setup_logger(logdir, name=None, level=logging.INFO):
+    global loggers
+
+    logger = logging.getLogger(f"{name}")
+    # propagate messages to fleet logger.
+
+    logger.setLevel(level)
+    handler = logging.FileHandler(logdir + f"/{name}.log")
+    handler.setFormatter(FORMATTER)
+    logger.addHandler(handler)
+    loggers[name] = logger
+
+
+def setup_logger_for_fleet(fleet: str, logdir, name=None, level=logging.INFO):
     global loggers
 
     if not name:
@@ -67,7 +85,6 @@ def setup_logger(fleet: str, logdir, name=None, level=logging.INFO):
     handler = logging.FileHandler(logdir + f"/{fleet}/{name}.log")
     handler.setFormatter(FORMATTER)
     logger.addHandler(handler)
-
     loggers[name] = logger
 
 
