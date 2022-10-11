@@ -76,7 +76,7 @@ async def trip_status(
     if not trip_status_req.trip_ids:
         raise HTTPException(
             status_code=403,
-            detail="no trip id given/available in the given timeframe",
+            detail="no trip id given or available in the given timeframe",
         )
 
     for trip_id in trip_status_req.trip_ids:
@@ -106,16 +106,19 @@ async def trip_analytics(
     if not trip_analytics_req.trip_ids:
         raise HTTPException(
             status_code=403,
-            detail="no trip id given/available in the given timeframe",
+            detail="no trip id given or available in the given timeframe",
         )
 
     for trip_id in trip_analytics_req.trip_ids:
         trip_legs_id = session.get_all_trip_legs(trip_id)
         for trip_leg_id in trip_legs_id:
             trip_analytics: TripAnalytics = session.get_trip_analytics(trip_leg_id)
+
+            # any trip_leg where from_station and to_station are same won't have trip leg
             if not trip_analytics:
-                raise HTTPException(status_code=403, detail="invalid trip_leg_id")
+                continue
             response.update({trip_leg_id: tu.get_trip_analytics(trip_analytics)})
+
     return response
 
 
@@ -129,7 +132,7 @@ def get_last_n_trip_status(num_trips: int, viewable: int):
     trip_ids = [trip.id for trip in trips]
 
     if not trip_ids:
-        raise HTTPException(status_code=403, detail="bad request no trip id")
+        raise HTTPException(status_code=403, detail="bad request, no trip_ids")
 
     for trip_id in trip_ids:
         trip: Trip = session.get_trip(trip_id)

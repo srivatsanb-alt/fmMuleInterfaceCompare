@@ -48,7 +48,12 @@ from models.trip_models import (
 
 from requests import Response
 from utils.comms import get, send_move_msg, send_msg_to_sherpa, send_status_update
-from utils.util import are_poses_close, check_if_timestamp_has_passed, get_table_as_dict
+from utils.util import (
+    are_poses_close,
+    check_if_timestamp_has_passed,
+    get_table_as_dict,
+    dt_to_str,
+)
 from utils.visa_utils import maybe_grant_visa, unlock_exclusion_zone
 import redis
 import os
@@ -56,7 +61,6 @@ import json
 import datetime
 from core.config import Config
 import handlers.default.handler_utils as hutils
-from sqlalchemy.exc import NoResultFound
 
 
 class RequestContext:
@@ -189,23 +193,26 @@ class Handlers:
 
     def end_leg(self, ongoing_trip: OngoingTrip):
         trip: Trip = ongoing_trip.trip
+
         trip.etas[ongoing_trip.next_idx_aug] = 0
 
         trip_analytics = session.get_trip_analytics(ongoing_trip.trip_leg_id)
+
+        # ongoing_trip.trip_leg.end_time is set only hutils.end_leg using current time for analytics end time
         if trip_analytics:
-            trip_analytics.end_time = ongoing_trip.trip_leg.end_time
-            time_delta = ongoing_trip.trip_leg.end_time - ongoing_trip.trip_leg.start_time
+            trip_analytics.end_time = datetime.datetime.now()
+            time_delta = datetime.datetime.now() - ongoing_trip.trip_leg.start_time
             trip_analytics.actual_trip_time = time_delta.seconds
 
         sherpa_name = trip.sherpa_name
         get_logger(sherpa_name).info(
-            f"{sherpa_name} finished leg of trip {trip.id} from {ongoing_trip.curr_station()} to {ongoing_trip.next_station()}"
+            f"{sherpa_name} finished leg of trip {trip.id} from {ongoing_trip.trip_leg.from_station} to {ongoing_trip.trip_leg.to_station} "
         )
         hutils.end_leg(ongoing_trip)
 
         self.do_post_actions(ongoing_trip)
 
-    def recreate_milkrun(pending_trip: PendingTrip):
+    def recreate_milkrun(self, pending_trip: PendingTrip):
 
         if not check_if_timestamp_has_passed(pending_trip.trip.end_time):
             get_logger().info(
@@ -215,9 +222,11 @@ class Handlers:
             time_period = new_metadata["milkrun_time_period"]
 
             # modify start time
-            new_metadata[
-                "milkrun_start_time"
-            ] = datetime.datetime.now() + datetime.timedelta(seconds=time_period)
+            new_start_time = datetime.datetime.now() + datetime.timedelta(
+                seconds=int(time_period)
+            )
+            new_start_time = dt_to_str(new_start_time)
+            new_metadata["milkrun_start_time"] = new_start_time
 
             get_logger().info(f"milkrun new metadata {new_metadata}")
             new_trip: Trip = session.create_trip(
@@ -247,7 +256,7 @@ class Handlers:
         pending_trip: PendingTrip = session.get_pending_trip(sherpa_name)
 
         if not pending_trip:
-            get_logger(sherpa_name).info(f"no pending trip to assign to {sherpa_name}")
+            # get_logger(sherpa_name).info(f"no pending trip to assign to {sherpa_name}")
             return False
 
         get_logger(sherpa_name).info(
@@ -405,6 +414,7 @@ class Handlers:
 
         ongoing_trip: OngoingTrip = session.get_ongoing_trip(sherpa_name)
         dest_pose = session.get_station(ongoing_trip.next_station()).pose
+
         if not are_poses_close(dest_pose, msg.destination_pose):
             raise ValueError(
                 f"{sherpa_name} sent to {dest_pose} but reached {msg.destination_pose}"
@@ -528,8 +538,13 @@ class Handlers:
     def handle_trip_status(self, req: TripStatusMsg):
         sherpa_name = req.source
         sherpa: Sherpa = session.get_sherpa(sherpa_name)
-
         ongoing_trip: OngoingTrip = session.get_ongoing_trip_with_trip_id(req.trip_id)
+
+        if not ongoing_trip:
+            raise ValueError(
+                f"{sherpa_name} sent a trip status but no ongoing trip data found (trip_id {req.trip_id})"
+            )
+
         ongoing_trip.trip.etas[ongoing_trip.next_idx_aug] = req.trip_info.eta
 
         trip_analytics = session.get_trip_analytics(ongoing_trip.trip_leg_id)
@@ -546,6 +561,7 @@ class Handlers:
             trip_analytics.time_elapsed_other_stoppages = (
                 req.stoppages.extra_info.time_elapsed_other_stoppages
             )
+
         else:
             trip_analytics: TripAnalytics = TripAnalytics(
                 sherpa_name=sherpa_name,
@@ -555,7 +571,7 @@ class Handlers:
                 from_station=ongoing_trip.trip_leg.from_station,
                 to_station=ongoing_trip.trip_leg.to_station,
                 expected_trip_time=ongoing_trip.trip.etas_at_start[
-                    ongoing_trip.next_idx_aug - 1
+                    ongoing_trip.next_idx_aug
                 ],
                 actual_trip_time=None,
                 cte=req.trip_info.cte,
@@ -565,6 +581,9 @@ class Handlers:
                 time_elapsed_other_stoppages=req.stoppages.extra_info.time_elapsed_other_stoppages,
             )
             session.add_to_session(trip_analytics)
+            get_logger().info(
+                f"added TripAnalytics entry for trip_leg_id: {ongoing_trip.trip_leg_id}"
+            )
 
         trip_status_update = {}
 
@@ -647,11 +666,14 @@ class Handlers:
 
     def handle(self, msg):
         init_request_context(msg)
-        req_ctxt.logger.info(f"got message: {msg}")
 
-        if req_ctxt.sherpa_name:
-            if msg.type not in ["trip_status", "sherpa_status"]:
-                self.add_sherpa_event(req_ctxt.sherpa_name, msg.type, "sent by sherpa")
+        if req_ctxt.sherpa_name and msg.type not in ["trip_status", "sherpa_status"]:
+            self.add_sherpa_event(req_ctxt.sherpa_name, msg.type, "sent by sherpa")
+
+        if req_ctxt.sherpa_name and msg.type in ["trip_status", "sherpa_status"]:
+            pass
+        else:
+            req_ctxt.logger.info(f"got message: {msg}")
 
         handle_ok, reason = self.should_handle_msg(msg)
         if not handle_ok:

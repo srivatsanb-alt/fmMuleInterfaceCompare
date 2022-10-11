@@ -7,7 +7,7 @@ TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
 
 
 def check_if_timestamp_has_passed(dt):
-    return dt < datetime.now()
+    return dt < datetime.datetime.now()
 
 
 def dt_to_str(dt):

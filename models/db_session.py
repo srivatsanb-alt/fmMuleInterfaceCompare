@@ -264,7 +264,11 @@ class DBSession:
             )
 
     def get_all_trip_legs(self, trip_id: int):
-        return self.session.query(TripLeg.id).filter(TripLeg.trip_id == trip_id).all()
+        temp = self.session.query(TripLeg.id).filter(TripLeg.trip_id == trip_id).all()
+        trip_leg_ids = []
+        for vals in temp:
+            trip_leg_ids.append(vals[0])
+        return trip_leg_ids
 
     def get_exclusion_zone(self, zone_name, zone_type) -> ExclusionZone:
         zone_id = f"{zone_name}_{zone_type}"
