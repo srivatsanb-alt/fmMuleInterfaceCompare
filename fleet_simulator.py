@@ -253,8 +253,12 @@ class FleetSimulator:
                         simulated_trip_legs.append(trip_leg.id)
                     else:
                         self.send_sherpa_status(sherpa.name)
+
+                if sherpa.status.disabled:
+                    print(f"sherpa disabled: {sherpa.status.disabled_reason}")
+
                 else:
-                    print(f"no  trip_leg for {sherpa.name}")
+                    # print(f"no  trip_leg for {sherpa.name}")
                     self.send_sherpa_status(sherpa.name)
 
                 # session.session.flush()
