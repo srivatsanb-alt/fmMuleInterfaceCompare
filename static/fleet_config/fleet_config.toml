@@ -16,6 +16,9 @@ customer=""
 site=""
 location=""
 
+[docker_registry]
+port=443
+
 [frontenduser.<user>]
 hashed_password=""
 
@@ -27,5 +30,4 @@ hashed_password=""
 hwid=""
 api_key=""
 fleet_name=""
-
-
+vehicle_type=""
