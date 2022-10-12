@@ -27,15 +27,6 @@ external_connections = toml.load(fleet_config_path).get("external_connections")
 
 print(f"frontend user details in config {frontenduser}")
 
-
-def set_env_vars():
-    os.environ["FM_SERVER_IP"] = FLEET_CONFIG["server_ip"]
-    docker_registry_config = FLEET_CONFIG["docker_registry"]
-    os.environ["DOCKER_REGISTRY_PORT"] = docker_registry_config["port"]
-    print(f"frontend user details in config {frontenduser}")
-    return
-
-
 time.sleep(5)
 
 # create all tables
