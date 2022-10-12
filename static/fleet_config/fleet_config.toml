@@ -19,7 +19,13 @@ location=""
 [frontenduser.<user>]
 hashed_password=""
 
+[external_connections.<connection_name>]
+fleet_names=[]
+hashed_password=""
+
 [fleet_sherpas.<sherpa_name>]
 hwid=""
 api_key=""
 fleet_name=""
+
+

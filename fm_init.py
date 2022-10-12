@@ -22,7 +22,7 @@ fleet_config_path = os.path.join(os.getenv("FM_CONFIG_DIR"), "fleet_config.toml"
 
 FLEET_CONFIG = toml.load(fleet_config_path)["fleet"]
 frontenduser = toml.load(fleet_config_path)["frontenduser"]
-external_connections = toml.load(fleet_config_path)["external_connections"]
+external_connections = toml.load(fleet_config_path).get("external_connections")
 
 
 print(f"frontend user details in config {frontenduser}")
@@ -88,18 +88,19 @@ for sherpa_name, sherpa_detail in fleet_sherpas.items():
 
 
 # add external connections like IES, CONV_APP etc
-for external_connection, external_connection_details in external_connections.items():
-    fns = external_connection_details["fleet_names"]
-    status = False
-    if external_connection_details.get("default_state") == "enabled":
-        status = True
-    for fn in fns:
-        fu.add_external_connections(
-            name=external_connection,
-            fleet_name=fn,
-            hashed_password=external_connection_details["hashed_password"],
-            status=status,
-        )
+if external_connections:
+    for external_connection, external_connection_details in external_connections.items():
+        fns = external_connection_details["fleet_names"]
+        status = False
+        if external_connection_details.get("default_state") == "enabled":
+            status = True
+        for fn in fns:
+            fu.add_external_connections(
+                name=external_connection,
+                fleet_name=fn,
+                hashed_password=external_connection_details["hashed_password"],
+                status=status,
+            )
 
 # regenerate_mule_config for routing
 regenerate_config()
