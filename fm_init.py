@@ -5,6 +5,7 @@ import os
 import utils.fleet_utils as fu
 from models.frontend_models import FrontendUser
 from models.fleet_models import MapFile, AvailableSherpas
+from models.connection_models import ExternalConnections
 from models.visa_models import LinkedGates
 
 sys.path.append("/app/mule")
@@ -17,13 +18,12 @@ def regenerate_config():
     os.environ["ATI_CONFIG"] = os.environ["ATI_CONSOLIDATED_CONFIG"]
 
 
-FLEET_CONFIG = toml.load(os.path.join(os.getenv("FM_CONFIG_DIR"), "fleet_config.toml"))[
-    "fleet"
-]
+fleet_config_path = os.path.join(os.getenv("FM_CONFIG_DIR"), "fleet_config.toml")
 
-frontenduser = toml.load(os.path.join(os.getenv("FM_CONFIG_DIR"), "fleet_config.toml"))[
-    "frontenduser"
-]
+FLEET_CONFIG = toml.load(fleet_config_path)["fleet"]
+frontenduser = toml.load(fleet_config_path)["frontenduser"]
+external_connections = toml.load(fleet_config_path)["external_connections"]
+
 
 print(f"frontend user details in config {frontenduser}")
 
@@ -46,13 +46,16 @@ fu.delete_table_contents(MapFile)
 fu.delete_table_contents(FrontendUser)
 fu.delete_table_contents(LinkedGates)
 fu.delete_table_contents(AvailableSherpas)
+fu.delete_table_contents(ExternalConnections)
 
 
 for user_name, user_details in frontenduser.items():
     fu.add_frontend_user(user_name, user_details["hashed_password"])
 
-# create fleet, update map details
+
 fleet_names = FLEET_CONFIG["fleet_names"]
+
+# create fleet, update map details
 for fleet_name in fleet_names:
     try:
         print(f"trying to update db tables for fleet : {fleet_name}")
@@ -63,6 +66,7 @@ for fleet_name in fleet_names:
             location=FLEET_CONFIG["location"],
         )
         fu.add_update_map(fleet_name)
+
     except Exception as e:
         print(f"failed to update db tables for fleet {fleet_name}: {e}")
 
@@ -79,9 +83,23 @@ for sherpa_name, sherpa_detail in fleet_sherpas.items():
         fleet_id=1,
     )
     fu.add_sherpa_to_fleet(sherpa=sherpa_name, fleet=sherpa_detail["fleet_name"])
-    fu.add_update_sherpa_availability(sherpa_name, sherpa_detail["fleet_name"], False)
+    fu.add_update_sherpa_availability(sherpa_name, sherpa_detail["fleet_name"], True)
     print(f"added {sherpa_name}, {sherpa_detail} to db")
 
+
+# add external connections like IES, CONV_APP etc
+for external_connection, external_connection_details in external_connections.items():
+    fns = external_connection_details["fleet_names"]
+    status = False
+    if external_connection_details.get("default_state") == "enabled":
+        status = True
+    for fn in fns:
+        fu.add_external_connections(
+            name=external_connection,
+            fleet_name=fn,
+            hashed_password=external_connection_details["hashed_password"],
+            status=status,
+        )
 
 # regenerate_mule_config for routing
 regenerate_config()

@@ -17,6 +17,7 @@ from models.fleet_models import (
     StationStatus,
     AvailableSherpas,
 )
+from models.connection_models import ExternalConnections
 import datetime
 from models.visa_models import ExclusionZone, LinkedGates
 from models.frontend_models import FrontendUser
@@ -317,13 +318,43 @@ def add_frontend_user(user_name: str, hashed_password: str):
                 db.query(FrontendUser).filter(FrontendUser.name == user_name).one()
             )
             user.hashed_password = hashed_password
-            print(f"added frontend user successfully {user.__dict__}")
+            print(f"updated frontend user successfully {user.__dict__}")
         except NoResultFound:
             user = FrontendUser(name=user_name, hashed_password=hashed_password)
             db.add(user)
             db.flush()
             db.refresh(user)
             print(f"added frontend user successfully {user.__dict__}")
+        db.commit()
+
+
+def add_external_connections(
+    name: str, fleet_name: str, hashed_password: str, status: bool
+):
+    with session_maker() as db:
+        try:
+            external_connection: ExternalConnections = (
+                db.query(ExternalConnections)
+                .filter(ExternalConnections.name == name)
+                .filter(ExternalConnections.fleet_name == fleet_name)
+                .one()
+            )
+            external_connection.hashed_password = hashed_password
+            external_connection.status = status
+            print(
+                f"updated external_connection successfully {external_connection.__dict__}"
+            )
+        except NoResultFound:
+            external_connection = ExternalConnections(
+                name=name,
+                fleet_name=fleet_name,
+                hashed_password=hashed_password,
+                status=status,
+            )
+            db.add(external_connection)
+            db.flush()
+            db.refresh(external_connection)
+            print(f"added external_connection successfully {external_connection.__dict__}")
         db.commit()
 
 

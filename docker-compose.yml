@@ -1,3 +1,4 @@
+version: "3.0"
 services:
   fleet_manager:
     image: fleet_manager:dev

@@ -52,7 +52,7 @@ from utils.util import (
     get_table_as_dict,
     dt_to_str,
 )
-from utils.visa_utils import maybe_grant_visa, unlock_exclusion_zone
+from utils.visa_utils import maybe_grant_visa, unlock_exclusion_zone, split_zone_id
 import redis
 import os
 import json
@@ -452,10 +452,24 @@ class Handlers:
             self.initialize_sherpa(sherpa_name)
 
     def handle_induct_sherpa(self, req: SherpaInductReq):
+        response = {}
         sherpa: Sherpa = session.get_sherpa(req.sherpa_name)
         sherpa.status.inducted = req.induct
         sherpa_availability = session.get_sherpa_availability(req.sherpa_name)
         sherpa_availability.available = req.induct
+
+        if not req.induct:
+            visa_held = session.get_visa_held(sherpa.name)
+            if visa_held:
+                zone_name, zone_type = split_zone_id(visa_held.zone_id)
+                visa_release_req = VisaReq(
+                    zone_id=zone_name,
+                    zone_name=zone_name,
+                    visa_type=zone_type,
+                )
+                response = self.handle_visa_release(visa_release_req, sherpa.name)
+
+        return response
 
     def handle_peripherals(self, req: SherpaPeripheralsReq):
         sherpa_name = req.source

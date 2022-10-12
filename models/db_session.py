@@ -13,9 +13,10 @@ from models.fleet_models import (
     SherpaEvent,
     AvailableSherpas,
 )
+from models.connection_models import ExternalConnections
 from models.trip_models import OngoingTrip, PendingTrip, Trip, TripLeg, TripAnalytics
 
-from models.visa_models import ExclusionZone
+from models.visa_models import ExclusionZone, VisaAssignment
 from utils.util import check_if_timestamp_has_passed
 import datetime
 
@@ -92,6 +93,16 @@ class DBSession:
         ezone.prev_linked_gates.append(linked_ezone)
         linked_ezone.next_linked_gates.append(ezone)
 
+    def get_visa_held(self, sherpa_name: str):
+        return (
+            self.session.query(VisaAssignment)
+            .filter(VisaAssignment.sherpa_name == sherpa_name)
+            .all()
+        )
+
+    def clear_all_visa_assignments(self):
+        self.session.query(VisaAssignment).delete()
+
     def get_all_fleets(self) -> List[Fleet]:
         return self.session.query(Fleet).all()
 
@@ -104,6 +115,14 @@ class DBSession:
 
     def get_all_sherpas(self) -> List[Sherpa]:
         return self.session.query(Sherpa).all()
+
+    def get_all_sherpas_in_fleet(self, fleet_name: str) -> List[Sherpa]:
+        return (
+            self.session.query(Sherpa)
+            .join(Sherpa.fleet)
+            .filter(Fleet.name == fleet_name)
+            .all()
+        )
 
     def get_sherpa_by_api_key(self, hashed_api_key: str) -> Sherpa:
         return (
@@ -168,6 +187,14 @@ class DBSession:
 
     def get_all_stations(self) -> List[Station]:
         return self.session.query(Station).all()
+
+    def get_all_stations_in_fleet(self, fleet_name: str) -> List[Station]:
+        return (
+            self.session.query(Station)
+            .join(Sherpa.fleet)
+            .filter(Fleet.name == fleet_name)
+            .all()
+        )
 
     def get_station_status(self, name: str) -> StationStatus:
         return (
@@ -291,6 +318,13 @@ class DBSession:
 
     def delete_ongoing_trip(self, ongoing_trip):
         self.session.delete(ongoing_trip)
+
+    def get_external_connections(self, fleet_name: str) -> List[ExternalConnections]:
+        return (
+            self.session.query(ExternalConnections)
+            .filter(ExternalConnections.fleet_name == fleet_name)
+            .all()
+        )
 
 
 session = DBSession()

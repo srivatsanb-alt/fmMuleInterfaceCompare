@@ -7,6 +7,7 @@ from utils.util import dt_to_str
 from models.db_session import session
 from typing import List
 import pandas as pd
+import os
 from fastapi.responses import HTMLResponse
 
 router = APIRouter(
@@ -22,10 +23,15 @@ async def fleet_names(
     if not user_name:
         raise HTTPException(status_code=403, detail="Unknown requester")
 
+    # send timezone
+    timezone = os.environ["PGTZ"]
+
     all_fleets = session.get_all_fleets()
     fleet_list = [fleet.name for fleet in all_fleets]
 
-    return {"fleet_names": fleet_list}
+    response = {"fleet_names": fleet_list, "timezone": timezone}
+
+    return response
 
 
 @router.post("/api/v1/master_data/fleet")
@@ -44,28 +50,27 @@ async def master_data(
     if master_data_info.fleet_name not in fleet_list:
         raise HTTPException(status_code=403, detail="Unknown fleet")
 
-    all_sherpas = session.get_all_sherpas()
-    all_stations = session.get_all_stations()
+    all_sherpas = session.get_all_sherpas_in_fleet(master_data_info.fleet_name)
+    all_stations = session.get_all_stations_in_fleet(master_data_info.fleet_name)
+    all_connections = session.get_external_connections(master_data_info.fleet_name)
+
     response = {}
     sherpa_list = []
     station_list = []
+    connection_list = []
 
     if all_sherpas:
-        sherpa_list = [
-            sherpa.name
-            for sherpa in all_sherpas
-            if sherpa.fleet.name == master_data_info.fleet_name
-        ]
+        sherpa_list = [sherpa.name for sherpa in all_sherpas]
 
     if all_stations:
-        station_list = [
-            station.name
-            for station in all_stations
-            if station.fleet.name == master_data_info.fleet_name
-        ]
+        station_list = [station.name for station in all_stations]
+
+    if all_connections:
+        connection_list = [connection.name for connection in all_connections]
 
     response.update({"sherpa_list": sherpa_list})
     response.update({"station_list": station_list})
+    response.update({"external_connections": connection_list})
 
     sample_sherpa_status = {}
     all_sherpa_status = session.get_all_sherpa_status()
