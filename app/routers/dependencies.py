@@ -12,6 +12,7 @@ from core.config import Config
 import redis
 import os
 import json
+from models.request_models import SherpaReq
 
 
 def get_db_session():
@@ -72,6 +73,9 @@ def process_req(queue, req, user):
 
     if not user:
         raise HTTPException(status_code=403, detail=f"Unknown requeter {user}")
+
+    if isinstance(req, SherpaReq):
+        req.source = user
 
     handler_obj = Config.get_handler()
 
