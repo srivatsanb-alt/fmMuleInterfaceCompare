@@ -1,15 +1,14 @@
 import numpy as np
 from core.logs import get_logger
-from utils.router_utils import RouterModule
 from core.config import Config
-from models.db_session import DBSession
 from models.fleet_models import Fleet, AvailableSherpas
 from models.trip_models import Trip, PendingTrip, TripStatus
 from typing import List
+from sqlalchemy.sql import or_
 import datetime
 from optimal_dispatch.hungarian import hungarian_assignment
-import time
-import os
+import pandas as pd
+from utils.util import are_poses_close
 
 
 class OptimalDispatch:
@@ -23,19 +22,28 @@ class OptimalDispatch:
         self.fleet_names = Config.get_all_fleets()
         self.fleets: List[Fleet] = []
         self.router_utils = {}
-
+        self.ptrip_first_station = []
         for fleet_name in self.fleet_names:
             self.last_assigment_time[fleet_name] = datetime.datetime.now()
-            map_path = os.path.join(os.environ["FM_MAP_DIR"], f"{fleet_name}/map/")
-            temp = RouterModule(map_path)
-            self.router_utils.update({fleet_name: temp})
 
     def any_new_trips_booked(self, dbsession, fleet_name):
+
         updates = (
             dbsession.session.query(Trip)
             .filter(Trip.status == TripStatus.BOOKED)
             .filter(Trip.fleet_name == fleet_name)
-            .filter(Trip.start_time < datetime.datetime.now())
+            .filter(or_(Trip.start_time < datetime.datetime.now(), Trip.start_time == None))
+            .all()
+        )
+        if updates:
+            return True
+        return False
+
+    def any_trips_cancelled(self, dbsession, fleet_name):
+        updates = (
+            dbsession.session.query(Trip)
+            .filter(Trip.updated_at > self.last_assigment_time)
+            .fiter(Trip.status == TripStatus.CANCELLED)
             .all()
         )
         if updates:
@@ -58,11 +66,11 @@ class OptimalDispatch:
 
     def update_sherpa_q(self, dbsession, fleet_name):
         self.sherpa_q = {}
-        available_sherpas = dbsession.get_all_available_sherpas(fleet_name)
+        available_sherpas = dbsession.get_all_available_sherpa_names(fleet_name)
         for available_sherpa_name in available_sherpas:
             available_sherpa = dbsession.get_sherpa(available_sherpa_name)
-            trip_id = available_sherpas.sherpa.trip_id
-            pose = available_sherpa.sherpa.status.pose
+            trip_id = available_sherpa.status.trip_id
+            pose = available_sherpa.status.pose
             remaining_eta = 0
 
             if trip_id:
@@ -72,17 +80,26 @@ class OptimalDispatch:
                 final_pose = dbsession.get_station(final_dest).pose
                 pose = final_pose
 
-            self.sherpa_q.update(
-                {
-                    available_sherpa.sherpa_name: {
-                        "pose": pose,
-                        "remaining_eta": remaining_eta,
+            if not pose:
+                raise ValueError(
+                    f"{available_sherpa_name} pose is None, cannot assemble_cost_matrix"
+                )
+
+            # sherpas with pending trips can't be assigned anotther pending trip
+            if available_sherpa.name not in dbsession.get_sherpas_with_pending_trip():
+                self.sherpa_q.update(
+                    {
+                        available_sherpa.name: {
+                            "pose": pose,
+                            "remaining_eta": remaining_eta,
+                        }
                     }
-                }
-            )
+                )
 
     def update_pickup_q(self, dbsession, fleet_name):
         self.pickup_q = {}
+        self.ptrip_first_station = []
+
         pending_trips = (
             dbsession.session.query(PendingTrip)
             .join(PendingTrip.trip)
@@ -92,7 +109,13 @@ class OptimalDispatch:
 
         for pending_trip in pending_trips:
             pose = dbsession.get_station(pending_trip.trip.route[0]).pose
+            if not pose:
+                raise ValueError(
+                    f"{pending_trip.trip.route[0]} pose is None,  cannot assemble_cost_matrix"
+                )
+
             self.pickup_q.update({pending_trip.trip_id: {"pose": pose}})
+            self.ptrip_first_station.append(pending_trip.trip.route[0])
 
     def assemble_cost_matrix(self, router_utils):
         cost_matrix = np.ones((len(self.pickup_q), len(self.sherpa_q))) * np.inf
@@ -100,62 +123,76 @@ class OptimalDispatch:
         j = 0
         for pickup_keys, pickup_q_val in self.pickup_q.items():
             for sherpa_q, sherpa_q_val in self.sherpa_q.items():
-                cost_matrix[i, j] = (
-                    router_utils.get_route_length(
+                route_length = 0
+                if not are_poses_close(sherpa_q_val["pose"], pickup_q_val["pose"]):
+                    route_length = router_utils.get_route_length(
                         np.array(sherpa_q_val["pose"]), np.array(pickup_q_val["pose"])
                     )
-                    + sherpa_q_val["remaining_eta"]
-                )
+                cost_matrix[i, j] = route_length + sherpa_q_val["remaining_eta"]
                 j += 1
             i += 1
+
         return cost_matrix
 
-    def update_pending_trips(dbsession, assignments):
+    def update_pending_trips(self, dbsession, assignments):
 
         for pickup, sherpa_name in assignments.items():
-            ptrip = dbsession.get_pending_trip_with_trip_id(pickup)
+            ptrip: PendingTrip = dbsession.get_pending_trip_with_trip_id(pickup)
             ptrip.sherpa_name = sherpa_name
+
+            trip: Trip = dbsession.get_trip(pickup)
+            trip.status = TripStatus.ASSIGNED
 
         # commit all the changes
 
-    def run(self):
-        with DBSession() as dbsession:
-            self.logger = get_logger("optimal_dispatch")
-            self.logger.info("will run optimal dispatch logic")
+    def run(self, dbsession, router_utils):
+        self.router_utils = router_utils
+        self.logger = get_logger("optimal_dispatch")
+        self.logger.info("will run optimal dispatch logic")
+        self.fleets = dbsession.get_all_fleets()
 
-            while True:
-                self.fleets = dbsession.get_all_fleets()
+        for fleet in self.fleets:
+            if (
+                self.any_new_trips_booked(dbsession, fleet.name)
+                or self.any_change_in_sherpa_availability(dbsession, fleet.name)
+                or self.any_trips_cancelled(dbsession, fleet.name)
+            ):
 
-                for fleet in self.fleets:
-                    if self.any_new_trips_booked(
-                        dbsession, fleet.name
-                    ) or self.any_change_in_sherpa_availability(dbsession, fleet.name):
+                self.logger.info(f"need to create/update assignments for {fleet.name}")
+                self.update_sherpa_q(dbsession, fleet.name)
+                self.logger.info(f"updated sherpa_q {self.sherpa_q}")
 
-                        self.logger.info(f"need to create/update assignments {fleet.name}")
+                self.update_pickup_q(dbsession, fleet.name)
+                self.logger.info(f"updated pickup_q {self.pickup_q}")
 
-                        self.update_sherpa_q(dbsession, fleet.name)
-                        self.logger.info(f"updated sherpa_q {self.sherpa_q}")
+                router_utils = self.router_utils[fleet.name]
+                cost_matrix = self.assemble_cost_matrix(router_utils)
 
-                        self.update_pickup_q(dbsession, fleet.name)
-                        self.logger.info(f"updated pickup_q {self.pickup_q}")
+                pickup_list = list(self.pickup_q.keys())
+                sherpa_list = list(self.sherpa_q.keys())
 
-                        router_utils = self.router_utils[fleet.name]
-                        cost_matrix = self.assemble_cost_matrix(router_utils)
-                        self.logger.info(f"assembled cost matrix {cost_matrix}")
+                cost_matrix_df = pd.DataFrame(
+                    cost_matrix, index=self.ptrip_first_station, columns=sherpa_list
+                )
 
-                        assignments = self.assign(
-                            cost_matrix,
-                            list(self.pickup_q.keys()),
-                            list(self.sherpa_q.keys()),
-                        )
+                self.logger.info(
+                    f"Assembled Cost Matrix for {fleet.name}:\n{cost_matrix_df}\n"
+                )
 
-                        self.logger.info(f"assignments {assignments}")
-                        self.update_pending_trips(dbsession, assignments)
-                        self.last_assigment_time[fleet.name] = datetime.datetime.now()
-                        dbsession.session.commit()
-                    else:
-                        self.logger.info(f"need not update assignment {fleet.name}")
+                assignments = self.assign(
+                    cost_matrix,
+                    pickup_list,
+                    sherpa_list,
+                )
 
-                dbsession.close()
+                self.logger.info(f"Assignments- {fleet.name}:\n")
+                for i in range(0, len(assignments)):
+                    self.logger.info(
+                        f"{list(assignments.values())[i]} ---> {self.ptrip_first_station[i]}, trip_id: {list(assignments.keys())[i]}"
+                    )
+                self.logger.info("\n")
 
-                time.sleep(1)
+                self.update_pending_trips(dbsession, assignments)
+                self.last_assigment_time[fleet.name] = datetime.datetime.now()
+            else:
+                self.logger.info(f"need not update assignment for {fleet.name}")

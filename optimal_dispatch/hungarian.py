@@ -16,7 +16,7 @@ def hungarian_assignment(cost_matrix, pickups, sherpas):
     dlib_mat = dlib.matrix(cost_matrix)
     dlib_assignments = dlib.max_cost_assignment(dlib_mat)
 
-    for i in range(0, len * dlib_assignments):
+    for i in range(0, len(dlib_assignments)):
         try:
             assignment.update({pickups[i]: sherpas[dlib_assignments[i]]})
         except Exception as e:

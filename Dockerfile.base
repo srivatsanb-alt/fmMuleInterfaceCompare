@@ -2,6 +2,7 @@ From ubuntu:18.04
 RUN apt-get update && apt install -y --no-install-recommends \
     curl make net-tools unzip git openssh-client postgresql-client \
     python3.7-dev python3-pip \
+    libpq-dev \
     cmake g++ pkg-config \
     redis && \
     apt-get clean

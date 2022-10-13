@@ -138,13 +138,19 @@ class DBSession:
             .one_or_none()
         )
 
-    def get_all_available_sherpas(self, fleet_name: str):
-        return (
-            self.session.query(AvailableSherpas)
+    def get_all_available_sherpa_names(self, fleet_name: str):
+        available_sherpa_names = []
+
+        temp = (
+            self.session.query(AvailableSherpas.sherpa_name)
             .filter(AvailableSherpas.fleet_name == fleet_name)
             .filter(AvailableSherpas.available.is_(True))
             .all()
         )
+        for val in temp:
+            available_sherpa_names.append(val[0])
+
+        return available_sherpa_names
 
     def get_frontend_user(self, name: str, hashed_password: str) -> FrontendUser:
         return (
@@ -239,6 +245,13 @@ class DBSession:
                     continue
             return pending_trip
         return None
+
+    def get_sherpas_with_pending_trip(self):
+        sherpas = []
+        temp = self.session.query(PendingTrip.sherpa_name).all()
+        for val in temp:
+            sherpas.append(val[0])
+        return sherpas
 
     def get_ongoing_trip(self, sherpa: str):
         return (
