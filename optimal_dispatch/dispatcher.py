@@ -100,12 +100,7 @@ class OptimalDispatch:
         self.pickup_q = {}
         self.ptrip_first_station = []
 
-        pending_trips = (
-            dbsession.session.query(PendingTrip)
-            .join(PendingTrip.trip)
-            .filter(Trip.fleet_name == fleet_name)
-            .all()
-        )
+        pending_trips = dbsession.get_pending_trips_with_fleet_name(fleet_name)
 
         for pending_trip in pending_trips:
             pose = dbsession.get_station(pending_trip.trip.route[0]).pose

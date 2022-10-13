@@ -59,6 +59,18 @@ async def start_stop(
     return response
 
 
+@router.get("/fleet/clear_all_visa_assignments")
+async def clear_all_visa_assignments(
+    entity_name=Union[str, None], user_name=Depends(get_user_from_header)
+):
+
+    if not user_name:
+        raise HTTPException(status_code=403, detail="Unknown requester")
+
+    session.clear_all_visa_assignments()
+    return {}
+
+
 @router.post("/fleet/{entity_name}/emergency_stop")
 async def emergency_stop(
     pause_resume_ctrl_req: PauseResumeCtrlReq,
@@ -108,7 +120,7 @@ async def emergency_stop(
 @router.post("/sherpa/{entity_name}/emergency_stop")
 async def sherpa_emergency_stop(
     pause_resume_ctrl_req: PauseResumeCtrlReq,
-    entity_name=Union[str, None],
+    entity_name: str,
     user_name=Depends(get_user_from_header),
 ):
 

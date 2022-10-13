@@ -59,6 +59,28 @@ async def delete_pending_trip(booking_id: int, user_name=Depends(get_user_from_h
     return response
 
 
+@router.get("/booking/{entity_name}/clear_optimal_dispatch_assignments")
+async def clear_optimal_dispatch_assignments(
+    entity_name: str, user_name=Depends(get_user_from_header)
+):
+
+    response = {}
+
+    if not user_name:
+        raise HTTPException(status_code=403, detail="Unknown requester")
+
+    if not entity_name:
+        raise HTTPException(status_code=403, detail="No entity name")
+
+    ptrips = session.get_pending_trips_with_fleet_name(entity_name)
+
+    for ptrip in ptrips:
+        ptrip.trip.status = TripStatus.BOOKED
+        ptrip.sherpa_name = None
+
+    return response
+
+
 @router.post("/status")
 async def trip_status(
     trip_status_req: TripStatusReq, user_name=Depends(get_user_from_header)

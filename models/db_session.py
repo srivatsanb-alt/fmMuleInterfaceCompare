@@ -17,6 +17,7 @@ from models.connection_models import ExternalConnections
 from models.trip_models import OngoingTrip, PendingTrip, Trip, TripLeg, TripAnalytics
 
 from models.visa_models import ExclusionZone, VisaAssignment
+from models.trip_models import TripStatus
 from utils.util import check_if_timestamp_has_passed
 import datetime
 
@@ -245,6 +246,14 @@ class DBSession:
                     continue
             return pending_trip
         return None
+
+    def get_pending_trips_with_fleet_name(self, fleet_name: str):
+        return (
+            session.query(PendingTrip)
+            .join(PendingTrip.trip)
+            .filter(Trip.fleet_name == fleet_name)
+            .all()
+        )
 
     def get_sherpas_with_pending_trip(self):
         sherpas = []
