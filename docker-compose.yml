@@ -12,6 +12,8 @@ services:
       PGPORT: 5432
       PGUSER: postgres
       PGPASSWORD: postgres
+      FM_SERVER_IP: $FM_SERVER_IP
+      DOCKER_REGISTRY_PORT: $DOCKER_REGISTRY_PORT
       PGDATABASE: ati_fleet
       PGTZ: Asia/Kolkata
       FM_DATABASE_URI: postgresql://postgres:postgres@db

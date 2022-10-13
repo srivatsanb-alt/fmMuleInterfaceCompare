@@ -38,6 +38,14 @@ create_static_backup()
 
   ssh $usr_name@$ip_address "rsync -aP /home/$usr_name/static/. /home/$usr_name/static_old/."
   rsync -azP ./static/* $usr_name@$ip_address:/home/$usr_name/static/.
+  echo "setting env variable FM_SERVER_IP $FM_SERVER_IP"
+  ssh $usr_name@$ip_address "export FM_SERVER_IP=$ip_address"
+  echo "Set env variable FM_SERVER_IP "
+  ssh $usr_name@$ip_address "echo $FM_SERVER_IP"
+  echo "setting env variable DOCKER_REGISTRY_PORT 443"
+  ssh $usr_name@$ip_address "export DOCKER_REGISTRY_PORT=443"
+  echo "Set env variable DOCKER_REGISTRY_PORT "
+  ssh $usr_name@$ip_address "echo $DOCKER_REGISTRY_PORT"
 }
 
 clean_static()
