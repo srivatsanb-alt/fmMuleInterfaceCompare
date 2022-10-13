@@ -5,11 +5,6 @@ TAG="latest"
 MULE_USER_NAME="ati"
 VEHICLE_TYPE="tug"
 
-###### DELETE later
-# export FM_SERVER_IP="192.168.6.11"
-# export DOCKER_REGISTRY_PORT=443
-# export PGTZ="Asia/Kolkata"
-
 Help()
 {
   # Display Help
@@ -50,13 +45,12 @@ do
 done
 
 echo "Checking docker image ID on mule $MULE_NAME from with that on $FM_SERVER_IP!!"
-id_fm=$(docker images --format {{.ID}} localhost:5000/ubuntu)
-echo "Docker image ID on $FM_SERVER_IP $id_fm!!"
+echo "Docker image ID on $FM_SERVER_IP $MULE_IMAGE_ID!!"
 id_mule=$(ssh $MULE_USER_NAME@$MULE_NAME.local docker images --format {{.ID}} mule)
 echo "Docker image ID on $MULE_USER_NAME $id_mule!!"
 
 
-if [ $id_fm = $id_mule ]; then
+if [ $MULE_IMAGE_ID = $id_mule ]; then
   echo "Mule has the right image! No need to update!!"
 else
   echo "Starting the docker image push process!!"

@@ -11,6 +11,7 @@ build_base=1
 
 # Set variables
 IP_ADDRESS="localhost"
+DOCKER_REGISTRY_PORT=443
 
 # Get the options
 while getopts i:hcWDb flag;
@@ -103,8 +104,9 @@ else
 fi
 
 
-MULE_IMAGE_ID=$(docker images --format {{.ID}} mule)
-docker image build --build-arg FM_IMAGE_INFO="${FM_IMAGE_INFO}" -t fleet_manager:dev -f Dockerfile .
+MULE_IMAGE_ID=$(docker images --format {{.ID}} localhost:$DOCKER_REGISTRY_PORT/mule)
+echo "MULE_IMAGE_ID $MULE_IMAGE_ID"
+docker image build --build-arg FM_IMAGE_INFO="${FM_IMAGE_INFO}" --build-arg MULE_IMAGE_ID="${MULE_IMAGE_ID}" -t fleet_manager:dev -f Dockerfile .
 
 FM_IMAGE_ID=$(docker images --format {{.ID}} fleet_manager:dev)
 echo "Successfully built FM Image $FM_IMAGE_ID!"
