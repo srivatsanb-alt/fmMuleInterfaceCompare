@@ -11,7 +11,8 @@ ENV FM_REDIS_URI="redis://localhost:$REDIS_PORT" \
     MULE_ROOT="$FM_INSTALL_DIR/mule" \
     ATI_CONFIG="/app/static/mule_config/config.toml" \
     ATI_CONSOLIDATED_CONFIG="/app/static/mule_config/consolidated.toml" \
-    FM_IMAGE_INFO=$FM_IMAGE_INFO
+    FM_IMAGE_INFO=$FM_IMAGE_INFO \
+    MULE_IMAGE_ID=$MULE_IMAGE_ID
 
 RUN ln -fs /usr/share/zoneinfo/Asia/Kolkata /etc/localtime && \
        dpkg-reconfigure -f noninteractive tzdata
