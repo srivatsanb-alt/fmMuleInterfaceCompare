@@ -24,6 +24,8 @@ def init_logging():
     # misc loggers
     setup_logger(logdir, "optimal_dispatch")
     setup_logger(logdir, "status_updates")
+    setup_logger(logdir, "simulator")
+    setup_logger(logdir, "control_router_module")
 
 
 def init_logging_for_fleet(fleet: Fleet, logdir):

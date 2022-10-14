@@ -5,10 +5,14 @@ from models.fleet_models import Fleet, AvailableSherpas
 from models.trip_models import Trip, PendingTrip, TripStatus
 from typing import List
 from sqlalchemy.sql import or_
+import os
 import datetime
 from optimal_dispatch.hungarian import hungarian_assignment
 import pandas as pd
-from utils.util import are_poses_close
+from utils.util import generate_random_job_id
+import redis
+import time
+import json
 
 
 class OptimalDispatch:
@@ -42,8 +46,9 @@ class OptimalDispatch:
     def any_trips_cancelled(self, dbsession, fleet_name):
         updates = (
             dbsession.session.query(Trip)
-            .filter(Trip.updated_at > self.last_assigment_time)
-            .fiter(Trip.status == TripStatus.CANCELLED)
+            .filter(Trip.updated_at > self.last_assigment_time[fleet_name])
+            .filter(Trip.fleet_name == fleet_name)
+            .filter(Trip.status == TripStatus.CANCELLED)
             .all()
         )
         if updates:
@@ -112,17 +117,25 @@ class OptimalDispatch:
             self.pickup_q.update({pending_trip.trip_id: {"pose": pose}})
             self.ptrip_first_station.append(pending_trip.trip.route[0])
 
-    def assemble_cost_matrix(self, router_utils):
+    def assemble_cost_matrix(self, fleet_name):
+        redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
         cost_matrix = np.ones((len(self.pickup_q), len(self.sherpa_q))) * np.inf
         i = 0
         j = 0
         for pickup_keys, pickup_q_val in self.pickup_q.items():
             for sherpa_q, sherpa_q_val in self.sherpa_q.items():
-                route_length = 0
-                if not are_poses_close(sherpa_q_val["pose"], pickup_q_val["pose"]):
-                    route_length = router_utils.get_route_length(
-                        np.array(sherpa_q_val["pose"]), np.array(pickup_q_val["pose"])
-                    )
+                pose_1 = sherpa_q_val["pose"]
+                pose_2 = pickup_q_val["pose"]
+                job_id = generate_random_job_id()
+                control_router_job = [pose_1, pose_2, fleet_name, job_id]
+                redis_conn.set(
+                    f"control_router_job_{job_id}", json.dumps(control_router_job)
+                )
+                while not redis_conn.get(f"result_{job_id}"):
+                    time.sleep(0.005)
+
+                route_length = json.loads(redis_conn.get(f"result_{job_id}"))
+                redis_conn.delete(f"result_{job_id}")
                 cost_matrix[i, j] = route_length + sherpa_q_val["remaining_eta"]
                 j += 1
             i += 1
@@ -140,8 +153,7 @@ class OptimalDispatch:
 
         # commit all the changes
 
-    def run(self, dbsession, router_utils):
-        self.router_utils = router_utils
+    def run(self, dbsession):
         self.logger = get_logger("optimal_dispatch")
         self.logger.info("will run optimal dispatch logic")
         self.fleets = dbsession.get_all_fleets()
@@ -160,8 +172,7 @@ class OptimalDispatch:
                 self.update_pickup_q(dbsession, fleet.name)
                 self.logger.info(f"updated pickup_q {self.pickup_q}")
 
-                router_utils = self.router_utils[fleet.name]
-                cost_matrix = self.assemble_cost_matrix(router_utils)
+                cost_matrix = self.assemble_cost_matrix(fleet.name)
 
                 pickup_list = list(self.pickup_q.keys())
                 sherpa_list = list(self.sherpa_q.keys())

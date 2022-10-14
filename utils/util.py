@@ -1,6 +1,8 @@
 import datetime
 import inspect
 import numpy as np
+import secrets
+import string
 
 
 TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
@@ -54,3 +56,8 @@ def get_table_as_dict(model, model_obj):
                     continue
             result.update({col: model_dict[col]})
     return result
+
+
+def generate_random_job_id():
+    N = 10
+    return "".join(secrets.choice(string.ascii_uppercase + string.digits) for i in range(N))

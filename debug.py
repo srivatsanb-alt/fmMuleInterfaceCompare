@@ -1,6 +1,7 @@
 import sys
 from fleet_simulator import FleetSimulator, MuleAPP
 from core.config import Config
+import time
 
 
 if __name__ == "__main__":
@@ -18,4 +19,5 @@ if __name__ == "__main__":
 
     if sys.argv[1] == "simulate" and simulator_config["simulate"]:
         fs.initialize_sherpas()
+        time.sleep(1)
         fs.act_on_sherpa_events()

@@ -19,9 +19,11 @@ from models.db_session import session
 from multiprocessing import Process
 import redis
 import numpy as np
+from models.db_session import DBSession
 from models.fleet_models import Sherpa, Station
 from models.request_models import ReachedReq
 import threading
+from core.logs import get_logger
 
 
 def should_trip_msg_be_sent(sherpa_events):
@@ -110,113 +112,120 @@ class FleetSimulator:
             self.send_sherpa_status(sherpa.name, mode="fleet", pose=st.pose)
 
     def send_sherpa_status(self, sherpa_name, mode=None, pose=None, battery_status=None):
-        sherpa_update_q = Queues.queues_dict[f"{sherpa_name}_update_handler"]
+        with DBSession() as session:
+            sherpa_update_q = Queues.queues_dict[f"{sherpa_name}_update_handler"]
 
-        sherpa: Sherpa = session.get_sherpa(sherpa_name)
+            sherpa: Sherpa = session.get_sherpa(sherpa_name)
 
-        msg = {}
-        msg["type"] = "sherpa_status"
-        msg["source"] = sherpa_name
-        msg["sherpa_name"] = sherpa_name
-        msg["timestamp"] = time.time()
-        msg["mode"] = "fleet" if not mode else mode
-        msg["current_pose"] = sherpa.status.pose if not pose else pose
-        msg["battery_status"] = -1 if not battery_status else battery_status
-        # print(f"will send a proxy sherpa status {msg}")
+            msg = {}
+            msg["type"] = "sherpa_status"
+            msg["source"] = sherpa_name
+            msg["sherpa_name"] = sherpa_name
+            msg["timestamp"] = time.time()
+            msg["mode"] = mode if mode else "fleet"
+            msg["current_pose"] = sherpa.status.pose if not pose else pose
+            msg["battery_status"] = -1 if not battery_status else battery_status
+            get_logger("simulator").info(f"will send a proxy sherpa status {msg}")
 
-        if msg["type"] == "sherpa_status":
-            msg = SherpaStatusMsg.from_dict(msg)
-            enqueue(sherpa_update_q, handle, self.handler_obj, msg, ttl=1)
+            if sherpa.status.pose or pose:
+                msg = SherpaStatusMsg.from_dict(msg)
+                enqueue(sherpa_update_q, handle, self.handler_obj, msg, ttl=1)
 
     def send_trip_status(self, sherpa_name):
-        sherpa_update_q = Queues.queues_dict[f"{sherpa_name}_update_handler"]
-        ongoing_trip: OngoingTrip = session.get_ongoing_trip(sherpa_name)
-        sherpa: Sherpa = session.get_sherpa(sherpa_name)
-        from_station = ongoing_trip.trip_leg.from_station
-        to_station = ongoing_trip.trip_leg.to_station
 
-        if from_station:
-            from_pose = session.get_station(from_station).pose
-        else:
-            from_pose = sherpa.status.pose
+        with DBSession() as session:
+            sherpa_update_q = Queues.queues_dict[f"{sherpa_name}_update_handler"]
+            ongoing_trip: OngoingTrip = session.get_ongoing_trip(sherpa_name)
+            sherpa: Sherpa = session.get_sherpa(sherpa_name)
+            from_station = ongoing_trip.trip_leg.from_station
+            to_station = ongoing_trip.trip_leg.to_station
 
-        to_pose = session.get_station(to_station).pose
-        rm = self.router_modules[sherpa.fleet.name]
+            if from_station:
+                from_pose = session.get_station(from_station).pose
+            else:
+                from_pose = sherpa.status.pose
 
-        if to_pose == from_pose:
-            self.send_reached_msg(sherpa_name)
-            print(f"ending trip leg {from_station}, {to_station}")
-            return
+            to_pose = session.get_station(to_station).pose
+            rm = self.router_modules[sherpa.fleet.name]
 
-        final_route = rm.get_route(from_pose, to_pose)[0]
-        eta_at_start = rm.get_route_length(from_pose, to_pose)
-        x_vals, y_vals, t_vals, _ = get_dense_path(final_route)
-
-        for i in range(0, len(x_vals), 10):
-            stoppage_type = None
-            local_obstacle = [-999.0, -999.0]
-
-            obst_random = np.random.rand(1)[0]
-            if obst_random < 0.07:
-                stoppage_type = "Stopped due to detected obstacle"
-                local_obstacle = [0.1, 1]
-
-            curr_pose = [x_vals[i], y_vals[i], t_vals[i]]
-
-            if i % 50 == 0:
-                print(
-                    f"simulating trip_id: {ongoing_trip.trip_id}, progress: {i / len(x_vals)}"
+            if to_pose == from_pose:
+                self.send_reached_msg(sherpa_name)
+                get_logger("simulator").info(
+                    f"ending trip leg {from_station}, {to_station}"
                 )
+                return
 
-            self.send_sherpa_status(sherpa.name, mode="fleet", pose=curr_pose)
-            trip_status_msg = {
-                "type": "trip_status",
-                "timestamp": time.time(),
-                "trip_id": ongoing_trip.trip_id,
-                "trip_leg_id": ongoing_trip.trip_leg_id,
-                "trip_info": {
-                    "current_pose": curr_pose,
-                    "destination_pose": to_pose,
-                    "destination_name": ongoing_trip.trip_leg.to_station,
-                    "total_route_length": float,
-                    "remaining_route_length": float,
-                    "eta_at_start": eta_at_start,
-                    "eta": i / len(x_vals) * eta_at_start,
-                    "cte": 0.0,
-                    "te": 0.0,
-                    "progress": i / len(x_vals),
-                    "stoppages": {
-                        "type": stoppage_type,
-                        "extra_info": {
-                            "local_obstacle": local_obstacle,
-                            "velocity_speed_factor": 1.0,
-                            "obstacle_speed_factor": 1.0,
-                            "time_elapsed_stoppages": 0,
-                            "time_elapsed_obstacle_stoppages": 0,
-                            "time_elapsed_visa_stoppages": 0,
-                            "time_elapsed_other_stoppages": 0,
+            final_route = rm.get_route(from_pose, to_pose)[0]
+            eta_at_start = rm.get_route_length(from_pose, to_pose)
+            x_vals, y_vals, t_vals, _ = get_dense_path(final_route)
+
+            for i in range(0, len(x_vals), 10):
+                stoppage_type = None
+                local_obstacle = [-999.0, -999.0]
+
+                obst_random = np.random.rand(1)[0]
+                if obst_random < 0.07:
+                    stoppage_type = "Stopped due to detected obstacle"
+                    local_obstacle = [0.1, 1]
+
+                curr_pose = [x_vals[i], y_vals[i], t_vals[i]]
+
+                if i % 50 == 0:
+                    get_logger("simulator").info(
+                        f"simulating trip_id: {ongoing_trip.trip_id}, progress: {i / len(x_vals)}"
+                    )
+
+                self.send_sherpa_status(sherpa.name, mode="fleet", pose=curr_pose)
+                trip_status_msg = {
+                    "type": "trip_status",
+                    "timestamp": time.time(),
+                    "trip_id": ongoing_trip.trip_id,
+                    "trip_leg_id": ongoing_trip.trip_leg_id,
+                    "trip_info": {
+                        "current_pose": curr_pose,
+                        "destination_pose": to_pose,
+                        "destination_name": ongoing_trip.trip_leg.to_station,
+                        "total_route_length": float,
+                        "remaining_route_length": float,
+                        "eta_at_start": eta_at_start,
+                        "eta": i / len(x_vals) * eta_at_start,
+                        "cte": 0.0,
+                        "te": 0.0,
+                        "progress": i / len(x_vals),
+                        "stoppages": {
+                            "type": stoppage_type,
+                            "extra_info": {
+                                "local_obstacle": local_obstacle,
+                                "velocity_speed_factor": 1.0,
+                                "obstacle_speed_factor": 1.0,
+                                "time_elapsed_stoppages": 0,
+                                "time_elapsed_obstacle_stoppages": 0,
+                                "time_elapsed_visa_stoppages": 0,
+                                "time_elapsed_other_stoppages": 0,
+                            },
                         },
                     },
-                },
-            }
+                }
 
-            trip_status_msg["source"] = sherpa.name
-            final_trip_status_msg = TripStatusMsg.from_dict(trip_status_msg)
-            final_trip_status_msg.trip_info = TripInfo.from_dict(
-                trip_status_msg["trip_info"]
-            )
-            final_trip_status_msg.stoppages = Stoppages.from_dict(
-                trip_status_msg["trip_info"]["stoppages"]
-            )
-            final_trip_status_msg.stoppages.extra_info = StoppageInfo.from_dict(
-                trip_status_msg["trip_info"]["stoppages"]["extra_info"]
-            )
-            enqueue(sherpa_update_q, handle, self.handler_obj, final_trip_status_msg, ttl=1)
+                trip_status_msg["source"] = sherpa.name
+                final_trip_status_msg = TripStatusMsg.from_dict(trip_status_msg)
+                final_trip_status_msg.trip_info = TripInfo.from_dict(
+                    trip_status_msg["trip_info"]
+                )
+                final_trip_status_msg.stoppages = Stoppages.from_dict(
+                    trip_status_msg["trip_info"]["stoppages"]
+                )
+                final_trip_status_msg.stoppages.extra_info = StoppageInfo.from_dict(
+                    trip_status_msg["trip_info"]["stoppages"]["extra_info"]
+                )
+                enqueue(
+                    sherpa_update_q, handle, self.handler_obj, final_trip_status_msg, ttl=1
+                )
 
-        dest_pose = [x_vals[-1], y_vals[-1], t_vals[-1]]
-        self.send_sherpa_status(sherpa.name, mode="fleet", pose=dest_pose)
-        self.send_reached_msg(sherpa_name)
-        print(f"ending trip leg {from_station}, {to_station}")
+            dest_pose = [x_vals[-1], y_vals[-1], t_vals[-1]]
+            self.send_sherpa_status(sherpa.name, mode="fleet", pose=dest_pose)
+            self.send_reached_msg(sherpa_name)
+            get_logger("simulator").info(f"ending trip leg {from_station}, {to_station}")
 
     def send_reached_msg(self, sherpa_name):
         queue = Queues.queues_dict["generic_handler"]
@@ -230,38 +239,39 @@ class FleetSimulator:
             destination_name=ongoing_trip.trip_leg.to_station,
         )
         reached_req.source = sherpa_name
-        print(f"will send a reached msg for {sherpa_name}, {reached_req}")
+        get_logger("simulator").info(
+            f"will send a reached msg for {sherpa_name}, {reached_req}"
+        )
         enqueue(queue, handle, self.handler_obj, reached_req, ttl=1)
 
     def act_on_sherpa_events(self):
-        time.sleep(2)
         simulated_trip_legs = []
-        while True:
-            sherpas = session.get_all_sherpas()
-            for sherpa in sherpas:
-                trip_leg = session.get_trip_leg(sherpa.name)
-                if trip_leg:
-                    if trip_leg.id not in simulated_trip_legs:
-                        print(
-                            f"starting trip simulation for sherpa {sherpa.name}, trip_leg: {trip_leg.__dict__}"
-                        )
-                        t = threading.Thread(
-                            target=self.send_trip_status, args=[sherpa.name]
-                        )
-                        t.daemon = True
-                        t.start()
-                        simulated_trip_legs.append(trip_leg.id)
+        with DBSession() as session:
+            while True:
+                sherpas = session.get_all_sherpas()
+                for sherpa in sherpas:
+                    session.session.refresh(sherpa)
+                    trip_leg = session.get_trip_leg(sherpa.name)
+                    if trip_leg:
+                        if trip_leg.id not in simulated_trip_legs:
+                            get_logger("simulator").info(
+                                f"starting trip simulation for sherpa {sherpa.name}, trip_leg: {trip_leg.__dict__}"
+                            )
+                            t = threading.Thread(
+                                target=self.send_trip_status, args=[sherpa.name]
+                            )
+                            t.daemon = True
+                            t.start()
+                            simulated_trip_legs.append(trip_leg.id)
+                        else:
+                            self.send_sherpa_status(sherpa.name)
                     else:
+                        get_logger("simulator").info(f"no trip_leg for {sherpa.name}")
                         self.send_sherpa_status(sherpa.name)
 
-                if sherpa.status.disabled:
-                    print(f"sherpa disabled: {sherpa.status.disabled_reason}")
+                    if sherpa.status.disabled:
+                        get_logger("simulator").info(
+                            f"sherpa disabled: {sherpa.status.disabled_reason}"
+                        )
 
-                else:
-                    # print(f"no  trip_leg for {sherpa.name}")
-                    self.send_sherpa_status(sherpa.name)
-
-                # session.session.flush()
-                # session.session.refresh(sherpa)
-
-            time.sleep(3)
+                time.sleep(1)

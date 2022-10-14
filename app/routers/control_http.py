@@ -6,7 +6,8 @@ from app.routers.dependencies import (
     process_req_with_response,
 )
 from core.constants import FleetStatus, DisabledReason
-from models.fleet_models import Fleet, SherpaStatus, Sherpa
+from models.fleet_models import Fleet, SherpaStatus
+
 from utils.comms import get_sherpa_url
 from fastapi import APIRouter, Depends, HTTPException
 from models.db_session import session
@@ -20,6 +21,7 @@ from models.request_models import (
     ResetPoseCtrlReq,
     StartStopCtrlReq,
     SherpaInductReq,
+    DeleteVisaAssignments,
 )
 
 
@@ -60,15 +62,15 @@ async def start_stop(
 
 
 @router.get("/fleet/clear_all_visa_assignments")
-async def clear_all_visa_assignments(
-    entity_name=Union[str, None], user_name=Depends(get_user_from_header)
-):
+async def clear_all_visa_assignments(user_name=Depends(get_user_from_header)):
 
     if not user_name:
         raise HTTPException(status_code=403, detail="Unknown requester")
 
-    session.clear_all_visa_assignments()
-    return {}
+    delete_visas_req = DeleteVisaAssignments()
+    response = process_req_with_response(None, delete_visas_req, user_name)
+
+    return response
 
 
 @router.post("/fleet/{entity_name}/emergency_stop")

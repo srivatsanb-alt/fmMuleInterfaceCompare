@@ -3,6 +3,7 @@ from core.logs import get_logger
 from models.base_models import StationProperties
 from models.db_session import session
 from models.fleet_models import Fleet, Sherpa, SherpaStatus, Station, SherpaEvent
+import pickle
 from models.request_models import (
     AccessType,
     BookingReq,
@@ -34,6 +35,8 @@ from models.request_models import (
     VisaType,
     DeleteTripReq,
     TerminateTripReq,
+    DeleteVisaAssignments,
+    DeleteOptimalDispatchAssignments,
 )
 from models.trip_models import (
     OngoingTrip,
@@ -169,18 +172,6 @@ class Handlers:
                 f"stale heartbeat from sherpa {stale_sherpa_status.sherpa_name}"
             )
 
-    def add_sherpa_events(self):
-        redis_db = redis.from_url(os.getenv("FM_REDIS_URI"))
-        sherpa_events = redis_db.get("sherpa_events")
-        if sherpa_events:
-            sherpa_events = json.loads(sherpa_events)
-            for event in sherpa_events:
-                self.add_sherpa_event(
-                    sherpa_name=event[0], msg_type=event[1], context=event[2]
-                )
-        # clear sherpa events
-        redis_db.delete("sherpa_events")
-
     def add_sherpa_event(self, sherpa_name, msg_type, context):
         sherpa_event: SherpaEvent = SherpaEvent(
             sherpa_name=sherpa_name,
@@ -315,6 +306,23 @@ class Handlers:
             sherpa_status.idle = False
         else:
             get_logger(sherpa_name).info(f"{sherpa_name} not assigned new task")
+
+    # run optimal_dispatch
+    def run_optimal_dispatch(self):
+        # load the pickled optimal dispatch object
+        with open(
+            os.path.join(os.environ["FM_MAP_DIR"], "optimal_dispatch"), "rb"
+        ) as optimal_dispatch_pkl:
+            optimal_dispatch = pickle.load(optimal_dispatch_pkl)
+
+        # run optimal dispatch
+        optimal_dispatch.run(session)
+
+        # pickle the updated file
+        with open(
+            os.path.join(os.environ["FM_MAP_DIR"], "optimal_dispatch"), "wb"
+        ) as optimal_dispatch_pkl:
+            pickle.dump(optimal_dispatch, optimal_dispatch_pkl)
 
     def check_continue_curr_leg(self, ongoing_trip: OngoingTrip):
         return (
@@ -612,6 +620,16 @@ class Handlers:
         trip_status_update.update({"stoppages": {"type": req.stoppages.type}})
         send_status_update(trip_status_update)
 
+    def handle_delete_optimal_dispatch_assignments(
+        self, req: DeleteOptimalDispatchAssignments
+    ):
+        ptrips = session.get_pending_trips_with_fleet_name(req.fleet_name)
+        for ptrip in ptrips:
+            ptrip.trip.status = TripStatus.BOOKED
+            ptrip.sherpa_name = None
+
+        return {}
+
     def handle_verify_fleet_files(self, req: SherpaReq):
         sherpa_name = req.source
         sherpa: Sherpa = session.get_sherpa(sherpa_name)
@@ -669,6 +687,10 @@ class Handlers:
         elif access_type == AccessType.RELEASE:
             return self.handle_visa_release(req, sherpa_name)
 
+    def handle_delete_visa_assignments(self, req: DeleteVisaAssignments):
+        session.clear_all_visa_assignments()
+        return {}
+
     def handle_resource_access(self, req: ResourceReq):
         sherpa_name = req.source
         if not req.visa:
@@ -678,18 +700,24 @@ class Handlers:
 
     def handle(self, msg):
         init_request_context(msg)
+        update_msgs = ["trip_status", "sherpa_status"]
 
-        if req_ctxt.sherpa_name and msg.type not in ["trip_status", "sherpa_status"]:
+        if req_ctxt.sherpa_name and msg.type not in update_msgs:
             self.add_sherpa_event(req_ctxt.sherpa_name, msg.type, "sent by sherpa")
 
-        if req_ctxt.sherpa_name and msg.type in ["trip_status", "sherpa_status"]:
+        if msg.type in update_msgs:
             get_logger("status_updates").info(f"{req_ctxt.sherpa_name} :  {msg}")
         else:
             req_ctxt.logger.info(f"got message: {msg}")
 
         handle_ok, reason = self.should_handle_msg(msg)
         if not handle_ok:
-            get_logger().warning(f"message of type {msg.type} ignored, reason={reason}")
+            if msg.type in update_msgs:
+                get_logger("status_updates").warning(
+                    f"message of type {msg.type} ignored, reason={reason}"
+                )
+            else:
+                get_logger().warning(f"message of type {msg.type} ignored, reason={reason}")
             return
 
         msg_handler = getattr(self, "handle_" + msg.type, None)
@@ -703,5 +731,8 @@ class Handlers:
             self.assign_next_task(req_ctxt.sherpa_name)
 
         self.check_sherpa_status()
+
+        if msg.type not in update_msgs or msg.type == "resource_access":
+            self.run_optimal_dispatch()
 
         return response

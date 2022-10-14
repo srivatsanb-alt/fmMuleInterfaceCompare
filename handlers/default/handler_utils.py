@@ -3,6 +3,11 @@ from core.logs import get_logger
 from models.db_session import DBSession, session
 from models.fleet_models import SherpaStatus
 from models.trip_models import OngoingTrip, Trip, TripLeg
+from utils.util import generate_random_job_id
+import json
+import redis
+import os
+import time
 
 
 AVAILABLE = "available"
@@ -20,21 +25,30 @@ def assign_sherpa(trip: Trip, sherpa: str, session: DBSession):
 
 def start_trip(ongoing_trip: OngoingTrip, session: DBSession):
 
-    # populate trip etas, need not be imported for every request
-    from utils.router_utils import AllRouterModules
+    redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
 
-    rm = AllRouterModules.get_router_module(ongoing_trip.trip.fleet_name)
-    sherpa_status: SherpaStatus = session.get_sherpa_status(ongoing_trip.sherpa_name)
+    # populate trip etas, need not be imported for every request
+    sherpa_status = session.get_sherpa_status(ongoing_trip.sherpa_name)
 
     start_pose = sherpa_status.pose
+    fleet_name = ongoing_trip.trip.fleet_name
+
     etas_at_start = []
     for station in ongoing_trip.trip.augmented_route:
+        job_id = generate_random_job_id()
         end_pose = session.get_station(station).pose
-        route_length = 0
+        control_router_job = [start_pose, end_pose, fleet_name, job_id]
+        redis_conn.set(f"control_router_job_{job_id}", json.dumps(control_router_job))
 
-        # control throws an error
-        if start_pose != end_pose:
-            route_length = rm.get_route_length(start_pose, end_pose)
+        while not redis_conn.get(f"result_{job_id}"):
+            time.sleep(0.005)
+
+        route_length = json.loads(redis_conn.get(f"result_{job_id}"))
+        redis_conn.delete(f"result_{job_id}")
+
+        get_logger("control_router_module").info(
+            f"route_length {control_router_job}- {route_length}"
+        )
 
         etas_at_start.append(route_length)
         start_pose = session.get_station(station).pose

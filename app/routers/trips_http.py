@@ -2,8 +2,14 @@ from app.routers.dependencies import (
     get_user_from_header,
     process_req_with_response,
 )
+from typing import Union
 from fastapi import APIRouter, Depends, HTTPException
-from models.request_models import BookingReq, TripStatusReq, DeleteTripReq
+from models.request_models import (
+    BookingReq,
+    TripStatusReq,
+    DeleteTripReq,
+    DeleteOptimalDispatchAssignments,
+)
 from models.trip_models import TripStatus, PendingTrip, Trip, TripAnalytics
 from fastapi.responses import HTMLResponse
 from models.db_session import session
@@ -61,7 +67,7 @@ async def delete_pending_trip(booking_id: int, user_name=Depends(get_user_from_h
 
 @router.get("/booking/{entity_name}/clear_optimal_dispatch_assignments")
 async def clear_optimal_dispatch_assignments(
-    entity_name: str, user_name=Depends(get_user_from_header)
+    entity_name=Union[str, None], user_name=Depends(get_user_from_header)
 ):
 
     response = {}
@@ -72,11 +78,13 @@ async def clear_optimal_dispatch_assignments(
     if not entity_name:
         raise HTTPException(status_code=403, detail="No entity name")
 
-    ptrips = session.get_pending_trips_with_fleet_name(entity_name)
+    delete_optimal_dispatch_assignments_req = DeleteOptimalDispatchAssignments(
+        fleet_name=entity_name
+    )
 
-    for ptrip in ptrips:
-        ptrip.trip.status = TripStatus.BOOKED
-        ptrip.sherpa_name = None
+    response = process_req_with_response(
+        None, delete_optimal_dispatch_assignments_req, user_name
+    )
 
     return response
 

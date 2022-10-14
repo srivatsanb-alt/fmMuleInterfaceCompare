@@ -249,7 +249,7 @@ class DBSession:
 
     def get_pending_trips_with_fleet_name(self, fleet_name: str):
         return (
-            session.query(PendingTrip)
+            self.session.query(PendingTrip)
             .join(PendingTrip.trip)
             .filter(Trip.fleet_name == fleet_name)
             .all()

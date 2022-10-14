@@ -252,6 +252,15 @@ class GiveRouteWPS(BaseModel):
     sherpa_name: str = None  # only for Live monitoring: Route from current pose to next destination, None for route-preview
 
 
+class DeleteVisaAssignments(BaseModel):
+    type: str = MessageType.DELETE_VISA_ASSIGNMENTS
+
+
+class DeleteOptimalDispatchAssignments(BaseModel):
+    type: str = MessageType.DELETE_OPTIMAL_DISPATCH_ASSIGNMENTS
+    fleet_name: str
+
+
 #################################################
 # Messages to sherpas
 
