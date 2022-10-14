@@ -5,6 +5,9 @@ mule_heartbeat_interval=60
 simulate=false
 book_trips=false
 
+[optimal_dispatch]
+method="hungarian"
+
 [fleet]
 mode="default"
 handler_package="handlers.default.handlers"
