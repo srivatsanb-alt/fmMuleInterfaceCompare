@@ -32,7 +32,7 @@ def get_trip_status(trip: Trip):
         "trip_leg_to_station": trip_leg.to_station if trip_leg else None,
         "route": trip.augmented_route,
         "priority": trip.priority,
-        "milkrun": trip.milkrun,
+        "scheduled": trip.scheduled,
         "time_period": trip.time_period,
         "booking_id": trip.booking_id,
         "booking_time": booking_time,
