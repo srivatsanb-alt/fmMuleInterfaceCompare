@@ -241,7 +241,7 @@ class DBSession:
         )
 
         for pending_trip in pending_trips:
-            if pending_trip.trip.milkrun:
+            if pending_trip.trip.scheduled:
                 if not check_if_timestamp_has_passed(pending_trip.trip.start_time):
                     continue
             return pending_trip

@@ -7,6 +7,9 @@ book_trips=false
 
 [optimal_dispatch]
 method="hungarian"
+prioritise_waiting_stations=true
+eta_power_factor=1.0
+priority_power_factor=0.5
 
 [fleet]
 mode="default"

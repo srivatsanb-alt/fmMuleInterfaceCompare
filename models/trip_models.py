@@ -92,23 +92,31 @@ class Trip(Base, TimestampMixin):
     # other details we may want to store about the trip
     other_info = Column(JSONB)
 
-    def __init__(self, route, priority=0, metadata=None, fleet_name=None, booking_id=None):
+    def __init__(
+        self,
+        route,
+        priority=1,
+        metadata=None,
+        fleet_name=None,
+        booking_id=None,
+    ):
+
         self.fleet_name = fleet_name
         self.booking_id = booking_id
         self.booking_time = datetime.datetime.now()
         self.route = route
         self.status = TripStatus.BOOKED
         self.priority = priority
-        self.milkrun = False
+        self.scheduled = False
         self.time_period = 0
         self.trip_metadata = metadata
 
         # set all milkrun trip details
-        if metadata.get("milkrun"):
-            self.milkrun = True
-            self.start_time = str_to_dt(metadata["milkrun_start_time"])
-            self.end_time = str_to_dt(metadata["milkrun_end_time"])
-            self.time_period = int(metadata["milkrun_time_period"])
+        if metadata.get("scheduled"):
+            self.scheduled = True
+            self.start_time = str_to_dt(metadata["scheduled_start_time"])
+            self.end_time = str_to_dt(metadata["scheduled_end_time"])
+            self.time_period = int(metadata["scheduled_time_period"])
 
         self.augmented_route = route
         self.aug_idxs_booked = list(range(len(self.augmented_route)))
@@ -188,8 +196,11 @@ class OngoingTrip(Base, TimestampMixin):
     def curr_station(self):
         if self.next_idx_aug > 0:
             return self.trip.augmented_route[self.next_idx_aug - 1]
-        else:
-            return None
+
+        elif self.next_idx_aug == 0 and self.trip.etas_at_start[0] == 0:
+            return self.trip.augmented_route[0]
+
+        return None
 
     def next_station(self):
         if self.next_idx_aug < len(self.trip.augmented_route):

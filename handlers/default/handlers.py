@@ -201,23 +201,23 @@ class Handlers:
 
         self.do_post_actions(ongoing_trip)
 
-    def recreate_milkrun(self, pending_trip: PendingTrip):
+    def should_recreate_scheduled_trip(self, pending_trip: PendingTrip):
 
         if not check_if_timestamp_has_passed(pending_trip.trip.end_time):
             get_logger().info(
-                f"recreating trip {pending_trip.trip.id}, milkrun needs to be continued"
+                f"recreating trip {pending_trip.trip.id}, scheduled trip needs to be continued"
             )
             new_metadata = pending_trip.trip.trip_metadata
-            time_period = new_metadata["milkrun_time_period"]
+            time_period = new_metadata["scheduled_time_period"]
 
             # modify start time
             new_start_time = datetime.datetime.now() + datetime.timedelta(
                 seconds=int(time_period)
             )
             new_start_time = dt_to_str(new_start_time)
-            new_metadata["milkrun_start_time"] = new_start_time
+            new_metadata["scheduled_start_time"] = new_start_time
 
-            get_logger().info(f"milkrun new metadata {new_metadata}")
+            get_logger().info(f"scheduled new metadata {new_metadata}")
             new_trip: Trip = session.create_trip(
                 pending_trip.trip.route,
                 pending_trip.trip.priority,
@@ -228,7 +228,7 @@ class Handlers:
             session.create_pending_trip(new_trip.id)
         else:
             get_logger().info(
-                f"will not recreate trip {pending_trip.trip.id}, milkrun_end_time past current time"
+                f"will not recreate trip {pending_trip.trip.id}, scheduled_end_time past current time"
             )
 
     def assign_new_trip(self, sherpa_name: str):
@@ -260,8 +260,8 @@ class Handlers:
             )
             return False
 
-        if pending_trip.trip.milkrun:
-            self.recreate_milkrun(pending_trip)
+        if pending_trip.trip.scheduled:
+            self.should_recreate_scheduled_trip(pending_trip)
 
         self.start_trip(pending_trip.trip, sherpa_name)
         session.delete_pending_trip(pending_trip)

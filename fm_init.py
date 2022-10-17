@@ -108,8 +108,8 @@ while not DB_UP:
         print(f"will use {config_path} as ATI_CONFIG")
 
         # create optimal_dispatch object for handler usage
-        optimal_dispatch_method = optimal_dispatch_config["method"]
-        optimal_dispatch_object = OptimalDispatch(optimal_dispatch_method)
+        optimal_dispatch_object = OptimalDispatch(optimal_dispatch_config)
+        _ = optimal_dispatch_object.are_power_factors_valid()
 
         with open(
             os.path.join(os.environ["FM_MAP_DIR"], "optimal_dispatch"), "wb"
