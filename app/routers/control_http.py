@@ -22,7 +22,7 @@ from models.request_models import (
     StartStopCtrlReq,
     SherpaInductReq,
     DeleteVisaAssignments,
-    SherpaImageUpdateCtrlReq,
+    SherpaImgUpdateCtrlReq,
 )
 
 
@@ -79,6 +79,26 @@ async def diagnostics(
         raise HTTPException(
             status_code=403, detail=f"Bad response from sherpa, {response.status_code}"
         )
+
+    return response
+
+
+@router.get("/sherpa/{entity_name}/update_sherpa_img")
+async def update_sherpa_img(
+    entity_name=Union[str, None],
+    user_name=Depends(get_user_from_header),
+):
+
+    response = {}
+
+    if not user_name:
+        raise HTTPException(status_code=403, detail="Unknown requester")
+
+    if not entity_name:
+        raise HTTPException(status_code=403, detail="No entity name")
+    update_image_req = SherpaImgUpdateCtrlReq(sherpa_name=entity_name)
+    _ = process_req_with_response(None, update_image_req, user_name)
+    session.close()
 
     return response
 
@@ -284,23 +304,3 @@ async def induct_sherpa(
     _ = process_req_with_response(None, sherpa_induct_req, user_name)
 
     return respone
-
-
-@router.post("/sherpa/{entity_name}/update_sherpa_img")
-async def update_sherpa_img(
-    entity_name=Union[str, None],
-    user_name=Depends(get_user_from_header),
-):
-
-    response = {}
-
-    if not user_name:
-        raise HTTPException(status_code=403, detail="Unknown requester")
-
-    if not entity_name:
-        raise HTTPException(status_code=403, detail="No entity name")
-    update_image_req = SherpaImageUpdateCtrlReq(sherpa_name=entity_name)
-    _ = process_req_with_response(None, update_image_req, user_name)
-    session.close()
-
-    return response
