@@ -37,6 +37,8 @@ from models.request_models import (
     TerminateTripReq,
     DeleteVisaAssignments,
     DeleteOptimalDispatchAssignments,
+    SherpaImgUpdate,
+    SherpaImgUpdateCtrlReq,
 )
 from models.trip_models import (
     OngoingTrip,
@@ -478,6 +480,24 @@ class Handlers:
                 response = self.handle_visa_release(visa_release_req, sherpa.name)
 
         return response
+
+    def handle_sherpa_img_update(self, req: SherpaImgUpdateCtrlReq):
+        sherpa_name = req.sherpa_name
+        sherpa = session.get_sherpa(sherpa_name)
+        fleet_config = Config.read_config()
+        ip_address = fleet_config["fleet"]["server_ip"]
+        image_tag = os.getenv("MULE_IMAGE_ID")
+        registry_port = fleet_config["docker_registry"]["port"]
+        fm_host_name = os.getenv("HOSTNAME")
+        time_zone = os.getenv("TZ")
+        image_update_req: SherpaImgUpdate = SherpaImgUpdate(
+            ip_address, image_tag, registry_port, fm_host_name, time_zone
+        )
+        get_logger().info(
+            f"Sending request {image_update_req} to update docker image on {sherpa_name}"
+        )
+        send_msg_to_sherpa(sherpa, image_update_req)
+        return
 
     def handle_peripherals(self, req: SherpaPeripheralsReq):
         sherpa_name = req.source
