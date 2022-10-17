@@ -329,11 +329,11 @@ class DiagnosticsReq(FMReq):
 
 class SherpaImgUpdate(FMReq):
     endpoint: str = "img_update"
-    ip_address: str  # Ex: "192.168.6.11"
-    image_tag: str  # Ex: "latest" or "v8"
-    registry_port: str  # Ex: "443"
-    fm_host_name: str  # Ex: "ati" or "maf1nh"
-    time_zone: str  # Ex: "Asia/Kolkata"
+    ip_address: str
+    image_tag: str
+    registry_port: str
+    fm_host_name: str
+    time_zone: str
 
 
 @dataclass
