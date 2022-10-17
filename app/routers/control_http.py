@@ -22,6 +22,7 @@ from models.request_models import (
     StartStopCtrlReq,
     SherpaInductReq,
     DeleteVisaAssignments,
+    SherpaImageUpdateCtrlReq,
 )
 
 
@@ -34,6 +35,52 @@ router = APIRouter(
 
 def handle(handler, msg):
     handler.handle(msg)
+
+
+@router.get("/fleet/clear_all_visa_assignments")
+async def clear_all_visa_assignments(user_name=Depends(get_user_from_header)):
+
+    if not user_name:
+        raise HTTPException(status_code=403, detail="Unknown requester")
+
+    delete_visas_req = DeleteVisaAssignments()
+    response = process_req_with_response(None, delete_visas_req, user_name)
+
+    return response
+
+
+@router.get("/sherpa/{entity_name}/diagnostics")
+async def diagnostics(
+    entity_name=Union[str, None],
+    user_name=Depends(get_user_from_header),
+):
+
+    response = {}
+
+    if not user_name:
+        raise HTTPException(status_code=403, detail="Unknown requester")
+
+    if not entity_name:
+        raise HTTPException(status_code=403, detail="No entity name")
+
+    sherpa_status = session.get_sherpa_status(entity_name)
+    if not sherpa_status:
+        raise HTTPException(status_code=403, detail="Bad sherpa name")
+
+    diagnostics_req = DiagnosticsReq(sherpa_name=entity_name)
+    base_url = get_sherpa_url(sherpa_status.sherpa)
+    url = f"{base_url}/{diagnostics_req.endpoint}"
+    response = requests.get(url)
+
+    if response.status_code == 200:
+        response = response.json()
+
+    else:
+        raise HTTPException(
+            status_code=403, detail=f"Bad response from sherpa, {response.status_code}"
+        )
+
+    return response
 
 
 @router.post("/fleet/{entity_name}/start_stop")
@@ -57,18 +104,6 @@ async def start_stop(
 
     fleet.status = FleetStatus.STARTED if start_stop_ctrl_req.start else FleetStatus.STOPPED
     session.close()
-
-    return response
-
-
-@router.get("/fleet/clear_all_visa_assignments")
-async def clear_all_visa_assignments(user_name=Depends(get_user_from_header)):
-
-    if not user_name:
-        raise HTTPException(status_code=403, detail="Unknown requester")
-
-    delete_visas_req = DeleteVisaAssignments()
-    response = process_req_with_response(None, delete_visas_req, user_name)
 
     return response
 
@@ -184,11 +219,9 @@ async def switch_mode(
         raise HTTPException(status_code=403, detail="Bad sherpa name")
 
     switch_mode_req = SwitchModeReq(mode=switch_mode_ctrl_req.mode, sherpa_name=entity_name)
-
     process_req(None, switch_mode_req, user_name)
 
     session.close()
-
     return response
 
 
@@ -250,13 +283,11 @@ async def induct_sherpa(
 
     _ = process_req_with_response(None, sherpa_induct_req, user_name)
 
-    session.close()
-
     return respone
 
 
-@router.get("/sherpa/{entity_name}/diagnostics")
-async def diagnostics(
+@router.post("/sherpa/{entity_name}/update_sherpa_img")
+async def update_sherpa_img(
     entity_name=Union[str, None],
     user_name=Depends(get_user_from_header),
 ):
@@ -268,22 +299,8 @@ async def diagnostics(
 
     if not entity_name:
         raise HTTPException(status_code=403, detail="No entity name")
-
-    sherpa_status = session.get_sherpa_status(entity_name)
-    if not sherpa_status:
-        raise HTTPException(status_code=403, detail="Bad sherpa name")
-
-    diagnostics_req = DiagnosticsReq(sherpa_name=entity_name)
-    base_url = get_sherpa_url(sherpa_status.sherpa)
-    url = f"{base_url}/{diagnostics_req.endpoint}"
-    response = requests.get(url)
-
-    if response.status_code == 200:
-        response = response.json()
-
-    else:
-        raise HTTPException(
-            status_code=403, detail=f"Bad response from sherpa, {response.status_code}"
-        )
+    update_image_req = SherpaImageUpdateCtrlReq(sherpa_name=entity_name)
+    _ = process_req_with_response(None, update_image_req, user_name)
+    session.close()
 
     return response
