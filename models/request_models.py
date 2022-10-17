@@ -240,6 +240,11 @@ class ResetPoseCtrlReq(BaseModel):
     fleet_station: str
 
 
+class SherpaImgUpdateCtrlReq(BaseModel):
+    sherpa_name: str
+    type: str = "sherpa_img_update"
+
+
 class TripStatusReq(BaseModel):
     booked_from: Optional[str]
     booked_till: Optional[str]
@@ -320,6 +325,15 @@ class DiagnosticsReq(FMReq):
     endpoint: str = "diagnostics"
     sherpa_name: str
     type = MessageType.PASS_TO_SHERPA
+
+
+class SherpaImgUpdate(FMReq):
+    endpoint: str = "img_update"
+    ip_address: str  # Ex: "192.168.6.11"
+    image_tag: str  # Ex: "latest" or "v8"
+    registry_port: str  # Ex: "443"
+    fm_host_name: str  # Ex: "ati" or "maf1nh"
+    time_zone: str  # Ex: "Asia/Kolkata"
 
 
 @dataclass
