@@ -66,3 +66,25 @@ clear_db_on_fm_server()
     echo "couldn't clear cb on fm server"
   }
 }
+
+create_certs()
+{
+  CERT_FILE=static/certs/cert.crt	
+  KEY_FILE=static/certs/cert.key
+  if ([ -f "$CERT_FILE" ]) && ([ -f "$KEY_FILE" ]); then
+     echo "FM already has cert files not creating a new one, make sure it was created with the right IP"
+  else
+     IP=$1
+     NETWORK_TYPE=$2
+     if [ "$2" == "self" ]; then
+	IP=127.0.0.1
+     elif ([ "$1" == "localhost" ]) && ([ "$2" != "self" ]); then  
+	 IP=$(ifconfig | grep -C 1 -e $NETWORK_TYPE | awk '/i/ {print $2}')
+     fi
+     echo "will create cert files for FM with ip: $IP $NETWORK_TYPE"
+     openssl req -new -newkey rsa:2048 -x509 -sha256 -days 365 -nodes -out cert.crt -keyout cert.key -addext "subjectAltName = IP:$IP"
+     mkdir static/certs || true
+     mv cert.crt static/certs/
+     mv cert.key static/certs/
+  fi
+}

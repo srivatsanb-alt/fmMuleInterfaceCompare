@@ -11,8 +11,11 @@ build_base=1
 
 # Set variables
 IP_ADDRESS="localhost"
+NETWORK_TYPE="wlp"
 FM_SERVER_HOSTNAME="localhost"
 DOCKER_REGISTRY_PORT=443
+FM_PORT=8002
+REDIS_PORT=6380
 
 # Get the options
 while getopts i:hcWDb flag;
@@ -52,6 +55,10 @@ else
   echo "Incorrect response. Will stop this push process. Try again!"
   exit
 fi
+
+
+create_certs $IP_ADDRESS $NETWORK_TYPE
+
 
 if [[ $copy_static == 1 ]] && [[ $server == 1 ]] ; then
 {
@@ -108,7 +115,12 @@ fi
 
 MULE_IMAGE_ID=$(docker images --format {{.ID}} localhost:$DOCKER_REGISTRY_PORT/mule)
 echo "MULE_IMAGE_ID $MULE_IMAGE_ID"
-docker image build --build-arg FM_IMAGE_INFO="${FM_IMAGE_INFO}" --build-arg MULE_IMAGE_ID="${MULE_IMAGE_ID}" --build-arg HOSTNAME="${FM_SERVER_HOSTNAME}" -t fleet_manager:dev -f Dockerfile .
+docker image build --build-arg FM_IMAGE_INFO="${FM_IMAGE_INFO}" \
+                   --build-arg MULE_IMAGE_ID="${MULE_IMAGE_ID}" \
+		   --build-arg HOSTNAME="${FM_SERVER_HOSTNAME}" \
+		   --build-arg FM_PORT="${FM_PORT}" \
+		   --build-arg REDIS_PORT="${REDIS_PORT}" \
+		   -t fleet_manager:dev -f Dockerfile .
 
 FM_IMAGE_ID=$(docker images --format {{.ID}} fleet_manager:dev)
 echo "Successfully built FM Image $FM_IMAGE_ID!"

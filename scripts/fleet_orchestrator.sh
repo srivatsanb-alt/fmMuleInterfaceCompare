@@ -37,7 +37,7 @@ run_simulator() {
 
 fm_init
 save_fleet_log
-redis-server > $LOGS/redis.log 2>&1 &
+redis-server --port $REDIS_PORT > $LOGS/redis.log 2>&1 &
 redis-cli flushall
 start
 
