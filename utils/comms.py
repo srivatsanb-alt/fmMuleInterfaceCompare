@@ -29,7 +29,7 @@ def post_mock(url, body: Dict) -> Dict:
 
 def post(url, body: Dict) -> Dict:
     response = requests.post(url, json=body)
-    return process_response(response)
+    return process_response(response, body)
 
 
 def get_mock(sherpa: Sherpa, req: FMReq) -> Dict:
@@ -40,7 +40,7 @@ def get(sherpa: Sherpa, req: FMReq) -> Dict:
     base_url = get_sherpa_url(sherpa)
     url = f"{base_url}/{req.endpoint}"
     response = requests.get(url)
-    return process_response(response)
+    return process_response(response, req)
 
 
 def send_msg_to_sherpa(sherpa: Sherpa, msg: FMReq) -> Dict:
@@ -55,6 +55,9 @@ def send_msg_to_sherpa(sherpa: Sherpa, msg: FMReq) -> Dict:
 
     base_url = get_sherpa_url(sherpa)
     url = f"{base_url}/{endpoint}"
+
+    get_logger().info(f"msg to {sherpa.name}: {body}")
+    get_logger().info(f"msg url: {url}")
 
     get_logger(sherpa.name).info(f"msg to {sherpa.name}: {body}")
     get_logger(sherpa.name).info(f"msg url: {url}")
@@ -87,9 +90,9 @@ def process_response_mock(response: requests.Response, json=False) -> Dict:
     return response
 
 
-def process_response(response: requests.Response) -> Dict:
+def process_response(response: requests.Response, req=None) -> Dict:
     response.raise_for_status()
-    get_logger().info(f"received response: {response.json()}")
+    get_logger().info(f"received response: {response.json()}, Request: {req}")
     return response
 
 

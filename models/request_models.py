@@ -198,8 +198,8 @@ class TripsReq(BaseModel):
 
 class TripMsg(BaseModel):
     route: List[str]
+    priority: Optional[float] = 1.0
     tasks: Optional[Dict[str, str]] = None
-    priority: Optional[int] = 1
     metadata: Optional[Dict[str, Union[List[int], bool, str, int]]] = None
 
 

@@ -82,11 +82,11 @@ class Trip(Base, TimestampMixin):
     etas_at_start = Column(ARRAY(Float))
     etas = Column(ARRAY(Float))
 
-    milkrun = Column(Boolean)
+    scheduled = Column(Boolean)
     time_period = Column(Integer)
 
     # these come from the booking request
-    priority = Column(Integer)
+    priority = Column(Float)
     trip_metadata = Column(JSONB)
 
     # other details we may want to store about the trip
@@ -95,7 +95,7 @@ class Trip(Base, TimestampMixin):
     def __init__(
         self,
         route,
-        priority=1,
+        priority,
         metadata=None,
         fleet_name=None,
         booking_id=None,

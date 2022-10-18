@@ -213,8 +213,6 @@ async def sherpa_emergency_stop(
 
     _ = process_req_with_response(None, pause_resume_req, user_name)
 
-    session.close()
-
     return response
 
 
@@ -239,7 +237,7 @@ async def switch_mode(
         raise HTTPException(status_code=403, detail="Bad sherpa name")
 
     switch_mode_req = SwitchModeReq(mode=switch_mode_ctrl_req.mode, sherpa_name=entity_name)
-    process_req(None, switch_mode_req, user_name)
+    _ = process_req_with_response(None, switch_mode_req, user_name)
 
     session.close()
     return response
@@ -279,8 +277,6 @@ async def reset_pose(
 
     _ = process_req_with_response(None, reset_pose_req, user_name)
 
-    session.close()
-
     return response
 
 
@@ -295,7 +291,7 @@ async def induct_sherpa(
     sherpa = session.get_sherpa(sherpa_name)
 
     if sherpa.status.trip_id and not sherpa_induct_req.induct:
-        trip = session.get_trip(sherpa.trip_id)
+        trip = session.get_trip(sherpa.status.trip_id)
         raise HTTPException(
             status_code=403,
             detail=f"delete the ongoing trip with booking_id: {trip.booking_id}, to induct {sherpa_name} out of fleet",

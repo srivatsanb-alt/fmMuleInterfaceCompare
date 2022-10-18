@@ -23,7 +23,6 @@ from models.db_session import DBSession
 from models.fleet_models import Sherpa, Station
 from models.request_models import ReachedReq
 import threading
-from core.logs import get_logger
 
 
 def should_trip_msg_be_sent(sherpa_events):
@@ -125,7 +124,7 @@ class FleetSimulator:
             msg["mode"] = mode if mode else "fleet"
             msg["current_pose"] = sherpa.status.pose if not pose else pose
             msg["battery_status"] = -1 if not battery_status else battery_status
-            get_logger("simulator").info(f"will send a proxy sherpa status {msg}")
+            print(f"will send a proxy sherpa status {msg}")
 
             if sherpa.status.pose or pose:
                 msg = SherpaStatusMsg.from_dict(msg)
@@ -150,16 +149,18 @@ class FleetSimulator:
 
             if to_pose == from_pose:
                 self.send_reached_msg(sherpa_name)
-                get_logger("simulator").info(
-                    f"ending trip leg {from_station}, {to_station}"
-                )
+                print(f"ending trip leg {from_station}, {to_station}")
                 return
 
             final_route = rm.get_route(from_pose, to_pose)[0]
             eta_at_start = rm.get_route_length(from_pose, to_pose)
             x_vals, y_vals, t_vals, _ = get_dense_path(final_route)
-
-            for i in range(0, len(x_vals), 10):
+            steps = 10
+            sleep_time = steps * (eta_at_start / len(x_vals))
+            print(
+                f"{sherpa.name}, trip_leg_id: {ongoing_trip.trip_leg_id} sleep time {sleep_time}"
+            )
+            for i in range(0, len(x_vals), steps):
                 stoppage_type = None
                 local_obstacle = [-999.0, -999.0]
 
@@ -171,11 +172,12 @@ class FleetSimulator:
                 curr_pose = [x_vals[i], y_vals[i], t_vals[i]]
 
                 if i % 50 == 0:
-                    get_logger("simulator").info(
+                    print(
                         f"simulating trip_id: {ongoing_trip.trip_id}, progress: {i / len(x_vals)}"
                     )
 
                 self.send_sherpa_status(sherpa.name, mode="fleet", pose=curr_pose)
+                eta = i / len(x_vals) * eta_at_start
                 trip_status_msg = {
                     "type": "trip_status",
                     "timestamp": time.time(),
@@ -185,10 +187,10 @@ class FleetSimulator:
                         "current_pose": curr_pose,
                         "destination_pose": to_pose,
                         "destination_name": ongoing_trip.trip_leg.to_station,
-                        "total_route_length": float,
-                        "remaining_route_length": float,
+                        "total_route_length": eta_at_start,
+                        "remaining_route_length": eta,
                         "eta_at_start": eta_at_start,
-                        "eta": i / len(x_vals) * eta_at_start,
+                        "eta": eta,
                         "cte": 0.0,
                         "te": 0.0,
                         "progress": i / len(x_vals),
@@ -221,11 +223,12 @@ class FleetSimulator:
                 enqueue(
                     sherpa_update_q, handle, self.handler_obj, final_trip_status_msg, ttl=1
                 )
+                time.sleep(sleep_time)
 
             dest_pose = [x_vals[-1], y_vals[-1], t_vals[-1]]
             self.send_sherpa_status(sherpa.name, mode="fleet", pose=dest_pose)
             self.send_reached_msg(sherpa_name)
-            get_logger("simulator").info(f"ending trip leg {from_station}, {to_station}")
+            print(f"ending trip leg {from_station}, {to_station}")
 
     def send_reached_msg(self, sherpa_name):
         queue = Queues.queues_dict["generic_handler"]
@@ -239,9 +242,7 @@ class FleetSimulator:
             destination_name=ongoing_trip.trip_leg.to_station,
         )
         reached_req.source = sherpa_name
-        get_logger("simulator").info(
-            f"will send a reached msg for {sherpa_name}, {reached_req}"
-        )
+        print(f"will send a reached msg for {sherpa_name}, {reached_req}")
         enqueue(queue, handle, self.handler_obj, reached_req, ttl=1)
 
     def act_on_sherpa_events(self):
@@ -250,11 +251,12 @@ class FleetSimulator:
             while True:
                 sherpas = session.get_all_sherpas()
                 for sherpa in sherpas:
+                    dest_station = None
                     session.session.refresh(sherpa)
                     trip_leg = session.get_trip_leg(sherpa.name)
                     if trip_leg:
                         if trip_leg.id not in simulated_trip_legs:
-                            get_logger("simulator").info(
+                            print(
                                 f"starting trip simulation for sherpa {sherpa.name}, trip_leg: {trip_leg.__dict__}"
                             )
                             t = threading.Thread(
@@ -263,15 +265,11 @@ class FleetSimulator:
                             t.daemon = True
                             t.start()
                             simulated_trip_legs.append(trip_leg.id)
-                        else:
-                            self.send_sherpa_status(sherpa.name)
                     else:
-                        get_logger("simulator").info(f"no trip_leg for {sherpa.name}")
+                        print(f"no trip_leg for {sherpa.name}")
                         self.send_sherpa_status(sherpa.name)
 
                     if sherpa.status.disabled:
-                        get_logger("simulator").info(
-                            f"sherpa disabled: {sherpa.status.disabled_reason}"
-                        )
+                        print(f"{sherpa.name} disabled: {sherpa.status.disabled_reason}")
 
                 time.sleep(1)

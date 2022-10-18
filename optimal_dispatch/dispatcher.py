@@ -76,7 +76,7 @@ class OptimalDispatch:
             return True
         return False
 
-    def add_waiting_time_priority(self, pending_trips):
+    def get_waiting_time_priorities(self, pending_trips):
         waiting_times = []
         for pending_trip in pending_trips:
             wait_time_dt = datetime.datetime.now() - pending_trip.trip.booking_time
@@ -89,13 +89,17 @@ class OptimalDispatch:
 
             waiting_times.append(wait_time_dt.seconds)
 
-        waiting_time_priorities = np.array(waiting_times)
-        waiting_time_priorities /= np.min(waiting_times)
+        if waiting_times:
+            waiting_time_priorities = np.array(waiting_times)
 
-        for pending_trip in pending_trips:
-            pending_trip.trip.priority = (
-                pending_trip.trip.priority * waiting_time_priorities
-            )
+            # priority cannot be zero
+            waiting_time_priorities[waiting_time_priorities <= 0] = 1
+
+            min_wait_time = np.min(waiting_time_priorities)
+            waiting_time_priorities = waiting_time_priorities / min_wait_time
+            return waiting_time_priorities
+
+        return [1] * len(pending_trips)
 
     def hungarian(self, cost_matrix, pickups, sherpas):
         return hungarian_assignment(cost_matrix, pickups, sherpas)
@@ -112,7 +116,7 @@ class OptimalDispatch:
             if trip_id:
                 trip: Trip = dbsession.get_trip(trip_id)
                 remaining_eta = np.sum(trip.etas)
-                final_dest = trip.augumented_route[-1]
+                final_dest = trip.augmented_route[-1]
                 final_pose = dbsession.get_station(final_dest).pose
                 pose = final_pose
 
@@ -138,9 +142,12 @@ class OptimalDispatch:
 
         pending_trips = dbsession.get_pending_trips_with_fleet_name(fleet_name)
 
+        waiting_time_priorities = [1] * len(pending_trips)
         if self.config["prioritise_waiting_stations"]:
-            pending_trips = self.add_waiting_time_priority(pending_trips)
+            waiting_time_priorities = self.get_waiting_time_priorities(pending_trips)
+            self.logger.info(f"waiting_time_priorities : {waiting_time_priorities}")
 
+        count = 0
         for pending_trip in pending_trips:
             pose = dbsession.get_station(pending_trip.trip.route[0]).pose
             if not pose:
@@ -148,22 +155,34 @@ class OptimalDispatch:
                     f"{pending_trip.trip.route[0]} pose is None,  cannot assemble_cost_matrix"
                 )
 
+            if pending_trip.trip.priority <= 0:
+                raise ValueError("trip priority cannot be less than or equal to zero")
+
+            updated_priority = pending_trip.trip.priority * waiting_time_priorities[count]
+
+            if updated_priority <= 0:
+                raise ValueError(
+                    "updated priority of a trip cannot be less than or equal to zero"
+                )
+
             self.pickup_q.update(
                 {
                     pending_trip.trip_id: {
                         "pose": pose,
-                        "priority": pending_trip.trip.priority,
+                        "priority": updated_priority,
                     },
                 }
             )
             self.ptrip_first_station.append(pending_trip.trip.route[0])
+            count += 1
 
-    def assemble_eta_cost_matrix(self, fleet_name):
+    def assemble_cost_matrix(self, fleet_name):
         redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
         cost_matrix = np.ones((len(self.pickup_q), len(self.sherpa_q))) * np.inf
         priority_normalised_cost_matrix = (
             np.ones((len(self.pickup_q), len(self.sherpa_q))) * np.inf
         )
+        priority_matrix = np.zeros((len(self.pickup_q), len(self.sherpa_q)))
         i = 0
         j = 0
         for pickup_keys, pickup_q_val in self.pickup_q.items():
@@ -193,6 +212,7 @@ class OptimalDispatch:
                 )
 
                 cost_matrix[i, j] = total_eta
+                priority_matrix[i, j] = pickup_priority
 
                 priority_normalised_cost_matrix[i, j] = (
                     weighted_total_eta / pickup_priority**w2
@@ -201,7 +221,7 @@ class OptimalDispatch:
                 j += 1
             i += 1
 
-        return cost_matrix, priority_normalised_cost_matrix
+        return cost_matrix, priority_matrix, priority_normalised_cost_matrix
 
     def update_pending_trips(self, dbsession, assignments):
 
@@ -215,7 +235,7 @@ class OptimalDispatch:
 
     def print_cost_matrix(self, cost_matrix, index, columns, text):
         cost_matrix_df = pd.DataFrame(cost_matrix, index=index, columns=columns)
-        self.logger.info(f"{text}:\n{cost_matrix_df}\n")
+        self.logger.info(f"{text}:\n{cost_matrix_df.to_markdown()}\n")
 
     def run(self, dbsession):
         self.logger = get_logger("optimal_dispatch")
@@ -241,22 +261,31 @@ class OptimalDispatch:
                 pickup_list = list(self.pickup_q.keys())
                 sherpa_list = list(self.sherpa_q.keys())
 
-                cost_matrix, priority_normalised_cost_matrix = self.assemble_cost_matrix(
-                    fleet.name
-                )
+                (
+                    cost_matrix,
+                    priority_matrix,
+                    priority_normalised_cost_matrix,
+                ) = self.assemble_cost_matrix(fleet.name)
 
                 text = f"ETA COST MATRIX for {fleet.name}"
                 self.print_cost_matrix(
                     cost_matrix, self.ptrip_first_station, sherpa_list, text
                 )
 
-                text = f"ETA COST MATRIX normalised with priority and power factors for {fleet.name}"
+                text = f"PRIORITY  MATRIX for {fleet.name}"
+                self.print_cost_matrix(
+                    priority_matrix, self.ptrip_first_station, sherpa_list, text
+                )
+
+                w1 = self.config["eta_power_factor"]
+                w2 = self.config["priority_power_factor"]
+                text = f"ETA COST MATRIX normalised with priority {fleet.name}, w1= {w1}, w2={w2}"
                 self.print_cost_matrix(
                     cost_matrix, self.ptrip_first_station, sherpa_list, text
                 )
 
                 assignments = self.assign(
-                    cost_matrix,
+                    priority_normalised_cost_matrix,
                     pickup_list,
                     sherpa_list,
                 )

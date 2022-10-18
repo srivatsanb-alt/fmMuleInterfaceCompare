@@ -22,10 +22,10 @@ def init_logging():
         init_logging_for_fleet(fleet, logdir)
 
     # misc loggers
-    setup_logger(logdir, "optimal_dispatch")
-    setup_logger(logdir, "status_updates")
-    setup_logger(logdir, "simulator")
-    setup_logger(logdir, "control_router_module")
+    setup_logger(logdir, "optimal_dispatch", propagate=False)
+    setup_logger(logdir, "status_updates", propagate=False)
+    # setup_logger(logdir, "simulator")
+    setup_logger(logdir, "control_router_module", propagate=False)
 
 
 def init_logging_for_fleet(fleet: Fleet, logdir):
@@ -57,12 +57,13 @@ def setup_root_logger(logdir, level=logging.INFO):
     loggers["root"] = logger
 
 
-def setup_logger(logdir, name=None, level=logging.INFO):
+def setup_logger(logdir, name=None, propagate=True, level=logging.INFO):
     global loggers
 
     logger = logging.getLogger(f"{name}")
     # propagate messages to fleet logger.
 
+    logger.propagate = propagate
     logger.setLevel(level)
     handler = logging.FileHandler(logdir + f"/{name}.log")
     handler.setFormatter(FORMATTER)

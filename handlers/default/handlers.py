@@ -307,7 +307,7 @@ class Handlers:
             sherpa_status = session.get_sherpa_status(sherpa_name)
             sherpa_status.idle = False
         else:
-            get_logger(sherpa_name).info(f"{sherpa_name} not assigned new task")
+            get_logger("status_updates").info(f"{sherpa_name} not assigned new task")
 
     # run optimal_dispatch
     def run_optimal_dispatch(self):
@@ -469,16 +469,7 @@ class Handlers:
         sherpa_availability.available = req.induct
 
         if not req.induct:
-            visa_held = session.get_visa_held(sherpa.name)
-            if visa_held:
-                zone_name, zone_type = split_zone_id(visa_held.zone_id)
-                visa_release_req = VisaReq(
-                    zone_id=zone_name,
-                    zone_name=zone_name,
-                    visa_type=zone_type,
-                )
-                response = self.handle_visa_release(visa_release_req, sherpa.name)
-
+            session.clear_visa_held_by_sherpa(req.sherpa_name)
         return response
 
     def handle_sherpa_img_update(self, req: SherpaImgUpdateCtrlReq):
@@ -561,6 +552,15 @@ class Handlers:
             booking_id = session.get_new_booking_id()
             fleet_name = session.get_fleet_name_from_route(trip_msg.route)
             if fleet_name:
+                # need priority for optimal dispatch logic, default is 1
+                if not trip_msg.priority:
+                    trip_msg.priority = 1.0
+
+                if trip_msg.priority <= 0.0:
+                    raise ValueError(
+                        f"trip priority: {trip_msg.priority} should be greater than 0"
+                    )
+
                 trip: Trip = session.create_trip(
                     trip_msg.route,
                     trip_msg.priority,
@@ -752,7 +752,7 @@ class Handlers:
 
         self.check_sherpa_status()
 
-        if msg.type not in update_msgs or msg.type == "resource_access":
+        if msg.type not in update_msgs or msg.type != "resource_access":
             self.run_optimal_dispatch()
 
         return response

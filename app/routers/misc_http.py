@@ -15,7 +15,7 @@ router = APIRouter(
 )
 
 
-@router.get("/api/v1/info/fleet_names")
+@router.get("/api/v1/site_info")
 async def fleet_names(
     user_name=Depends(get_user_from_header), session=Depends(get_db_session)
 ):

@@ -44,9 +44,7 @@ class DBSession:
         self.session.flush()
         self.session.refresh(obj)
 
-    def create_trip(
-        self, route, priority=0, metadata=None, booking_id=None, fleet_name=None
-    ):
+    def create_trip(self, route, priority, metadata=None, booking_id=None, fleet_name=None):
         trip = Trip(
             route=route,
             priority=priority,
@@ -103,6 +101,11 @@ class DBSession:
 
     def clear_all_visa_assignments(self):
         self.session.query(VisaAssignment).delete()
+
+    def clear_visa_held_by_sherpa(self, sherpa_name: str):
+        self.session.query(VisaAssignment).filter(
+            VisaAssignment.sherpa_name == sherpa_name
+        ).delete()
 
     def get_all_fleets(self) -> List[Fleet]:
         return self.session.query(Fleet).all()
