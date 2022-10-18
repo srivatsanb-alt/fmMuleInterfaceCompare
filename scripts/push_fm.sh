@@ -56,8 +56,8 @@ else
   exit
 fi
 
-
-create_certs $IP_ADDRESS $NETWORK_TYPE
+IP=`echo $IP_ADDRESS | cut -d@ -f2`
+create_certs $IP $NETWORK_TYPE
 
 
 if [[ $copy_static == 1 ]] && [[ $server == 1 ]] ; then
