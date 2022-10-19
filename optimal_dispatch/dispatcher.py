@@ -85,7 +85,7 @@ class OptimalDispatch:
                 if pending_trip.trip.start_time < datetime.datetime.now():
                     wait_time_dt = datetime.datetime.now() - pending_trip.trip.start_time
                 else:
-                    wait_time_dt = datetime.timedelta(seconds=0)
+                    continue
 
             waiting_times.append(wait_time_dt.seconds)
 
@@ -151,7 +151,7 @@ class OptimalDispatch:
         for pending_trip in pending_trips:
 
             if pending_trip.trip.scheduled:
-                if pending_trip.trip.start_time < datetime.datetime.now():
+                if pending_trip.trip.start_time > datetime.datetime.now():
                     continue
 
             pose = dbsession.get_station(pending_trip.trip.route[0]).pose
