@@ -110,7 +110,6 @@ class Handlers:
             f"{sherpa_name} assigned trip {trip.id} with route {trip.route}"
         )
         hutils.start_trip(ongoing_trip, session)
-        get_logger(sherpa_name).info(f"trip {trip.id} started")
 
     def end_trip(self, ongoing_trip: OngoingTrip, success: bool = True):
         if not ongoing_trip:
@@ -285,22 +284,23 @@ class Handlers:
 
         ongoing_trip: OngoingTrip = session.get_ongoing_trip(sherpa_name)
 
-        if (
-            self.check_continue_curr_leg(ongoing_trip)
-            and ongoing_trip.check_continue()
-            and req_ctxt.continue_curr_task
-        ):
-            get_logger(sherpa_name).info(f"{sherpa_name} continuing leg")
-            self.continue_leg(ongoing_trip)
-            done = True
-        elif (
-            self.check_start_new_leg(ongoing_trip)
-            and not ongoing_trip.finished_booked()
-            and ongoing_trip.check_continue()
-        ):
-            get_logger(sherpa_name).info(f"{sherpa_name} starting new leg")
-            self.start_leg(ongoing_trip)
-            done = True
+        if ongoing_trip:
+            if (
+                self.check_continue_curr_leg(ongoing_trip)
+                and ongoing_trip.check_continue()
+                and req_ctxt.continue_curr_task
+            ):
+                get_logger(sherpa_name).info(f"{sherpa_name} continuing leg")
+                self.continue_leg(ongoing_trip)
+                done = True
+            elif (
+                self.check_start_new_leg(ongoing_trip)
+                and not ongoing_trip.finished_booked()
+                and ongoing_trip.check_continue()
+            ):
+                get_logger(sherpa_name).info(f"{sherpa_name} starting new leg")
+                self.start_leg(ongoing_trip)
+                done = True
 
         if done:
             get_logger(sherpa_name).info(f"assigned next task to {sherpa_name}")
