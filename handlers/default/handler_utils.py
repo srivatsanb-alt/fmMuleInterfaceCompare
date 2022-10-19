@@ -2,7 +2,7 @@ from typing import Dict, List
 from core.logs import get_logger
 from models.db_session import DBSession, session
 from models.fleet_models import SherpaStatus
-from models.trip_models import OngoingTrip, Trip, TripLeg, TripStatus
+from models.trip_models import OngoingTrip, Trip, TripLeg
 from utils.util import generate_random_job_id
 import json
 import redis
@@ -21,16 +21,6 @@ def assign_sherpa(trip: Trip, sherpa: str, session: DBSession):
     sherpa_status.trip_id = trip.id
     get_logger(sherpa).info(f"assigned trip id {trip.id} to {sherpa}")
     return ongoing_trip
-
-
-def record_trip_failure(ongoing_trip: OngoingTrip, session: DBSession, reason=None):
-    ongoing_trip.trip.status = TripStatus.FAILED
-    sherpa_status = session.get_sherpa_status(ongoing_trip.sherpa_name)
-    sherpa_status.idle = True
-    sherpa_status.trip_id = None
-    get_logger(sherpa_status.sherpa_name).info(
-        f"trip {ongoing_trip.trip_id} with {ongoing_trip.sherpa_name} failed, reason: {reason}"
-    )
 
 
 def start_trip(ongoing_trip: OngoingTrip, session: DBSession):
@@ -61,11 +51,11 @@ def start_trip(ongoing_trip: OngoingTrip, session: DBSession):
         )
 
         if route_length == np.inf:
-            record_trip_failure(
-                ongoing_trip,
-                session,
-                reason=f"no route found from {start_pose} to {end_pose}",
+            reason = f"no route from {start_pose} to {end_pose}"
+            get_logger(ongoing_trip.sherpa_name).info(
+                f"trip {ongoing_trip.trip_id} with {ongoing_trip.sherpa_name} failed, reason: {reason}"
             )
+            end_trip(ongoing_trip, False, session)
             return
 
         etas_at_start.append(route_length)
@@ -83,6 +73,8 @@ def end_trip(ongoing_trip: OngoingTrip, success: bool, session: DBSession):
     session.delete_ongoing_trip(ongoing_trip)
     sherpa_status = session.get_sherpa_status(ongoing_trip.sherpa_name)
     sherpa_status.idle = True
+    sherpa_status.trip_id = None
+    sherpa_status.trip_leg_id = None
 
 
 def start_leg(ongoing_trip: OngoingTrip, session: DBSession) -> TripLeg:

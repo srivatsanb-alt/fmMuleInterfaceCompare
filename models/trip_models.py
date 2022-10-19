@@ -132,6 +132,9 @@ class Trip(Base, TimestampMixin):
         self.end_time = datetime.datetime.now()
         self.status = TripStatus.SUCCEEDED if success else TripStatus.FAILED
 
+    def cancel(self):
+        self.status = TripStatus.CANCELLED
+
     def __repr__(self):
         return str(self.__dict__)
 

@@ -278,8 +278,6 @@ class Handlers:
         if not ongoing_trip or ongoing_trip.finished():
             self.end_trip(ongoing_trip)
             sherpa = session.get_sherpa(sherpa_name)
-            sherpa.status.trip_id = None
-            sherpa.status.trip_leg_id = None
             done = self.assign_new_trip(sherpa_name)
 
         ongoing_trip: OngoingTrip = session.get_ongoing_trip(sherpa_name)
@@ -404,16 +402,15 @@ class Handlers:
     def delete_ongoing_trip(self, req: DeleteTripReq):
         trips = session.get_trip_with_booking_id(req.booking_id)
         for trip in trips:
-            trip.status = TripStatus.CANCELLED
             ongoing_trip: OngoingTrip = session.get_ongoing_trip_with_trip_id(trip.id)
+            self.end_trip(ongoing_trip, False)
+            trip.cancel()
             sherpa: Sherpa = session.get_sherpa(ongoing_trip.sherpa_name)
-            sherpa.status.trip_id = None
-            sherpa.status.trip_leg_id = None
             terminate_trip_msg = TerminateTripReq(
                 trip_id=ongoing_trip.trip_id, trip_leg_id=ongoing_trip.trip_leg_id
             )
             response = send_msg_to_sherpa(sherpa, terminate_trip_msg)
-            session.delete_ongoing_trip(ongoing_trip)
+
         return response
 
     def handle_reached(self, msg: ReachedReq):
