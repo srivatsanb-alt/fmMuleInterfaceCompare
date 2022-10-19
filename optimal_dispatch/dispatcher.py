@@ -99,7 +99,7 @@ class OptimalDispatch:
             waiting_time_priorities = waiting_time_priorities / min_wait_time
             return waiting_time_priorities
 
-        return [1] * len(pending_trips)
+        return []
 
     def hungarian(self, cost_matrix, pickups, sherpas):
         return hungarian_assignment(cost_matrix, pickups, sherpas)
@@ -149,6 +149,11 @@ class OptimalDispatch:
 
         count = 0
         for pending_trip in pending_trips:
+
+            if pending_trip.trip.scheduled:
+                if pending_trip.trip.start_time < datetime.datetime.now():
+                    continue
+
             pose = dbsession.get_station(pending_trip.trip.route[0]).pose
             if not pose:
                 raise ValueError(

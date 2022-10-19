@@ -67,6 +67,11 @@ async def diagnostics(
     if not sherpa_status:
         raise HTTPException(status_code=403, detail="Bad sherpa name")
 
+    if not sherpa_status.sherpa.ip_address:
+        raise HTTPException(
+            status_code=403, detail="Sherpa not yet connected to the fleet manager"
+        )
+
     diagnostics_req = DiagnosticsReq(sherpa_name=entity_name)
     base_url = get_sherpa_url(sherpa_status.sherpa)
     url = f"{base_url}/{diagnostics_req.endpoint}"
@@ -96,6 +101,14 @@ async def update_sherpa_img(
 
     if not entity_name:
         raise HTTPException(status_code=403, detail="No entity name")
+
+    sherpa_status = session.get_sherpa_status(entity_name)
+
+    if not sherpa_status.sherpa.ip_address:
+        raise HTTPException(
+            status_code=403, detail="Sherpa not yet connected to the fleet manager"
+        )
+
     update_image_req = SherpaImgUpdateCtrlReq(sherpa_name=entity_name)
     _ = process_req_with_response(None, update_image_req, user_name)
     session.close()
@@ -193,6 +206,11 @@ async def sherpa_emergency_stop(
     if not sherpa_status:
         raise HTTPException(status_code=403, detail="Bad sherpa name")
 
+    if not sherpa_status.sherpa.ip_address:
+        raise HTTPException(
+            status_code=403, detail="Sherpa not yet connected to the fleet manager"
+        )
+
     fleet_name = sherpa_status.sherpa.fleet.name
     fleet_status = session.get_fleet(fleet_name)
 
@@ -236,6 +254,11 @@ async def switch_mode(
     if not sherpa_status:
         raise HTTPException(status_code=403, detail="Bad sherpa name")
 
+    if not sherpa_status.sherpa.ip_address:
+        raise HTTPException(
+            status_code=403, detail="Sherpa not yet connected to the fleet manager"
+        )
+
     switch_mode_req = SwitchModeReq(mode=switch_mode_ctrl_req.mode, sherpa_name=entity_name)
     _ = process_req_with_response(None, switch_mode_req, user_name)
 
@@ -264,6 +287,11 @@ async def reset_pose(
     sherpa_status = session.get_sherpa_status(entity_name)
     if not sherpa_status:
         raise HTTPException(status_code=403, detail="Bad sherpa name")
+
+    if not sherpa_status.sherpa.ip_address:
+        raise HTTPException(
+            status_code=403, detail="Sherpa not yet connected to the fleet manager"
+        )
 
     station = session.get_station(reset_pose_ctrl_req.fleet_station)
 

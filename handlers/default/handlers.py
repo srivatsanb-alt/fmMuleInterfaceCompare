@@ -403,9 +403,9 @@ class Handlers:
         trips = session.get_trip_with_booking_id(req.booking_id)
         for trip in trips:
             ongoing_trip: OngoingTrip = session.get_ongoing_trip_with_trip_id(trip.id)
+            sherpa: Sherpa = session.get_sherpa(ongoing_trip.sherpa_name)
             self.end_trip(ongoing_trip, False)
             trip.cancel()
-            sherpa: Sherpa = session.get_sherpa(ongoing_trip.sherpa_name)
             terminate_trip_msg = TerminateTripReq(
                 trip_id=ongoing_trip.trip_id, trip_leg_id=ongoing_trip.trip_leg_id
             )
