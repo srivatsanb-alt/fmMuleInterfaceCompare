@@ -28,7 +28,7 @@ def record_trip_failure(ongoing_trip: OngoingTrip, session: DBSession, reason=No
     sherpa_status = session.get_sherpa_status(ongoing_trip.sherpa_name)
     sherpa_status.idle = True
     sherpa_status.trip_id = None
-    get_logger(sherpa_name).info(
+    get_logger(sherpa_status.sherpa_name).info(
         f"trip {ongoing_trip.trip_id} with {ongoing_trip.sherpa_name} failed, reason: {reason}"
     )
 
