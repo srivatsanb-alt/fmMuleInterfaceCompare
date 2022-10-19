@@ -56,9 +56,6 @@ def send_msg_to_sherpa(sherpa: Sherpa, msg: FMReq) -> Dict:
     base_url = get_sherpa_url(sherpa)
     url = f"{base_url}/{endpoint}"
 
-    get_logger().info(f"msg to {sherpa.name}: {body}")
-    get_logger().info(f"msg url: {url}")
-
     get_logger(sherpa.name).info(f"msg to {sherpa.name}: {body}")
     get_logger(sherpa.name).info(f"msg url: {url}")
 
