@@ -123,15 +123,15 @@ class OptimalDispatch:
                 )
 
             # sherpas with pending trips can't be assigned anotther pending trip
-            if available_sherpa.name not in dbsession.get_sherpas_with_pending_trip():
-                self.sherpa_q.update(
-                    {
-                        available_sherpa.name: {
-                            "pose": pose,
-                            "remaining_eta": remaining_eta,
-                        }
+            # if available_sherpa.name not in dbsession.get_sherpas_with_pending_trip():
+            self.sherpa_q.update(
+                {
+                    available_sherpa.name: {
+                        "pose": pose,
+                        "remaining_eta": remaining_eta,
                     }
-                )
+                }
+            )
 
     def get_valid_pending_trips(self, pending_trips):
         valid_pending_trips = []
@@ -193,8 +193,8 @@ class OptimalDispatch:
         )
         priority_matrix = np.zeros((len(self.pickup_q), len(self.sherpa_q)))
         i = 0
-        j = 0
         for pickup_keys, pickup_q_val in self.pickup_q.items():
+            j = 0
             for sherpa_q, sherpa_q_val in self.sherpa_q.items():
                 pose_1 = sherpa_q_val["pose"]
                 pose_2 = pickup_q_val["pose"]
