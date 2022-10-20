@@ -82,10 +82,7 @@ class OptimalDispatch:
             wait_time_dt = datetime.datetime.now() - pending_trip.trip.booking_time
 
             if pending_trip.trip.scheduled:
-                if pending_trip.trip.start_time < datetime.datetime.now():
-                    wait_time_dt = datetime.datetime.now() - pending_trip.trip.start_time
-                else:
-                    continue
+                wait_time_dt = datetime.datetime.now() - pending_trip.trip.start_time
 
             waiting_times.append(wait_time_dt.seconds)
 
@@ -99,7 +96,7 @@ class OptimalDispatch:
             waiting_time_priorities = waiting_time_priorities / min_wait_time
             return waiting_time_priorities
 
-        return []
+        return [1] * len(pending_trips)
 
     def hungarian(self, cost_matrix, pickups, sherpas):
         return hungarian_assignment(cost_matrix, pickups, sherpas)
@@ -136,11 +133,22 @@ class OptimalDispatch:
                     }
                 )
 
+    def get_valid_pending_trips(self, pending_trips):
+        valid_pending_trips = []
+        for pending_trip in pending_trips:
+            if pending_trip.trip.scheduled:
+                if pending_trip.trip.start_time > datetime.datetime.now():
+                    continue
+            valid_pending_trips.append(pending_trip)
+
+        return valid_pending_trips
+
     def update_pickup_q(self, dbsession, fleet_name):
         self.pickup_q = {}
         self.ptrip_first_station = []
 
         pending_trips = dbsession.get_pending_trips_with_fleet_name(fleet_name)
+        pending_trips = self.get_valid_pending_trips(pending_trips)
 
         waiting_time_priorities = [1] * len(pending_trips)
         if self.config["prioritise_waiting_stations"]:
@@ -148,12 +156,8 @@ class OptimalDispatch:
             self.logger.info(f"waiting_time_priorities : {waiting_time_priorities}")
 
         count = 0
+
         for pending_trip in pending_trips:
-
-            if pending_trip.trip.scheduled:
-                if pending_trip.trip.start_time > datetime.datetime.now():
-                    continue
-
             pose = dbsession.get_station(pending_trip.trip.route[0]).pose
             if not pose:
                 raise ValueError(
