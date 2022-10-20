@@ -111,7 +111,6 @@ async def update_sherpa_img(
 
     update_image_req = SherpaImgUpdateCtrlReq(sherpa_name=entity_name)
     _ = process_req_with_response(None, update_image_req, user_name)
-    session.close()
 
     return response
 
@@ -181,8 +180,6 @@ async def emergency_stop(
             _ = process_req_with_response(None, pause_resume_req, user_name)
         except Exception as e:
             unconnected_sherpas.append([sherpa_status.sherpa_name, e])
-
-    session.close()
 
     return response
 
@@ -262,7 +259,6 @@ async def switch_mode(
     switch_mode_req = SwitchModeReq(mode=switch_mode_ctrl_req.mode, sherpa_name=entity_name)
     _ = process_req_with_response(None, switch_mode_req, user_name)
 
-    session.close()
     return response
 
 
