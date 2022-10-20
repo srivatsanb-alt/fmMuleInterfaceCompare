@@ -3,10 +3,13 @@ FROM fleet_manager_base:dev
 ARG FM_IMAGE_INFO
 ARG MULE_IMAGE_ID
 ARG HOSTNAME
-ARG REDIS_PORT 
+ARG FM_SERVER_IP
 ARG FM_PORT
+ARG REDIS_PORT 
 
-ENV FM_INSTALL_DIR="/app" REDIS_PORT=$REDIS_PORT FM_PORT=$FM_PORT
+RUN echo "server ip $FM_SERVER_IP"
+
+ENV FM_INSTALL_DIR="/app" REDIS_PORT=$REDIS_PORT FM_PORT=$FM_PORT FM_SERVER_IP=$FM_SERVER_IP
 
 ENV FM_REDIS_URI="redis://localhost:$REDIS_PORT" \
     FM_MAP_DIR="/app/static" \
@@ -17,7 +20,7 @@ ENV FM_REDIS_URI="redis://localhost:$REDIS_PORT" \
     ATI_CONSOLIDATED_CONFIG="/app/static/mule_config/consolidated.toml" \
     FM_IMAGE_INFO=$FM_IMAGE_INFO \
     HOSTNAME=$HOSTNAME \
-    MULE_IMAGE_ID=$MULE_IMAGE_ID
+    MULE_IMAGE_ID=$MULE_IMAGE_ID  
 
 RUN ln -fs /usr/share/zoneinfo/Asia/Kolkata /etc/localtime && \
        dpkg-reconfigure -f noninteractive tzdata

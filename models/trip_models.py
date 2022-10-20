@@ -221,8 +221,6 @@ class OngoingTrip(Base, TimestampMixin):
         if self.next_idx_aug in self.trip.aug_idxs_booked:
             self.next_idx += 1
         self.next_idx_aug += 1
-        if self.finished():
-            self.trip.end(success=True)
 
     def finished(self):
         if not self.check_continue():

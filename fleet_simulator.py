@@ -124,7 +124,7 @@ class FleetSimulator:
             msg["mode"] = mode if mode else "fleet"
             msg["current_pose"] = sherpa.status.pose if not pose else pose
             msg["battery_status"] = -1 if not battery_status else battery_status
-            print(f"will send a proxy sherpa status {msg}")
+            # print(f"will send a proxy sherpa status {msg}")
 
             if sherpa.status.pose or pose:
                 msg = SherpaStatusMsg.from_dict(msg)
@@ -161,6 +161,14 @@ class FleetSimulator:
                 f"{sherpa.name}, trip_leg_id: {ongoing_trip.trip_leg_id} sleep time {sleep_time}"
             )
             for i in range(0, len(x_vals), steps):
+                sherpa: Sherpa = session.get_sherpa(sherpa_name)
+                session.session.refresh(sherpa)
+                if not sherpa.status.trip_id:
+                    print(
+                        f"ending trip leg {from_station}, {to_station}, seems like trip was deleted"
+                    )
+                    return
+
                 stoppage_type = None
                 local_obstacle = [-999.0, -999.0]
 
@@ -220,6 +228,7 @@ class FleetSimulator:
                 final_trip_status_msg.stoppages.extra_info = StoppageInfo.from_dict(
                     trip_status_msg["trip_info"]["stoppages"]["extra_info"]
                 )
+                print("sending trip status")
                 enqueue(
                     sherpa_update_q, handle, self.handler_obj, final_trip_status_msg, ttl=1
                 )
@@ -251,7 +260,6 @@ class FleetSimulator:
             while True:
                 sherpas = session.get_all_sherpas()
                 for sherpa in sherpas:
-                    dest_station = None
                     session.session.refresh(sherpa)
                     trip_leg = session.get_trip_leg(sherpa.name)
                     if trip_leg:

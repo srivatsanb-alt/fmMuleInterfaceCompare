@@ -355,6 +355,7 @@ class Handlers:
     def do_post_actions(self, ongoing_trip: OngoingTrip):
         curr_station = ongoing_trip.curr_station()
         sherpa_name = ongoing_trip.sherpa_name
+
         if not curr_station:
             get_logger(sherpa_name).info(
                 f"no post-actions performed since {sherpa_name} is not at a trip station"
@@ -472,13 +473,18 @@ class Handlers:
         sherpa_name = req.sherpa_name
         sherpa = session.get_sherpa(sherpa_name)
         fleet_config = Config.read_config()
-        ip_address = fleet_config["fleet"]["server_ip"]
+        # ip_address = os.getenv("FM_SERVER_IP")
         image_tag = os.getenv("MULE_IMAGE_ID")
-        registry_port = fleet_config["docker_registry"]["port"]
         fm_host_name = os.getenv("HOSTNAME")
-        time_zone = os.getenv("TZ")
+        time_zone = os.getenv("PGTZ")
+        ip_address = fleet_config["fleet"]["server_ip"]
+        registry_port = fleet_config["docker_registry"]["port"]
         image_update_req: SherpaImgUpdate = SherpaImgUpdate(
-            ip_address, image_tag, registry_port, fm_host_name, time_zone
+            ip_address=ip_address,
+            image_tag=image_tag,
+            registry_port=registry_port,
+            fm_host_name=fm_host_name,
+            time_zone=time_zone,
         )
         get_logger().info(
             f"Sending request {image_update_req} to update docker image on {sherpa_name}"

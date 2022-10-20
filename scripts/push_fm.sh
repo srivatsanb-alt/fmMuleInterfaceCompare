@@ -42,9 +42,13 @@ do
 done
 
 if [ $server == 1 ]; then
-	export DOCKER_HOST=ssh://$IP_ADDRESS
+  export DOCKER_HOST=ssh://$IP_ADDRESS
   FM_SERVER_HOSTNAME=`echo $IP_ADDRESS | cut -d@ -f1`
-	echo "DOCKER_HOST $DOCKER_HOST"
+  FM_SERVER_IP=`echo $IP_ADDRESS | cut -d@ -f2`
+  echo "DOCKER_HOST $DOCKER_HOST"
+else
+  FM_SERVER_HOSTNAME=$HOSTNAME	
+  FM_SERVER_IP=$(get_localhost_ip $IP_ADDRESS $NETWORK_TYPE)	
 fi
 
 printf "\n \n \n"
@@ -56,8 +60,7 @@ else
   exit
 fi
 
-IP=`echo $IP_ADDRESS | cut -d@ -f2`
-create_certs $IP $NETWORK_TYPE
+create_certs $FM_SERVER_IP
 
 
 if [[ $copy_static == 1 ]] && [[ $server == 1 ]] ; then
@@ -118,6 +121,7 @@ echo "MULE_IMAGE_ID $MULE_IMAGE_ID"
 docker image build --build-arg FM_IMAGE_INFO="${FM_IMAGE_INFO}" \
                    --build-arg MULE_IMAGE_ID="${MULE_IMAGE_ID}" \
 		   --build-arg HOSTNAME="${FM_SERVER_HOSTNAME}" \
+		   --build-arg FM_SERVER_IP="${FM_SERVER_IP}" \
 		   --build-arg FM_PORT="${FM_PORT}" \
 		   --build-arg REDIS_PORT="${REDIS_PORT}" \
 		   -t fleet_manager:dev -f Dockerfile .
