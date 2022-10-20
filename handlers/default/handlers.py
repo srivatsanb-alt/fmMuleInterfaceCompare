@@ -277,7 +277,6 @@ class Handlers:
 
         if not ongoing_trip or ongoing_trip.finished():
             self.end_trip(ongoing_trip)
-            sherpa = session.get_sherpa(sherpa_name)
             done = self.assign_new_trip(sherpa_name)
 
         ongoing_trip: OngoingTrip = session.get_ongoing_trip(sherpa_name)
@@ -441,12 +440,6 @@ class Handlers:
             status.disabled = False
             status.disabled_reason = None
 
-        if msg.mode == status.mode:
-            return
-
-        status.mode = msg.mode
-        get_logger(sherpa_name).info(f"{sherpa_name} switched to {msg.mode} mode")
-
         if msg.mode != "fleet":
             get_logger(sherpa_name).info(f"{sherpa_name} uninitialized")
             status.initialized = False
@@ -457,6 +450,12 @@ class Handlers:
             init_resp: InitResp = InitResp.from_dict(response.json())
             get_logger(sherpa_name).info(f"received from {sherpa_name}: {init_resp}")
             self.initialize_sherpa(sherpa_name)
+
+        if msg.mode == status.mode:
+            return
+
+        status.mode = msg.mode
+        get_logger(sherpa_name).info(f"{sherpa_name} switched to {msg.mode} mode")
 
     def handle_induct_sherpa(self, req: SherpaInductReq):
         response = {}
