@@ -180,6 +180,7 @@ async def emergency_stop(
             _ = process_req_with_response(None, pause_resume_req, user_name)
         except Exception as e:
             unconnected_sherpas.append([sherpa_status.sherpa_name, e])
+    session.close()
 
     return response
 
@@ -227,6 +228,8 @@ async def sherpa_emergency_stop(
     )
 
     _ = process_req_with_response(None, pause_resume_req, user_name)
+
+    session.close()
 
     return response
 
