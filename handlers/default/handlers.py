@@ -182,9 +182,9 @@ class Handlers:
         session.add_to_session(sherpa_event)
 
     def end_leg(self, ongoing_trip: OngoingTrip):
-        trip: Trip = ongoing_trip.trip
-
-        trip.etas[ongoing_trip.next_idx_aug] = 0
+        trip: Trip = session.get_trip(ongoing_trip.trip_id)
+        trip.etas[ongoing_trip.next_idx_aug] = 0.0
+        sherpa_name = trip.sherpa_name
 
         trip_analytics = session.get_trip_analytics(ongoing_trip.trip_leg_id)
 
@@ -193,11 +193,14 @@ class Handlers:
             trip_analytics.end_time = datetime.datetime.now()
             time_delta = datetime.datetime.now() - ongoing_trip.trip_leg.start_time
             trip_analytics.actual_trip_time = time_delta.seconds
+            get_logger(sherpa_name).info(
+                f"{sherpa_name} finished leg of trip {trip.id} \n trip_analytics: {get_table_as_dict(TripAnalytics, trip_analytics)}"
+            )
 
-        sherpa_name = trip.sherpa_name
         get_logger(sherpa_name).info(
             f"{sherpa_name} finished leg of trip {trip.id} from {ongoing_trip.trip_leg.from_station} to {ongoing_trip.trip_leg.to_station} "
         )
+
         hutils.end_leg(ongoing_trip)
 
         self.do_post_actions(ongoing_trip)
@@ -581,13 +584,17 @@ class Handlers:
         sherpa_name = req.source
         sherpa: Sherpa = session.get_sherpa(sherpa_name)
         ongoing_trip: OngoingTrip = session.get_ongoing_trip_with_trip_id(req.trip_id)
+        trip: Trip = session.get_trip(req.trip_id)
 
         if not ongoing_trip:
             raise ValueError(
                 f"{sherpa_name} sent a trip status but no ongoing trip data found (trip_id {req.trip_id})"
             )
+        trip.etas[ongoing_trip.next_idx_aug] = req.trip_info.eta
 
-        ongoing_trip.trip.etas[ongoing_trip.next_idx_aug] = req.trip_info.eta
+        get_logger().info(
+            f"updating trip eta {ongoing_trip.trip_id}, {ongoing_trip.trip.etas} , {ongoing_trip.next_idx_aug}, {req.trip_info.eta}"
+        )
 
         trip_analytics = session.get_trip_analytics(ongoing_trip.trip_leg_id)
 
@@ -603,6 +610,7 @@ class Handlers:
             trip_analytics.time_elapsed_other_stoppages = (
                 req.stoppages.extra_info.time_elapsed_other_stoppages
             )
+            trip_analytics.num_trip_msg = trip_analytics.num_trip_msg + 1
 
         else:
             trip_analytics: TripAnalytics = TripAnalytics(
@@ -621,6 +629,7 @@ class Handlers:
                 time_elapsed_visa_stoppages=req.stoppages.extra_info.time_elapsed_visa_stoppages,
                 time_elapsed_obstacle_stoppages=req.stoppages.extra_info.time_elapsed_obstacle_stoppages,
                 time_elapsed_other_stoppages=req.stoppages.extra_info.time_elapsed_other_stoppages,
+                num_trip_msg=1,
             )
             session.add_to_session(trip_analytics)
             get_logger().info(
@@ -730,7 +739,7 @@ class Handlers:
         if msg.type in update_msgs:
             get_logger("status_updates").info(f"{req_ctxt.sherpa_name} :  {msg}")
         else:
-            req_ctxt.logger.info(f"got message: {msg}")
+            get_logger().info(f"Got message from {req_ctxt.sherpa_name} \n {msg}")
 
         handle_ok, reason = self.should_handle_msg(msg)
         if not handle_ok:

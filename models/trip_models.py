@@ -46,6 +46,7 @@ class TripAnalytics(Base, TimestampMixin):
     time_elapsed_obstacle_stoppages = Column(Float)
     time_elapsed_visa_stoppages = Column(Float)
     time_elapsed_other_stoppages = Column(Float)
+    num_trip_msg = Column(Integer)
 
 
 class Trip(Base, TimestampMixin):

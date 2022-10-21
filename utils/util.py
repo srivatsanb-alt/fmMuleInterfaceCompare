@@ -39,22 +39,23 @@ def get_table_as_dict(model, model_obj):
     result = {}
     model_dict = model_obj.__dict__
     for col, col_type in cols:
-        if isinstance(model_dict[col], datetime.datetime):
-            result.update({col: dt_to_str(model_dict[col])})
-        elif inspect.isclass(model_dict[col]):
+        value = model_dict.get(col, None)
+        if isinstance(value, datetime.datetime):
+            result.update({col: dt_to_str(value)})
+        elif inspect.isclass(value):
             pass
         elif col_type not in all_valid_types:
             pass
         else:
-            if isinstance(model_dict[col], list):
+            if isinstance(value, list):
                 skip = False
-                for item in model_dict[col]:
+                for item in value:
                     if type(item).__name__ not in all_valid_types:
                         skip = True
                         break
                 if skip:
                     continue
-            result.update({col: model_dict[col]})
+            result.update({col: value})
     return result
 
 

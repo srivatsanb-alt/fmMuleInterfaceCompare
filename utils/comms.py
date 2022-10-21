@@ -23,24 +23,16 @@ def get_sherpa_url(
     return f"http://{sherpa.ip_address}:{port}/api/{version}/fm"
 
 
-def post_mock(url, body: Dict) -> Dict:
-    return process_response_mock(None)
-
-
-def post(url, body: Dict) -> Dict:
+def post(url, body: Dict, sherpa: Sherpa) -> Dict:
     response = requests.post(url, json=body)
-    return process_response(response, body)
-
-
-def get_mock(sherpa: Sherpa, req: FMReq) -> Dict:
-    return process_response_mock(None, json=True)
+    return process_response(response, body, sherpa)
 
 
 def get(sherpa: Sherpa, req: FMReq) -> Dict:
     base_url = get_sherpa_url(sherpa)
     url = f"{base_url}/{req.endpoint}"
     response = requests.get(url)
-    return process_response(response, req)
+    return process_response(response, req, sherpa)
 
 
 def send_msg_to_sherpa(sherpa: Sherpa, msg: FMReq) -> Dict:
@@ -56,8 +48,7 @@ def send_msg_to_sherpa(sherpa: Sherpa, msg: FMReq) -> Dict:
     base_url = get_sherpa_url(sherpa)
     url = f"{base_url}/{endpoint}"
 
-    get_logger(sherpa.name).info(f"msg to {sherpa.name}: {body}")
-    get_logger(sherpa.name).info(f"msg url: {url}")
+    get_logger(sherpa.name).info(f"msg to {sherpa.name}: {body}, {url}")
 
     sherpa_event: SherpaEvent = SherpaEvent(
         sherpa_name=sherpa.name,
@@ -66,30 +57,14 @@ def send_msg_to_sherpa(sherpa: Sherpa, msg: FMReq) -> Dict:
     )
     session.add_to_session(sherpa_event)
 
-    return post(url, body)
+    return post(url, body, sherpa)
 
 
-def process_response_mock(response: requests.Response, json=False) -> Dict:
-    from unittest.mock import Mock
-
-    from requests.models import Response
-
-    response = Mock(spec=Response)
-
-    resp_d = {
-        "display_name": "S2",
-        "hwid": "abcd",
-    }
-    if json:
-        response.json.return_value = resp_d
-    response.status_code = 200
-
-    return response
-
-
-def process_response(response: requests.Response, req=None) -> Dict:
+def process_response(response: requests.Response, req=None, sherpa=None) -> Dict:
     response.raise_for_status()
-    get_logger().info(f"received response: {response.json()}, Request: {req}")
+    get_logger().info(
+        f"\n  {sherpa.name} || {sherpa.ip_address}:{sherpa.port} \n  Request: {req} \n  Response: {response.json()}"
+    )
     return response
 
 

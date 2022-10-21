@@ -133,7 +133,8 @@ class FleetSimulator:
     def send_trip_status(self, sherpa_name):
 
         with DBSession() as session:
-            sherpa_update_q = Queues.queues_dict[f"{sherpa_name}_update_handler"]
+            sherpa_trip_q = Queues.queues_dict[f"{sherpa_name}_trip_update_handler"]
+
             ongoing_trip: OngoingTrip = session.get_ongoing_trip(sherpa_name)
             sherpa: Sherpa = session.get_sherpa(sherpa_name)
             from_station = ongoing_trip.trip_leg.from_station
@@ -185,7 +186,7 @@ class FleetSimulator:
                     )
 
                 self.send_sherpa_status(sherpa.name, mode="fleet", pose=curr_pose)
-                eta = i / len(x_vals) * eta_at_start
+                eta = ((len(x_vals) - i) / len(x_vals)) * eta_at_start
                 trip_status_msg = {
                     "type": "trip_status",
                     "timestamp": time.time(),
@@ -230,7 +231,11 @@ class FleetSimulator:
                 )
                 print("sending trip status")
                 enqueue(
-                    sherpa_update_q, handle, self.handler_obj, final_trip_status_msg, ttl=1
+                    sherpa_trip_q,
+                    handle,
+                    self.handler_obj,
+                    final_trip_status_msg,
+                    ttl=1,
                 )
                 time.sleep(sleep_time)
 

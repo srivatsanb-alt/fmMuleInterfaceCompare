@@ -25,6 +25,15 @@ class Queues:
             }
         )
 
+    for sherpa in all_sherpas.keys():
+        queues_dict.update(
+            {
+                f"{sherpa}_trip_update_handler": Queue(
+                    f"{sherpa}_trip_update_handler", connection=redis_conn
+                )
+            }
+        )
+
     queues_dict.update({"resource_handler": Queue("visa_handler", connection=redis_conn)})
     queues_dict.update({"generic_handler": Queue("generic_handler", connection=redis_conn)})
     queues = [q_name for q_name in queues_dict.keys()]
