@@ -182,8 +182,7 @@ class Handlers:
         session.add_to_session(sherpa_event)
 
     def end_leg(self, ongoing_trip: OngoingTrip):
-        trip: Trip = session.get_trip(ongoing_trip.trip_id)
-        trip.etas[ongoing_trip.next_idx_aug] = 0.0
+        trip: Trip = ongoing_trip.trip
         sherpa_name = trip.sherpa_name
 
         trip_analytics = session.get_trip_analytics(ongoing_trip.trip_leg_id)
@@ -584,17 +583,13 @@ class Handlers:
         sherpa_name = req.source
         sherpa: Sherpa = session.get_sherpa(sherpa_name)
         ongoing_trip: OngoingTrip = session.get_ongoing_trip_with_trip_id(req.trip_id)
-        trip: Trip = session.get_trip(req.trip_id)
 
         if not ongoing_trip:
             raise ValueError(
                 f"{sherpa_name} sent a trip status but no ongoing trip data found (trip_id {req.trip_id})"
             )
-        trip.etas[ongoing_trip.next_idx_aug] = req.trip_info.eta
 
-        get_logger().info(
-            f"updating trip eta {ongoing_trip.trip_id}, {ongoing_trip.trip.etas} , {ongoing_trip.next_idx_aug}, {req.trip_info.eta}"
-        )
+        ongoing_trip.trip.update_etas(float(req.trip_info.eta), ongoing_trip.next_idx_aug)
 
         trip_analytics = session.get_trip_analytics(ongoing_trip.trip_leg_id)
 

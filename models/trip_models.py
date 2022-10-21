@@ -130,11 +130,16 @@ class Trip(Base, TimestampMixin):
         self.start_time = datetime.datetime.now()
 
     def end(self, success):
+        self.etas = [0] * len(self.augmented_route)
         self.end_time = datetime.datetime.now()
         self.status = TripStatus.SUCCEEDED if success else TripStatus.FAILED
 
     def cancel(self):
+        self.end_time = datetime.datetime.now()
         self.status = TripStatus.CANCELLED
+
+    def update_etas(self, eta, idx):
+        self.etas[idx] = eta
 
     def __repr__(self):
         return str(self.__dict__)
