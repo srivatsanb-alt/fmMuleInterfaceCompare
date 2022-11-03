@@ -59,7 +59,7 @@
     3.3. *Create map folders, map_files.txt for all the fleet names present in fleet_config.toml. Make sure grid_map_attributes.json is present*
 
     ```markdown
-    mkdir sample_fleet/map/
+    mkdir static/sample_fleet/map/
     copy all the map files to sample_fleet/map/
     cd sample_fleet/map/
     ls > map_files.txt
