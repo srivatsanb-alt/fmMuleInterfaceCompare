@@ -80,7 +80,7 @@ while not DB_UP:
             )
             fu.add_sherpa_to_fleet(sherpa=sherpa_name, fleet=sherpa_detail["fleet_name"])
             fu.add_update_sherpa_availability(
-                sherpa_name, sherpa_detail["fleet_name"], True
+                sherpa_name, sherpa_detail["fleet_name"], False
             )
             print(f"added {sherpa_name}, {sherpa_detail} to db")
 

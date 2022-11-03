@@ -82,19 +82,3 @@ get_localhost_ip()
 }
 
 
-create_certs()
-{
-  CERT_FILE=static/certs/cert.crt	
-  KEY_FILE=static/certs/cert.key
-  if ([ -f "$CERT_FILE" ]) && ([ -f "$KEY_FILE" ]); then
-	  echo "FM already has cert files not creating a new one, make sure it was created with the right IP $IP"
-  else
-     IP=$1
-     echo "will create cert files for FM with ip: $IP"
-     rm -rf static/certs
-     openssl req -new -newkey rsa:2048 -x509 -sha256 -days 365 -nodes -out cert.crt -keyout cert.key -addext "subjectAltName = IP:$IP"
-     mkdir static/certs/
-     mv cert.crt static/certs/
-     mv cert.key static/certs/
-  fi
-}

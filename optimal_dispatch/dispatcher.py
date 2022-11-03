@@ -40,6 +40,15 @@ class OptimalDispatch:
 
         raise ValueError("power factors are not valid, need to be in the range of 0-1")
 
+    def all_data_available(self, dbsession, fleet_name):
+        available_sherpas = dbsession.get_all_available_sherpa_names(fleet_name)
+        for available_sherpa_name in available_sherpas:
+            available_sherpa = dbsession.get_sherpa(available_sherpa_name)
+            pose = available_sherpa.status.pose
+            if pose is None:
+                return False
+        return True
+
     def any_new_trips_booked(self, dbsession, fleet_name):
 
         updates = (
@@ -158,6 +167,7 @@ class OptimalDispatch:
         count = 0
 
         for pending_trip in pending_trips:
+            pending_trip.sherpa_name = None
             pose = dbsession.get_station(pending_trip.trip.route[0]).pose
             if not pose:
                 raise ValueError(
@@ -259,54 +269,58 @@ class OptimalDispatch:
                 or self.any_change_in_sherpa_availability(dbsession, fleet.name)
                 or self.any_trips_cancelled(dbsession, fleet.name)
             ):
+                if self.all_data_available(dbsession, fleet.name):
+                    self.logger.info(f"need to create/update assignments for {fleet.name}")
+                    self.update_sherpa_q(dbsession, fleet.name)
+                    self.logger.info(f"updated sherpa_q {self.sherpa_q}")
 
-                self.logger.info(f"need to create/update assignments for {fleet.name}")
-                self.update_sherpa_q(dbsession, fleet.name)
-                self.logger.info(f"updated sherpa_q {self.sherpa_q}")
+                    self.update_pickup_q(dbsession, fleet.name)
+                    self.logger.info(f"updated pickup_q {self.pickup_q}")
 
-                self.update_pickup_q(dbsession, fleet.name)
-                self.logger.info(f"updated pickup_q {self.pickup_q}")
+                    pickup_list = list(self.pickup_q.keys())
+                    sherpa_list = list(self.sherpa_q.keys())
 
-                pickup_list = list(self.pickup_q.keys())
-                sherpa_list = list(self.sherpa_q.keys())
+                    (
+                        cost_matrix,
+                        priority_matrix,
+                        priority_normalised_cost_matrix,
+                    ) = self.assemble_cost_matrix(fleet.name)
 
-                (
-                    cost_matrix,
-                    priority_matrix,
-                    priority_normalised_cost_matrix,
-                ) = self.assemble_cost_matrix(fleet.name)
-
-                text = f"ETA COST MATRIX for {fleet.name}"
-                self.print_cost_matrix(
-                    cost_matrix, self.ptrip_first_station, sherpa_list, text
-                )
-
-                text = f"PRIORITY  MATRIX for {fleet.name}"
-                self.print_cost_matrix(
-                    priority_matrix, self.ptrip_first_station, sherpa_list, text
-                )
-
-                w1 = self.config["eta_power_factor"]
-                w2 = self.config["priority_power_factor"]
-                text = f"ETA COST MATRIX normalised with priority {fleet.name}, w1= {w1}, w2={w2}"
-                self.print_cost_matrix(
-                    cost_matrix, self.ptrip_first_station, sherpa_list, text
-                )
-
-                assignments = self.assign(
-                    priority_normalised_cost_matrix,
-                    pickup_list,
-                    sherpa_list,
-                )
-
-                self.logger.info(f"Assignments- {fleet.name}:\n")
-                for i in range(0, len(assignments)):
-                    self.logger.info(
-                        f"{list(assignments.values())[i]} ---> {self.ptrip_first_station[i]}, trip_id: {list(assignments.keys())[i]}"
+                    text = f"ETA COST MATRIX for {fleet.name}"
+                    self.print_cost_matrix(
+                        cost_matrix, self.ptrip_first_station, sherpa_list, text
                     )
-                self.logger.info("\n")
 
-                self.update_pending_trips(dbsession, assignments)
-                self.last_assigment_time[fleet.name] = datetime.datetime.now()
+                    text = f"PRIORITY  MATRIX for {fleet.name}"
+                    self.print_cost_matrix(
+                        priority_matrix, self.ptrip_first_station, sherpa_list, text
+                    )
+
+                    w1 = self.config["eta_power_factor"]
+                    w2 = self.config["priority_power_factor"]
+                    text = f"ETA COST MATRIX normalised with priority {fleet.name}, w1= {w1}, w2={w2}"
+                    self.print_cost_matrix(
+                        cost_matrix, self.ptrip_first_station, sherpa_list, text
+                    )
+
+                    assignments = self.assign(
+                        priority_normalised_cost_matrix,
+                        pickup_list,
+                        sherpa_list,
+                    )
+
+                    self.logger.info(f"Assignments- {fleet.name}:\n")
+                    for i in range(0, len(assignments)):
+                        self.logger.info(
+                            f"{list(assignments.values())[i]} ---> {self.ptrip_first_station[i]}, trip_id: {list(assignments.keys())[i]}"
+                        )
+                    self.logger.info("\n")
+
+                    self.update_pending_trips(dbsession, assignments)
+                    self.last_assigment_time[fleet.name] = datetime.datetime.now()
+                else:
+                    self.logger.info(
+                        f"data not sufficient to create/update assignments for {fleet.name}"
+                    )
             else:
                 self.logger.info(f"need not update assignment for {fleet.name}")

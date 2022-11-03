@@ -60,9 +60,6 @@ else
   exit
 fi
 
-create_certs $FM_SERVER_IP
-
-
 if [[ $copy_static == 1 ]] && [[ $server == 1 ]] ; then
 {
   printf "\n \n \n"
@@ -107,13 +104,20 @@ echo "Building fleet manager docker image"
 if [ $build_base == 1 ] ; then
 {
   echo "Will build base image!"
-  docker image build -t fleet_manager_base:dev -f Dockerfile.base .
+  docker image build -t fleet_manager_base:dev -f docker_files/Dockerfile.base .
+  docker pull nginx:1.14.0
+  docker pull postgres:14.0
+
 }
 else
 {
   echo "Skipping base image build step!"
 }
 fi
+
+echo "will build nginx docker image"
+docker image build -t nginx:1.14.0 -f docker_files/nginx.Dockerfile .
+echo "Successfully built nginx image"
 
 
 MULE_IMAGE_ID=$(docker images --format {{.ID}} localhost:$DOCKER_REGISTRY_PORT/mule)
@@ -124,7 +128,7 @@ docker image build --build-arg FM_IMAGE_INFO="${FM_IMAGE_INFO}" \
 		   --build-arg FM_SERVER_IP="${FM_SERVER_IP}" \
 		   --build-arg FM_PORT="${FM_PORT}" \
 		   --build-arg REDIS_PORT="${REDIS_PORT}" \
-		   -t fleet_manager:dev -f Dockerfile .
+		   -t fleet_manager:dev -f docker_files/Dockerfile .
 
 FM_IMAGE_ID=$(docker images --format {{.ID}} fleet_manager:dev)
 echo "Successfully built FM Image $FM_IMAGE_ID!"
