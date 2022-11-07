@@ -18,6 +18,7 @@ if __name__ == "__main__":
             pass
 
     if sys.argv[1] == "simulate" and simulator_config["simulate"]:
+        time.sleep(25)
         fs.initialize_sherpas()
         time.sleep(1)
         fs.act_on_sherpa_events()
