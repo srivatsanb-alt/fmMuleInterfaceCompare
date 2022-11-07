@@ -15,7 +15,7 @@ NETWORK_TYPE="wlp"
 FM_SERVER_HOSTNAME="localhost"
 DOCKER_REGISTRY_PORT=443
 FM_PORT=8002
-REDIS_PORT=6380
+REDIS_PORT=6379
 
 # Get the options
 while getopts i:hcWDb flag;
@@ -47,8 +47,8 @@ if [ $server == 1 ]; then
   FM_SERVER_IP=`echo $IP_ADDRESS | cut -d@ -f2`
   echo "DOCKER_HOST $DOCKER_HOST"
 else
-  FM_SERVER_HOSTNAME=$HOSTNAME	
-  FM_SERVER_IP=$(get_localhost_ip $IP_ADDRESS $NETWORK_TYPE)	
+  FM_SERVER_HOSTNAME=$HOSTNAME
+  FM_SERVER_IP=$(get_localhost_ip $IP_ADDRESS $NETWORK_TYPE)
 fi
 
 printf "\n \n \n"
