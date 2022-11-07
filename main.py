@@ -11,6 +11,7 @@ from core.logs import init_logging
 from utils.rq import Queues
 
 from scripts.periodic_updates import send_periodic_updates
+from optimal_dispatch.router import start_router_module
 
 
 def init_fleet_manager(config):
@@ -45,5 +46,8 @@ if __name__ == "__main__":
 
     # send periodic status update
     Process(target=send_periodic_updates).start()
+
+    # start router module
+    Process(target=start_router_module).start()
 
     logging.info("Ati Fleet Manager started")
