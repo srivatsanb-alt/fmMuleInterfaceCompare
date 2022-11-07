@@ -45,7 +45,6 @@ services:
     container_name: reverseproxy
     ports:
       - "443:443"
-      - "80:80"
     restart: always
     links:
       - fleet_manager
