@@ -121,23 +121,22 @@ async def reader(websocket, sherpa):
 
         sherpa_update_q = Queues.queues_dict[f"{sherpa}_update_handler"]
         sherpa_trip_q = Queues.queues_dict[f"{sherpa}_trip_update_handler"]
-        logging.info(f"shq : {sherpa_update_q}")
 
         if msg_type == MessageType.TRIP_STATUS:
+            logging.info(f"got a trip status {msg}")
             msg["source"] = sherpa
             trip_status_msg = TripStatusMsg.from_dict(msg)
             trip_status_msg.trip_info = TripInfo.from_dict(msg["trip_info"])
-            trip_status_msg.stoppages = Stoppages.from_dict(msg["trip_info"]["stoppages"])
+            trip_status_msg.stoppages = Stoppages.from_dict(msg["stoppages"])
             trip_status_msg.stoppages.extra_info = StoppageInfo.from_dict(
-                msg["trip_info"]["stoppages"]["extra_info"]
+                msg["stoppages"]["extra_info"]
             )
-
-            enqueue(sherpa_update_q, handle, handler_obj, trip_status_msg, ttl=1)
+            enqueue(sherpa_trip_q, handle, handler_obj, trip_status_msg, ttl=1)
 
         elif msg_type == MessageType.SHERPA_STATUS:
             msg["source"] = sherpa
             status_msg = SherpaStatusMsg.from_dict(msg)
-            enqueue(sherpa_trip_q, handle, handler_obj, status_msg, ttl=1)
+            enqueue(sherpa_update_q, handle, handler_obj, status_msg, ttl=1)
         else:
             logging.getLogger().error(f"Unsupported message type {msg_type}")
 

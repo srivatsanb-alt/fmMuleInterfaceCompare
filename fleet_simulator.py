@@ -203,17 +203,17 @@ class FleetSimulator:
                         "cte": 0.0,
                         "te": 0.0,
                         "progress": i / len(x_vals),
-                        "stoppages": {
-                            "type": stoppage_type,
-                            "extra_info": {
-                                "local_obstacle": local_obstacle,
-                                "velocity_speed_factor": 1.0,
-                                "obstacle_speed_factor": 1.0,
-                                "time_elapsed_stoppages": 0,
-                                "time_elapsed_obstacle_stoppages": 0,
-                                "time_elapsed_visa_stoppages": 0,
-                                "time_elapsed_other_stoppages": 0,
-                            },
+                    },
+                    "stoppages": {
+                        "type": stoppage_type,
+                        "extra_info": {
+                            "local_obstacle": local_obstacle,
+                            "velocity_speed_factor": 1.0,
+                            "obstacle_speed_factor": 1.0,
+                            "time_elapsed_stoppages": 0,
+                            "time_elapsed_obstacle_stoppages": 0,
+                            "time_elapsed_visa_stoppages": 0,
+                            "time_elapsed_other_stoppages": 0,
                         },
                     },
                 }

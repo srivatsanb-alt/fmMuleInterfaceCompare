@@ -142,7 +142,7 @@ async def sherpa_summary(
     return response
 
 
-@router.get("/api/v1/trips/get_route_wps")
+@router.post("/api/v1/trips/get_route_wps")
 async def get_route_wps(
     route_preview_req: RoutePreview,
     user_name=Depends(get_user_from_header),

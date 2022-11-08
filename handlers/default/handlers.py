@@ -585,9 +585,19 @@ class Handlers:
         ongoing_trip: OngoingTrip = session.get_ongoing_trip_with_trip_id(req.trip_id)
 
         if not ongoing_trip:
-            raise ValueError(
-                f"{sherpa_name} sent a trip status but no ongoing trip data found (trip_id {req.trip_id})"
+            get_logger().info(
+                f"LATENCY: trip status sent by {sherpa_name} is invalid, no ongoing trip data found trip_id: {req.trip_id}"
             )
+            # raise ValueError(
+            #     f"{sherpa_name} sent a trip status but no ongoing trip data found (trip_id {req.trip_id})"
+            # )
+            return
+
+        if req.trip_leg_id != ongoing_trip.trip_leg_id:
+            get_logger().info(
+                f"trip status sent by {sherpa_name} is invalid, sherpa_trip_leg_id: {req.trip_leg_id}, FM_trip_leg_id: {ongoing_trip.trip_leg_id}"
+            )
+            return
 
         ongoing_trip.trip.update_etas(float(req.trip_info.eta), ongoing_trip.next_idx_aug)
 
