@@ -224,10 +224,10 @@ class FleetSimulator:
                     trip_status_msg["trip_info"]
                 )
                 final_trip_status_msg.stoppages = Stoppages.from_dict(
-                    trip_status_msg["trip_info"]["stoppages"]
+                    trip_status_msg["stoppages"]
                 )
                 final_trip_status_msg.stoppages.extra_info = StoppageInfo.from_dict(
-                    trip_status_msg["trip_info"]["stoppages"]["extra_info"]
+                    trip_status_msg["stoppages"]["extra_info"]
                 )
                 print("sending trip status")
                 enqueue(
@@ -261,6 +261,7 @@ class FleetSimulator:
 
     def act_on_sherpa_events(self):
         simulated_trip_legs = []
+        print("Will act on sherpa events")
         with DBSession() as session:
             while True:
                 sherpas = session.get_all_sherpas()

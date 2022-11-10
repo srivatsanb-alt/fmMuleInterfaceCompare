@@ -12,6 +12,7 @@ from utils.rq import Queues
 
 from scripts.periodic_updates import send_periodic_updates
 from optimal_dispatch.router import start_router_module
+from scripts.periodic_assigner import assign_next_task
 
 
 def init_fleet_manager(config):
@@ -21,7 +22,7 @@ def init_fleet_manager(config):
         pass
 
 
-def start(queue):
+def start_worker(queue):
     with Connection():
         Worker.log_result_lifespan = False
         worker = Worker(
@@ -41,7 +42,7 @@ if __name__ == "__main__":
     logging.info(f"all queues {Queues.get_queues()}")
 
     for q in Queues.get_queues():
-        process = Process(target=start, args=(q,))
+        process = Process(target=start_worker, args=(q,))
         process.start()
 
     # send periodic status update
@@ -49,5 +50,8 @@ if __name__ == "__main__":
 
     # start router module
     Process(target=start_router_module).start()
+
+    # start periodic assigner scripts
+    Process(target=assign_next_task).start()
 
     logging.info("Ati Fleet Manager started")

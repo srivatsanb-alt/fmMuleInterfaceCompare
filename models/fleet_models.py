@@ -76,17 +76,16 @@ class SherpaStatus(TimestampMixin, Base):
 
     initialized = Column(Boolean)
     disabled = Column(Boolean)
-    disabled_reason = Column(String)
     inducted = Column(Boolean)
     idle = Column(Boolean)
     error = Column(String)
     pose = Column(ARRAY(Float))
     battery_status = Column(Float)
     mode = Column(String)
-
     trip_id = Column(Integer)
     trip_leg_id = Column(Integer)
-
+    assign_next_task = Column(Boolean)
+    disabled_reason = Column(String)
     other_info = Column(JSONB)
 
 

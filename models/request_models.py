@@ -180,6 +180,13 @@ class TripStatusMsg(SherpaMsg, JsonMixin):
 
 
 #################################################
+# internal messsages FM to FM
+class AssignNextTask(BaseModel):
+    sherpa_name: str
+    type: str = MessageType.ASSIGN_NEXT_TASK
+
+
+#################################################
 # Messages from frontend
 
 

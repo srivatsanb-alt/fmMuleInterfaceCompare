@@ -39,6 +39,7 @@ from models.request_models import (
     DeleteOptimalDispatchAssignments,
     SherpaImgUpdate,
     SherpaImgUpdateCtrlReq,
+    AssignNextTask,
 )
 from models.trip_models import (
     OngoingTrip,
@@ -272,42 +273,6 @@ class Handlers:
 
         return True
 
-    # assigns next destination to sherpa
-    def assign_next_task(self, sherpa_name):
-        done = False
-        ongoing_trip: OngoingTrip = session.get_ongoing_trip(sherpa_name)
-
-        if not ongoing_trip or ongoing_trip.finished():
-            self.end_trip(ongoing_trip)
-            done = self.assign_new_trip(sherpa_name)
-
-        ongoing_trip: OngoingTrip = session.get_ongoing_trip(sherpa_name)
-
-        if ongoing_trip:
-            if (
-                self.check_continue_curr_leg(ongoing_trip)
-                and ongoing_trip.check_continue()
-                and req_ctxt.continue_curr_task
-            ):
-                get_logger(sherpa_name).info(f"{sherpa_name} continuing leg")
-                self.continue_leg(ongoing_trip)
-                done = True
-            elif (
-                self.check_start_new_leg(ongoing_trip)
-                and not ongoing_trip.finished_booked()
-                and ongoing_trip.check_continue()
-            ):
-                get_logger(sherpa_name).info(f"{sherpa_name} starting new leg")
-                self.start_leg(ongoing_trip)
-                done = True
-
-        if done:
-            get_logger(sherpa_name).info(f"assigned next task to {sherpa_name}")
-            sherpa_status = session.get_sherpa_status(sherpa_name)
-            sherpa_status.idle = False
-        else:
-            get_logger("status_updates").info(f"{sherpa_name} not assigned new task")
-
     # run optimal_dispatch
     def run_optimal_dispatch(self):
         # load the pickled optimal dispatch object
@@ -425,6 +390,77 @@ class Handlers:
                 )
 
         return {}
+
+    def should_assign_next_task(self, sherpa_name):
+        done = False
+        next_task = "no new task to assign"
+        ongoing_trip: OngoingTrip = session.get_ongoing_trip(sherpa_name)
+
+        if not ongoing_trip or ongoing_trip.finished():
+            done = True
+            next_task = "assign_new_trip"
+
+        if ongoing_trip:
+            if (
+                self.check_continue_curr_leg(ongoing_trip)
+                and ongoing_trip.check_continue()
+                and req_ctxt.continue_curr_task
+            ):
+                done = True
+                next_task = "continue_leg"
+            elif (
+                self.check_start_new_leg(ongoing_trip)
+                and not ongoing_trip.finished_booked()
+                and ongoing_trip.check_continue()
+            ):
+                done = True
+                next_task = "start_leg"
+
+        if next_task == "no new task to assign":
+            get_logger("status_updates").info(f"{sherpa_name} not assigned new task")
+
+        sherpa_status = session.get_sherpa_status(sherpa_name)
+
+        if done:
+            sherpa_status.assign_next_task = True
+        else:
+            sherpa_status.assign_next_task = False
+
+        return done, next_task
+
+    # assigns next destination to sherpa
+    def handle_assign_next_task(self, req: AssignNextTask):
+        done, next_task = self.should_assign_next_task(req.sherpa_name)
+        valid_tasks = ["assign_new_trip", "continue_leg", "start_leg"]
+
+        if done and next_task in valid_tasks:
+            ongoing_trip: OngoingTrip = session.get_ongoing_trip(req.sherpa_name)
+
+            if next_task == "assign_new_trip":
+                get_logger("status_updates").info(
+                    f"will try to assign a new trip for {req.sherpa_name}, ongoing completed"
+                )
+                self.end_trip(ongoing_trip)
+                self.assign_new_trip(req.sherpa_name)
+                return
+
+            if not ongoing_trip:
+                raise ValueError(
+                    f"No ongoing trip, {req.sherpa_name}, next_task: {done, next_task}"
+                )
+
+            if next_task == "continue_leg":
+                get_logger(req.sherpa_name).info(f"{req.sherpa_name} continuing leg")
+                self.continue_leg(ongoing_trip)
+
+            elif next_task == "start_leg":
+                get_logger(req.sherpa_name).info(f"{req.sherpa_name} starting new leg")
+                self.start_leg(ongoing_trip)
+
+        # else:
+        #     raise ValueError(
+        #         f"assign next task request was raised internally for {req.sherpa_name}, next_task: {done, next_task}"
+        #     )
 
     def handle_reached(self, msg: ReachedReq):
         sherpa_name = msg.source
@@ -775,11 +811,11 @@ class Handlers:
         response = msg_handler(msg)
 
         if req_ctxt.sherpa_name:
-            self.assign_next_task(req_ctxt.sherpa_name)
+            done, next_task = self.should_assign_next_task(req_ctxt.sherpa_name)
 
         self.check_sherpa_status()
 
-        if msg.type not in update_msgs or msg.type != "resource_access":
+        if msg.type not in update_msgs and msg.type != "resource_access":
             self.run_optimal_dispatch()
 
         return response
