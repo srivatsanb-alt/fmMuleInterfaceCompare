@@ -140,6 +140,7 @@ class Trip(Base, TimestampMixin):
 
     def update_etas(self, eta, idx):
         self.etas[idx] = eta
+        flag_modified(self, "etas")
 
     def __repr__(self):
         return str(self.__dict__)

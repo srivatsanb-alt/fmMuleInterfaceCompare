@@ -3,6 +3,7 @@ import os
 from logging import WARNING
 from multiprocessing import Process
 
+import json
 import redis
 from rq import Connection, Worker
 
@@ -36,6 +37,8 @@ def start_worker(queue):
 
 
 if __name__ == "__main__":
+    redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
+
     config = Config.read_config()
     init_fleet_manager(config)
 
@@ -54,4 +57,5 @@ if __name__ == "__main__":
     # start periodic assigner scripts
     Process(target=assign_next_task).start()
 
+    redis_conn.set("is_fleet_manager_up", json.dumps(True))
     logging.info("Ati Fleet Manager started")
