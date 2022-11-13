@@ -4,10 +4,10 @@ from models.fleet_models import SherpaStatus
 from app.routers.dependencies import process_req
 import time
 import logging
-from core.constants import MessageType
 
 
 def assign_next_task():
+
     while True:
         try:
             logging.getLogger().info("starting periodic assigner script")
@@ -19,7 +19,7 @@ def assign_next_task():
                         .all()
                     )
                     for sherpa_status in all_sherpa_status:
-                        logging.getLogger().info(
+                        logging.getLogger("status_updates").info(
                             f"will send assign task request for {sherpa_status.sherpa_name}"
                         )
                         assign_next_task_req = AssignNextTask(

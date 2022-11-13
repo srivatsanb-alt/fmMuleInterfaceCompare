@@ -168,6 +168,9 @@ class OptimalDispatch:
 
         for pending_trip in pending_trips:
             pending_trip.sherpa_name = None
+            pending_trip.trip.sherpa_name = None
+            pending_trip.trip.status = TripStatus
+
             pose = dbsession.get_station(pending_trip.trip.route[0]).pose
             if not pose:
                 raise ValueError(
@@ -300,15 +303,19 @@ class OptimalDispatch:
                     w2 = self.config["priority_power_factor"]
                     text = f"ETA COST MATRIX normalised with priority {fleet.name}, w1= {w1}, w2={w2}"
                     self.print_cost_matrix(
-                        cost_matrix, self.ptrip_first_station, sherpa_list, text
+                        priority_normalised_cost_matrix,
+                        self.ptrip_first_station,
+                        sherpa_list,
+                        text,
                     )
 
-                    assignments = self.assign(
+                    assignments, raw_assignments = self.assign(
                         priority_normalised_cost_matrix,
                         pickup_list,
                         sherpa_list,
                     )
 
+                    self.logger.info(f"Raw assignments: {raw_assignments}\n")
                     self.logger.info(f"Assignments- {fleet.name}:\n")
                     for i in range(0, len(assignments)):
                         self.logger.info(

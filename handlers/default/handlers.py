@@ -398,8 +398,10 @@ class Handlers:
         sherpa_status: SherpaStatus = session.get_sherpa_status(sherpa_name)
 
         if not ongoing_trip or ongoing_trip.finished():
-            done = True
-            next_task = "assign_new_trip"
+            pending_trip: PendingTrip = session.get_pending_trip(sherpa_name)
+            if pending_trip:
+                done = True
+                next_task = "assign_new_trip"
 
         if ongoing_trip:
             if (

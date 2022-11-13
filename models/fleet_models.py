@@ -85,6 +85,7 @@ class SherpaStatus(TimestampMixin, Base):
     trip_id = Column(Integer)
     trip_leg_id = Column(Integer)
     assign_next_task = Column(Boolean)
+    continue_curr_task = Column(Boolean)
     disabled_reason = Column(String)
     other_info = Column(JSONB)
 
