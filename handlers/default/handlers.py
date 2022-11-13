@@ -70,8 +70,6 @@ import handlers.default.handler_utils as hutils
 class RequestContext:
     msg_type: str
     sherpa_name: str
-    assign_next_task: bool
-    continue_curr_task: bool
     logger = None
 
 
@@ -84,9 +82,8 @@ def init_request_context(req):
         req_ctxt.sherpa_name = req.source
     else:
         req_ctxt.sherpa_name = None
-    req_ctxt.assign_next_task = True
+
     # do not send a move to current destination, except if asked
-    req_ctxt.continue_curr_task = False
     if isinstance(req, SherpaReq) or isinstance(req, SherpaMsg):
         req_ctxt.logger = get_logger(req.source)
     else:
@@ -123,6 +120,8 @@ class Handlers:
         trip: Trip = ongoing_trip.trip
         sherpa_name: str = trip.sherpa_name
         sherpa: Sherpa = trip.sherpa
+        sherpa.status.continue_curr_task = False
+
         next_station: Station = session.get_station(ongoing_trip.next_station())
 
         get_logger(sherpa_name).info(
@@ -257,6 +256,7 @@ class Handlers:
         )
 
         sherpa_status: SherpaStatus = session.get_sherpa_status(sherpa_name)
+        sherpa_status.continue_curr_task = False
 
         if not hutils.is_sherpa_available_for_new_trip(sherpa_status):
             get_logger(sherpa_name).info(
@@ -307,8 +307,8 @@ class Handlers:
         sherpa_status: SherpaStatus = session.get_sherpa_status(sherpa_name)
         sherpa_status.initialized = True
         sherpa_status.idle = True
+        sherpa_status.continue_curr_task = True
         get_logger(sherpa_name).info(f"{sherpa_name} initialized")
-        req_ctxt.continue_curr_task = True
 
     def do_pre_actions(self, ongoing_trip: OngoingTrip):
         curr_station = ongoing_trip.curr_station()
@@ -395,6 +395,7 @@ class Handlers:
         done = False
         next_task = "no new task to assign"
         ongoing_trip: OngoingTrip = session.get_ongoing_trip(sherpa_name)
+        sherpa_status: SherpaStatus = session.get_sherpa_status(sherpa_name)
 
         if not ongoing_trip or ongoing_trip.finished():
             done = True
@@ -404,10 +405,11 @@ class Handlers:
             if (
                 self.check_continue_curr_leg(ongoing_trip)
                 and ongoing_trip.check_continue()
-                and req_ctxt.continue_curr_task
+                and sherpa_status.continue_curr_task
             ):
                 done = True
                 next_task = "continue_leg"
+
             elif (
                 self.check_start_new_leg(ongoing_trip)
                 and not ongoing_trip.finished_booked()
@@ -415,6 +417,8 @@ class Handlers:
             ):
                 done = True
                 next_task = "start_leg"
+        else:
+            sherpa_status.continue_curr_task = False
 
         if next_task == "no new task to assign":
             get_logger("status_updates").info(f"{sherpa_name} not assigned new task")
@@ -467,8 +471,16 @@ class Handlers:
         sherpa: SherpaStatus = session.get_sherpa_status(sherpa_name)
 
         ongoing_trip: OngoingTrip = session.get_ongoing_trip(sherpa_name)
-        dest_pose = session.get_station(ongoing_trip.next_station()).pose
 
+        if (
+            ongoing_trip.trip_leg_id != msg.trip_leg_id
+            or ongoing_trip.trip_id != msg.trip_id
+        ):
+            raise ValueError(
+                f"Trip information mismatch(trip_id, trip_leg_id), ongoing_trip_id: {ongoing_trip.trip_id}, ongoing_trip_leg_id: {ongoing_trip.trip_leg_id}"
+            )
+
+        dest_pose = session.get_station(ongoing_trip.next_station()).pose
         if not are_poses_close(dest_pose, msg.destination_pose):
             raise ValueError(
                 f"{sherpa_name} sent to {dest_pose} but reached {msg.destination_pose}"
@@ -493,6 +505,8 @@ class Handlers:
         if msg.mode != "fleet":
             get_logger(sherpa_name).info(f"{sherpa_name} uninitialized")
             status.initialized = False
+            status.continue_curr_task = False
+
         elif not status.initialized:
             # sherpa switched to fleet mode
             init_req: InitReq = InitReq()
