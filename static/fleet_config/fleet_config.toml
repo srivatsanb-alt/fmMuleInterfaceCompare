@@ -15,7 +15,7 @@ book_trips=false
 method="hungarian"
 prioritise_waiting_stations=true
 eta_power_factor=1.0
-priority_power_factor=0.5
+priority_power_factor=0.1
 
 [fleet]
 mode="default"
