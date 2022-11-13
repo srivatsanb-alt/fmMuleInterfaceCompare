@@ -62,9 +62,14 @@ def send_msg_to_sherpa(sherpa: Sherpa, msg: FMReq) -> Dict:
 
 def process_response(response: requests.Response, req=None, sherpa=None) -> Dict:
     response.raise_for_status()
-    get_logger().info(
-        f"\n\n  {sherpa.name} || {sherpa.ip_address}:{sherpa.port} \n  Request: {req} \n  Response: {response.json()}\n"
-    )
+    if sherpa:
+        get_logger().info(
+            f"\n\n Request-response log \n sherpa_name: {sherpa.name} || sherpa_ip: {sherpa.ip_address}:{sherpa.port} || endpoint: /{req.endpoint} \n Request_to_{sherpa.name}: {req} \n Response_from_{sherpa.name}: {response.json()}\n"
+        )
+
+    else:
+        get_logger().info(f"\n\n Request: {req} \n Response: {response.json()}\n")
+
     return response
 
 
