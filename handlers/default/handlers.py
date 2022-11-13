@@ -170,7 +170,7 @@ class Handlers:
                 stale_sherpa_status.disabled = True
                 stale_sherpa_status.disabled_reason = DisabledReason.STALE_HEARTBEAT
             get_logger().info(
-                f"stale heartbeat from sherpa {stale_sherpa_status.sherpa_name}"
+                f"stale heartbeat from sherpa {stale_sherpa_status.sherpa_name}, last_update_at: {stale_sherpa_status.updated_at}, mule_heartbeat_interval: {MULE_HEARTBEAT_INTERVAL}"
             )
 
     def add_sherpa_event(self, sherpa_name, msg_type, context):
@@ -721,6 +721,7 @@ class Handlers:
     ):
         ptrips = session.get_pending_trips_with_fleet_name(req.fleet_name)
         for ptrip in ptrips:
+            ptrip.trip.sherpa_name = None
             ptrip.trip.status = TripStatus.BOOKED
             ptrip.sherpa_name = None
 

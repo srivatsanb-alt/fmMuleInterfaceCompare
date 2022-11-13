@@ -169,7 +169,7 @@ class OptimalDispatch:
         for pending_trip in pending_trips:
             pending_trip.sherpa_name = None
             pending_trip.trip.sherpa_name = None
-            pending_trip.trip.status = TripStatus
+            pending_trip.trip.status = TripStatus.BOOKED
 
             pose = dbsession.get_station(pending_trip.trip.route[0]).pose
             if not pose:
@@ -310,9 +310,7 @@ class OptimalDispatch:
                     )
 
                     assignments, raw_assignments = self.assign(
-                        priority_normalised_cost_matrix,
-                        pickup_list,
-                        sherpa_list,
+                        priority_normalised_cost_matrix, pickup_list, sherpa_list
                     )
 
                     self.logger.info(f"Raw assignments: {raw_assignments}\n")
