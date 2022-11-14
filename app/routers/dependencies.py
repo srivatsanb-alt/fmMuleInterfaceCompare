@@ -104,7 +104,12 @@ def process_req_with_response(queue, req, user: str):
                 rq_fails = b"[]"
 
             rq_fails = json.loads(rq_fails)
-            rq_fails.append([user, req.__dict__])
+
+            try:
+                rq_fails.append([user, req.__dict__])
+            except:
+                pass
+
             redis_conn.set("rq_fails", json.dumps(rq_fails))
 
             raise HTTPException(status_code=500, detail="rq job failed")

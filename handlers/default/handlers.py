@@ -437,6 +437,9 @@ class Handlers:
     # assigns next destination to sherpa
     def handle_assign_next_task(self, req: AssignNextTask):
         done, next_task = self.should_assign_next_task(req.sherpa_name)
+        sherpa_status: SherpaStatus = session.get_sherpa_status(req.sherpa_name)
+        sherpa_status.assign_next_task = False
+
         valid_tasks = ["assign_new_trip", "continue_leg", "start_leg"]
 
         if done and next_task in valid_tasks:
@@ -797,7 +800,7 @@ class Handlers:
 
     def handle(self, msg):
         init_request_context(msg)
-        update_msgs = ["trip_status", "sherpa_status"]
+        update_msgs = ["trip_status", "sherpa_status", "assign_next_task"]
 
         if req_ctxt.sherpa_name and msg.type not in update_msgs:
             self.add_sherpa_event(req_ctxt.sherpa_name, msg.type, "sent by sherpa")

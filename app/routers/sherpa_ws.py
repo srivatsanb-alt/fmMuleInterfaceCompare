@@ -123,7 +123,7 @@ async def reader(websocket, sherpa):
         sherpa_trip_q = Queues.queues_dict[f"{sherpa}_trip_update_handler"]
 
         if msg_type == MessageType.TRIP_STATUS:
-            logging.info(f"got a trip status {msg}")
+            # logging.info(f"got a trip status {msg}")
             msg["source"] = sherpa
             trip_status_msg = TripStatusMsg.from_dict(msg)
             trip_status_msg.trip_info = TripInfo.from_dict(msg["trip_info"])
