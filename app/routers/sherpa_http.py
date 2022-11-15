@@ -45,7 +45,7 @@ async def peripherals(
 
 @router.post("/access/resource/", response_model=ResourceResp)
 async def resource_access(resource_req: ResourceReq, sherpa: str = Depends(get_sherpa)):
-    queue = Queues.queues_dict["resource_handlers"]
+    queue = Queues.queues_dict["resource_handler"]
     response = process_req_with_response(queue, resource_req, sherpa)
     return ResourceResp.from_json(response)
 
