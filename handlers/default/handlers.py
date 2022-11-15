@@ -78,8 +78,10 @@ req_ctxt = RequestContext()
 
 def init_request_context(req):
     req_ctxt.msg_type = req.type
+    req_ctxt.source = None
     if isinstance(req, SherpaReq) or isinstance(req, SherpaMsg):
         req_ctxt.sherpa_name = req.source
+        req_ctxt.source = req.source
     else:
         req_ctxt.sherpa_name = None
 
@@ -169,7 +171,7 @@ class Handlers:
             if not stale_sherpa_status.disabled:
                 stale_sherpa_status.disabled = True
                 stale_sherpa_status.disabled_reason = DisabledReason.STALE_HEARTBEAT
-            get_logger().info(
+            get_logger("status_updates").info(
                 f"stale heartbeat from sherpa {stale_sherpa_status.sherpa_name}, last_update_at: {stale_sherpa_status.updated_at}, mule_heartbeat_interval: {MULE_HEARTBEAT_INTERVAL}"
             )
 
@@ -319,6 +321,17 @@ class Handlers:
             )
             return
 
+    def add_dispatch_start_to_ongoing_trip(self, ongoing_trip):
+        ongoing_trip.add_state(TripState.WAITING_STATION_DISPATCH_START)
+        sound_msg = PeripheralsReq(
+            speaker=SpeakerReq(sound=SoundEnum.wait_for_dispatch, play=True),
+            indicator=IndicatorReq(pattern=PatternEnum.wait_for_dispatch, activate=True),
+        )
+        response = send_msg_to_sherpa(ongoing_trip.trip.sherpa, sound_msg)
+        get_logger(ongoing_trip.sherpa_name).info(
+            f"sent speaker and indicator request to {ongoing_trip.sherpa_name}: response status {response.status_code}"
+        )
+
     def do_post_actions(self, ongoing_trip: OngoingTrip):
         curr_station = ongoing_trip.curr_station()
         sherpa_name = ongoing_trip.sherpa_name
@@ -352,18 +365,29 @@ class Handlers:
 
         if StationProperties.DISPATCH_NOT_REQD not in station.properties:
             get_logger(sherpa_name).info(f"{sherpa_name} reached a dispatch station")
-            ongoing_trip.add_state(TripState.WAITING_STATION_DISPATCH_START)
-            # ask sherpa to play a sound
-            sound_msg = PeripheralsReq(
-                speaker=SpeakerReq(sound=SoundEnum.wait_for_dispatch, play=True),
-                indicator=IndicatorReq(
-                    pattern=PatternEnum.wait_for_dispatch, activate=True
-                ),
-            )
-            response = send_msg_to_sherpa(ongoing_trip.trip.sherpa, sound_msg)
+            self.add_dispatch_start_to_ongoing_trip(ongoing_trip)
 
-            get_logger(sherpa_name).info(
-                f"sent speaker and indicator request to {sherpa_name}: response status {response.status_code}"
+    def resolve_auto_hitch_error(self, req: SherpaPeripheralsReq):
+        sherpa_name = req.source
+        ongoing_trip: OngoingTrip = session.get_ongoing_trip(sherpa_name)
+
+        if not ongoing_trip:
+            raise ValueError(
+                f"Cannot resolve {req.error_device} error for {sherpa_name}, reason: no ongoing_trip"
+            )
+
+        peripheral_info = req.auto_hitch
+        if not peripheral_info.hitch:
+            if TripState.WAITING_STATION_AUTO_UNHITCH_START in ongoing_trip.states:
+                ongoing_trip.add_state(TripState.WAITING_STATION_AUTO_UNHITCH_END)
+                get_logger().info(
+                    f"Resolving {req.error_device} error for {sherpa_name}, will wait for dispatch button to start"
+                )
+                self.add_dispatch_start_to_ongoing_trip(ongoing_trip)
+
+        if peripheral_info.hitch:
+            get_logger().info(
+                f"Cannot resolve {req.error_device} error for {sherpa_name},, {req}"
             )
 
     def delete_ongoing_trip(self, req: DeleteTripReq):
@@ -398,6 +422,7 @@ class Handlers:
         sherpa_status: SherpaStatus = session.get_sherpa_status(sherpa_name)
 
         if not ongoing_trip or ongoing_trip.finished():
+            self.end_trip(ongoing_trip)
             pending_trip: PendingTrip = session.get_pending_trip(sherpa_name)
             if pending_trip:
                 done = True
@@ -444,12 +469,10 @@ class Handlers:
 
         if done and next_task in valid_tasks:
             ongoing_trip: OngoingTrip = session.get_ongoing_trip(req.sherpa_name)
-
             if next_task == "assign_new_trip":
                 get_logger("status_updates").info(
                     f"will try to assign a new trip for {req.sherpa_name}, ongoing completed"
                 )
-                self.end_trip(ongoing_trip)
                 self.assign_new_trip(req.sherpa_name)
                 return
 
@@ -560,6 +583,23 @@ class Handlers:
         send_msg_to_sherpa(sherpa, image_update_req)
         return
 
+    def handle_peripheral_error(self, req: SherpaPeripheralsReq):
+
+        valid_error_devices = ["auto_hitch"]
+
+        if req.error_device in valid_error_devices:
+            # get error resolver
+            peripheral_error_resolver = getattr(
+                self, f"resolve_{req.error_device}_error", None
+            )
+            peripheral_info = getattr(req, req.error_device, None)
+            if peripheral_info is not None and peripheral_error_resolver is not None:
+                peripheral_error_resolver(req)
+            else:
+                raise ValueError(f"Unable to resolve {req.error_device} peripheral error")
+        else:
+            raise ValueError(f" {req.error_device} peripheral error can't be handled")
+
     def handle_peripherals(self, req: SherpaPeripheralsReq):
         sherpa_name = req.source
         ongoing_trip: OngoingTrip = session.get_ongoing_trip(sherpa_name)
@@ -568,6 +608,11 @@ class Handlers:
                 f"ignoring peripherals request from {sherpa_name} without ongoing trip"
             )
             return
+
+        if req.error_device:
+            self.handle_peripheral_error(req)
+            return
+
         if req.dispatch_button:
             self.handle_dispatch_button(req.dispatch_button, ongoing_trip)
         elif req.auto_hitch:
@@ -639,6 +684,9 @@ class Handlers:
                     fleet_name,
                 )
                 session.create_pending_trip(trip.id)
+                get_logger().info(
+                    f"Created a pending trip : trip_id: {trip.id}, booking_id: {trip.booking_id}"
+                )
         return response
 
     def handle_delete_ongoing_trip(self, req: DeleteTripReq):
@@ -652,7 +700,7 @@ class Handlers:
 
         if not ongoing_trip:
             get_logger().info(
-                f"Trip status sent by {sherpa_name} is invalid, no ongoing trip data found trip_id: {req.trip_id}"
+                f"Trip status sent by {sherpa_name} is invalid/delayed, no ongoing trip data found trip_id: {req.trip_id}"
             )
             return
 
@@ -808,7 +856,9 @@ class Handlers:
         if msg.type in update_msgs:
             get_logger("status_updates").info(f"{req_ctxt.sherpa_name} :  {msg}")
         else:
-            get_logger().info(f"Got message from {req_ctxt.sherpa_name} \n {msg}")
+            get_logger().info(
+                f"Got message of type {msg.type} from {req_ctxt.source} \n Message: {msg} \n"
+            )
 
         handle_ok, reason = self.should_handle_msg(msg)
         if not handle_ok:
@@ -832,6 +882,7 @@ class Handlers:
 
         self.check_sherpa_status()
 
+        # status updates, visa request - wouldn't modify optimal dispatch assignment
         if msg.type not in update_msgs and msg.type != "resource_access":
             self.run_optimal_dispatch()
 

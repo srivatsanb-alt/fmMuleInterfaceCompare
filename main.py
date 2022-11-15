@@ -51,9 +51,6 @@ if __name__ == "__main__":
     # send periodic status update
     Process(target=send_periodic_updates).start()
 
-    # start router module
-    Process(target=start_router_module).start()
-
     # start periodic assigner scripts
     Process(target=assign_next_task).start()
 

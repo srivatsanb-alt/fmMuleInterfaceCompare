@@ -105,7 +105,7 @@ class SherpaPeripheralsReq(SherpaReq):
     dispatch_button: DispatchButtonReq = None
     speaker: SpeakerReq = None
     indicator: IndicatorReq = None
-    error_info: str = None
+    error_device: str = None
     type = MessageType.PERIPHERALS
 
 

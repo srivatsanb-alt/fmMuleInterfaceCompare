@@ -46,7 +46,7 @@ def start_trip(ongoing_trip: OngoingTrip, session: DBSession):
         route_length = json.loads(redis_conn.get(f"result_{job_id}"))
         redis_conn.delete(f"result_{job_id}")
 
-        get_logger("control_router_module").info(
+        get_logger(ongoing_trip.sherpa_name).info(
             f"route_length {control_router_job}- {route_length}"
         )
 

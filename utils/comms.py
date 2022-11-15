@@ -25,14 +25,14 @@ def get_sherpa_url(
 
 def post(url, body: Dict, sherpa: Sherpa) -> Dict:
     response = requests.post(url, json=body)
-    return process_response(response, body, sherpa)
+    return process_response(response, url, body, sherpa)
 
 
 def get(sherpa: Sherpa, req: FMReq) -> Dict:
     base_url = get_sherpa_url(sherpa)
     url = f"{base_url}/{req.endpoint}"
     response = requests.get(url)
-    return process_response(response, req, sherpa)
+    return process_response(response, url, req, sherpa)
 
 
 def send_msg_to_sherpa(sherpa: Sherpa, msg: FMReq) -> Dict:
@@ -48,6 +48,7 @@ def send_msg_to_sherpa(sherpa: Sherpa, msg: FMReq) -> Dict:
     base_url = get_sherpa_url(sherpa)
     url = f"{base_url}/{endpoint}"
 
+    get_logger().info(f"Sending msg to {sherpa.name}")
     get_logger(sherpa.name).info(f"msg to {sherpa.name}: {body}, {url}")
 
     sherpa_event: SherpaEvent = SherpaEvent(
@@ -60,15 +61,20 @@ def send_msg_to_sherpa(sherpa: Sherpa, msg: FMReq) -> Dict:
     return post(url, body, sherpa)
 
 
-def process_response(response: requests.Response, req=None, sherpa=None) -> Dict:
+def process_response(
+    response: requests.Response,
+    url,
+    req=None,
+    sherpa=None,
+) -> Dict:
     response.raise_for_status()
     if sherpa:
         get_logger().info(
-            f"\n\n Request-response log \n sherpa_name: {sherpa.name} || sherpa_ip: {sherpa.ip_address}:{sherpa.port} || \n Request_to_{sherpa.name}: {req} \n Response_from_{sherpa.name}: {response.json()}\n"
+            f"sherpa_name: {sherpa.name} || sherpa_ip: {sherpa.ip_address}:{sherpa.port} \n url: {url} \n Request_to_{sherpa.name}: {req} \n Response_from_{sherpa.name}: {response.json()}\n"
         )
 
     else:
-        get_logger().info(f"\n\n Request: {req} \n Response: {response.json()}\n")
+        get_logger().info(f"url: {url} \n Request: {req} \n Response: {response.json()}\n")
 
     return response
 

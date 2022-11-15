@@ -24,6 +24,7 @@ def init_logging():
     # misc loggers
     setup_logger(logdir, "optimal_dispatch", propagate=False)
     setup_logger(logdir, "status_updates", propagate=False)
+
     # setup_logger(logdir, "simulator")
     setup_logger(logdir, "control_router_module", propagate=False)
 
@@ -95,3 +96,15 @@ def get_logger(name=None):
     if name not in loggers:
         return loggers["root"] if "root" in loggers else logging.getLogger()
     return loggers[name]
+
+
+def get_seperate_logger(name):
+
+    logger = logging.getLogger(name)
+    logger.propagate = False
+    log_file = os.path.join(os.getenv("FM_LOG_DIR"), f"{name}.log")
+    f_handler = logging.FileHandler(log_file)
+    logger.setLevel(logging.INFO)
+    logger.addHandler(f_handler)
+
+    return logger

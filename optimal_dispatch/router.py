@@ -3,20 +3,23 @@ import json
 import time
 import numpy as np
 import sys
+import logging
+
+logging.getLogger().level == logging.ERROR
 
 sys.path.append("/app")
+from core.logs import get_seperate_logger
 from utils.util import are_poses_close
 from utils.router_utils import AllRouterModules
 import os
-from core.logs import get_logger
+import logging
 
 
 def start_router_module():
     all_router_modules = AllRouterModules()
     redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
-    logger = get_logger("control_router_module")
 
-    logger.info("starting control router module")
+    logger = get_seperate_logger("control_module_router")
 
     while True:
         for key in redis_conn.scan_iter("control_router_job_*"):
