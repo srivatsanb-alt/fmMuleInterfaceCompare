@@ -50,8 +50,8 @@ def accept_message(sherpa: str, msg):
     prev_ts = float(prev_ts) if prev_ts else 0.0
 
     # check if timestamp is valid
-    # if math.isclose(ts, prev_ts, rel_tol=1e-10) or ts < prev_ts:
-    #    return False, MSG_TS_INVALID
+    if math.isclose(ts, prev_ts, rel_tol=1e-10) or ts < prev_ts:
+        return False, MSG_TS_INVALID
 
     redis.hset(ts_key, msg_type, ts)
     return True, None

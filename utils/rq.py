@@ -34,7 +34,9 @@ class Queues:
             }
         )
 
-    queues_dict.update({"resource_handler": Queue("visa_handler", connection=redis_conn)})
+    queues_dict.update(
+        {"resource_handler": Queue("resource_handler", connection=redis_conn)}
+    )
     queues_dict.update({"generic_handler": Queue("generic_handler", connection=redis_conn)})
     queues = [q_name for q_name in queues_dict.keys()]
 
