@@ -52,7 +52,7 @@ async def delete_pending_trip(booking_id: int, user_name=Depends(get_user_from_h
         raise HTTPException(status_code=403, detail="no trip with the given booking_id")
 
     for trip in trips:
-        if trip.status in TripStatus.SUCCEEDED:
+        if trip.status in [TripStatus.SUCCEEDED, TripStatus.CANCELLED, TripStatus.FAILED]:
             continue
         if trip.status not in [TripStatus.BOOKED, TripStatus.ASSIGNED]:
             raise HTTPException(
