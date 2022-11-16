@@ -112,7 +112,7 @@ def process_req_with_response(queue, req, user: str):
 
             redis_conn.set("rq_fails", json.dumps(rq_fails))
 
-            raise HTTPException(status_code=500, detail="rq job failed")
+            raise HTTPException(status_code=500, detail="Unable to process the request")
 
         time.sleep(0.01)
 
