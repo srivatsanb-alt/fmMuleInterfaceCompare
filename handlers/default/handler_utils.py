@@ -2,8 +2,8 @@ from typing import Dict, List
 from core.logs import get_logger
 from models.db_session import DBSession, session
 from models.fleet_models import SherpaStatus
-from models.trip_models import OngoingTrip, Trip, TripLeg
-from utils.util import generate_random_job_id
+from models.trip_models import OngoingTrip, Trip, TripLeg, PendingTrip
+from utils.util import generate_random_job_id, check_if_timestamp_has_passed
 import json
 import redis
 import os
@@ -147,3 +147,12 @@ def find_best_sherpa():
             return name
 
     return None
+
+
+def any_new_scheduled_trips_to_consider(session: DBSession):
+    pending_trips = session.session.query(PendingTrip).all()
+    for pending_trip in pending_trips:
+        if pending_trip.trip.scheduled:
+            if check_if_timestamp_has_passed(pending_trip.trip.start_time):
+                return True
+    return False

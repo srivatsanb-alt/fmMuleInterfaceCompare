@@ -910,7 +910,10 @@ class Handlers:
             "assign_next_task",
         ]
 
-        if msg.type in optimal_dispatch_influencers:
+        if (
+            msg.type in optimal_dispatch_influencers
+            or hutils.any_new_scheduled_trips_to_consider
+        ):
             self.run_optimal_dispatch()
 
         return response
