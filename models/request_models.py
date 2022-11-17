@@ -220,9 +220,14 @@ class BookingReq(TripsReq):
     type: str = MessageType.BOOKING
 
 
-class DeleteTripReq(BaseModel):
+class DeleteOngoingTripReq(BaseModel):
     booking_id: int
     type: str = MessageType.DELETE_ONGOING_TRIP
+
+
+class DeleteBookedTripReq(BaseModel):
+    booking_id: int
+    type: str = MessageType.DELETE_BOOKED_TRIP
 
 
 class SherpaInductReq(BaseModel):

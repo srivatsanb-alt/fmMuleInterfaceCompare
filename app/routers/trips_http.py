@@ -7,7 +7,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from models.request_models import (
     BookingReq,
     TripStatusReq,
-    DeleteTripReq,
+    DeleteOngoingTripReq,
+    DeleteBookedTripReq,
     DeleteOptimalDispatchAssignments,
 )
 from models.trip_models import TripStatus, PendingTrip, Trip, TripAnalytics
@@ -35,8 +36,15 @@ async def delete_ongoing_trip(booking_id: int, user_name=Depends(get_user_from_h
     if not user_name:
         raise HTTPException(status_code=403, detail="Unknown requester")
 
-    delete_trip_req: DeleteTripReq = DeleteTripReq(booking_id=booking_id)
-    response = process_req_with_response(None, delete_trip_req, user_name)
+    trips = session.get_trip_with_booking_id(booking_id)
+
+    if not trips:
+        raise HTTPException(status_code=403, detail="no trip with the given booking_id")
+
+    delete_ongoing_trip_req: DeleteOngoingTripReq = DeleteOngoingTripReq(
+        booking_id=booking_id
+    )
+    response = process_req_with_response(None, delete_ongoing_trip_req, user_name)
     return response
 
 
@@ -48,21 +56,12 @@ async def delete_pending_trip(booking_id: int, user_name=Depends(get_user_from_h
         raise HTTPException(status_code=403, detail="Unknown requester")
 
     trips = session.get_trip_with_booking_id(booking_id)
+
     if not trips:
         raise HTTPException(status_code=403, detail="no trip with the given booking_id")
 
-    for trip in trips:
-        if trip.status in [TripStatus.SUCCEEDED, TripStatus.CANCELLED, TripStatus.FAILED]:
-            continue
-        if trip.status not in [TripStatus.BOOKED, TripStatus.ASSIGNED]:
-            raise HTTPException(
-                status_code=403, detail="expected trip status to be booked or assigned"
-            )
-        pending_trip: PendingTrip = session.get_pending_trip_with_trip_id(trip.id)
-        session.delete_pending_trip(pending_trip)
-        trip.status = TripStatus.CANCELLED
-
-    session.close()
+    delete_booked_trip_req: DeleteBookedTripReq = DeleteBookedTripReq(booking_id=booking_id)
+    response = process_req_with_response(None, delete_booked_trip_req, user_name)
 
     return response
 

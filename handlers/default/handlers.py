@@ -33,7 +33,8 @@ from models.request_models import (
     VerifyFleetFilesResp,
     VisaReq,
     VisaType,
-    DeleteTripReq,
+    DeleteOngoingTripReq,
+    DeleteBookedTripReq,
     TerminateTripReq,
     DeleteVisaAssignments,
     DeleteOptimalDispatchAssignments,
@@ -390,7 +391,7 @@ class Handlers:
                 f"Cannot resolve {req.error_device} error for {sherpa_name},, {req}"
             )
 
-    def delete_ongoing_trip(self, req: DeleteTripReq):
+    def delete_ongoing_trip(self, req: DeleteOngoingTripReq):
         trips = session.get_trip_with_booking_id(req.booking_id)
         for trip in trips:
             ongoing_trip: OngoingTrip = session.get_ongoing_trip_with_trip_id(trip.id)
@@ -421,15 +422,18 @@ class Handlers:
         ongoing_trip: OngoingTrip = session.get_ongoing_trip(sherpa_name)
         sherpa_status: SherpaStatus = session.get_sherpa_status(sherpa_name)
 
-        if not ongoing_trip or ongoing_trip.finished():
-            self.end_trip(ongoing_trip)
+        if not ongoing_trip:
             pending_trip: PendingTrip = session.get_pending_trip(sherpa_name)
             if pending_trip:
                 done = True
                 next_task = "assign_new_trip"
 
         if ongoing_trip:
-            if (
+            if ongoing_trip.finished():
+                done = True
+                next_task = "end_ongoing_trip"
+
+            elif (
                 self.check_continue_curr_leg(ongoing_trip)
                 and ongoing_trip.check_continue()
                 and sherpa_status.continue_curr_task
@@ -465,7 +469,7 @@ class Handlers:
         sherpa_status: SherpaStatus = session.get_sherpa_status(req.sherpa_name)
         sherpa_status.assign_next_task = False
 
-        valid_tasks = ["assign_new_trip", "continue_leg", "start_leg"]
+        valid_tasks = ["assign_new_trip", "end_ongoing_trip", "continue_leg", "start_leg"]
 
         if done and next_task in valid_tasks:
             ongoing_trip: OngoingTrip = session.get_ongoing_trip(req.sherpa_name)
@@ -481,6 +485,9 @@ class Handlers:
                     f"No ongoing trip, {req.sherpa_name}, next_task: {done, next_task}"
                 )
 
+            if next_task == "end_ongoing_trip":
+                self.end_trip(ongoing_trip)
+
             if next_task == "continue_leg":
                 get_logger(req.sherpa_name).info(f"{req.sherpa_name} continuing leg")
                 self.continue_leg(ongoing_trip)
@@ -488,11 +495,6 @@ class Handlers:
             elif next_task == "start_leg":
                 get_logger(req.sherpa_name).info(f"{req.sherpa_name} starting new leg")
                 self.start_leg(ongoing_trip)
-
-        # else:
-        #     raise ValueError(
-        #         f"assign next task request was raised internally for {req.sherpa_name}, next_task: {done, next_task}"
-        #     )
 
     def handle_reached(self, msg: ReachedReq):
         sherpa_name = msg.source
@@ -552,6 +554,12 @@ class Handlers:
     def handle_induct_sherpa(self, req: SherpaInductReq):
         response = {}
         sherpa: Sherpa = session.get_sherpa(req.sherpa_name)
+
+        if sherpa.status.pose is None:
+            raise ValueError(
+                f"{req.sherpa_name} cannot be inducted for doing trips, sherpa pose information is not available with fleet manager"
+            )
+
         sherpa.status.inducted = req.induct
         sherpa_availability = session.get_sherpa_availability(req.sherpa_name)
         sherpa_availability.available = req.induct
@@ -689,9 +697,21 @@ class Handlers:
                 )
         return response
 
-    def handle_delete_ongoing_trip(self, req: DeleteTripReq):
+    def handle_delete_ongoing_trip(self, req: DeleteOngoingTripReq):
         response = self.delete_ongoing_trip(req)
         return response
+
+    def handle_delete_booked_trip(self, req: DeleteBookedTripReq):
+        trips = session.get_trip_with_booking_id(req.booking_id)
+        valid_trip_status = [TripStatus.BOOKED, TripStatus.ASSIGNED]
+        for trip in trips:
+            if trip.status in valid_trip_status:
+                pending_trip: PendingTrip = session.get_pending_trip_with_trip_id(trip.id)
+                session.delete_pending_trip(pending_trip)
+                trip.status = TripStatus.CANCELLED
+                get_logger().info(
+                    f"Successfully deleted booked trip trip_id: {trip.id}, booking_id: {trip.booking_id}"
+                )
 
     def handle_trip_status(self, req: TripStatusMsg):
         sherpa_name = req.source
@@ -848,8 +868,7 @@ class Handlers:
 
     def handle(self, msg):
         init_request_context(msg)
-        update_msgs = ["trip_status", "sherpa_status", "assign_next_task"]
-
+        update_msgs = ["trip_status", "sherpa_status"]
         if req_ctxt.sherpa_name and msg.type not in update_msgs:
             self.add_sherpa_event(req_ctxt.sherpa_name, msg.type, "sent by sherpa")
 
@@ -883,7 +902,15 @@ class Handlers:
         self.check_sherpa_status()
 
         # status updates, visa request - wouldn't modify optimal dispatch assignment
-        if msg.type not in update_msgs and msg.type != "resource_access":
+        optimal_dispatch_influencers = [
+            "book",
+            "delete_ongoing_trip",
+            "delete_booked_trip",
+            "induct_sherpa",
+            "assign_next_task",
+        ]
+
+        if msg.type in optimal_dispatch_influencers:
             self.run_optimal_dispatch()
 
         return response

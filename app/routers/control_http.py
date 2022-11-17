@@ -317,6 +317,17 @@ async def induct_sherpa(
     sherpa_induct_req.sherpa_name = sherpa_name
     sherpa = session.get_sherpa(sherpa_name)
 
+    if not sherpa.ip_address:
+        raise HTTPException(
+            status_code=403, detail=f"Sherpa not yet connected to the fleet manager"
+        )
+
+    if sherpa.status.pose is None:
+        raise HTTPException(
+            status_code=403,
+            detail=f"Cannot induct a {sherpa_name} into fleet, sherpa pose is None",
+        )
+
     if sherpa.status.trip_id and not sherpa_induct_req.induct:
         trip = session.get_trip(sherpa.status.trip_id)
         raise HTTPException(
