@@ -1,5 +1,6 @@
 from utils.comms import send_status_update
 import utils.fleet_utils as fu
+import utils.trip_utils as tu
 import logging
 from models.db_session import DBSession
 from models.fleet_models import SherpaStatus, Sherpa, Fleet, Station, StationStatus
@@ -55,6 +56,18 @@ def get_fleet_status_msg(session, fleet):
     return msg
 
 
+def get_ongoing_trips_status(session, fleet):
+    msg = {}
+    _ = session.get_all_ongoing_trips()
+    all_ongoing_trips_fleet = session.get_all_ongoing_trips_fleet(fleet.name)
+
+    for ongoing_trip in all_ongoing_trips_fleet:
+        msg.update({ongoing_trip.trip_id: tu.get_trip_status(ongoing_trip.trip)})
+
+    msg["type"] = "ongoing_trips_status"
+    return msg
+
+
 def send_periodic_updates():
     while True:
         try:
@@ -65,8 +78,12 @@ def send_periodic_updates():
                     for fleet in all_fleets:
                         session.session.refresh(fleet)
                         # logging.getLogger().info(f"fleet msg 1 {fleet.__dict__}")
-                        msg = get_fleet_status_msg(session, fleet)
-                        send_status_update(msg)
+                        fleet_status_msg = get_fleet_status_msg(session, fleet)
+                        send_status_update(fleet_status_msg)
+
+                        ongoing_trip_msg = get_ongoing_trips_status(session, fleet)
+                        send_status_update(ongoing_trip_msg)
+
                     time.sleep(2)
         except Exception as e:
             logging.getLogger().info(f"exception in periodic updates script {e}")

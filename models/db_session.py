@@ -272,6 +272,17 @@ class DBSession:
             .one_or_none()
         )
 
+    def get_all_ongoing_trips(self):
+        return self.session.query(OngoingTrip).all()
+
+    def get_all_ongoing_trips_fleet(self, fleet_name: str):
+        return (
+            self.session.query(OngoingTrip)
+            .join(OngoingTrip.trip)
+            .filter(Trip.fleet_name == fleet_name)
+            .all()
+        )
+
     def get_ongoing_trip_with_trip_id(self, trip_id):
         return (
             self.session.query(OngoingTrip)
