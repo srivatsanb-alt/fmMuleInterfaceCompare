@@ -6,7 +6,7 @@ services:
     restart: always
     build: .
     ports:
-      - '8002:8002'
+      - '8001:8001'
     environment:
       PGHOST: db
       PGPORT: 5432
@@ -20,7 +20,7 @@ services:
     volumes:
       - .:/app/static
     expose:
-      - 8002
+      - 8001
     links:
       - db
     depends_on:
