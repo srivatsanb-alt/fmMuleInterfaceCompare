@@ -9,6 +9,7 @@ from models.request_models import (
     BookingReq,
     DispatchButtonReq,
     HitchReq,
+    ConveyorReq,
     InitReq,
     InitResp,
     MapFileInfo,
@@ -176,6 +177,30 @@ class Handlers:
                 f"stale heartbeat from sherpa {stale_sherpa_status.sherpa_name}, last_update_at: {stale_sherpa_status.updated_at}, mule_heartbeat_interval: {MULE_HEARTBEAT_INTERVAL}"
             )
 
+    def check_if_booking_is_valid(self, trip_msg):
+        get_logger().info("Checking integrity of trip msg")
+        reason = None
+        if trip_msg.priority <= 0.0:
+            reason = f"trip priority cannot be less than/ equal to zero, priority: {trip_msg.priority}"
+
+        for station_name in trip_msg.route:
+            station = session.get_station(station_name)
+            if any(
+                prop in station.properties
+                for prop in [StationProperties.CONVEYOR, StationProperties.CHUTE]
+            ):
+                trip_metadata = trip_msg.metadata
+                num_units = hutils.get_conveyor_ops_info(trip_metadata)
+                if not num_units:
+                    reason = "No information on conveyor_ops, num units, need num units for booking trip to conveyor/chute"
+
+                if num_units:
+                    if num_units > 2 or num_units < 0:
+                        reason = f"num units for conveyor transaction cannot be greater than 2 or less than 0, num_units_input: {num_units}"
+
+        if reason:
+            raise ValueError(f"{reason}")
+
     def add_sherpa_event(self, sherpa_name, msg_type, context):
         sherpa_event: SherpaEvent = SherpaEvent(
             sherpa_name=sherpa_name,
@@ -210,9 +235,6 @@ class Handlers:
     def should_recreate_scheduled_trip(self, pending_trip: PendingTrip):
 
         if not check_if_timestamp_has_passed(pending_trip.trip.end_time):
-            get_logger().info(
-                f"recreating trip {pending_trip.trip.id}, scheduled trip needs to be continued"
-            )
             new_metadata = pending_trip.trip.trip_metadata
             time_period = new_metadata["scheduled_time_period"]
 
@@ -220,6 +242,17 @@ class Handlers:
             new_start_time = datetime.datetime.now() + datetime.timedelta(
                 seconds=int(time_period)
             )
+
+            if new_start_time > pending_trip.trip.end_time:
+                get_logger().info(
+                    f"will not recreate trip {pending_trip.trip.id}, new trip start_time past scheduled_end_time"
+                )
+                return
+
+            get_logger().info(
+                f"recreating trip {pending_trip.trip.id}, scheduled trip needs to be continued"
+            )
+
             new_start_time = dt_to_str(new_start_time)
             new_metadata["scheduled_start_time"] = new_start_time
 
@@ -333,6 +366,45 @@ class Handlers:
             f"sent speaker and indicator request to {ongoing_trip.sherpa_name}: response status {response.status_code}"
         )
 
+    def add_auto_hitch_start_to_ongoing_trip(self, ongoing_trip):
+        hitch_msg = PeripheralsReq(auto_hitch=HitchReq(hitch=True))
+        response = send_msg_to_sherpa(ongoing_trip.trip.sherpa, hitch_msg)
+        get_logger(ongoing_trip.sherpa_name).info(
+            f"received from {ongoing_trip.sherpa_name}: status {response.status_code}"
+        )
+        ongoing_trip.add_state(TripState.WAITING_STATION_AUTO_HITCH_START)
+
+    def add_auto_unhitch_start_to_ongoing_trip(self, ongoing_trip):
+        unhitch_msg = PeripheralsReq(auto_hitch=HitchReq(hitch=False))
+        response = send_msg_to_sherpa(ongoing_trip.trip.sherpa, unhitch_msg)
+        get_logger(ongoing_trip.sherpa_name).info(
+            f"received from {ongoing_trip.sherpa_name}: status {response.status_code}"
+        )
+        ongoing_trip.add_state(TripState.WAITING_STATION_AUTO_UNHITCH_START)
+
+    def add_conveyor_start_to_ongoing_trip(self, ongoing_trip, station):
+        trip_metadata = ongoing_trip.trip.trip_metadata
+        num_units = hutils.get_conveyor_ops_info(trip_metadata)
+        direction = "send" if StationProperties.CHUTE in station.properties else "receive"
+        station_type = (
+            "chute" if StationProperties.CHUTE in station.properties else "conveyor"
+        )
+        if not num_units:
+            raise ValueError(
+                f"{ongoing_trip.sherpa_name} has reached a {station_type} station, no tote info available in trip metadata"
+            )
+        conveyor_send_msg = PeripheralsReq(
+            conveyor=ConveyorReq(direction=direction, num_units=num_units)
+        )
+        response = send_msg_to_sherpa(ongoing_trip.trip.sherpa, conveyor_send_msg)
+        get_logger(ongoing_trip.sherpa_name).info(
+            f"received from {ongoing_trip.sherpa_name}: status {response.status_code}"
+        )
+        conveyor_start_state = getattr(
+            TripState, f"WAITING_STATION_CONV_{direction.upper()}_START"
+        )
+        ongoing_trip.add_state(conveyor_start_state)
+
     def do_post_actions(self, ongoing_trip: OngoingTrip):
         curr_station = ongoing_trip.curr_station()
         sherpa_name = ongoing_trip.sherpa_name
@@ -346,27 +418,24 @@ class Handlers:
 
         # if at hitch station send hitch command.
         if StationProperties.AUTO_HITCH in station.properties:
-            get_logger(sherpa_name).info(f"{sherpa_name} reached an auto-hitch station")
-            hitch_msg = PeripheralsReq(auto_hitch=HitchReq(hitch=True))
-            response = send_msg_to_sherpa(ongoing_trip.trip.sherpa, hitch_msg)
-            get_logger(sherpa_name).info(
-                f"received from {sherpa_name}: status {response.status_code}"
-            )
-            ongoing_trip.add_state(TripState.WAITING_STATION_AUTO_HITCH_START)
+            get_logger(sherpa_name).info(f"{sherpa_name} reached a auto hitch station")
+            self.add_auto_hitch_start_to_ongoing_trip(ongoing_trip)
 
         # if at unhitch station send unhitch command.
         if StationProperties.AUTO_UNHITCH in station.properties:
             get_logger(sherpa_name).info(f"{sherpa_name} reached an auto-unhitch station")
-            unhitch_msg = PeripheralsReq(auto_hitch=HitchReq(hitch=False))
-            response = send_msg_to_sherpa(ongoing_trip.trip.sherpa, unhitch_msg)
-            get_logger(sherpa_name).info(
-                f"received from {sherpa_name}: status {response.status_code}"
-            )
-            ongoing_trip.add_state(TripState.WAITING_STATION_AUTO_UNHITCH_START)
+            self.add_auto_unhitch_start_to_ongoing_trip(ongoing_trip)
 
         if StationProperties.DISPATCH_NOT_REQD not in station.properties:
             get_logger(sherpa_name).info(f"{sherpa_name} reached a dispatch station")
             self.add_dispatch_start_to_ongoing_trip(ongoing_trip)
+
+        if any(
+            prop in station.properties
+            for prop in [StationProperties.CONVEYOR, StationProperties.CHUTE]
+        ):
+            get_logger(sherpa_name).info(f"{sherpa_name} reached a dispatch station")
+            self.add_conveyor_start_to_ongoing_trip(ongoing_trip, station)
 
     def resolve_auto_hitch_error(self, req: SherpaPeripheralsReq):
         sherpa_name = req.source
@@ -382,14 +451,37 @@ class Handlers:
             if TripState.WAITING_STATION_AUTO_UNHITCH_START in ongoing_trip.states:
                 ongoing_trip.add_state(TripState.WAITING_STATION_AUTO_UNHITCH_END)
                 get_logger().info(
-                    f"Resolving {req.error_device} error for {sherpa_name}, will wait for dispatch button to start"
+                    f"Resolving {req.error_device} error for {sherpa_name}, will wait for dispatch button to continue"
                 )
                 self.add_dispatch_start_to_ongoing_trip(ongoing_trip)
 
         if peripheral_info.hitch:
             get_logger().info(
-                f"Cannot resolve {req.error_device} error for {sherpa_name},, {req}"
+                f"Cannot resolve {req.error_device} error for {sherpa_name}, {req}"
             )
+
+    def resolve_conveyor_error(self, req: SherpaPeripheralsReq):
+        sherpa_name = req.source
+        ongoing_trip: OngoingTrip = session.get_ongoing_trip(sherpa_name)
+
+        if not ongoing_trip:
+            raise ValueError(
+                f"Cannot resolve {req.error_device} error for {sherpa_name}, reason: no ongoing_trip"
+            )
+
+        direction = req.conveyor.direction
+        conveyor_start_state = getattr(
+            TripState, f"WAITING_STATION_CONV_{direction.upper()}_START"
+        )
+        conveyor_end_state = getattr(
+            TripState, f"WAITING_STATION_CONV_{direction.upper()}_END"
+        )
+        if conveyor_start_state in ongoing_trip.states:
+            ongoing_trip.add_state(conveyor_end_state)
+            get_logger().info(
+                f"Resolving {req.error_device} error for {sherpa_name}, will wait for dispatch button to continue"
+            )
+            self.add_dispatch_start_to_ongoing_trip(ongoing_trip)
 
     def delete_ongoing_trip(self, req: DeleteOngoingTripReq):
         trips = session.get_trip_with_booking_id(req.booking_id)
@@ -507,7 +599,7 @@ class Handlers:
             or ongoing_trip.trip_id != msg.trip_id
         ):
             raise ValueError(
-                f"Trip information mismatch(trip_id, trip_leg_id), ongoing_trip_id: {ongoing_trip.trip_id}, ongoing_trip_leg_id: {ongoing_trip.trip_leg_id}"
+                f"Trip information mismatch(trip_id: {msg.trip_id}, trip_leg_id: {msg.trip_leg_id}), ongoing_trip_id: {ongoing_trip.trip_id}, ongoing_trip_leg_id: {ongoing_trip.trip_leg_id}"
             )
 
         dest_pose = session.get_station(ongoing_trip.next_station()).pose
@@ -516,7 +608,6 @@ class Handlers:
                 f"{sherpa_name} sent to {dest_pose} but reached {msg.destination_pose}"
             )
         sherpa.pose = msg.destination_pose
-
         self.end_leg(ongoing_trip)
 
     def handle_sherpa_status(self, msg: SherpaStatusMsg):
@@ -593,8 +684,7 @@ class Handlers:
 
     def handle_peripheral_error(self, req: SherpaPeripheralsReq):
 
-        valid_error_devices = ["auto_hitch"]
-
+        valid_error_devices = ["auto_hitch", "conveyor"]
         if req.error_device in valid_error_devices:
             # get error resolver
             peripheral_error_resolver = getattr(
@@ -625,6 +715,43 @@ class Handlers:
             self.handle_dispatch_button(req.dispatch_button, ongoing_trip)
         elif req.auto_hitch:
             self.handle_auto_hitch(req.auto_hitch, ongoing_trip)
+        elif req.conveyor:
+            conveyor_ack = req.conveyor.ack
+            if conveyor_ack:
+                self.handle_conveyor_ack(req.conveyor, ongoing_trip)
+                return
+            self.handle_conveyor(req.conveyor, ongoing_trip)
+
+    def handle_conveyor_ack(self, req: ConveyorReq, ongoing_trip: OngoingTrip):
+        current_station = ongoing_trip.curr_station()
+
+        conveyor_start_state = getattr(
+            TripState, f"WAITING_STATION_CONV_{req.direction.upper()}_START"
+        )
+
+        if conveyor_start_state not in ongoing_trip.states:
+            error = f"{ongoing_trip.sherpa_name} sent a invalid conveyor ack message, {ongoing_trip.states} doesn't match ack msg"
+            raise ValueError(error)
+
+        get_logger().info(
+            f"will send conveyor msg(direction: {req.direction}, num_units: {req.num_units}) to {current_station}"
+        )
+
+    def handle_conveyor(self, req: ConveyorReq, ongoing_trip: OngoingTrip):
+        sherpa_name = ongoing_trip.sherpa_name
+        conveyor_start_state = getattr(
+            TripState, f"WAITING_STATION_CONV_{req.direction.upper()}_START"
+        )
+
+        if conveyor_start_state not in ongoing_trip.states:
+            error = f"{ongoing_trip.sherpa_name} {req.direction} totes without conveyor {req.direction} command"
+            raise ValueError(error)
+
+        conveyor_end_state = getattr(
+            TripState, f"WAITING_STATION_CONV_{req.direction.upper()}_END"
+        )
+        get_logger(sherpa_name).info(f"CONV_{req.direction.upper()} done by {sherpa_name}")
+        ongoing_trip.add_state(conveyor_end_state)
 
     def handle_auto_hitch(self, req: HitchReq, ongoing_trip: OngoingTrip):
         sherpa_name = ongoing_trip.sherpa_name
@@ -679,10 +806,7 @@ class Handlers:
                 if not trip_msg.priority:
                     trip_msg.priority = 1.0
 
-                if trip_msg.priority <= 0.0:
-                    raise ValueError(
-                        f"trip priority: {trip_msg.priority} should be greater than 0"
-                    )
+                self.check_if_booking_is_valid(trip_msg)
 
                 trip: Trip = session.create_trip(
                     trip_msg.route,

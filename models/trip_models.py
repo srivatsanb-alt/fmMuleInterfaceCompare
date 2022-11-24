@@ -21,6 +21,11 @@ class TripStatus:
     CANCELLED = "cancelled"
 
 
+COMPLETED_TRIP_STATUS = [TripStatus.SUCCEEDED, TripStatus.FAILED, TripStatus.CANCELLED]
+ONGOING_TRIP_STATUS = [TripStatus.WAITING_STATION, TripStatus.EN_ROUTE]
+YET_TO_START_TRIP_STATUS = [TripStatus.BOOKED, TripStatus.ASSIGNED]
+
+
 class TripState:
     WAITING_STATION_AUTO_HITCH_START = "waiting_station_auto_hitch_start"
     WAITING_STATION_AUTO_HITCH_END = "waiting_station_auto_hitch_end"
@@ -28,6 +33,10 @@ class TripState:
     WAITING_STATION_AUTO_UNHITCH_END = "waiting_station_auto_unhitch_end"
     WAITING_STATION_DISPATCH_START = "waiting_station_dispatch_start"
     WAITING_STATION_DISPATCH_END = "waiting_station_dispatch_end"
+    WAITING_STATION_CONV_RECEIVE_START = "waiting_station_conv_receive_start"
+    WAITING_STATION_CONV_RECEIVE_END = "waiting_station_conv_receive_end"
+    WAITING_STATION_CONV_SEND_START = "waiting_station_conv_send_start"
+    WAITING_STATION_CONV_SEND_END = "waiting_station_conv_send_end"
 
 
 class TripAnalytics(Base, TimestampMixin):

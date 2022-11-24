@@ -46,3 +46,5 @@ class StationProperties(enum.Enum):
     DISPATCH_NOT_REQD = 6
     CHARGING = 7
     EXCLUSIVE_PARKING = 8
+    CONVEYOR = 9
+    CHUTE = 10

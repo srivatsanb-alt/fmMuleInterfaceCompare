@@ -46,6 +46,7 @@ class AccessType(str, Enum):
 class ConveyorReq(BaseModel):
     direction: DirectionEnum
     num_units: int
+    ack: Optional[bool]
 
 
 class SpeakerReq(BaseModel):
@@ -207,7 +208,7 @@ class TripMsg(BaseModel):
     route: List[str]
     priority: Optional[float] = 1.0
     tasks: Optional[Dict[str, str]] = None
-    metadata: Optional[Dict[str, Union[List[int], bool, str, int]]] = None
+    metadata: Optional[Dict[str, Union[List[int], bool, str, int, Dict]]] = None
 
 
 class RoutePreview(BaseModel):
