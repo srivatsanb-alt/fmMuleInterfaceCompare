@@ -29,6 +29,7 @@ def get_trip_status(trip: Trip):
         "etas_at_start": trip.etas_at_start,
         "etas": trip.etas,
         "trip_leg_id": trip_leg.id if trip_leg else None,
+        "next_idx_aug": ongoing_trip.next_idx_aug if ongoing_trip else None,
         "trip_leg_from_station": trip_leg.from_station if trip_leg else None,
         "trip_leg_to_station": trip_leg.to_station if trip_leg else None,
         "route": trip.augmented_route,

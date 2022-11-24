@@ -30,6 +30,10 @@ def str_to_ts(dt_str):
     return datetime.datetime.strptime(dt_str, TIME_FORMAT).timestamp()
 
 
+def str_to_dt_UTC(dt_str):
+    return datetime.datetime.strptime(dt_str, TIME_FORMAT + " %z")
+
+
 def are_poses_close(pose1, pose2):
     mule_config = get_mule_config()
     threshold = mule_config.get("control").get("common").get("station_dist_thresh", 0.8)

@@ -455,6 +455,11 @@ class Handlers:
                 )
                 self.add_dispatch_start_to_ongoing_trip(ongoing_trip)
 
+            else:
+                get_logger().info(
+                    f"Ignoring {req.error_device} error message from {sherpa_name}"
+                )
+
         if peripheral_info.hitch:
             get_logger().info(
                 f"Cannot resolve {req.error_device} error for {sherpa_name}, {req}"
@@ -482,6 +487,10 @@ class Handlers:
                 f"Resolving {req.error_device} error for {sherpa_name}, will wait for dispatch button to continue"
             )
             self.add_dispatch_start_to_ongoing_trip(ongoing_trip)
+        else:
+            get_logger().info(
+                f"Ignoring {req.error_device} error message from {sherpa_name}"
+            )
 
     def delete_ongoing_trip(self, req: DeleteOngoingTripReq):
         trips = session.get_trip_with_booking_id(req.booking_id)
