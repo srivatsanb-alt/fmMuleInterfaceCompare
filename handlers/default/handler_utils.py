@@ -136,6 +136,18 @@ def get_sherpa_availability(all_sherpa_status: List[SherpaStatus]):
     return availability
 
 
+def get_conveyor_ops_info(trip_metadata):
+    get_logger().info(
+        f"will parse trip metadata for conveyor ops, Trip metadata: {trip_metadata}"
+    )
+    num_units = None
+    if trip_metadata:
+        conveyor_ops = trip_metadata.get("conveyor_ops", None)
+        if conveyor_ops:
+            num_units = conveyor_ops.get("num_units", None)
+    return num_units
+
+
 def find_best_sherpa():
     all_sherpa_status: List[SherpaStatus] = session.get_all_sherpa_status()
     availability: Dict[str, str] = get_sherpa_availability(all_sherpa_status)
