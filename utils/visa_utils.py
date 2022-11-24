@@ -128,23 +128,23 @@ def maybe_grant_visa(zone_name, visa_type, sherpa_name):
     # get_logger(sherpa_name).warn(visa_str)
     # return False
 
-    if len(linked_zones) > 0:
-        if visa_type != VisaType.TRANSIT:
-            visa_str = f"sherpa {sherpa_name} asking for non-transit visa_type {visa_type} at intersection-zone {zone_name}. Rejecting visa."
-            get_logger(sherpa_name).warn(visa_str)
-            return False
-        else:
-            return lock_linked_zones(zone_name, "lane", sherpa_name)
-
     if visa_type == VisaType.PARKING:
+        if len(linked_zones):
+            lock_linked_zones(zone_name, "station", sherpa_name)
         return lock_exclusion_zone(zone_name, "station", sherpa_name)
 
     if visa_type in {VisaType.EXCLUSIVE_PARKING, VisaType.UNPARKING}:
+        if len(linked_zones):
+            lock_linked_zones(zone_name, "station", sherpa_name)
+            lock_linked_zones(zone_name, "lane", sherpa_name)
+
         return lock_exclusion_zone(
             zone_name, "station", sherpa_name
         ) and lock_exclusion_zone(zone_name, "lane", sherpa_name)
 
     if visa_type == VisaType.TRANSIT:
+        if len(linked_zones):
+            lock_linked_zones(zone_name, "lane", sherpa_name)
         return lock_exclusion_zone(zone_name, "lane", sherpa_name, exclusive=False)
 
 
