@@ -69,7 +69,7 @@ def split_zone_id(zone_id: str):
     return zone_id.rsplit("_", 1)
 
 
-def lock_linked_zones(zone_name, zone_type, sherpa_name):
+def can_lock_linked_zones(zone_name, zone_type, sherpa_name):
     ezone = session.get_exclusion_zone(zone_name, zone_type)
     linked_gates: List[ExclusionZone] = get_linked_gates(ezone)
     can_lock_linked_gates: List[bool] = []
@@ -79,10 +79,7 @@ def lock_linked_zones(zone_name, zone_type, sherpa_name):
         can_lock = lock_exclusion_zone(lz_name, lz_type, sherpa_name, test=True)
         can_lock_linked_gates.append(can_lock)
 
-    if all(can_lock_linked_gates):
-        return lock_exclusion_zone(zone_name, zone_type, sherpa_name, exclusive=False)
-    else:
-        return False
+    return all(can_lock_linked_gates)
 
 
 def unlock_exclusion_zone(zone_name, zone_type, sherpa_name):
@@ -116,36 +113,31 @@ def clear_all_locks(sherpa_name):
 
 
 def maybe_grant_visa(zone_name, visa_type, sherpa_name):
-    # sherpa: Sherpa = session.get_sherpa(sherpa_name)
-
     ezone = session.get_exclusion_zone(zone_name, "lane")
-
-    # other_zones: List[ExclusionZone] = sherpa.exclusion_zones
     linked_zones = get_linked_gates(ezone) if ezone else []
 
-    # if len(other_zones) > 1 or (len(other_zones) > 0 and other_zones[0] != ezone):
-    # visa_str = f"Foreign policy violation - sherpa {sherpa_name} asking for visa to zone {zone_id} while holding visa for other_zones"
-    # get_logger(sherpa_name).warn(visa_str)
-    # return False
+    linked_zone_flag = True
 
     if visa_type == VisaType.PARKING:
         if len(linked_zones):
-            lock_linked_zones(zone_name, "station", sherpa_name)
-        return lock_exclusion_zone(zone_name, "station", sherpa_name)
+            linked_zone_flag = can_lock_linked_zones(zone_name, "station", sherpa_name)
+        return lock_exclusion_zone(zone_name, "station", sherpa_name) and linked_zone_flag
 
     if visa_type in {VisaType.EXCLUSIVE_PARKING, VisaType.UNPARKING}:
         if len(linked_zones):
-            lock_linked_zones(zone_name, "station", sherpa_name)
-            lock_linked_zones(zone_name, "lane", sherpa_name)
-
-        return lock_exclusion_zone(
-            zone_name, "station", sherpa_name
-        ) and lock_exclusion_zone(zone_name, "lane", sherpa_name)
+            linked_zone_flag = can_lock_linked_zones(
+                zone_name, "station", sherpa_name
+            ) and can_lock_linked_zones(zone_name, "lane", sherpa_name)
+        return (
+            lock_exclusion_zone(zone_name, "station", sherpa_name)
+            and lock_exclusion_zone(zone_name, "lane", sherpa_name)
+            and linked_zone_flag
+        )
 
     if visa_type == VisaType.TRANSIT:
         if len(linked_zones):
-            lock_linked_zones(zone_name, "lane", sherpa_name)
-        return lock_exclusion_zone(zone_name, "lane", sherpa_name, exclusive=False)
+            linked_zone_flag = can_lock_linked_zones(zone_name, "lane", sherpa_name)
+        return lock_exclusion_zone(zone_name, "lane", sherpa_name) and linked_zone_flag
 
 
 if __name__ == "__main__":

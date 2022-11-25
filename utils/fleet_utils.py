@@ -270,21 +270,29 @@ def add_linked_gates_table(fleet):
         gates_dict = ez_gates["ez_gates"]
         for gate in gates_dict.values():
             if gate["linked_gate"]:
-                print(f"Current gate {gate}!")
-                prev_zone_id = gate["name"] + "_lane"
-                linked_gates = gate["linked_gates_ids"]
-                print(f"Adding linked gates for {prev_zone_id}!")
-                print(f"linked_gates are {linked_gates}!")
-                for linked_gate in linked_gates:
-                    linked_gate_id = gates_dict[str(linked_gate)]["name"] + "_lane"
-                    print(f"linked_gate_id is {linked_gate_id}!")
-                    new_linked_gate = LinkedGates(
-                        prev_zone_id=prev_zone_id, next_zone_id=linked_gate_id
-                    )
-                    db.add(new_linked_gate)
-                    db.flush()
-                    db.refresh(new_linked_gate)
-                    print(f"Added the linkedgate {new_linked_gate}!")
+                zone_types = ["_lane", "_station"]
+                for zone_type_1 in zone_types:
+                    print(f"Current gate {gate}!")
+                    prev_zone_id = gate["name"] + zone_type_1
+                    linked_gates = gate["linked_gates_ids"]
+                    print(f"Adding linked gates for {prev_zone_id}!")
+                    print(f"linked_gates are {linked_gates}!")
+                    for linked_gate in linked_gates:
+                        for zone_type_2 in zone_types:
+                            linked_gate_id = (
+                                gates_dict[str(linked_gate)]["name"] + zone_type_2
+                            )
+                            print(f"linked_gate_id is {linked_gate_id}!")
+                            new_linked_gate = LinkedGates(
+                                prev_zone_id=prev_zone_id, next_zone_id=linked_gate_id
+                            )
+                            db.add(new_linked_gate)
+                            db.flush()
+                            db.refresh(new_linked_gate)
+                            print(
+                                f"created a link between {prev_zone_id} and {linked_gate_id}"
+                            )
+                            print(f"Added the linkedgate {new_linked_gate}!")
         db.commit()
     return
 
