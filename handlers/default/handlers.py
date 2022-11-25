@@ -982,6 +982,7 @@ class Handlers:
         response: ResourceResp = ResourceResp(
             granted=granted, visa=req, access_type=AccessType.REQUEST
         )
+        get_logger().info(f"visa {granted_message} to {sherpa_name}")
         return response.to_json()
 
     def handle_visa_access(self, req: VisaReq, access_type: AccessType, sherpa_name):
@@ -1052,13 +1053,9 @@ class Handlers:
             "delete_ongoing_trip",
             "delete_booked_trip",
             "induct_sherpa",
-            "assign_next_task",
         ]
 
         if msg.type in optimal_dispatch_influencers:
-            if assign_next_task_reason in ["start_leg", "continue_leg"]:
-                pass
-            else:
-                self.run_optimal_dispatch()
+            self.run_optimal_dispatch()
 
         return response
