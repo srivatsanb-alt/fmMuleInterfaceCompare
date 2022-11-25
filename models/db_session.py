@@ -13,7 +13,6 @@ from models.fleet_models import (
     SherpaEvent,
     AvailableSherpas,
 )
-from models.connection_models import ExternalConnections
 from models.trip_models import OngoingTrip, PendingTrip, Trip, TripLeg, TripAnalytics
 
 from models.visa_models import ExclusionZone, VisaAssignment
@@ -354,13 +353,6 @@ class DBSession:
 
     def delete_ongoing_trip(self, ongoing_trip):
         self.session.delete(ongoing_trip)
-
-    def get_external_connections(self, fleet_name: str) -> List[ExternalConnections]:
-        return (
-            self.session.query(ExternalConnections)
-            .filter(ExternalConnections.fleet_name == fleet_name)
-            .all()
-        )
 
 
 session = DBSession()

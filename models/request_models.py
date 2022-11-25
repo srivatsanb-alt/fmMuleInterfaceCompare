@@ -183,7 +183,7 @@ class TripStatusMsg(SherpaMsg, JsonMixin):
 #################################################
 # internal messsages FM to FM
 class AssignNextTask(BaseModel):
-    sherpa_name: str
+    sherpa_name: str = None
     type: str = MessageType.ASSIGN_NEXT_TASK
 
 

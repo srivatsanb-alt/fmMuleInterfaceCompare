@@ -159,12 +159,3 @@ def find_best_sherpa():
             return name
 
     return None
-
-
-def any_new_scheduled_trips_to_consider(session: DBSession):
-    pending_trips = session.session.query(PendingTrip).all()
-    for pending_trip in pending_trips:
-        if pending_trip.trip.scheduled:
-            if check_if_timestamp_has_passed(pending_trip.trip.start_time):
-                return True
-    return False

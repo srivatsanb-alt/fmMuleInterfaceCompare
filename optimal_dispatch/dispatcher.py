@@ -1,7 +1,7 @@
 import numpy as np
 from core.logs import get_logger
 from core.config import Config
-from models.fleet_models import Fleet, AvailableSherpas
+from models.fleet_models import Fleet, AvailableSherpas, OptimalDispatchState
 from models.trip_models import Trip, PendingTrip, TripStatus
 from typing import List
 from sqlalchemy.sql import or_
@@ -23,13 +23,32 @@ class OptimalDispatch:
         self.config = optimal_dispatch_config
         self.assignment_method = self.config["method"]
         self.assign = getattr(self, self.assignment_method)
-        self.last_assigment_time = {}
         self.fleet_names = Config.get_all_fleets()
         self.fleets: List[Fleet] = []
         self.router_utils = {}
         self.ptrip_first_station = []
-        for fleet_name in self.fleet_names:
-            self.last_assigment_time[fleet_name] = datetime.datetime.now()
+
+    def get_last_assignment_time(self, dbsession):
+        self.last_assignment_time = {}
+        all_last_assignment_data = dbsession.session.query(OptimalDispatchState).all()
+        for last_assignment_data in all_last_assignment_data:
+
+            if last_assignment_data.last_assignment_time is not None:
+                self.last_assignment_time[
+                    last_assignment_data.fleet_name
+                ] = last_assignment_data.last_assignment_time
+            else:
+                self.last_assignment_time[
+                    last_assignment_data.fleet_name
+                ] = datetime.datetime.now()
+
+    def update_last_assignment_time(self, dbsession, fleet_name):
+        fleet_last_assignment_data = (
+            dbsession.session.query(OptimalDispatchState)
+            .filter(OptimalDispatchState.fleet_name == fleet_name)
+            .one()
+        )
+        fleet_last_assignment_data.last_assignment_time = datetime.datetime.now()
 
     def are_power_factors_valid(self):
         w1 = self.config["eta_power_factor"]
@@ -65,7 +84,7 @@ class OptimalDispatch:
     def any_trips_cancelled(self, dbsession, fleet_name):
         updates = (
             dbsession.session.query(Trip)
-            .filter(Trip.updated_at > self.last_assigment_time[fleet_name])
+            .filter(Trip.updated_at > self.last_assignment_time[fleet_name])
             .filter(Trip.fleet_name == fleet_name)
             .filter(Trip.status == TripStatus.CANCELLED)
             .all()
@@ -77,7 +96,7 @@ class OptimalDispatch:
     def any_change_in_sherpa_availability(self, dbsession, fleet_name):
         updates = (
             dbsession.session.query(AvailableSherpas)
-            .filter(AvailableSherpas.updated_at > self.last_assigment_time[fleet_name])
+            .filter(AvailableSherpas.updated_at > self.last_assignment_time[fleet_name])
             .filter(AvailableSherpas.fleet_name == fleet_name)
             .all()
         )
@@ -264,6 +283,7 @@ class OptimalDispatch:
         self.logger.info("will run optimal dispatch logic")
         self.fleets = dbsession.get_all_fleets()
 
+        self.get_last_assignment_time(dbsession)
         _ = self.are_power_factors_valid()
 
         for fleet in self.fleets:
@@ -322,7 +342,7 @@ class OptimalDispatch:
                     self.logger.info("\n")
 
                     self.update_pending_trips(dbsession, assignments)
-                    self.last_assigment_time[fleet.name] = datetime.datetime.now()
+                    self.update_last_assignment_time(dbsession, fleet.name)
                 else:
                     self.logger.info(
                         f"data not sufficient to create/update assignments for {fleet.name}"

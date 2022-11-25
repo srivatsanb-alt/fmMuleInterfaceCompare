@@ -52,7 +52,6 @@ async def master_data(
 
     all_sherpas = session.get_all_sherpas_in_fleet(master_data_info.fleet_name)
     all_stations = session.get_all_stations_in_fleet(master_data_info.fleet_name)
-    all_connections = session.get_external_connections(master_data_info.fleet_name)
 
     response = {}
     sherpa_list = []
@@ -65,12 +64,8 @@ async def master_data(
     if all_stations:
         station_list = [station.name for station in all_stations]
 
-    if all_connections:
-        connection_list = [connection.name for connection in all_connections]
-
     response.update({"sherpa_list": sherpa_list})
     response.update({"station_list": station_list})
-    response.update({"external_connections": connection_list})
 
     sample_sherpa_status = {}
     all_sherpa_status = session.get_all_sherpa_status()

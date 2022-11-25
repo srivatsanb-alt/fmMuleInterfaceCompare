@@ -7,7 +7,7 @@ from fastapi import Depends, Header
 from fastapi.param_functions import Query
 from models.db_session import DBSession
 from rq.job import Job
-from utils.rq import enqueue, Queues
+from utils.rq import enqueue, enqueue_at, Queues
 from core.config import Config
 import redis
 import os
@@ -69,7 +69,7 @@ def generate_jwt_token(username: str):
     return access_token
 
 
-def process_req(queue, req, user):
+def process_req(queue, req, user, dt=None):
 
     if not user:
         raise HTTPException(status_code=403, detail=f"Unknown requeter {user}")
@@ -81,6 +81,9 @@ def process_req(queue, req, user):
 
     if not queue:
         queue = Queues.queues_dict["generic_handler"]
+
+    if dt:
+        enqueue_at(queue, dt, handle, handler_obj, req)
 
     return enqueue(queue, handle, handler_obj, req)
 

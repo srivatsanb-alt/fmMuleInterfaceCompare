@@ -4,6 +4,7 @@ from models.base_models import StationProperties
 from models.db_session import session
 from models.fleet_models import Fleet, Sherpa, SherpaStatus, Station, SherpaEvent
 import pickle
+from optimal_dispatch.dispatcher import OptimalDispatch
 from models.request_models import (
     AccessType,
     BookingReq,
@@ -178,7 +179,6 @@ class Handlers:
             )
 
     def check_if_booking_is_valid(self, trip_msg):
-        get_logger().info("Checking integrity of trip msg")
         reason = None
         if trip_msg.priority <= 0.0:
             reason = f"trip priority cannot be less than/ equal to zero, priority: {trip_msg.priority}"
@@ -192,7 +192,7 @@ class Handlers:
                 trip_metadata = trip_msg.metadata
                 num_units = hutils.get_conveyor_ops_info(trip_metadata)
                 if not num_units:
-                    reason = "No information on conveyor_ops, num units, need num units for booking trip to conveyor/chute"
+                    reason = "No information on conveyor_ops and num units, need num units info for booking trip involving conveyor/chute stations"
 
                 if num_units:
                     if num_units > 2 or num_units < 0:
@@ -311,20 +311,10 @@ class Handlers:
 
     # run optimal_dispatch
     def run_optimal_dispatch(self):
-        # load the pickled optimal dispatch object
-        with open(
-            os.path.join(os.environ["FM_MAP_DIR"], "optimal_dispatch"), "rb"
-        ) as optimal_dispatch_pkl:
-            optimal_dispatch = pickle.load(optimal_dispatch_pkl)
 
-        # run optimal dispatch
+        optimal_dispatch_config = Config.get_optimal_dispatch_config()
+        optimal_dispatch = OptimalDispatch(optimal_dispatch_config)
         optimal_dispatch.run(session)
-
-        # pickle the updated file
-        with open(
-            os.path.join(os.environ["FM_MAP_DIR"], "optimal_dispatch"), "wb"
-        ) as optimal_dispatch_pkl:
-            pickle.dump(optimal_dispatch, optimal_dispatch_pkl)
 
     def check_continue_curr_leg(self, ongoing_trip: OngoingTrip):
         return (
@@ -385,6 +375,13 @@ class Handlers:
     def add_conveyor_start_to_ongoing_trip(self, ongoing_trip, station):
         trip_metadata = ongoing_trip.trip.trip_metadata
         num_units = hutils.get_conveyor_ops_info(trip_metadata)
+
+        if num_units == 0:
+            get_logger().info(
+                f"will not send conveyor msg to {ongoing_trip.sherpa_name}, reason: num_units is {num_units}"
+            )
+            return
+
         direction = "send" if StationProperties.CHUTE in station.properties else "receive"
         station_type = (
             "chute" if StationProperties.CHUTE in station.properties else "conveyor"
@@ -863,6 +860,12 @@ class Handlers:
             )
             return
 
+        if not ongoing_trip.next_station():
+            get_logger().info(
+                f"Trip status sent by {sherpa_name} is delayed, all trip legs completed trip_id: {req.trip_id}"
+            )
+            return
+
         ongoing_trip.trip.update_etas(float(req.trip_info.eta), ongoing_trip.next_idx_aug)
 
         trip_analytics = session.get_trip_analytics(ongoing_trip.trip_leg_id)
@@ -1002,6 +1005,7 @@ class Handlers:
     def handle(self, msg):
         init_request_context(msg)
         update_msgs = ["trip_status", "sherpa_status"]
+
         if req_ctxt.sherpa_name and msg.type not in update_msgs:
             self.add_sherpa_event(req_ctxt.sherpa_name, msg.type, "sent by sherpa")
 
@@ -1027,6 +1031,14 @@ class Handlers:
             get_logger().error(f"no handler defined for {msg.type}")
             return
 
+        assign_next_task_reason = None
+        if msg.type == "assign_next_task":
+            if msg.sherpa_name is None:
+                self.run_optimal_dispatch()
+                return
+
+            _, assign_next_task_reason = self.should_assign_next_task(msg.sherpa_name)
+
         response = msg_handler(msg)
 
         if req_ctxt.sherpa_name:
@@ -1043,10 +1055,10 @@ class Handlers:
             "assign_next_task",
         ]
 
-        if (
-            msg.type in optimal_dispatch_influencers
-            or hutils.any_new_scheduled_trips_to_consider
-        ):
-            self.run_optimal_dispatch()
+        if msg.type in optimal_dispatch_influencers:
+            if assign_next_task_reason in ["start_leg", "continue_leg"]:
+                pass
+            else:
+                self.run_optimal_dispatch()
 
         return response

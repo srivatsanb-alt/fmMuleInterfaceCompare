@@ -25,9 +25,6 @@ def init_logging():
     setup_logger(logdir, "optimal_dispatch", propagate=False)
     setup_logger(logdir, "status_updates", propagate=False)
 
-    # setup_logger(logdir, "simulator")
-    setup_logger(logdir, "control_router_module", propagate=False)
-
 
 def init_logging_for_fleet(fleet: Fleet, logdir):
     fleet_name = fleet.name

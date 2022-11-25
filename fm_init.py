@@ -4,11 +4,8 @@ import toml
 import os
 import utils.fleet_utils as fu
 from models.frontend_models import FrontendUser
-from models.fleet_models import MapFile, AvailableSherpas
-from models.connection_models import ExternalConnections
+from models.fleet_models import MapFile, AvailableSherpas, OptimalDispatchState
 from models.visa_models import LinkedGates
-from optimal_dispatch.dispatcher import OptimalDispatch
-import pickle
 
 
 sys.path.append("/app/mule")
@@ -26,7 +23,6 @@ fleet_config_path = os.path.join(os.getenv("FM_CONFIG_DIR"), "fleet_config.toml"
 config = toml.load(fleet_config_path)
 FLEET_CONFIG = config["fleet"]
 frontenduser = config["frontenduser"]
-external_connections = config.get("external_connections")
 optimal_dispatch_config = config["optimal_dispatch"]
 
 
@@ -45,7 +41,7 @@ while not DB_UP:
         fu.delete_table_contents(FrontendUser)
         fu.delete_table_contents(LinkedGates)
         fu.delete_table_contents(AvailableSherpas)
-        fu.delete_table_contents(ExternalConnections)
+        fu.delete_table_contents(OptimalDispatchState)
 
         for user_name, user_details in frontenduser.items():
             fu.add_frontend_user(user_name, user_details["hashed_password"])
@@ -84,37 +80,10 @@ while not DB_UP:
             )
             print(f"added {sherpa_name}, {sherpa_detail} to db")
 
-        # add external connections like IES, CONV_APP etc
-        if external_connections:
-            for (
-                external_connection,
-                external_connection_details,
-            ) in external_connections.items():
-                fns = external_connection_details["fleet_names"]
-                status = False
-                if external_connection_details.get("default_state") == "enabled":
-                    status = True
-                for fn in fns:
-                    fu.add_external_connections(
-                        name=external_connection,
-                        fleet_name=fn,
-                        hashed_password=external_connection_details["hashed_password"],
-                        status=status,
-                    )
-
         # regenerate_mule_config for routing
         regenerate_config()
         config_path = os.environ["ATI_CONFIG"]
         print(f"will use {config_path} as ATI_CONFIG")
-
-        # create optimal_dispatch object for handler usage
-        optimal_dispatch_object = OptimalDispatch(optimal_dispatch_config)
-        _ = optimal_dispatch_object.are_power_factors_valid()
-
-        with open(
-            os.path.join(os.environ["FM_MAP_DIR"], "optimal_dispatch"), "wb"
-        ) as optimal_dispatch_pkl:
-            pickle.dump(optimal_dispatch_object, optimal_dispatch_pkl)
 
         DB_UP = True
 

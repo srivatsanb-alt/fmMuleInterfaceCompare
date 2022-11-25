@@ -16,8 +16,8 @@ from models.fleet_models import (
     Station,
     StationStatus,
     AvailableSherpas,
+    OptimalDispatchState,
 )
-from models.connection_models import ExternalConnections
 import datetime
 from models.visa_models import ExclusionZone, LinkedGates
 from models.frontend_models import FrontendUser
@@ -135,6 +135,12 @@ def add_update_fleet(**kwargs):
             if not val:
                 continue
             setattr(fleet, col, val)
+
+        # add optimal dispatch state
+        optimal_dispatch_state = OptimalDispatchState(
+            fleet_name=fleet_name, last_assignment_time=datetime.datetime.now()
+        )
+        db.add(optimal_dispatch_state)
         db.commit()
 
     return fleet
@@ -325,36 +331,6 @@ def add_frontend_user(user_name: str, hashed_password: str):
             db.flush()
             db.refresh(user)
             print(f"added frontend user successfully {user.__dict__}")
-        db.commit()
-
-
-def add_external_connections(
-    name: str, fleet_name: str, hashed_password: str, status: bool
-):
-    with session_maker() as db:
-        try:
-            external_connection: ExternalConnections = (
-                db.query(ExternalConnections)
-                .filter(ExternalConnections.name == name)
-                .filter(ExternalConnections.fleet_name == fleet_name)
-                .one()
-            )
-            external_connection.hashed_password = hashed_password
-            external_connection.status = status
-            print(
-                f"updated external_connection successfully {external_connection.__dict__}"
-            )
-        except NoResultFound:
-            external_connection = ExternalConnections(
-                name=name,
-                fleet_name=fleet_name,
-                hashed_password=hashed_password,
-                status=status,
-            )
-            db.add(external_connection)
-            db.flush()
-            db.refresh(external_connection)
-            print(f"added external_connection successfully {external_connection.__dict__}")
         db.commit()
 
 

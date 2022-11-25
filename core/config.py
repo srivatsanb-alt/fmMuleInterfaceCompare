@@ -97,6 +97,12 @@ class Config:
             cls.config = cls.read_config()
         return cls.config["fleet"]["simulator"]
 
+    @classmethod
+    def get_optimal_dispatch_config(cls):
+        if not cls.config:
+            cls.config = cls.read_config()
+        return cls.config["optimal_dispatch"]
+
 
 if __name__ == "__main__":
     d = {"a": [1, 2, 3], "b": {"c": 2, "d": {"e": 3}, "f": {"g": [4, 5]}}}

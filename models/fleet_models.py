@@ -1,4 +1,14 @@
-from sqlalchemy import ARRAY, Boolean, Column, Enum, Float, ForeignKey, Integer, String
+from sqlalchemy import (
+    ARRAY,
+    Boolean,
+    Column,
+    Enum,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    DateTime,
+)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 
@@ -118,3 +128,9 @@ class AvailableSherpas(TimestampMixin, Base):
     sherpa_name = Column(String, primary_key=True, index=True)
     fleet_name = Column(String)
     available = Column(Boolean)
+
+
+class OptimalDispatchState(Base):
+    __tablename__ = "optimal_dispatch_state"
+    fleet_name = Column(String, primary_key=True, index=True)
+    last_assignment_time = Column(DateTime)
