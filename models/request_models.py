@@ -183,98 +183,101 @@ class TripStatusMsg(SherpaMsg, JsonMixin):
 #################################################
 # internal messsages FM to FM
 class AssignNextTask(BaseModel):
+    source: str = "self"
     sherpa_name: str = None
     type: str = MessageType.ASSIGN_NEXT_TASK
 
 
 #################################################
 # Messages from frontend
+class ClientReq(BaseModel):
+    source: Union[str, None] = None
 
 
-class MasterDataInfo(BaseModel):
+class MasterDataInfo(ClientReq):
     fleet_name: str
 
 
-class UserLogin(BaseModel):
+class UserLogin(ClientReq):
     name: str
     password: str
 
 
-class TripsReq(BaseModel):
+class TripsReq(ClientReq):
     type: str
 
 
-class TripMsg(BaseModel):
+class TripMsg(ClientReq):
     route: List[str]
     priority: Optional[float] = 1.0
     tasks: Optional[Dict[str, str]] = None
     metadata: Optional[Dict[str, Union[List[int], bool, str, int, Dict]]] = None
 
 
-class RoutePreview(BaseModel):
+class RoutePreview(ClientReq):
     route: List[str]
     fleet_name: str
 
 
-class BookingReq(TripsReq):
+class BookingReq(ClientReq):
     trips: List[TripMsg]
     type: str = MessageType.BOOKING
 
 
-class DeleteOngoingTripReq(BaseModel):
+class DeleteOngoingTripReq(ClientReq):
     booking_id: int
     type: str = MessageType.DELETE_ONGOING_TRIP
 
 
-class DeleteBookedTripReq(BaseModel):
+class DeleteBookedTripReq(ClientReq):
     booking_id: int
     type: str = MessageType.DELETE_BOOKED_TRIP
 
 
-class SherpaInductReq(BaseModel):
+class SherpaInductReq(ClientReq):
     induct: bool
     sherpa_name: Optional[str]
     type: str = MessageType.INDUCT_SHERPA
 
 
-class StartStopCtrlReq(BaseModel):
+class StartStopCtrlReq(ClientReq):
     start: bool
 
 
-class PauseResumeCtrlReq(BaseModel):
+class PauseResumeCtrlReq(ClientReq):
     pause: bool
 
 
-class SwitchModeCtrlReq(BaseModel):
+class SwitchModeCtrlReq(ClientReq):
     mode: str
 
 
-class ResetPoseCtrlReq(BaseModel):
+class ResetPoseCtrlReq(ClientReq):
     fleet_station: str
 
 
-class SherpaImgUpdateCtrlReq(BaseModel):
+class SherpaImgUpdateCtrlReq(ClientReq):
     sherpa_name: str
     type: str = "sherpa_img_update"
 
 
-class TripStatusReq(BaseModel):
+class TripStatusReq(ClientReq):
     booked_from: Optional[str]
     booked_till: Optional[str]
     trip_ids: Optional[List[int]]
 
 
-class GiveRouteWPS(BaseModel):
+class GiveRouteWPS(ClientReq):
     start_pose: List = None  # Start station pose
     to_poses: List = None  # end station pose(s). can be more than 1 station
     sherpa_name: str = None  # only for Live monitoring: Route from current pose to next destination, None for route-preview
 
 
-class DeleteVisaAssignments(BaseModel):
+class DeleteVisaAssignments(ClientReq):
     type: str = MessageType.DELETE_VISA_ASSIGNMENTS
 
 
-class DeleteOptimalDispatchAssignments(BaseModel):
+class DeleteOptimalDispatchAssignments(ClientReq):
     type: str = MessageType.DELETE_OPTIMAL_DISPATCH_ASSIGNMENTS
     fleet_name: str
 

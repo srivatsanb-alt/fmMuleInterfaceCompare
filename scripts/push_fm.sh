@@ -15,6 +15,7 @@ NETWORK_TYPE="wlp"
 FM_SERVER_HOSTNAME="localhost"
 DOCKER_REGISTRY_PORT=443
 FM_PORT=8001
+PLUGIN_PORT=8002
 REDIS_PORT=6379
 
 # Get the options
@@ -128,6 +129,7 @@ docker image build --build-arg FM_IMAGE_INFO="${FM_IMAGE_INFO}" \
 		   --build-arg FM_SERVER_IP="${FM_SERVER_IP}" \
 		   --build-arg FM_PORT="${FM_PORT}" \
 		   --build-arg REDIS_PORT="${REDIS_PORT}" \
+		   --build-arg PLUGIN_PORT="${PLUGIN_PORT}" \
 		   -t fleet_manager:dev -f docker_files/Dockerfile .
 
 FM_IMAGE_ID=$(docker images --format {{.ID}} fleet_manager:dev)

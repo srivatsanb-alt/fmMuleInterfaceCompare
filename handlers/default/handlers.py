@@ -3,7 +3,6 @@ from core.logs import get_logger
 from models.base_models import StationProperties
 from models.db_session import session
 from models.fleet_models import Fleet, Sherpa, SherpaStatus, Station, SherpaEvent
-import pickle
 from optimal_dispatch.dispatcher import OptimalDispatch
 from models.request_models import (
     AccessType,
@@ -81,7 +80,7 @@ req_ctxt = RequestContext()
 
 def init_request_context(req):
     req_ctxt.msg_type = req.type
-    req_ctxt.source = None
+    req_ctxt.source = req.source
     if isinstance(req, SherpaReq) or isinstance(req, SherpaMsg):
         req_ctxt.sherpa_name = req.source
         req_ctxt.source = req.source
@@ -822,6 +821,9 @@ class Handlers:
                     fleet_name,
                 )
                 session.create_pending_trip(trip.id)
+                response.update(
+                    {trip.id: {"booking_id": trip.booking_id, "status": trip.status}}
+                )
                 get_logger().info(
                     f"Created a pending trip : trip_id: {trip.id}, booking_id: {trip.booking_id}"
                 )

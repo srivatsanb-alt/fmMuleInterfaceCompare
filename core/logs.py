@@ -98,10 +98,12 @@ def get_logger(name=None):
 def get_seperate_logger(name):
 
     logger = logging.getLogger(name)
+    FORMATTER = logging.Formatter("%(asctime)s %(levelname)s [%(funcName)s] %(message)s")
     logger.propagate = False
     log_file = os.path.join(os.getenv("FM_LOG_DIR"), f"{name}.log")
-    f_handler = logging.FileHandler(log_file)
     logger.setLevel(logging.INFO)
+    f_handler = logging.FileHandler(log_file)
+    f_handler.setFormatter(FORMATTER)
     logger.addHandler(f_handler)
 
     return logger

@@ -47,10 +47,11 @@ def get_user_from_query(token: str = Query(None)):
 
 
 def decode_token(token: str):
+    redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
     try:
         details = jwt.decode(
             token,
-            settings.FM_SECRET_KEY,
+            redis_conn.get("FM_SECRET_TOKEN"),
             algorithms=["HS256"],
             options={"require": ["exp", "sub"]},
         )
@@ -61,9 +62,10 @@ def decode_token(token: str):
 
 
 def generate_jwt_token(username: str):
+    redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
     access_token = jwt.encode(
         {"sub": username, "exp": time.time() + 64800},
-        settings.FM_SECRET_KEY,
+        redis_conn.get("FM_SECRET_TOKEN"),
         algorithm="HS256",
     )
     return access_token
@@ -74,8 +76,7 @@ def process_req(queue, req, user, dt=None):
     if not user:
         raise HTTPException(status_code=403, detail=f"Unknown requeter {user}")
 
-    if isinstance(req, SherpaReq):
-        req.source = user
+    req.source = user
 
     handler_obj = Config.get_handler()
 

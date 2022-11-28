@@ -122,11 +122,12 @@ class Trip(Base, TimestampMixin):
         self.trip_metadata = metadata
 
         # set all milkrun trip details
-        if metadata.get("scheduled"):
-            self.scheduled = True
-            self.start_time = str_to_dt(metadata["scheduled_start_time"])
-            self.end_time = str_to_dt(metadata["scheduled_end_time"])
-            self.time_period = int(metadata["scheduled_time_period"])
+        if metadata:
+            if metadata.get("scheduled"):
+                self.scheduled = True
+                self.start_time = str_to_dt(metadata["scheduled_start_time"])
+                self.end_time = str_to_dt(metadata["scheduled_end_time"])
+                self.time_period = int(metadata["scheduled_time_period"])
 
         self.augmented_route = route
         self.aug_idxs_booked = list(range(len(self.augmented_route)))
