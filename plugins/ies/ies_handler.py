@@ -55,6 +55,7 @@ class IES_HANDLER:
         )
         if trip_ies:
             self.send_msg(msg_to_ies)
+            self.logger.info(f"Reference ID {msg['externalReferenceId']} already exists, can't book trip!")
             return
 
         endpoint = "trip_book"
@@ -66,6 +67,7 @@ class IES_HANDLER:
                 routes.append(station)
             except:
                 self.send_msg(msg_to_ies)
+                self.logger.info(f"Can't find station {task['locationId']}, can't book trip!")
                 return
 
         req_json = {"trips": [{"route": routes, "priority": priority}]}
@@ -91,6 +93,8 @@ class IES_HANDLER:
                 )
                 session.add(trip)
                 self.logger.info(f"adding trip entry to db {trip.__dict__}")
+        else:
+            self.logger.info(f"Req to FM failed, response json: {response_json} and response code: {status_code}")
 
         self.send_msg(msg_to_ies)
 
