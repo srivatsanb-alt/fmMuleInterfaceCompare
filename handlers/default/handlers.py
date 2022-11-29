@@ -971,6 +971,8 @@ class Handlers:
         response: ResourceResp = ResourceResp(
             granted=True, visa=req, access_type=AccessType.RELEASE
         )
+        get_logger().info(f"visa released by {sherpa_name}")
+
         return response.to_json()
 
     def handle_visa_request(self, req: VisaReq, sherpa_name):
