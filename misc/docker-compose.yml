@@ -17,6 +17,7 @@ services:
       DOCKER_REGISTRY_PORT: $DOCKER_REGISTRY_PORT
       PGDATABASE: ati_fleet
       PGTZ: Asia/Kolkata
+      TZ: Asia/Kolkata
       FM_DATABASE_URI: postgresql://postgres:postgres@db 
     volumes:
       - .:/app/static
@@ -44,6 +45,7 @@ services:
   reverseproxy:
     image: nginx:1.14.0
     container_name: reverseproxy
+    hostname: fm_rev_proxy 
     ports:
       - "443:443"
     restart: always

@@ -87,6 +87,9 @@ fi
 
 if [ $server == 1 ] ; then
   create_static_backup $IP_ADDRESS # function defined in push_utils
+else
+  cp misc/docker-compose.yml static/
+  cp misc/clear_db.sh static/
 fi
 
 if [ $clear_db == 1 ] ; then

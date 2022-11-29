@@ -287,6 +287,7 @@ class DeleteOptimalDispatchAssignments(ClientReq):
 
 
 class FMReq(BaseModel):
+    source: Union[str, None] = None
     endpoint: str
 
 

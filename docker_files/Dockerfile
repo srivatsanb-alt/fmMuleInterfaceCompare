@@ -5,7 +5,7 @@ ARG MULE_IMAGE_ID
 ARG HOSTNAME
 ARG FM_SERVER_IP
 ARG FM_PORT
-ARG REDIS_PORT 
+ARG REDIS_PORT
 ARG PLUGIN_PORT
 
 RUN echo "server ip $FM_SERVER_IP"
@@ -22,14 +22,14 @@ ENV FM_REDIS_URI="redis://localhost:$REDIS_PORT" \
     ATI_CONSOLIDATED_CONFIG="/app/static/mule_config/consolidated.toml" \
     FM_IMAGE_INFO=$FM_IMAGE_INFO \
     HOSTNAME=$HOSTNAME \
-    MULE_IMAGE_ID=$MULE_IMAGE_ID  
+    MULE_IMAGE_ID=$MULE_IMAGE_ID
 
 RUN ln -fs /usr/share/zoneinfo/Asia/Kolkata /etc/localtime && \
        dpkg-reconfigure -f noninteractive tzdata
 
 COPY . /app/
 RUN echo "Copying messages_pb2.py to mule/ati/schema on the docker"
-COPY ./static/messages_pb2.py /app/mule/ati/schema/
+COPY ./misc/messages_pb2.py /app/mule/ati/schema/
 RUN mkdir /app/logs
 RUN cd /app
 RUN chmod +x scripts/fleet_orchestrator.sh

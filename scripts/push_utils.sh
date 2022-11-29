@@ -38,7 +38,9 @@ create_static_backup()
 
   ssh $usr_name@$ip_address "rsync -aP /home/$usr_name/static/. /home/$usr_name/static_old/."
   rsync -azP ./static/* $usr_name@$ip_address:/home/$usr_name/static/.
-  rsync -azP ./static/docker-compose.yml $usr_name@$ip_address:/home/$usr_name/static/.
+  rsync -azP ./misc/docker-compose.yml $usr_name@$ip_address:/home/$usr_name/static/.
+  rsync -azP ./misc/clear_db.sh $usr_name@$ip_address:/home/$usr_name/static/.
+
   echo "setting env variable FM_SERVER_IP $FM_SERVER_IP"
   ssh $usr_name@$ip_address "export FM_SERVER_IP=$ip_address"
   echo "Set env variable FM_SERVER_IP "
@@ -80,5 +82,3 @@ get_localhost_ip()
      fi
      echo $IP
 }
-
-
