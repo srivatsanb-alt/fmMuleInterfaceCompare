@@ -3,11 +3,12 @@ import os
 import redis
 import json
 import logging
+import pytz
 
 sys.path.append("/app")
 from plugins.plugin_comms import send_req_to_FM
 from .ies_utils import TripsIES, session
-from utils.util import str_to_dt
+from utils.util import str_to_dt, str_to_dt_UTC, dt_to_str
 from models.trip_models import TripStatus
 
 
@@ -63,11 +64,11 @@ class IES_HANDLER:
         priority = msg.get("priority", 1.0)
         for task in msg["taskList"]:
             try:
-                station = self.locationID_station_mapping[task["locationId"]]
+                station = self.locationID_station_mapping[task["LocationId"]]
                 routes.append(station)
             except:
                 self.send_msg(msg_to_ies)
-                self.logger.info(f"Can't find station {task['locationId']}, can't book trip!")
+                self.logger.info(f"Can't find station {task['LocationId']}, can't book trip!")
                 return
 
         req_json = {"trips": [{"route": routes, "priority": priority}]}
@@ -88,8 +89,8 @@ class IES_HANDLER:
                     booking_id=trip_details["booking_id"],
                     externalReferenceId=msg["externalReferenceId"],
                     status=trip_details["status"],
-                    actions=[tr.get("actionName", None) for tr in msg["taskList"]],
-                    locations=[tr["locationId"] for tr in msg["taskList"]],
+                    actions=[tr.get("ActionName", None) for tr in msg["taskList"]],
+                    locations=[tr["LocationId"] for tr in msg["taskList"]],
                 )
                 session.add(trip)
                 self.logger.info(f"adding trip entry to db {trip.__dict__}")
@@ -148,7 +149,7 @@ class IES_HANDLER:
 
             if trip_status in [TripStatus.EN_ROUTE, TripStatus.WAITING_STATION]:
                 endpoint = "delete_ongoing_trip"
-                return
+                # return
             else:
                 endpoint = "delete_booked_trip"
 
@@ -178,10 +179,11 @@ class IES_HANDLER:
     def handle_JobQuery(self, msg):
 
         tz = os.getenv("PGTZ")
-        trips_from = str_to_dt(msg["since"]).astimezone(tz)  # conv str to dt
-        trips_till = str_to_dt(msg["until"]).astimezone(tz)  # UTC time to local time
+        # enforcing UTC time zone info here (+0000), need to check Bosch's msg format!
+        trips_from = str_to_dt_UTC(msg["since"] + " +0000").astimezone(pytz.timezone(tz))  # conv str to dt
+        trips_till = str_to_dt_UTC(msg["until"] + " +0000").astimezone(pytz.timezone(tz))  # UTC time to local time
 
-        req_json = {"booked_from": trips_from, "booked_till": trips_till}
+        req_json = {"booked_from": dt_to_str(trips_from), "booked_till": dt_to_str(trips_till)}
 
         status_code, trips_update_response = send_req_to_FM(
             self.plugin_name, "trip_status", req_type="post", req_json=req_json
@@ -196,13 +198,15 @@ class IES_HANDLER:
                     .one_or_none()
                 )
                 if trip_ies:
-                    trip_status = trip_details["status"]
-                    next_idx_aug = trip_details["next_idx_aug"]
+                    trip_status = trip_details["trip_details"]["status"]
+                    next_idx_aug = trip_details["trip_details"]["next_idx_aug"]
+                    self.logger.info(f"Trip status, next_idx = {trip_status, next_idx_aug}")
 
-                    if not next_idx_aug:
-                        next_idx_aug = 0
+                    if next_idx_aug == 0:
+                        next_idx_aug = None
+                    self.logger.info(f"trip_status == TripStatus.SUCCEEDED is {trip_status == TripStatus.SUCCEEDED}")
                     if trip_status == TripStatus.SUCCEEDED:
-                        next_idx_aug = -1
+                        next_idx_aug = 0
 
                     trip_ies.status = trip_status
 
@@ -210,13 +214,22 @@ class IES_HANDLER:
                         "messageType": "JobUpdate",
                         "externalReferenceId": trip_ies.externalReferenceId,
                         "lastCompletedTask": {
-                            "actionName": trip_ies.actions[next_idx_aug],
-                            "locationId": trip_ies.locations[next_idx_aug],
+                            "ActionName": trip_ies.actions[next_idx_aug - 1] if next_idx_aug is not None else "",
+                            "LocationId": trip_ies.locations[next_idx_aug - 1] if next_idx_aug is not None else "",
                         },
                         "jobStatus": IES_JOB_STATUS_MAPPING[trip_status],
                     }
 
                     self.send_msg(msg_to_ies)
+        else:
+            msg_to_ies = {
+                "messageType": "JobUpdate",
+                "externalReferenceId": "None",
+                "lastCompletedTask": "No Trips",
+                "jobStatus": "None"
+            }
+
+            self.send_msg(msg_to_ies)
 
     def handle(self, msg):
         self.logger = logging.getLogger("plugin_ies")
@@ -225,7 +238,7 @@ class IES_HANDLER:
         self.init_handler()
 
         msg_type = msg.get("messageType")
-        valid_msg_types = ["JobCreate", "JobCancel"]
+        valid_msg_types = ["JobCreate", "JobCancel", "JobQuery"]
 
         if msg_type not in valid_msg_types:
             self.logger.info(f"invalid message type, {msg}")
