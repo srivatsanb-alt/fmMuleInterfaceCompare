@@ -166,11 +166,15 @@ def find_best_sherpa():
 
 def update_map_file_info_with_certs(map_file_info, sherpa_hostname, sherpa_ip_address):
     save_path = os.path.join(os.getenv("FM_MAP_DIR"), "certs")
-    generate_certs_for_sherpa(sherpa_hostname, sherpa_ip_address, save_path)
+
     files_to_process = [
         os.path.join(save_path, filename)
         for filename in [f"{sherpa_hostname}_cert.pem", f"{sherpa_hostname}_key.pem"]
     ]
+
+    if not all([os.path.exists(filename) for filename in files_to_process]):
+        generate_certs_for_sherpa(sherpa_hostname, sherpa_ip_address, save_path)
+
     all_file_hash = []
     for file_path in files_to_process:
         all_file_hash.append(compute_sha1_hash(file_path))
