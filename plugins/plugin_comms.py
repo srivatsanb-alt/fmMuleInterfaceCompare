@@ -3,6 +3,7 @@ import os
 import ast
 import requests
 import logging
+import json
 from app.routers.dependencies import generate_jwt_token
 from plugins.plugin_rq import Plugin_Queues, enqueue
 
@@ -13,7 +14,14 @@ async def ws_reader(websocket, name, handler_obj):
     plugin_q = Plugin_Queues.queues_dict[f"plugin_{name}"]
     logging.info(f"Started websocket reader for {name}")
     while True:
-        msg = await websocket.receive_json()
+        msg_recv = await websocket.receive_text()
+        logging.info(f"Received msg: {msg_recv}")
+        msg = msg_recv.replace("'", "\"")
+        count = 0
+        while (type(msg) is str):
+            count += 1
+            msg = json.loads(msg)
+        logging.info(f"Converted msg: {msg}, count: {count}")
         logging.info(f"Got a plugin msg {msg}")
         enqueue(plugin_q, handler_obj.handle, msg)
 
