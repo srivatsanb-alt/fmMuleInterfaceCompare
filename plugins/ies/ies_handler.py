@@ -63,11 +63,11 @@ class IES_HANDLER:
         priority = msg.get("priority", 1.0)
         for task in msg["taskList"]:
             try:
-                station = self.locationID_station_mapping[task["locationId"]]
+                station = self.locationID_station_mapping[task["LocationId"]]
                 routes.append(station)
             except:
                 self.send_msg(msg_to_ies)
-                self.logger.info(f"Can't find station {task['locationId']}, can't book trip!")
+                self.logger.info(f"Can't find station {task['LocationId']}, can't book trip!")
                 return
 
         req_json = {"trips": [{"route": routes, "priority": priority}]}
@@ -88,8 +88,8 @@ class IES_HANDLER:
                     booking_id=trip_details["booking_id"],
                     externalReferenceId=msg["externalReferenceId"],
                     status=trip_details["status"],
-                    actions=[tr.get("actionName", None) for tr in msg["taskList"]],
-                    locations=[tr["locationId"] for tr in msg["taskList"]],
+                    actions=[tr.get("ActionName", None) for tr in msg["taskList"]],
+                    locations=[tr["LocationId"] for tr in msg["taskList"]],
                 )
                 session.add(trip)
                 self.logger.info(f"adding trip entry to db {trip.__dict__}")
