@@ -149,7 +149,7 @@ class IES_HANDLER:
 
             if trip_status in [TripStatus.EN_ROUTE, TripStatus.WAITING_STATION]:
                 endpoint = "delete_ongoing_trip"
-                return
+                # return
             else:
                 endpoint = "delete_booked_trip"
 
