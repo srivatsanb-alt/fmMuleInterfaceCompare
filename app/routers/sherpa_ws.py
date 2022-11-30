@@ -4,9 +4,8 @@ import logging
 import math
 import os
 from datetime import timedelta
-import subprocess
 import aioredis
-from app.routers.dependencies import get_db_session, get_sherpa
+from app.routers.dependencies import get_db_session, get_sherpa, get_real_ip_from_header
 from core.config import Config
 from core.constants import MessageType
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, status
@@ -59,28 +58,21 @@ def accept_message(sherpa: str, msg):
 
 @router.websocket("/ws/api/v1/sherpa/")
 async def sherpa_status(
-    websocket: WebSocket, sherpa=Depends(get_sherpa), session=Depends(get_db_session)
+    websocket: WebSocket,
+    sherpa=Depends(get_sherpa),
+    x_real_ip=Depends(get_real_ip_from_header),
+    session=Depends(get_db_session),
 ):
     if not sherpa:
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
 
     await websocket.accept()
-    # logging.getLogger().info(f"Checking mule image ID on {sherpa}!")
-    # docker_push = subprocess.run(["/app/scripts/update_mule_image.sh", "-n", sherpa])
-    # print("The exit code was: %d" % docker_push.returncode)
-    # Process = subprocess.Popen(
-    #     ["/app/scripts/update_mule_image.sh", str(var1), str(var2)],
-    #     shell=True,
-    #     stdin=subprocess.PIPE,
-    #     stderr=subprocess.PIPE,
-    # )
-    # logging.getLogger().info(Process.communicate())  # now you should see your output
+
     logging.getLogger().info(f"websocket connection started for {sherpa}")
-
     client_ip = websocket.client.host
-    logging.getLogger().info(f"websocket connection started for {client_ip}")
-
+    logging.getLogger().info(f"reverseproxy ip: {client_ip}")
+    logging.getLogger().info(f"sherpa x_real_ip: {x_real_ip}")
     db_sherpa = session.get_sherpa(sherpa)
     db_sherpa.ip_address = client_ip
     logging.getLogger().info(f"modified sherpa details {db_sherpa.__dict__}")

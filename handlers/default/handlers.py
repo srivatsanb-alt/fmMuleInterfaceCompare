@@ -672,7 +672,9 @@ class Handlers:
         image_tag = os.getenv("MULE_IMAGE_ID")
         fm_host_name = os.getenv("HOSTNAME")
         time_zone = os.getenv("PGTZ")
-        ip_address = fleet_config["fleet"]["server_ip"]
+
+        # temp sol - needs modification - all_server_ips
+        ip_address = fleet_config["fleet"]["all_server_ips"][0]
         registry_port = fleet_config["docker_registry"]["port"]
         image_update_req: SherpaImgUpdate = SherpaImgUpdate(
             ip_address=ip_address,
@@ -944,6 +946,10 @@ class Handlers:
         map_file_info = [
             MapFileInfo(file_name=mf.filename, hash=mf.file_hash) for mf in map_files
         ]
+
+        map_file_info = hutils.update_map_file_info_with_certs(
+            map_file_info, sherpa.name, sherpa.ip_address
+        )
         response: VerifyFleetFilesResp = VerifyFleetFilesResp(
             fleet_name=fleet_name, files_info=map_file_info
         )
@@ -1057,6 +1063,7 @@ class Handlers:
             "delete_ongoing_trip",
             "delete_booked_trip",
             "induct_sherpa",
+            "pass_to_sherpa",
         ]
 
         if msg.type in optimal_dispatch_influencers:

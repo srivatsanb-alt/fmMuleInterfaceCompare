@@ -46,6 +46,10 @@ def get_user_from_query(token: str = Query(None)):
     return decode_token(token)
 
 
+def get_real_ip_from_header(x_real_ip: str = Header(None)):
+    return x_real_ip
+
+
 def decode_token(token: str):
     redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
     try:
