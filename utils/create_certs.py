@@ -126,5 +126,5 @@ def generate_cert_for_fm(fleet_config_path, fleet_static_path):
 
 
 def generate_certs_for_sherpa(sherpa_hostname, sherpa_ip_address, save_path):
-    cert_pem, key_pem = gen_ssl_cert(sherpa_hostname, [sherpa_ip_address])
+    cert_pem, key_pem = gen_ssl_cert(sherpa_hostname, [sherpa_ip_address, "127.0.0.1"])
     save_certs(cert_pem, key_pem, sherpa_hostname, save_path)
