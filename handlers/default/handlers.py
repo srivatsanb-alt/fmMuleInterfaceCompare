@@ -947,8 +947,14 @@ class Handlers:
             MapFileInfo(file_name=mf.filename, hash=mf.file_hash) for mf in map_files
         ]
 
+        ip_changed = sherpa.status.other_info.get("ip_changed", True)
+        if ip_changed:
+            get_logger().warning(
+                f"{sherpa_name} ip address has changed will generate new cert files, force docker restart on mule"
+            )
+
         map_file_info = hutils.update_map_file_info_with_certs(
-            map_file_info, sherpa.name, sherpa.ip_address
+            map_file_info, sherpa.name, sherpa.ip_address, ip_changed=ip_changed
         )
         response: VerifyFleetFilesResp = VerifyFleetFilesResp(
             fleet_name=fleet_name, files_info=map_file_info

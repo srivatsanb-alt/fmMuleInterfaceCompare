@@ -68,13 +68,29 @@ async def sherpa_status(
         return
 
     await websocket.accept()
-
     logging.getLogger().info(f"websocket connection started for {sherpa}")
     client_ip = websocket.client.host
+    if x_real_ip is None:
+        x_real_ip = client_ip
+
     logging.getLogger().info(f"reverseproxy ip: {client_ip}")
-    logging.getLogger().info(f"sherpa x_real_ip: {x_real_ip}")
+    logging.getLogger().info(f"sherpa connected wiht x_real_ip: {x_real_ip}")
+
     db_sherpa = session.get_sherpa(sherpa)
-    db_sherpa.ip_address = client_ip
+
+    if db_sherpa.status.other_info is None:
+        db_sherpa.status.other_info = {}
+
+    if db_sherpa.ip_address != x_real_ip:
+        logging.info(
+            f"{sherpa} ip has changed since last connection , last_connection_ip: {db_sherpa.ip_address}"
+        )
+        db_sherpa.status.other_info.update({"ip_changed": True})
+        db_sherpa.ip_address = x_real_ip
+    else:
+        logging.info(f"{sherpa} ip hasn't changed since last connection")
+        db_sherpa.status.other_info.update({"ip_changed": False})
+
     logging.getLogger().info(f"modified sherpa details {db_sherpa.__dict__}")
     session.close()
 

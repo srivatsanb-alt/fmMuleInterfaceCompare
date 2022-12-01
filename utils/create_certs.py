@@ -116,9 +116,7 @@ def generate_cert_for_fm(fleet_config_path, fleet_static_path):
     nginx_hostname = FLEET_CONFIG.get("nginx_hostname", "fm_rev_proxy")
     print(f"Will create cert with name: {nginx_hostname}, ips: {all_server_ips}")
     cert_pem, key_pem = gen_ssl_cert(nginx_hostname, all_server_ips)
-    save_certs(
-        cert_pem, key_pem, "all_server_ips", os.path.join(fleet_static_path, "certs")
-    )
+    save_certs(cert_pem, key_pem, "fm_rev_proxy", os.path.join(fleet_static_path, "certs"))
     save_certs(
         cert_pem,
         key_pem,
