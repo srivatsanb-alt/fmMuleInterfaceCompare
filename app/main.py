@@ -10,6 +10,7 @@ from .routers import (
     updates_ws,
     misc_http,
     control_http,
+    station_http,
 )
 
 
@@ -43,3 +44,4 @@ app.include_router(updates_ws.router)
 app.include_router(auth.router)
 app.include_router(misc_http.router)
 app.include_router(control_http.router)
+app.include_router(station_http.router)

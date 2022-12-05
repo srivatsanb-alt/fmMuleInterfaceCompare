@@ -20,18 +20,24 @@ def get_sherpa_url(
 ):
     version = Config.get_api_version()
     port = sherpa.port if sherpa.port else Config.get_sherpa_port()
-    return f"http://{sherpa.ip_address}:{port}/api/{version}/fm"
+    scheme = Config.get_http_scheme() if Config.get_http_scheme() else "http"
+    verify = False
+    if scheme == "https":
+        port = 443
+        verify = os.path.join(os.getenv("FM_MAP_DIR"), "certs", f"{sherpa.name}_cert.pem")
+
+    return f"{scheme}://{sherpa.ip_address}:{port}/api/{version}/fm", verify
 
 
-def post(url, body: Dict, sherpa: Sherpa) -> Dict:
-    response = requests.post(url, json=body)
+def post(url, verify, body: Dict, sherpa: Sherpa) -> Dict:
+    response = requests.post(url, verify=verify, json=body)
     return process_response(response, url, body, sherpa)
 
 
 def get(sherpa: Sherpa, req: FMReq) -> Dict:
-    base_url = get_sherpa_url(sherpa)
+    base_url, verify = get_sherpa_url(sherpa)
     url = f"{base_url}/{req.endpoint}"
-    response = requests.get(url)
+    response = requests.get(url, verify=verify)
     return process_response(response, url, req, sherpa)
 
 
@@ -45,7 +51,7 @@ def send_msg_to_sherpa(sherpa: Sherpa, msg: FMReq) -> Dict:
         body.pop("type")
         body.pop("sherpa_name")
 
-    base_url = get_sherpa_url(sherpa)
+    base_url, verify = get_sherpa_url(sherpa)
     url = f"{base_url}/{endpoint}"
 
     get_logger().info(f"Sending msg to {sherpa.name}")
@@ -58,7 +64,7 @@ def send_msg_to_sherpa(sherpa: Sherpa, msg: FMReq) -> Dict:
     )
     session.add_to_session(sherpa_event)
 
-    return post(url, body, sherpa)
+    return post(url, verify, body, sherpa)
 
 
 def process_response(

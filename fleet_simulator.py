@@ -7,6 +7,7 @@ from models.request_models import (
     TripInfo,
     Stoppages,
     StoppageInfo,
+    SherpaReq,
 )
 from utils.router_utils import RouterModule, get_dense_path
 from models.trip_models import OngoingTrip
@@ -102,6 +103,12 @@ class FleetSimulator:
         stations: List[Station] = session.get_all_stations()
 
         for sherpa in sherpas:
+            self.send_verify_fleet_files_req(sherpa.name)
+            print(f"sending verify fleet files req sherpa: {sherpa.name}")
+
+        time.sleep(5)
+
+        for sherpa in sherpas:
             station_fleet_name = None
             while sherpa.fleet.name != station_fleet_name:
                 i = np.random.randint(0, len(stations))
@@ -109,6 +116,13 @@ class FleetSimulator:
 
             st = stations[i]
             self.send_sherpa_status(sherpa.name, mode="fleet", pose=st.pose)
+
+    def send_verify_fleet_files_req(self, sherpa_name):
+        generic_q = Queues.queues_dict["generic_handler"]
+        msg = SherpaReq(
+            type="verify_fleet_files", source=sherpa_name, timestamp=time.time()
+        )
+        enqueue(generic_q, handle, self.handler_obj, msg, ttl=1)
 
     def send_sherpa_status(self, sherpa_name, mode=None, pose=None, battery_status=None):
         with DBSession() as session:

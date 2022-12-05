@@ -8,6 +8,7 @@ copy_static=1
 clear_db=0
 server=0
 build_base=1
+cert_reqd=1
 
 # Set variables
 IP_ADDRESS="localhost"
@@ -41,6 +42,15 @@ do
       exit;;
   esac
 done
+
+
+if [ $cert_reqd == 1 ]; then 
+   echo "will copy fm_rev_proxy_cert.pem to dashboard/static/"
+   cp static/certs/fm_rev_proxy_cert.pem dashboard/static/  || { 
+   echo "Run cd utils && python3 set_up_certs.py ../static/fleet_config/fleet_config.toml ../static" 
+   exit 
+   } 
+fi
 
 if [ $server == 1 ]; then
   export DOCKER_HOST=ssh://$IP_ADDRESS

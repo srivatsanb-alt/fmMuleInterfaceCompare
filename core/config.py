@@ -43,7 +43,13 @@ class Config:
     def get_sherpa_port(cls):
         if not cls.config:
             cls.config = cls.read_config()
-        return cls.config["fleet"].get("sherpa_port", 5001)
+        return cls.config["fleet"].get("sherpa_port", 5000)
+
+    @classmethod
+    def get_http_scheme(cls):
+        if not cls.config:
+            cls.config = cls.read_config()
+        return cls.config["fleet"].get("http_scheme", None)
 
     @classmethod
     def get_handler_package(cls):
