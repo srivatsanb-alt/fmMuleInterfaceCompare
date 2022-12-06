@@ -963,7 +963,7 @@ class Handlers:
     def handle_visa_release(self, req: VisaReq, sherpa_name):
         visa_type = req.visa_type
         zone_name = req.zone_name
-        if visa_type == VisaType.UNPARKING:
+        if visa_type in [VisaType.UNPARKING, VisaType.SEZ]:
             unlock_exclusion_zone(zone_name, "station", sherpa_name)
             unlock_exclusion_zone(zone_name, "lane", sherpa_name)
         elif visa_type == VisaType.TRANSIT:

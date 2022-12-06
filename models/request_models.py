@@ -36,6 +36,7 @@ class VisaType(str, Enum):
     EXCLUSIVE_PARKING = "exclusive_parking"
     UNPARKING = "unparking"
     TRANSIT = "transit"
+    SEZ = "sez"
 
 
 class AccessType(str, Enum):

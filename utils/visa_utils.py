@@ -123,7 +123,7 @@ def maybe_grant_visa(zone_name, visa_type, sherpa_name):
             linked_zone_flag = can_lock_linked_zones(zone_name, "station", sherpa_name)
         return lock_exclusion_zone(zone_name, "station", sherpa_name) and linked_zone_flag
 
-    if visa_type in {VisaType.EXCLUSIVE_PARKING, VisaType.UNPARKING}:
+    if visa_type in [VisaType.EXCLUSIVE_PARKING, VisaType.UNPARKING, VisaType.SEZ]:
         if len(linked_zones):
             linked_zone_flag = can_lock_linked_zones(
                 zone_name, "station", sherpa_name
