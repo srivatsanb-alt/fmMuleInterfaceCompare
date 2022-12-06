@@ -866,6 +866,12 @@ class Handlers:
             )
             return
 
+        if req.trip_info.eta > 0.9:
+            get_logger().info(
+                f"Trip progress of {sherpa_name}, {req.trip_info.eta} > 0.9, ignoring the msg. trip_id: {req.trip_id}"
+            )
+            return
+
         ongoing_trip.trip.update_etas(float(req.trip_info.eta), ongoing_trip.next_idx_aug)
 
         trip_analytics = session.get_trip_analytics(ongoing_trip.trip_leg_id)
