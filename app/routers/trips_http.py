@@ -25,7 +25,7 @@ router = APIRouter(
 )
 
 
-@router.post("/book/")
+@router.post("/book")
 async def book(booking_req: BookingReq, user_name=Depends(get_user_from_header)):
     response = process_req_with_response(None, booking_req, user_name)
     return response

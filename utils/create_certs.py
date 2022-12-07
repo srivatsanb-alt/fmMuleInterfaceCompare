@@ -120,7 +120,7 @@ def generate_cert_for_fm(fleet_config_path, fleet_static_path):
     save_certs(
         cert_pem,
         key_pem,
-        "all_server_ips",
+        "fm_rev_proxy",
         os.path.join(fleet_static_path, "../dashboard/static/"),
     )
 

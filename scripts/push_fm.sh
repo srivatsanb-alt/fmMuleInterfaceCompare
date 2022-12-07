@@ -45,12 +45,16 @@ done
 
 
 if [ $cert_reqd == 1 ]; then 
-   echo "will copy fm_rev_proxy_cert.pem to dashboard/static/"
-   cp static/certs/fm_rev_proxy_cert.pem dashboard/static/  || { 
-   echo "Run cd utils && python3 set_up_certs.py ../static/fleet_config/fleet_config.toml ../static" 
-   exit 
-   } 
+   echo "Checking if cert files are present"
+   if [[ -f "static/certs/fm_rev_proxy_cert.pem" ]] && [[ -f "dashboard/static/fm_rev_proxy_cert.pem" ]] ; then
+      echo "FM cert files present"
+   else 
+      echo "Please update server ip in fleet_config.toml, run cd utils && python3 set_up_certs.py ../static/fleet_config/fleet_config.toml ../static"
+      echo "Generated certs needs to be copied to the sherpas" 
+      exit
+   fi 
 fi
+
 
 if [ $server == 1 ]; then
   export DOCKER_HOST=ssh://$IP_ADDRESS

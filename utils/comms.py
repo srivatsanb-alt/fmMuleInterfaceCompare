@@ -10,7 +10,7 @@ from core.logs import get_logger
 from models.fleet_models import Sherpa, Station
 from models.request_models import FMReq, MoveReq
 from models.trip_models import OngoingTrip
-
+import json
 
 redis_db = redis.from_url(os.getenv("FM_REDIS_URI"))
 
@@ -98,3 +98,8 @@ def send_move_msg(sherpa: Sherpa, ongoing_trip: OngoingTrip, station: Station) -
 def send_status_update(msg):
     pub = redis.from_url(os.getenv("FM_REDIS_URI"), decode_responses=True)
     pub.publish("channel:status_updates", str(msg))
+
+
+def send_ws_msg_to_sherpa(msg, sherpa):
+    pub = redis.from_url(os.getenv("FM_REDIS_URI"), decode_responses=True)
+    pub.publish(f"channel:{sherpa.name}", str(msg))

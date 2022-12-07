@@ -26,24 +26,24 @@ async def check_connection():
     return {"uvicorn": "I am alive"}
 
 
-@router.post("/init/")
+@router.post("/init")
 async def init_sherpa(init_msg: InitMsg, sherpa: str = Depends(get_sherpa)):
     process_req(None, init_msg, sherpa)
 
 
-@router.post("/trip/reached/")
+@router.post("/trip/reached")
 async def reached(reached_msg: ReachedReq, sherpa: str = Depends(get_sherpa)):
     process_req(None, reached_msg, sherpa)
 
 
-@router.post("/peripherals/")
+@router.post("/peripherals")
 async def peripherals(
     peripherals_req: SherpaPeripheralsReq, sherpa: str = Depends(get_sherpa)
 ):
     process_req(None, peripherals_req, sherpa)
 
 
-@router.post("/access/resource/", response_model=ResourceResp)
+@router.post("/access/resource", response_model=ResourceResp)
 async def resource_access(resource_req: ResourceReq, sherpa: str = Depends(get_sherpa)):
     queue = Queues.queues_dict["resource_handler"]
     response = process_req_with_response(queue, resource_req, sherpa)
