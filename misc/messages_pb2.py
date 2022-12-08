@@ -21,7 +21,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   package='ati.schema',
   syntax='proto3',
   serialized_options=None,
-  serialized_pb=_b('\n\x0emessages.proto\x12\nati.schema\"\x1e\n\x0bMuleCommand\x12\x0f\n\x07\x43ommand\x18\x01 \x01(\t\"\x1c\n\nMuleStatus\x12\x0e\n\x06Status\x18\x01 \x01(\t\"P\n\x0cSystemHealth\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x12\n\nepo_signal\x18\x02 \x01(\r\x12\x1e\n\x16\x64\x65lfino_firmware_error\x18\x03 \x01(\r\"\xa3\x01\n\x0fMulePeripherals\x12\x0b\n\x03Msg\x18\x01 \x01(\t\x12\x11\n\tAutoHitch\x18\x02 \x01(\t\x12\x10\n\x08\x43onveyor\x18\x03 \x01(\t\x12\x16\n\x0e\x44ispatchButton\x18\x04 \x01(\t\x12\x0f\n\x07Speaker\x18\x05 \x01(\t\x12\x11\n\tIndicator\x18\x06 \x01(\t\x12\x14\n\x0c\x65rror_device\x18\x07 \x01(\t\x12\x0c\n\x04time\x18\x08 \x01(\x01\"\x1f\n\rControlStatus\x12\x0e\n\x06Status\x18\x01 \x01(\t\")\n\x06Vector\x12\t\n\x01x\x18\x01 \x01(\x01\x12\t\n\x01y\x18\x02 \x01(\x01\x12\t\n\x01z\x18\x03 \x01(\x01\"\xec\x01\n\x0eOdometryUpdate\x12\x0c\n\x04time\x18\x07 \x01(\x01\x12\x10\n\x08\x66rame_id\x18\x08 \x01(\r\x12$\n\x08Position\x18\x01 \x01(\x0b\x32\x12.ati.schema.Vector\x12$\n\x08Velocity\x18\x02 \x01(\x0b\x32\x12.ati.schema.Vector\x12$\n\x08Welocity\x18\x04 \x01(\x0b\x32\x12.ati.schema.Vector\x12!\n\x05\x41ngle\x18\x03 \x01(\x0b\x32\x12.ati.schema.Vector\x12\x11\n\tOmegaLeft\x18\x05 \x01(\x01\x12\x12\n\nOmegaRight\x18\x06 \x01(\x01\"\xba\x01\n\x0b\x44riveUpdate\x12\x0c\n\x04time\x18\x07 \x01(\x01\x12\x14\n\x0cLeftThrottle\x18\x01 \x01(\x01\x12\x15\n\rRightThrottle\x18\x02 \x01(\x01\x12\x11\n\tRearOmega\x18\x08 \x01(\x01\x12\x12\n\nBrakeInput\x18\x03 \x01(\x01\x12\x15\n\rSteeringAngle\x18\x04 \x01(\x01\x12\r\n\x05v_ref\x18\x05 \x01(\x01\x12\x11\n\tomega_ref\x18\x06 \x01(\x01\x12\x10\n\x08gradient\x18\t \x01(\x01\"V\n\x0f\x44\x65tectedObjects\x12\x0c\n\x04time\x18\x02 \x01(\x01\x12#\n\x07objects\x18\x01 \x03(\x0b\x32\x12.ati.schema.Object\x12\x10\n\x08\x66rame_id\x18\x03 \x01(\r\">\n\rDetectedRoads\x12\x0c\n\x04time\x18\x02 \x01(\x01\x12\x1f\n\x05lanes\x18\x01 \x03(\x0b\x32\x10.ati.schema.Lane\"\xc7\x01\n\x06Object\x12$\n\x08position\x18\x01 \x01(\x0b\x32\x12.ati.schema.Vector\x12#\n\x07\x65xtents\x18\x02 \x01(\x0b\x32\x12.ati.schema.Vector\x12$\n\x04type\x18\x03 \x01(\x0e\x32\x16.ati.schema.ObjectType\x12$\n\x08vertices\x18\x04 \x03(\x0b\x32\x12.ati.schema.Vector\x12\x12\n\nmin_height\x18\x05 \x01(\x01\x12\x12\n\nmax_height\x18\x06 \x01(\x01\"*\n\x04Lane\x12\"\n\x05\x61reas\x18\x01 \x03(\x0b\x32\x13.ati.schema.Polygon\",\n\x07Polygon\x12!\n\x05\x65\x64ges\x18\x01 \x03(\x0b\x32\x12.ati.schema.Vector\"H\n\x04Line\x12\x1f\n\x03pt1\x18\x01 \x01(\x0b\x32\x12.ati.schema.Vector\x12\x1f\n\x03pt2\x18\x02 \x01(\x0b\x32\x12.ati.schema.Vector\"Y\n\x08LinePose\x12\x0c\n\x04\x64ist\x18\x01 \x01(\x01\x12\r\n\x05theta\x18\x02 \x01(\x01\x12\x0c\n\x04prob\x18\x03 \x01(\x01\x12\"\n\x08line_seg\x18\x04 \x01(\x0b\x32\x10.ati.schema.Line\"W\n\nRadarPoint\x12$\n\x08position\x18\x01 \x01(\x0b\x32\x12.ati.schema.Vector\x12\x10\n\x08velocity\x18\x02 \x01(\x01\x12\x11\n\tintensity\x18\x03 \x01(\x01\"\\\n\x0cLidarPoint2D\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x10\n\x08\x66rame_id\x18\x02 \x01(\x07\x12\x11\n\tdistances\x18\x03 \x01(\x0c\x12\x19\n\x11horizontal_angles\x18\x04 \x01(\x0c\";\n\x0bLidarGround\x12\x0c\n\x04time\x18\x03 \x01(\x01\x12\x0c\n\x04mask\x18\x01 \x01(\x0c\x12\x10\n\x08\x66rame_id\x18\x02 \x01(\x07\"\xb8\x01\n\x0e\x44rivableRegion\x12\x0c\n\x04time\x18\x05 \x01(\x01\x12\x10\n\x08\x66rame_id\x18\x01 \x01(\x07\x12\x10\n\x08origin_x\x18\x02 \x01(\x0f\x12\x10\n\x08origin_y\x18\x03 \x01(\x0f\x12\x0c\n\x04grid\x18\x04 \x01(\x0c\x12\x0c\n\x04roll\x18\x06 \x01(\x01\x12\r\n\x05pitch\x18\x07 \x01(\x01\x12\x17\n\x0fprocessing_time\x18\x08 \x01(\x01\x12\x0e\n\x06height\x18\t \x01(\x0c\x12\x0e\n\x06sensor\x18\n \x01(\x0c\"\xdb\x01\n\tImuUpdate\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x14\n\x0chw_time_diag\x18\x06 \x01(\x06\x12\x13\n\x0bhw_time_acc\x18\x07 \x01(\x06\x12\x14\n\x0chw_time_gyro\x18\x08 \x01(\x06\x12\x0c\n\x04temp\x18\x05 \x01(\x01\x12(\n\x0c\x61\x63\x63\x65leration\x18\x02 \x01(\x0b\x32\x12.ati.schema.Vector\x12$\n\x08welocity\x18\x03 \x01(\x0b\x32\x12.ati.schema.Vector\x12!\n\x05\x66ield\x18\x04 \x01(\x0b\x32\x12.ati.schema.Vector\"<\n\nGyroUpdate\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12 \n\x04gyro\x18\x02 \x01(\x0b\x32\x12.ati.schema.Vector\"E\n\x0eGyroBiasUpdate\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12%\n\tgyro_bias\x18\x02 \x01(\x0b\x32\x12.ati.schema.Vector\"<\n\x0fPitchRollUpdate\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\r\n\x05pitch\x18\x02 \x01(\x01\x12\x0c\n\x04roll\x18\x03 \x01(\x01\"F\n\x0b\x43\x61meraFrame\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\n\n\x02id\x18\x02 \x01(\t\x12\x0e\n\x06height\x18\x03 \x01(\r\x12\r\n\x05width\x18\x04 \x01(\r\"M\n\nGpsReading\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x10\n\x08latitude\x18\x02 \x01(\x01\x12\x11\n\tlongitude\x18\x03 \x01(\x01\x12\x0c\n\x04hdop\x18\x04 \x01(\x01\"R\n\x0e\x45ncoderReading\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\t\n\x01v\x18\x02 \x01(\x01\x12\t\n\x01w\x18\x03 \x01(\x01\x12\r\n\x05v_ref\x18\x04 \x01(\x01\x12\r\n\x05w_ref\x18\x05 \x01(\x01\"\xfb\x01\n\x13\x45ncoderDebugReading\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\r\n\x05motor\x18\x02 \x01(\x05\x12\r\n\x05ticks\x18\x03 \x01(\x05\x12\x11\n\tticks_ref\x18\x04 \x01(\x05\x12\x0b\n\x03pwm\x18\x05 \x01(\x05\x12\r\n\x05\x65rror\x18\x06 \x01(\x05\x12\x11\n\tint_error\x18\x07 \x01(\x05\x12\x12\n\nderivative\x18\x08 \x01(\x05\x12\x13\n\x0b\x63ontrol_ref\x18\t \x01(\x01\x12\x11\n\tticks_raw\x18\n \x01(\x05\x12\x11\n\tbrake_pwm\x18\x0b \x01(\x05\x12\x15\n\rencoder_error\x18\x0c \x01(\x05\x12\x10\n\x08rollback\x18\r \x01(\x05\"e\n\x0bRadarUpdate\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x10\n\x08\x66rame_no\x18\x02 \x01(\r\x12\x0e\n\x06numpts\x18\x03 \x01(\r\x12&\n\x06points\x18\x04 \x03(\x0b\x32\x16.ati.schema.RadarPoint\")\n\x08IrUpdate\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x0f\n\x07ir_msgs\x18\x02 \x03(\x01\"%\n\x07\x41\x64\x63Vals\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x0c\n\x04vals\x18\x02 \x03(\r\"b\n\tPoseFrame\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\"\n\x04left\x18\x02 \x01(\x0b\x32\x14.ati.schema.LinePose\x12#\n\x05right\x18\x03 \x01(\x0b\x32\x14.ati.schema.LinePose\"H\n\nGenericMsg\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x0c\n\x04name\x18\x02 \x01(\t\x12\x0e\n\x06\x66ields\x18\x03 \x03(\t\x12\x0e\n\x06values\x18\x04 \x03(\t\"S\n\rLidarSlamPose\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x11\n\tPositionX\x18\x02 \x01(\x01\x12\x11\n\tPositionY\x18\x03 \x01(\x01\x12\x0e\n\x06\x41ngleZ\x18\x04 \x01(\x01\"\"\n\x04Note\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x0c\n\x04note\x18\x02 \x01(\t\"w\n\x0cHealthUpdate\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x10\n\x08\x63pu_util\x18\x02 \x01(\x01\x12\x10\n\x08\x63pu_temp\x18\x03 \x01(\x01\x12\x11\n\tmem_avail\x18\x04 \x01(\x01\x12\x10\n\x08gpu_temp\x18\x05 \x01(\x01\x12\x10\n\x08gpu_util\x18\x06 \x01(\x01\"`\n\rControlUpdate\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\r\n\x05predx\x18\x02 \x01(\x01\x12\r\n\x05predy\x18\x03 \x01(\x01\x12\r\n\x05predt\x18\x04 \x01(\x01\x12\t\n\x01v\x18\x05 \x01(\x01\x12\t\n\x01w\x18\x06 \x01(\x01\"8\n\nLaneUpdate\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\r\n\x05xcorr\x18\x02 \x01(\x01\x12\r\n\x05ycorr\x18\x03 \x01(\x01\"5\n\x11\x43\x61meraNearObjects\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x12\n\nnum_frames\x18\x02 \x01(\r\"\xe1\x01\n\rPathOccupancy\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x10\n\x08\x66rame_id\x18\x02 \x01(\x07\x12\x0c\n\x04grid\x18\x03 \x01(\x0c\x12\x12\n\ngrid_width\x18\x0c \x01(\x07\x12\x0b\n\x03xcr\x18\x04 \x01(\x01\x12\x0b\n\x03ycr\x18\x05 \x01(\x01\x12\x12\n\nobs_factor\x18\x06 \x01(\x01\x12\x12\n\nunc_factor\x18\x07 \x01(\x01\x12\x12\n\nvel_factor\x18\x08 \x01(\x01\x12\x0c\n\x04path\x18\t \x01(\x0c\x12\x17\n\x0fhumans_detected\x18\n \x01(\x08\x12\x11\n\thuman_pos\x18\x0b \x01(\x0c\"\xa3\x01\n\x0fSensorException\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x11\n\tsensor_id\x18\x02 \x01(\x07\x12\x10\n\x08\x66rame_id\x18\x03 \x01(\x07\x12\x12\n\nmessage_id\x18\x08 \x01(\x07\x12\x10\n\x08severity\x18\t \x01(\x05\x12\x0c\n\x04\x64\x61ta\x18\x04 \x01(\x0c\x12\x0b\n\x03msg\x18\x05 \x01(\t\x12\r\n\x05\x66ield\x18\x06 \x03(\t\x12\r\n\x05value\x18\x07 \x03(\t\"H\n\tSystemMsg\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x11\n\tmodule_id\x18\x02 \x01(\r\x12\x0b\n\x03ref\x18\x03 \x01(\x01\x12\r\n\x05value\x18\x04 \x01(\x01\"\x87\x01\n\x08YelliMsg\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x17\n\x0fprocessing_time\x18\x02 \x01(\x01\x12\x10\n\x08\x66rame_id\x18\x03 \x01(\r\x12\x0e\n\x06pose_x\x18\x04 \x01(\x01\x12\x0e\n\x06pose_y\x18\x05 \x01(\x01\x12\x0e\n\x06pose_t\x18\x06 \x01(\x01\x12\x12\n\nbest_score\x18\x07 \x01(\x01\"\xc9\x01\n\nLidarFrame\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x10\n\x08\x66rame_id\x18\x02 \x01(\x07\x12\x13\n\x0bhw_frame_id\x18\x04 \x01(\x07\x12\x14\n\x0chw_timestamp\x18\x05 \x01(\x06\x12\x0c\n\x04\x64\x61ta\x18\x03 \x01(\x0c\x12\x15\n\rmajor_version\x18\x06 \x01(\x07\x12\x15\n\rminor_version\x18\x07 \x01(\x07\x12\x1b\n\x13num_missing_sectors\x18\x08 \x01(\x07\x12\x17\n\x0fmissing_sectors\x18\t \x01(\t\"G\n\x10LidarLookupTable\x12\x0c\n\x04\x64\x61ta\x18\x01 \x01(\x0c\x12\t\n\x01W\x18\x02 \x01(\x07\x12\t\n\x01H\x18\x03 \x01(\x07\x12\x0f\n\x07\x63olumns\x18\x04 \x01(\x07\"\x8a\x01\n\x10LidarSmallHeader\x12\x17\n\x0fvertical_angles\x18\x03 \x01(\x0c\x12\x19\n\x11horizontal_angles\x18\x04 \x01(\x0c\x12\x14\n\x0clookup_table\x18\x05 \x01(\x0c\x12\x15\n\rmajor_version\x18\x06 \x01(\x07\x12\x15\n\rminor_version\x18\x07 \x01(\x07\"\xa6\x01\n\x10LidarSmallPacket\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x10\n\x08\x66rame_id\x18\x02 \x01(\x07\x12\x13\n\x0bhw_frame_id\x18\x04 \x01(\x07\x12\x14\n\x0chw_timestamp\x18\x05 \x01(\x06\x12\x11\n\tdistances\x18\x03 \x01(\x0c\x12\x1b\n\x13num_missing_sectors\x18\x06 \x01(\x07\x12\x17\n\x0fmissing_sectors\x18\x07 \x01(\t\"j\n\x10LidarExtraPacket\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x10\n\x08\x66rame_id\x18\x02 \x01(\x07\x12\x11\n\tintensity\x18\x03 \x01(\x0c\x12\x14\n\x0creflectivity\x18\x04 \x01(\x0c\x12\r\n\x05noise\x18\x05 \x01(\x0c\"\xcf\x01\n\x15\x64\x65precated_LidarPoint\x12\x0c\n\x04time\x18\x05 \x01(\x01\x12\x10\n\x08\x66rame_id\x18\n \x01(\x07\x12\r\n\x05\x62\x65\x61ms\x18\x06 \x01(\r\x12\x0e\n\x06slices\x18\x07 \x01(\r\x12\x17\n\x0fvertical_angles\x18\x01 \x01(\x0c\x12\x19\n\x11horizontal_angles\x18\x02 \x01(\x0c\x12\x11\n\tdistances\x18\x03 \x01(\x0c\x12\x13\n\x0bintensities\x18\x04 \x01(\x0c\x12\n\n\x02id\x18\x08 \x01(\x0c\x12\x0f\n\x07ptcloud\x18\t \x01(\x0c\"\xa6\x01\n\x06\x42\x65\x64Msg\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x10\n\x08\x66rame_id\x18\x02 \x01(\x07\x12\x0f\n\x07ward_id\x18\x03 \x01(\x07\x12\x11\n\tmap_level\x18\x04 \x01(\x07\x12+\n\x0e\x64\x65tected_lines\x18\x05 \x03(\x0b\x32\x13.ati.schema.Polygon\x12+\n\x0epredicted_boxs\x18\x06 \x03(\x0b\x32\x13.ati.schema.Polygon\"z\n\nBedSideMsg\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x10\n\x08\x66rame_id\x18\x02 \x01(\x07\x12\x0f\n\x07ward_id\x18\x03 \x01(\x07\x12\x11\n\tmap_level\x18\x04 \x01(\x07\x12(\n\x0c\x62\x65\x64side_locs\x18\x05 \x03(\x0b\x32\x12.ati.schema.Vector\"q\n\x10HubMotorCurrents\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x1b\n\x13steer_motor_current\x18\x02 \x01(\x01\x12\x17\n\x0f\x62\x61ttery_current\x18\x03 \x01(\x01\x12\x19\n\x11hub_motor_current\x18\x04 \x01(\x01\"~\n\x0cSensorStatus\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x11\n\tsensor_id\x18\x02 \x01(\x07\x12\x10\n\x08\x66rame_id\x18\x03 \x01(\x07\x12\x0c\n\x04\x64\x61ta\x18\x04 \x01(\x0c\x12\x0b\n\x03msg\x18\x05 \x01(\t\x12\x10\n\x08severity\x18\t \x01(\x05\x12\x0e\n\x06status\x18\n \x01(\x08\"\x8c\x01\n\x08\x41rucoMsg\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x10\n\x08\x66rame_id\x18\x02 \x01(\x07\x12\'\n\x0btranslation\x18\x03 \x01(\x0b\x32\x12.ati.schema.Vector\x12$\n\x08rotation\x18\x04 \x01(\x0b\x32\x12.ati.schema.Vector\x12\x11\n\tmarker_id\x18\x05 \x01(\x05\"Z\n\rArucoMulePose\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12(\n\x04pose\x18\x02 \x01(\x0b\x32\x1a.ati.schema.OdometryUpdate\x12\x11\n\tmarker_id\x18\x03 \x01(\x05\"f\n\x0fTagDetectionMsg\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12#\n\x07\x63orners\x18\x02 \x03(\x0b\x32\x12.ati.schema.Vector\x12\x0e\n\x06tag_id\x18\x03 \x01(\x05\x12\x10\n\x08tag_type\x18\x04 \x01(\t\"g\n\x0bTagMulePose\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12(\n\x04pose\x18\x02 \x01(\x0b\x32\x1a.ati.schema.OdometryUpdate\x12\x0e\n\x06tag_id\x18\x03 \x01(\x05\x12\x10\n\x08tag_type\x18\x04 \x01(\t\"\x82\x01\n\x0cTagLocalPose\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12 \n\x04rvec\x18\x02 \x01(\x0b\x32\x12.ati.schema.Vector\x12 \n\x04tvec\x18\x03 \x01(\x0b\x32\x12.ati.schema.Vector\x12\x0e\n\x06tag_id\x18\x04 \x01(\x05\x12\x10\n\x08tag_type\x18\x05 \x01(\t\")\n\tPS4Report\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x0e\n\x06report\x18\x02 \x01(\t\"%\n\x08PS4State\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x0b\n\x03ref\x18\x02 \x01(\x05\"8\n\x0e\x43onveyorUpdate\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x0b\n\x03pwm\x18\x02 \x01(\x01\x12\x0b\n\x03\x64ir\x18\x03 \x01(\x01\"9\n\x11\x41utoUnhitchUpdate\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x16\n\x0eunhitch_signal\x18\x02 \x01(\x01\"-\n\x06Pose2d\x12\t\n\x01x\x18\x01 \x01(\x01\x12\t\n\x01y\x18\x02 \x01(\x01\x12\r\n\x05theta\x18\x03 \x01(\x01\"\xd8\x01\n\x0cTrackerState\x12\x0c\n\x04mode\x18\x01 \x01(\t\x12\t\n\x01v\x18\x02 \x01(\x01\x12\t\n\x01w\x18\x03 \x01(\x01\x12\x0b\n\x03\x63te\x18\x04 \x01(\x01\x12\n\n\x02te\x18\x05 \x01(\x01\x12\x12\n\nvel_factor\x18\x06 \x01(\x01\x12\x13\n\x0bsteer_angle\x18\x07 \x01(\x01\x12%\n\tmule_pose\x18\x08 \x01(\x0b\x32\x12.ati.schema.Pose2d\x12$\n\x08ref_pose\x18\t \x01(\x0b\x32\x12.ati.schema.Pose2d\x12\x15\n\rspeed_profile\x18\n \x01(\x07\"\'\n\nBatteryMsg\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x0b\n\x03soc\x18\x02 \x01(\x01*6\n\nObjectType\x12\x0b\n\x07UNKNOWN\x10\x00\x12\x0e\n\nPEDESTRIAN\x10\x01\x12\x0b\n\x07VEHICLE\x10\x02*\xa5\x01\n\x08SensorId\x12\t\n\x05LIDAR\x10\x00\x12\x0f\n\x0bRIGHT_MOTOR\x10\x01\x12\x0e\n\nLEFT_MOTOR\x10\x02\x12\x17\n\x13REAR_STEERING_MOTOR\x10\x03\x12\t\n\x05\x42RAKE\x10\x04\x12\x0b\n\x07\x43HANNEL\x10\x05\x12\x14\n\x10REAR_DRIVE_MOTOR\x10\x06\x12\x0c\n\x08RP_LIDAR\x10\x07\x12\x0f\n\x0bTOTE_SENSOR\x10\x08\x12\x07\n\x03IMU\x10\t*U\n\x0eLidarMessageId\x12\x12\n\x0eMissingSectors\x10\x00\x12\x18\n\x14MaxRollPitchExceeded\x10\x01\x12\x15\n\x11NumMissingSectors\x10\x02\x62\x06proto3')
+  serialized_pb=_b('\n\x0emessages.proto\x12\nati.schema\"\x1e\n\x0bMuleCommand\x12\x0f\n\x07\x43ommand\x18\x01 \x01(\t\"\x1c\n\nMuleStatus\x12\x0e\n\x06Status\x18\x01 \x01(\t\")\n\x06Vector\x12\t\n\x01x\x18\x01 \x01(\x01\x12\t\n\x01y\x18\x02 \x01(\x01\x12\t\n\x01z\x18\x03 \x01(\x01\"\xda\x01\n\x0eOdometryUpdate\x12\x0c\n\x04time\x18\x07 \x01(\x01\x12$\n\x08Position\x18\x01 \x01(\x0b\x32\x12.ati.schema.Vector\x12$\n\x08Velocity\x18\x02 \x01(\x0b\x32\x12.ati.schema.Vector\x12$\n\x08Welocity\x18\x04 \x01(\x0b\x32\x12.ati.schema.Vector\x12!\n\x05\x41ngle\x18\x03 \x01(\x0b\x32\x12.ati.schema.Vector\x12\x11\n\tOmegaLeft\x18\x05 \x01(\x01\x12\x12\n\nOmegaRight\x18\x06 \x01(\x01\"\x95\x01\n\x0b\x44riveUpdate\x12\x0c\n\x04time\x18\x07 \x01(\x01\x12\x14\n\x0cLeftThrottle\x18\x01 \x01(\x01\x12\x15\n\rRightThrottle\x18\x02 \x01(\x01\x12\x12\n\nBrakeInput\x18\x03 \x01(\x01\x12\x15\n\rSteeringAngle\x18\x04 \x01(\x01\x12\r\n\x05v_ref\x18\x05 \x01(\x01\x12\x11\n\tomega_ref\x18\x06 \x01(\x01\"\x1c\n\x08Timestep\x12\x10\n\x08Timestep\x18\x01 \x01(\x04\"D\n\x0f\x44\x65tectedObjects\x12\x0c\n\x04time\x18\x02 \x01(\x01\x12#\n\x07objects\x18\x01 \x03(\x0b\x32\x12.ati.schema.Object\">\n\rDetectedRoads\x12\x0c\n\x04time\x18\x02 \x01(\x01\x12\x1f\n\x05lanes\x18\x01 \x03(\x0b\x32\x10.ati.schema.Lane\"\x9f\x01\n\x06Object\x12$\n\x08position\x18\x01 \x01(\x0b\x32\x12.ati.schema.Vector\x12#\n\x07\x65xtents\x18\x02 \x01(\x0b\x32\x12.ati.schema.Vector\x12$\n\x04type\x18\x03 \x01(\x0e\x32\x16.ati.schema.ObjectType\x12$\n\x08vertices\x18\x04 \x03(\x0b\x32\x12.ati.schema.Vector\"*\n\x04Lane\x12\"\n\x05\x61reas\x18\x01 \x03(\x0b\x32\x13.ati.schema.Polygon\",\n\x07Polygon\x12!\n\x05\x65\x64ges\x18\x01 \x03(\x0b\x32\x12.ati.schema.Vector\"H\n\x04Line\x12\x1f\n\x03pt1\x18\x01 \x01(\x0b\x32\x12.ati.schema.Vector\x12\x1f\n\x03pt2\x18\x02 \x01(\x0b\x32\x12.ati.schema.Vector\"Y\n\x08LinePose\x12\x0c\n\x04\x64ist\x18\x01 \x01(\x01\x12\r\n\x05theta\x18\x02 \x01(\x01\x12\x0c\n\x04prob\x18\x03 \x01(\x01\x12\"\n\x08line_seg\x18\x04 \x01(\x0b\x32\x10.ati.schema.Line\"W\n\nRadarPoint\x12$\n\x08position\x18\x01 \x01(\x0b\x32\x12.ati.schema.Vector\x12\x10\n\x08velocity\x18\x02 \x01(\x01\x12\x11\n\tintensity\x18\x03 \x01(\x01\"\x95\x01\n\nLidarPoint\x12\x0c\n\x04time\x18\x05 \x01(\x01\x12\r\n\x05\x62\x65\x61ms\x18\x06 \x01(\r\x12\x0e\n\x06slices\x18\x07 \x01(\r\x12\x17\n\x0fvertical_angles\x18\x01 \x01(\x0c\x12\x19\n\x11horizontal_angles\x18\x02 \x01(\x0c\x12\x11\n\tdistances\x18\x03 \x01(\x0c\x12\x13\n\x0bintensities\x18\x04 \x01(\x0c\"\x9a\x01\n\tImuUpdate\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x0c\n\x04temp\x18\x05 \x01(\x01\x12(\n\x0c\x61\x63\x63\x65leration\x18\x02 \x01(\x0b\x32\x12.ati.schema.Vector\x12$\n\x08welocity\x18\x03 \x01(\x0b\x32\x12.ati.schema.Vector\x12!\n\x05\x66ield\x18\x04 \x01(\x0b\x32\x12.ati.schema.Vector\"F\n\x0b\x43\x61meraFrame\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\n\n\x02id\x18\x02 \x01(\t\x12\x0e\n\x06height\x18\x03 \x01(\r\x12\r\n\x05width\x18\x04 \x01(\r\"M\n\nGpsReading\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x10\n\x08latitude\x18\x02 \x01(\x01\x12\x11\n\tlongitude\x18\x03 \x01(\x01\x12\x0c\n\x04hdop\x18\x04 \x01(\x01\"4\n\x0e\x45ncoderReading\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\t\n\x01v\x18\x02 \x01(\x01\x12\t\n\x01w\x18\x03 \x01(\x01\"\xd4\x01\n\x13\x45ncoderDebugReading\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\r\n\x05motor\x18\x02 \x01(\t\x12\r\n\x05ticks\x18\x03 \x01(\x05\x12\x11\n\tticks_ref\x18\x04 \x01(\x05\x12\x0b\n\x03pwm\x18\x05 \x01(\x05\x12\r\n\x05\x65rror\x18\x06 \x01(\x05\x12\x11\n\tint_error\x18\x07 \x01(\x05\x12\x12\n\nderivative\x18\x08 \x01(\x05\x12\x10\n\x08left_ref\x18\t \x01(\x01\x12\x11\n\tright_ref\x18\n \x01(\x01\x12\x16\n\x0erear_angle_ref\x18\x0b \x01(\x01\"e\n\x0bRadarUpdate\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x10\n\x08\x66rame_no\x18\x02 \x01(\r\x12\x0e\n\x06numpts\x18\x03 \x01(\r\x12&\n\x06points\x18\x04 \x03(\x0b\x32\x16.ati.schema.RadarPoint\"b\n\tPoseFrame\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\"\n\x04left\x18\x02 \x01(\x0b\x32\x14.ati.schema.LinePose\x12#\n\x05right\x18\x03 \x01(\x0b\x32\x14.ati.schema.LinePose\":\n\x0eTelemetryEvent\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x0c\n\x04name\x18\x02 \x01(\t\x12\x0c\n\x04\x64\x61ta\x18\x03 \x01(\t\"H\n\nGenericMsg\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x0c\n\x04name\x18\x02 \x01(\t\x12\x0e\n\x06\x66ields\x18\x03 \x03(\t\x12\x0e\n\x06values\x18\x04 \x03(\t\"\x8d\x02\n\x07ICPPose\x12\x13\n\x0b\x66rameNumber\x18\x01 \x01(\r\x12\x11\n\ticp_error\x18\x02 \x01(\x01\x12\x1a\n\x12icp_error_internal\x18\x03 \x01(\x01\x12$\n\x08Position\x18\x05 \x01(\x0b\x32\x12.ati.schema.Vector\x12!\n\x05\x41ngle\x18\x06 \x01(\x0b\x32\x12.ati.schema.Vector\x12*\n\x0e\x63\x61rto_position\x18\x07 \x01(\x0b\x32\x12.ati.schema.Vector\x12\'\n\x0b\x63\x61rto_angle\x18\x08 \x01(\x0b\x32\x12.ati.schema.Vector\x12\x12\n\ncarto_time\x18\t \x01(\x01\x12\x0c\n\x04time\x18\n \x01(\x01\"S\n\rLidarSlamPose\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x11\n\tPositionX\x18\x02 \x01(\x01\x12\x11\n\tPositionY\x18\x03 \x01(\x01\x12\x0e\n\x06\x41ngleZ\x18\x04 \x01(\x01\"\"\n\x04Note\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x0c\n\x04note\x18\x02 \x01(\t\"w\n\x0cHealthUpdate\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x10\n\x08\x63pu_util\x18\x02 \x01(\x01\x12\x10\n\x08\x63pu_temp\x18\x03 \x01(\x01\x12\x11\n\tmem_avail\x18\x04 \x01(\x01\x12\x10\n\x08gpu_temp\x18\x05 \x01(\x01\x12\x10\n\x08gpu_util\x18\x06 \x01(\x01\"Y\n\x08LidarPts\x12\t\n\x01x\x18\x01 \x01(\x01\x12\t\n\x01y\x18\x02 \x01(\x01\x12\t\n\x01z\x18\x03 \x01(\x01\x12\n\n\x02va\x18\x04 \x01(\x01\x12\t\n\x01\x64\x18\x05 \x01(\x01\x12\n\n\x02ha\x18\x06 \x01(\x01\x12\t\n\x01i\x18\x07 \x01(\x01\"=\n\nLidarFrame\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12!\n\x03pts\x18\x02 \x03(\x0b\x32\x14.ati.schema.LidarPts*6\n\nObjectType\x12\x0b\n\x07UNKNOWN\x10\x00\x12\x0e\n\nPEDESTRIAN\x10\x01\x12\x0b\n\x07VEHICLE\x10\x02\x62\x06proto3')
 )
 
 _OBJECTTYPE = _descriptor.EnumDescriptor(
@@ -45,110 +45,15 @@ _OBJECTTYPE = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   serialized_options=None,
-  serialized_start=6732,
-  serialized_end=6786,
+  serialized_start=2912,
+  serialized_end=2966,
 )
 _sym_db.RegisterEnumDescriptor(_OBJECTTYPE)
 
 ObjectType = enum_type_wrapper.EnumTypeWrapper(_OBJECTTYPE)
-_SENSORID = _descriptor.EnumDescriptor(
-  name='SensorId',
-  full_name='ati.schema.SensorId',
-  filename=None,
-  file=DESCRIPTOR,
-  values=[
-    _descriptor.EnumValueDescriptor(
-      name='LIDAR', index=0, number=0,
-      serialized_options=None,
-      type=None),
-    _descriptor.EnumValueDescriptor(
-      name='RIGHT_MOTOR', index=1, number=1,
-      serialized_options=None,
-      type=None),
-    _descriptor.EnumValueDescriptor(
-      name='LEFT_MOTOR', index=2, number=2,
-      serialized_options=None,
-      type=None),
-    _descriptor.EnumValueDescriptor(
-      name='REAR_STEERING_MOTOR', index=3, number=3,
-      serialized_options=None,
-      type=None),
-    _descriptor.EnumValueDescriptor(
-      name='BRAKE', index=4, number=4,
-      serialized_options=None,
-      type=None),
-    _descriptor.EnumValueDescriptor(
-      name='CHANNEL', index=5, number=5,
-      serialized_options=None,
-      type=None),
-    _descriptor.EnumValueDescriptor(
-      name='REAR_DRIVE_MOTOR', index=6, number=6,
-      serialized_options=None,
-      type=None),
-    _descriptor.EnumValueDescriptor(
-      name='RP_LIDAR', index=7, number=7,
-      serialized_options=None,
-      type=None),
-    _descriptor.EnumValueDescriptor(
-      name='TOTE_SENSOR', index=8, number=8,
-      serialized_options=None,
-      type=None),
-    _descriptor.EnumValueDescriptor(
-      name='IMU', index=9, number=9,
-      serialized_options=None,
-      type=None),
-  ],
-  containing_type=None,
-  serialized_options=None,
-  serialized_start=6789,
-  serialized_end=6954,
-)
-_sym_db.RegisterEnumDescriptor(_SENSORID)
-
-SensorId = enum_type_wrapper.EnumTypeWrapper(_SENSORID)
-_LIDARMESSAGEID = _descriptor.EnumDescriptor(
-  name='LidarMessageId',
-  full_name='ati.schema.LidarMessageId',
-  filename=None,
-  file=DESCRIPTOR,
-  values=[
-    _descriptor.EnumValueDescriptor(
-      name='MissingSectors', index=0, number=0,
-      serialized_options=None,
-      type=None),
-    _descriptor.EnumValueDescriptor(
-      name='MaxRollPitchExceeded', index=1, number=1,
-      serialized_options=None,
-      type=None),
-    _descriptor.EnumValueDescriptor(
-      name='NumMissingSectors', index=2, number=2,
-      serialized_options=None,
-      type=None),
-  ],
-  containing_type=None,
-  serialized_options=None,
-  serialized_start=6956,
-  serialized_end=7041,
-)
-_sym_db.RegisterEnumDescriptor(_LIDARMESSAGEID)
-
-LidarMessageId = enum_type_wrapper.EnumTypeWrapper(_LIDARMESSAGEID)
 UNKNOWN = 0
 PEDESTRIAN = 1
 VEHICLE = 2
-LIDAR = 0
-RIGHT_MOTOR = 1
-LEFT_MOTOR = 2
-REAR_STEERING_MOTOR = 3
-BRAKE = 4
-CHANNEL = 5
-REAR_DRIVE_MOTOR = 6
-RP_LIDAR = 7
-TOTE_SENSOR = 8
-IMU = 9
-MissingSectors = 0
-MaxRollPitchExceeded = 1
-NumMissingSectors = 2
 
 
 
@@ -214,162 +119,6 @@ _MULESTATUS = _descriptor.Descriptor(
 )
 
 
-_SYSTEMHEALTH = _descriptor.Descriptor(
-  name='SystemHealth',
-  full_name='ati.schema.SystemHealth',
-  filename=None,
-  file=DESCRIPTOR,
-  containing_type=None,
-  fields=[
-    _descriptor.FieldDescriptor(
-      name='time', full_name='ati.schema.SystemHealth.time', index=0,
-      number=1, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='epo_signal', full_name='ati.schema.SystemHealth.epo_signal', index=1,
-      number=2, type=13, cpp_type=3, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='delfino_firmware_error', full_name='ati.schema.SystemHealth.delfino_firmware_error', index=2,
-      number=3, type=13, cpp_type=3, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-  ],
-  extensions=[
-  ],
-  nested_types=[],
-  enum_types=[
-  ],
-  serialized_options=None,
-  is_extendable=False,
-  syntax='proto3',
-  extension_ranges=[],
-  oneofs=[
-  ],
-  serialized_start=92,
-  serialized_end=172,
-)
-
-
-_MULEPERIPHERALS = _descriptor.Descriptor(
-  name='MulePeripherals',
-  full_name='ati.schema.MulePeripherals',
-  filename=None,
-  file=DESCRIPTOR,
-  containing_type=None,
-  fields=[
-    _descriptor.FieldDescriptor(
-      name='Msg', full_name='ati.schema.MulePeripherals.Msg', index=0,
-      number=1, type=9, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b("").decode('utf-8'),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='AutoHitch', full_name='ati.schema.MulePeripherals.AutoHitch', index=1,
-      number=2, type=9, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b("").decode('utf-8'),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='Conveyor', full_name='ati.schema.MulePeripherals.Conveyor', index=2,
-      number=3, type=9, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b("").decode('utf-8'),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='DispatchButton', full_name='ati.schema.MulePeripherals.DispatchButton', index=3,
-      number=4, type=9, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b("").decode('utf-8'),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='Speaker', full_name='ati.schema.MulePeripherals.Speaker', index=4,
-      number=5, type=9, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b("").decode('utf-8'),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='Indicator', full_name='ati.schema.MulePeripherals.Indicator', index=5,
-      number=6, type=9, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b("").decode('utf-8'),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='error_device', full_name='ati.schema.MulePeripherals.error_device', index=6,
-      number=7, type=9, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b("").decode('utf-8'),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='time', full_name='ati.schema.MulePeripherals.time', index=7,
-      number=8, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-  ],
-  extensions=[
-  ],
-  nested_types=[],
-  enum_types=[
-  ],
-  serialized_options=None,
-  is_extendable=False,
-  syntax='proto3',
-  extension_ranges=[],
-  oneofs=[
-  ],
-  serialized_start=175,
-  serialized_end=338,
-)
-
-
-_CONTROLSTATUS = _descriptor.Descriptor(
-  name='ControlStatus',
-  full_name='ati.schema.ControlStatus',
-  filename=None,
-  file=DESCRIPTOR,
-  containing_type=None,
-  fields=[
-    _descriptor.FieldDescriptor(
-      name='Status', full_name='ati.schema.ControlStatus.Status', index=0,
-      number=1, type=9, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b("").decode('utf-8'),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-  ],
-  extensions=[
-  ],
-  nested_types=[],
-  enum_types=[
-  ],
-  serialized_options=None,
-  is_extendable=False,
-  syntax='proto3',
-  extension_ranges=[],
-  oneofs=[
-  ],
-  serialized_start=340,
-  serialized_end=371,
-)
-
-
 _VECTOR = _descriptor.Descriptor(
   name='Vector',
   full_name='ati.schema.Vector',
@@ -410,8 +159,8 @@ _VECTOR = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=373,
-  serialized_end=414,
+  serialized_start=92,
+  serialized_end=133,
 )
 
 
@@ -430,49 +179,42 @@ _ODOMETRYUPDATE = _descriptor.Descriptor(
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='frame_id', full_name='ati.schema.OdometryUpdate.frame_id', index=1,
-      number=8, type=13, cpp_type=3, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='Position', full_name='ati.schema.OdometryUpdate.Position', index=2,
+      name='Position', full_name='ati.schema.OdometryUpdate.Position', index=1,
       number=1, type=11, cpp_type=10, label=1,
       has_default_value=False, default_value=None,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='Velocity', full_name='ati.schema.OdometryUpdate.Velocity', index=3,
+      name='Velocity', full_name='ati.schema.OdometryUpdate.Velocity', index=2,
       number=2, type=11, cpp_type=10, label=1,
       has_default_value=False, default_value=None,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='Welocity', full_name='ati.schema.OdometryUpdate.Welocity', index=4,
+      name='Welocity', full_name='ati.schema.OdometryUpdate.Welocity', index=3,
       number=4, type=11, cpp_type=10, label=1,
       has_default_value=False, default_value=None,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='Angle', full_name='ati.schema.OdometryUpdate.Angle', index=5,
+      name='Angle', full_name='ati.schema.OdometryUpdate.Angle', index=4,
       number=3, type=11, cpp_type=10, label=1,
       has_default_value=False, default_value=None,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='OmegaLeft', full_name='ati.schema.OdometryUpdate.OmegaLeft', index=6,
+      name='OmegaLeft', full_name='ati.schema.OdometryUpdate.OmegaLeft', index=5,
       number=5, type=1, cpp_type=5, label=1,
       has_default_value=False, default_value=float(0),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='OmegaRight', full_name='ati.schema.OdometryUpdate.OmegaRight', index=7,
+      name='OmegaRight', full_name='ati.schema.OdometryUpdate.OmegaRight', index=6,
       number=6, type=1, cpp_type=5, label=1,
       has_default_value=False, default_value=float(0),
       message_type=None, enum_type=None, containing_type=None,
@@ -490,8 +232,8 @@ _ODOMETRYUPDATE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=417,
-  serialized_end=653,
+  serialized_start=136,
+  serialized_end=354,
 )
 
 
@@ -524,43 +266,29 @@ _DRIVEUPDATE = _descriptor.Descriptor(
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='RearOmega', full_name='ati.schema.DriveUpdate.RearOmega', index=3,
-      number=8, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='BrakeInput', full_name='ati.schema.DriveUpdate.BrakeInput', index=4,
+      name='BrakeInput', full_name='ati.schema.DriveUpdate.BrakeInput', index=3,
       number=3, type=1, cpp_type=5, label=1,
       has_default_value=False, default_value=float(0),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='SteeringAngle', full_name='ati.schema.DriveUpdate.SteeringAngle', index=5,
+      name='SteeringAngle', full_name='ati.schema.DriveUpdate.SteeringAngle', index=4,
       number=4, type=1, cpp_type=5, label=1,
       has_default_value=False, default_value=float(0),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='v_ref', full_name='ati.schema.DriveUpdate.v_ref', index=6,
+      name='v_ref', full_name='ati.schema.DriveUpdate.v_ref', index=5,
       number=5, type=1, cpp_type=5, label=1,
       has_default_value=False, default_value=float(0),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='omega_ref', full_name='ati.schema.DriveUpdate.omega_ref', index=7,
+      name='omega_ref', full_name='ati.schema.DriveUpdate.omega_ref', index=6,
       number=6, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='gradient', full_name='ati.schema.DriveUpdate.gradient', index=8,
-      number=9, type=1, cpp_type=5, label=1,
       has_default_value=False, default_value=float(0),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
@@ -577,8 +305,39 @@ _DRIVEUPDATE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=656,
-  serialized_end=842,
+  serialized_start=357,
+  serialized_end=506,
+)
+
+
+_TIMESTEP = _descriptor.Descriptor(
+  name='Timestep',
+  full_name='ati.schema.Timestep',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='Timestep', full_name='ati.schema.Timestep.Timestep', index=0,
+      number=1, type=4, cpp_type=4, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=508,
+  serialized_end=536,
 )
 
 
@@ -603,13 +362,6 @@ _DETECTEDOBJECTS = _descriptor.Descriptor(
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='frame_id', full_name='ati.schema.DetectedObjects.frame_id', index=2,
-      number=3, type=13, cpp_type=3, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
   ],
   extensions=[
   ],
@@ -622,8 +374,8 @@ _DETECTEDOBJECTS = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=844,
-  serialized_end=930,
+  serialized_start=538,
+  serialized_end=606,
 )
 
 
@@ -660,8 +412,8 @@ _DETECTEDROADS = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=932,
-  serialized_end=994,
+  serialized_start=608,
+  serialized_end=670,
 )
 
 
@@ -700,20 +452,6 @@ _OBJECT = _descriptor.Descriptor(
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='min_height', full_name='ati.schema.Object.min_height', index=4,
-      number=5, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='max_height', full_name='ati.schema.Object.max_height', index=5,
-      number=6, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
   ],
   extensions=[
   ],
@@ -726,8 +464,8 @@ _OBJECT = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=997,
-  serialized_end=1196,
+  serialized_start=673,
+  serialized_end=832,
 )
 
 
@@ -757,8 +495,8 @@ _LANE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1198,
-  serialized_end=1240,
+  serialized_start=834,
+  serialized_end=876,
 )
 
 
@@ -788,8 +526,8 @@ _POLYGON = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1242,
-  serialized_end=1286,
+  serialized_start=878,
+  serialized_end=922,
 )
 
 
@@ -826,8 +564,8 @@ _LINE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1288,
-  serialized_end=1360,
+  serialized_start=924,
+  serialized_end=996,
 )
 
 
@@ -878,8 +616,8 @@ _LINEPOSE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1362,
-  serialized_end=1451,
+  serialized_start=998,
+  serialized_end=1087,
 )
 
 
@@ -923,181 +661,63 @@ _RADARPOINT = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1453,
-  serialized_end=1540,
+  serialized_start=1089,
+  serialized_end=1176,
 )
 
 
-_LIDARPOINT2D = _descriptor.Descriptor(
-  name='LidarPoint2D',
-  full_name='ati.schema.LidarPoint2D',
+_LIDARPOINT = _descriptor.Descriptor(
+  name='LidarPoint',
+  full_name='ati.schema.LidarPoint',
   filename=None,
   file=DESCRIPTOR,
   containing_type=None,
   fields=[
     _descriptor.FieldDescriptor(
-      name='time', full_name='ati.schema.LidarPoint2D.time', index=0,
-      number=1, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='frame_id', full_name='ati.schema.LidarPoint2D.frame_id', index=1,
-      number=2, type=7, cpp_type=3, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='distances', full_name='ati.schema.LidarPoint2D.distances', index=2,
-      number=3, type=12, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b(""),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='horizontal_angles', full_name='ati.schema.LidarPoint2D.horizontal_angles', index=3,
-      number=4, type=12, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b(""),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-  ],
-  extensions=[
-  ],
-  nested_types=[],
-  enum_types=[
-  ],
-  serialized_options=None,
-  is_extendable=False,
-  syntax='proto3',
-  extension_ranges=[],
-  oneofs=[
-  ],
-  serialized_start=1542,
-  serialized_end=1634,
-)
-
-
-_LIDARGROUND = _descriptor.Descriptor(
-  name='LidarGround',
-  full_name='ati.schema.LidarGround',
-  filename=None,
-  file=DESCRIPTOR,
-  containing_type=None,
-  fields=[
-    _descriptor.FieldDescriptor(
-      name='time', full_name='ati.schema.LidarGround.time', index=0,
-      number=3, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='mask', full_name='ati.schema.LidarGround.mask', index=1,
-      number=1, type=12, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b(""),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='frame_id', full_name='ati.schema.LidarGround.frame_id', index=2,
-      number=2, type=7, cpp_type=3, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-  ],
-  extensions=[
-  ],
-  nested_types=[],
-  enum_types=[
-  ],
-  serialized_options=None,
-  is_extendable=False,
-  syntax='proto3',
-  extension_ranges=[],
-  oneofs=[
-  ],
-  serialized_start=1636,
-  serialized_end=1695,
-)
-
-
-_DRIVABLEREGION = _descriptor.Descriptor(
-  name='DrivableRegion',
-  full_name='ati.schema.DrivableRegion',
-  filename=None,
-  file=DESCRIPTOR,
-  containing_type=None,
-  fields=[
-    _descriptor.FieldDescriptor(
-      name='time', full_name='ati.schema.DrivableRegion.time', index=0,
+      name='time', full_name='ati.schema.LidarPoint.time', index=0,
       number=5, type=1, cpp_type=5, label=1,
       has_default_value=False, default_value=float(0),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='frame_id', full_name='ati.schema.DrivableRegion.frame_id', index=1,
-      number=1, type=7, cpp_type=3, label=1,
+      name='beams', full_name='ati.schema.LidarPoint.beams', index=1,
+      number=6, type=13, cpp_type=3, label=1,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='origin_x', full_name='ati.schema.DrivableRegion.origin_x', index=2,
-      number=2, type=15, cpp_type=1, label=1,
+      name='slices', full_name='ati.schema.LidarPoint.slices', index=2,
+      number=7, type=13, cpp_type=3, label=1,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='origin_y', full_name='ati.schema.DrivableRegion.origin_y', index=3,
-      number=3, type=15, cpp_type=1, label=1,
-      has_default_value=False, default_value=0,
+      name='vertical_angles', full_name='ati.schema.LidarPoint.vertical_angles', index=3,
+      number=1, type=12, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b(""),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='grid', full_name='ati.schema.DrivableRegion.grid', index=4,
+      name='horizontal_angles', full_name='ati.schema.LidarPoint.horizontal_angles', index=4,
+      number=2, type=12, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b(""),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='distances', full_name='ati.schema.LidarPoint.distances', index=5,
+      number=3, type=12, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b(""),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='intensities', full_name='ati.schema.LidarPoint.intensities', index=6,
       number=4, type=12, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b(""),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='roll', full_name='ati.schema.DrivableRegion.roll', index=5,
-      number=6, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='pitch', full_name='ati.schema.DrivableRegion.pitch', index=6,
-      number=7, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='processing_time', full_name='ati.schema.DrivableRegion.processing_time', index=7,
-      number=8, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='height', full_name='ati.schema.DrivableRegion.height', index=8,
-      number=9, type=12, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b(""),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='sensor', full_name='ati.schema.DrivableRegion.sensor', index=9,
-      number=10, type=12, cpp_type=9, label=1,
       has_default_value=False, default_value=_b(""),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
@@ -1114,8 +734,8 @@ _DRIVABLEREGION = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1698,
-  serialized_end=1882,
+  serialized_start=1179,
+  serialized_end=1328,
 )
 
 
@@ -1134,49 +754,28 @@ _IMUUPDATE = _descriptor.Descriptor(
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='hw_time_diag', full_name='ati.schema.ImuUpdate.hw_time_diag', index=1,
-      number=6, type=6, cpp_type=4, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='hw_time_acc', full_name='ati.schema.ImuUpdate.hw_time_acc', index=2,
-      number=7, type=6, cpp_type=4, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='hw_time_gyro', full_name='ati.schema.ImuUpdate.hw_time_gyro', index=3,
-      number=8, type=6, cpp_type=4, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='temp', full_name='ati.schema.ImuUpdate.temp', index=4,
+      name='temp', full_name='ati.schema.ImuUpdate.temp', index=1,
       number=5, type=1, cpp_type=5, label=1,
       has_default_value=False, default_value=float(0),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='acceleration', full_name='ati.schema.ImuUpdate.acceleration', index=5,
+      name='acceleration', full_name='ati.schema.ImuUpdate.acceleration', index=2,
       number=2, type=11, cpp_type=10, label=1,
       has_default_value=False, default_value=None,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='welocity', full_name='ati.schema.ImuUpdate.welocity', index=6,
+      name='welocity', full_name='ati.schema.ImuUpdate.welocity', index=3,
       number=3, type=11, cpp_type=10, label=1,
       has_default_value=False, default_value=None,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='field', full_name='ati.schema.ImuUpdate.field', index=7,
+      name='field', full_name='ati.schema.ImuUpdate.field', index=4,
       number=4, type=11, cpp_type=10, label=1,
       has_default_value=False, default_value=None,
       message_type=None, enum_type=None, containing_type=None,
@@ -1194,129 +793,8 @@ _IMUUPDATE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1885,
-  serialized_end=2104,
-)
-
-
-_GYROUPDATE = _descriptor.Descriptor(
-  name='GyroUpdate',
-  full_name='ati.schema.GyroUpdate',
-  filename=None,
-  file=DESCRIPTOR,
-  containing_type=None,
-  fields=[
-    _descriptor.FieldDescriptor(
-      name='time', full_name='ati.schema.GyroUpdate.time', index=0,
-      number=1, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='gyro', full_name='ati.schema.GyroUpdate.gyro', index=1,
-      number=2, type=11, cpp_type=10, label=1,
-      has_default_value=False, default_value=None,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-  ],
-  extensions=[
-  ],
-  nested_types=[],
-  enum_types=[
-  ],
-  serialized_options=None,
-  is_extendable=False,
-  syntax='proto3',
-  extension_ranges=[],
-  oneofs=[
-  ],
-  serialized_start=2106,
-  serialized_end=2166,
-)
-
-
-_GYROBIASUPDATE = _descriptor.Descriptor(
-  name='GyroBiasUpdate',
-  full_name='ati.schema.GyroBiasUpdate',
-  filename=None,
-  file=DESCRIPTOR,
-  containing_type=None,
-  fields=[
-    _descriptor.FieldDescriptor(
-      name='time', full_name='ati.schema.GyroBiasUpdate.time', index=0,
-      number=1, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='gyro_bias', full_name='ati.schema.GyroBiasUpdate.gyro_bias', index=1,
-      number=2, type=11, cpp_type=10, label=1,
-      has_default_value=False, default_value=None,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-  ],
-  extensions=[
-  ],
-  nested_types=[],
-  enum_types=[
-  ],
-  serialized_options=None,
-  is_extendable=False,
-  syntax='proto3',
-  extension_ranges=[],
-  oneofs=[
-  ],
-  serialized_start=2168,
-  serialized_end=2237,
-)
-
-
-_PITCHROLLUPDATE = _descriptor.Descriptor(
-  name='PitchRollUpdate',
-  full_name='ati.schema.PitchRollUpdate',
-  filename=None,
-  file=DESCRIPTOR,
-  containing_type=None,
-  fields=[
-    _descriptor.FieldDescriptor(
-      name='time', full_name='ati.schema.PitchRollUpdate.time', index=0,
-      number=1, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='pitch', full_name='ati.schema.PitchRollUpdate.pitch', index=1,
-      number=2, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='roll', full_name='ati.schema.PitchRollUpdate.roll', index=2,
-      number=3, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-  ],
-  extensions=[
-  ],
-  nested_types=[],
-  enum_types=[
-  ],
-  serialized_options=None,
-  is_extendable=False,
-  syntax='proto3',
-  extension_ranges=[],
-  oneofs=[
-  ],
-  serialized_start=2239,
-  serialized_end=2299,
+  serialized_start=1331,
+  serialized_end=1485,
 )
 
 
@@ -1367,8 +845,8 @@ _CAMERAFRAME = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=2301,
-  serialized_end=2371,
+  serialized_start=1487,
+  serialized_end=1557,
 )
 
 
@@ -1419,8 +897,8 @@ _GPSREADING = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=2373,
-  serialized_end=2450,
+  serialized_start=1559,
+  serialized_end=1636,
 )
 
 
@@ -1452,20 +930,6 @@ _ENCODERREADING = _descriptor.Descriptor(
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='v_ref', full_name='ati.schema.EncoderReading.v_ref', index=3,
-      number=4, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='w_ref', full_name='ati.schema.EncoderReading.w_ref', index=4,
-      number=5, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
   ],
   extensions=[
   ],
@@ -1478,8 +942,8 @@ _ENCODERREADING = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=2452,
-  serialized_end=2534,
+  serialized_start=1638,
+  serialized_end=1690,
 )
 
 
@@ -1499,8 +963,8 @@ _ENCODERDEBUGREADING = _descriptor.Descriptor(
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
       name='motor', full_name='ati.schema.EncoderDebugReading.motor', index=1,
-      number=2, type=5, cpp_type=1, label=1,
-      has_default_value=False, default_value=0,
+      number=2, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
@@ -1547,37 +1011,23 @@ _ENCODERDEBUGREADING = _descriptor.Descriptor(
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='control_ref', full_name='ati.schema.EncoderDebugReading.control_ref', index=8,
+      name='left_ref', full_name='ati.schema.EncoderDebugReading.left_ref', index=8,
       number=9, type=1, cpp_type=5, label=1,
       has_default_value=False, default_value=float(0),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='ticks_raw', full_name='ati.schema.EncoderDebugReading.ticks_raw', index=9,
-      number=10, type=5, cpp_type=1, label=1,
-      has_default_value=False, default_value=0,
+      name='right_ref', full_name='ati.schema.EncoderDebugReading.right_ref', index=9,
+      number=10, type=1, cpp_type=5, label=1,
+      has_default_value=False, default_value=float(0),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='brake_pwm', full_name='ati.schema.EncoderDebugReading.brake_pwm', index=10,
-      number=11, type=5, cpp_type=1, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='encoder_error', full_name='ati.schema.EncoderDebugReading.encoder_error', index=11,
-      number=12, type=5, cpp_type=1, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='rollback', full_name='ati.schema.EncoderDebugReading.rollback', index=12,
-      number=13, type=5, cpp_type=1, label=1,
-      has_default_value=False, default_value=0,
+      name='rear_angle_ref', full_name='ati.schema.EncoderDebugReading.rear_angle_ref', index=10,
+      number=11, type=1, cpp_type=5, label=1,
+      has_default_value=False, default_value=float(0),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
@@ -1593,8 +1043,8 @@ _ENCODERDEBUGREADING = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=2537,
-  serialized_end=2788,
+  serialized_start=1693,
+  serialized_end=1905,
 )
 
 
@@ -1645,84 +1095,8 @@ _RADARUPDATE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=2790,
-  serialized_end=2891,
-)
-
-
-_IRUPDATE = _descriptor.Descriptor(
-  name='IrUpdate',
-  full_name='ati.schema.IrUpdate',
-  filename=None,
-  file=DESCRIPTOR,
-  containing_type=None,
-  fields=[
-    _descriptor.FieldDescriptor(
-      name='time', full_name='ati.schema.IrUpdate.time', index=0,
-      number=1, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='ir_msgs', full_name='ati.schema.IrUpdate.ir_msgs', index=1,
-      number=2, type=1, cpp_type=5, label=3,
-      has_default_value=False, default_value=[],
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-  ],
-  extensions=[
-  ],
-  nested_types=[],
-  enum_types=[
-  ],
-  serialized_options=None,
-  is_extendable=False,
-  syntax='proto3',
-  extension_ranges=[],
-  oneofs=[
-  ],
-  serialized_start=2893,
-  serialized_end=2934,
-)
-
-
-_ADCVALS = _descriptor.Descriptor(
-  name='AdcVals',
-  full_name='ati.schema.AdcVals',
-  filename=None,
-  file=DESCRIPTOR,
-  containing_type=None,
-  fields=[
-    _descriptor.FieldDescriptor(
-      name='time', full_name='ati.schema.AdcVals.time', index=0,
-      number=1, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='vals', full_name='ati.schema.AdcVals.vals', index=1,
-      number=2, type=13, cpp_type=3, label=3,
-      has_default_value=False, default_value=[],
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-  ],
-  extensions=[
-  ],
-  nested_types=[],
-  enum_types=[
-  ],
-  serialized_options=None,
-  is_extendable=False,
-  syntax='proto3',
-  extension_ranges=[],
-  oneofs=[
-  ],
-  serialized_start=2936,
-  serialized_end=2973,
+  serialized_start=1907,
+  serialized_end=2008,
 )
 
 
@@ -1766,8 +1140,53 @@ _POSEFRAME = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=2975,
-  serialized_end=3073,
+  serialized_start=2010,
+  serialized_end=2108,
+)
+
+
+_TELEMETRYEVENT = _descriptor.Descriptor(
+  name='TelemetryEvent',
+  full_name='ati.schema.TelemetryEvent',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='time', full_name='ati.schema.TelemetryEvent.time', index=0,
+      number=1, type=1, cpp_type=5, label=1,
+      has_default_value=False, default_value=float(0),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='name', full_name='ati.schema.TelemetryEvent.name', index=1,
+      number=2, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='data', full_name='ati.schema.TelemetryEvent.data', index=2,
+      number=3, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=2110,
+  serialized_end=2168,
 )
 
 
@@ -1818,8 +1237,95 @@ _GENERICMSG = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=3075,
-  serialized_end=3147,
+  serialized_start=2170,
+  serialized_end=2242,
+)
+
+
+_ICPPOSE = _descriptor.Descriptor(
+  name='ICPPose',
+  full_name='ati.schema.ICPPose',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='frameNumber', full_name='ati.schema.ICPPose.frameNumber', index=0,
+      number=1, type=13, cpp_type=3, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='icp_error', full_name='ati.schema.ICPPose.icp_error', index=1,
+      number=2, type=1, cpp_type=5, label=1,
+      has_default_value=False, default_value=float(0),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='icp_error_internal', full_name='ati.schema.ICPPose.icp_error_internal', index=2,
+      number=3, type=1, cpp_type=5, label=1,
+      has_default_value=False, default_value=float(0),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='Position', full_name='ati.schema.ICPPose.Position', index=3,
+      number=5, type=11, cpp_type=10, label=1,
+      has_default_value=False, default_value=None,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='Angle', full_name='ati.schema.ICPPose.Angle', index=4,
+      number=6, type=11, cpp_type=10, label=1,
+      has_default_value=False, default_value=None,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='carto_position', full_name='ati.schema.ICPPose.carto_position', index=5,
+      number=7, type=11, cpp_type=10, label=1,
+      has_default_value=False, default_value=None,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='carto_angle', full_name='ati.schema.ICPPose.carto_angle', index=6,
+      number=8, type=11, cpp_type=10, label=1,
+      has_default_value=False, default_value=None,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='carto_time', full_name='ati.schema.ICPPose.carto_time', index=7,
+      number=9, type=1, cpp_type=5, label=1,
+      has_default_value=False, default_value=float(0),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='time', full_name='ati.schema.ICPPose.time', index=8,
+      number=10, type=1, cpp_type=5, label=1,
+      has_default_value=False, default_value=float(0),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=2245,
+  serialized_end=2514,
 )
 
 
@@ -1870,8 +1376,8 @@ _LIDARSLAMPOSE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=3149,
-  serialized_end=3232,
+  serialized_start=2516,
+  serialized_end=2599,
 )
 
 
@@ -1908,8 +1414,8 @@ _NOTE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=3234,
-  serialized_end=3268,
+  serialized_start=2601,
+  serialized_end=2635,
 )
 
 
@@ -1974,458 +1480,62 @@ _HEALTHUPDATE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=3270,
-  serialized_end=3389,
+  serialized_start=2637,
+  serialized_end=2756,
 )
 
 
-_CONTROLUPDATE = _descriptor.Descriptor(
-  name='ControlUpdate',
-  full_name='ati.schema.ControlUpdate',
+_LIDARPTS = _descriptor.Descriptor(
+  name='LidarPts',
+  full_name='ati.schema.LidarPts',
   filename=None,
   file=DESCRIPTOR,
   containing_type=None,
   fields=[
     _descriptor.FieldDescriptor(
-      name='time', full_name='ati.schema.ControlUpdate.time', index=0,
+      name='x', full_name='ati.schema.LidarPts.x', index=0,
       number=1, type=1, cpp_type=5, label=1,
       has_default_value=False, default_value=float(0),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='predx', full_name='ati.schema.ControlUpdate.predx', index=1,
+      name='y', full_name='ati.schema.LidarPts.y', index=1,
       number=2, type=1, cpp_type=5, label=1,
       has_default_value=False, default_value=float(0),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='predy', full_name='ati.schema.ControlUpdate.predy', index=2,
+      name='z', full_name='ati.schema.LidarPts.z', index=2,
       number=3, type=1, cpp_type=5, label=1,
       has_default_value=False, default_value=float(0),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='predt', full_name='ati.schema.ControlUpdate.predt', index=3,
+      name='va', full_name='ati.schema.LidarPts.va', index=3,
       number=4, type=1, cpp_type=5, label=1,
       has_default_value=False, default_value=float(0),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='v', full_name='ati.schema.ControlUpdate.v', index=4,
+      name='d', full_name='ati.schema.LidarPts.d', index=4,
       number=5, type=1, cpp_type=5, label=1,
       has_default_value=False, default_value=float(0),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='w', full_name='ati.schema.ControlUpdate.w', index=5,
-      number=6, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-  ],
-  extensions=[
-  ],
-  nested_types=[],
-  enum_types=[
-  ],
-  serialized_options=None,
-  is_extendable=False,
-  syntax='proto3',
-  extension_ranges=[],
-  oneofs=[
-  ],
-  serialized_start=3391,
-  serialized_end=3487,
-)
-
-
-_LANEUPDATE = _descriptor.Descriptor(
-  name='LaneUpdate',
-  full_name='ati.schema.LaneUpdate',
-  filename=None,
-  file=DESCRIPTOR,
-  containing_type=None,
-  fields=[
-    _descriptor.FieldDescriptor(
-      name='time', full_name='ati.schema.LaneUpdate.time', index=0,
-      number=1, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='xcorr', full_name='ati.schema.LaneUpdate.xcorr', index=1,
-      number=2, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='ycorr', full_name='ati.schema.LaneUpdate.ycorr', index=2,
-      number=3, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-  ],
-  extensions=[
-  ],
-  nested_types=[],
-  enum_types=[
-  ],
-  serialized_options=None,
-  is_extendable=False,
-  syntax='proto3',
-  extension_ranges=[],
-  oneofs=[
-  ],
-  serialized_start=3489,
-  serialized_end=3545,
-)
-
-
-_CAMERANEAROBJECTS = _descriptor.Descriptor(
-  name='CameraNearObjects',
-  full_name='ati.schema.CameraNearObjects',
-  filename=None,
-  file=DESCRIPTOR,
-  containing_type=None,
-  fields=[
-    _descriptor.FieldDescriptor(
-      name='time', full_name='ati.schema.CameraNearObjects.time', index=0,
-      number=1, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='num_frames', full_name='ati.schema.CameraNearObjects.num_frames', index=1,
-      number=2, type=13, cpp_type=3, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-  ],
-  extensions=[
-  ],
-  nested_types=[],
-  enum_types=[
-  ],
-  serialized_options=None,
-  is_extendable=False,
-  syntax='proto3',
-  extension_ranges=[],
-  oneofs=[
-  ],
-  serialized_start=3547,
-  serialized_end=3600,
-)
-
-
-_PATHOCCUPANCY = _descriptor.Descriptor(
-  name='PathOccupancy',
-  full_name='ati.schema.PathOccupancy',
-  filename=None,
-  file=DESCRIPTOR,
-  containing_type=None,
-  fields=[
-    _descriptor.FieldDescriptor(
-      name='time', full_name='ati.schema.PathOccupancy.time', index=0,
-      number=1, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='frame_id', full_name='ati.schema.PathOccupancy.frame_id', index=1,
-      number=2, type=7, cpp_type=3, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='grid', full_name='ati.schema.PathOccupancy.grid', index=2,
-      number=3, type=12, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b(""),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='grid_width', full_name='ati.schema.PathOccupancy.grid_width', index=3,
-      number=12, type=7, cpp_type=3, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='xcr', full_name='ati.schema.PathOccupancy.xcr', index=4,
-      number=4, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='ycr', full_name='ati.schema.PathOccupancy.ycr', index=5,
-      number=5, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='obs_factor', full_name='ati.schema.PathOccupancy.obs_factor', index=6,
+      name='ha', full_name='ati.schema.LidarPts.ha', index=5,
       number=6, type=1, cpp_type=5, label=1,
       has_default_value=False, default_value=float(0),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='unc_factor', full_name='ati.schema.PathOccupancy.unc_factor', index=7,
-      number=7, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='vel_factor', full_name='ati.schema.PathOccupancy.vel_factor', index=8,
-      number=8, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='path', full_name='ati.schema.PathOccupancy.path', index=9,
-      number=9, type=12, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b(""),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='humans_detected', full_name='ati.schema.PathOccupancy.humans_detected', index=10,
-      number=10, type=8, cpp_type=7, label=1,
-      has_default_value=False, default_value=False,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='human_pos', full_name='ati.schema.PathOccupancy.human_pos', index=11,
-      number=11, type=12, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b(""),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-  ],
-  extensions=[
-  ],
-  nested_types=[],
-  enum_types=[
-  ],
-  serialized_options=None,
-  is_extendable=False,
-  syntax='proto3',
-  extension_ranges=[],
-  oneofs=[
-  ],
-  serialized_start=3603,
-  serialized_end=3828,
-)
-
-
-_SENSOREXCEPTION = _descriptor.Descriptor(
-  name='SensorException',
-  full_name='ati.schema.SensorException',
-  filename=None,
-  file=DESCRIPTOR,
-  containing_type=None,
-  fields=[
-    _descriptor.FieldDescriptor(
-      name='time', full_name='ati.schema.SensorException.time', index=0,
-      number=1, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='sensor_id', full_name='ati.schema.SensorException.sensor_id', index=1,
-      number=2, type=7, cpp_type=3, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='frame_id', full_name='ati.schema.SensorException.frame_id', index=2,
-      number=3, type=7, cpp_type=3, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='message_id', full_name='ati.schema.SensorException.message_id', index=3,
-      number=8, type=7, cpp_type=3, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='severity', full_name='ati.schema.SensorException.severity', index=4,
-      number=9, type=5, cpp_type=1, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='data', full_name='ati.schema.SensorException.data', index=5,
-      number=4, type=12, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b(""),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='msg', full_name='ati.schema.SensorException.msg', index=6,
-      number=5, type=9, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b("").decode('utf-8'),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='field', full_name='ati.schema.SensorException.field', index=7,
-      number=6, type=9, cpp_type=9, label=3,
-      has_default_value=False, default_value=[],
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='value', full_name='ati.schema.SensorException.value', index=8,
-      number=7, type=9, cpp_type=9, label=3,
-      has_default_value=False, default_value=[],
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-  ],
-  extensions=[
-  ],
-  nested_types=[],
-  enum_types=[
-  ],
-  serialized_options=None,
-  is_extendable=False,
-  syntax='proto3',
-  extension_ranges=[],
-  oneofs=[
-  ],
-  serialized_start=3831,
-  serialized_end=3994,
-)
-
-
-_SYSTEMMSG = _descriptor.Descriptor(
-  name='SystemMsg',
-  full_name='ati.schema.SystemMsg',
-  filename=None,
-  file=DESCRIPTOR,
-  containing_type=None,
-  fields=[
-    _descriptor.FieldDescriptor(
-      name='time', full_name='ati.schema.SystemMsg.time', index=0,
-      number=1, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='module_id', full_name='ati.schema.SystemMsg.module_id', index=1,
-      number=2, type=13, cpp_type=3, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='ref', full_name='ati.schema.SystemMsg.ref', index=2,
-      number=3, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='value', full_name='ati.schema.SystemMsg.value', index=3,
-      number=4, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-  ],
-  extensions=[
-  ],
-  nested_types=[],
-  enum_types=[
-  ],
-  serialized_options=None,
-  is_extendable=False,
-  syntax='proto3',
-  extension_ranges=[],
-  oneofs=[
-  ],
-  serialized_start=3996,
-  serialized_end=4068,
-)
-
-
-_YELLIMSG = _descriptor.Descriptor(
-  name='YelliMsg',
-  full_name='ati.schema.YelliMsg',
-  filename=None,
-  file=DESCRIPTOR,
-  containing_type=None,
-  fields=[
-    _descriptor.FieldDescriptor(
-      name='time', full_name='ati.schema.YelliMsg.time', index=0,
-      number=1, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='processing_time', full_name='ati.schema.YelliMsg.processing_time', index=1,
-      number=2, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='frame_id', full_name='ati.schema.YelliMsg.frame_id', index=2,
-      number=3, type=13, cpp_type=3, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='pose_x', full_name='ati.schema.YelliMsg.pose_x', index=3,
-      number=4, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='pose_y', full_name='ati.schema.YelliMsg.pose_y', index=4,
-      number=5, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='pose_t', full_name='ati.schema.YelliMsg.pose_t', index=5,
-      number=6, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='best_score', full_name='ati.schema.YelliMsg.best_score', index=6,
+      name='i', full_name='ati.schema.LidarPts.i', index=6,
       number=7, type=1, cpp_type=5, label=1,
       has_default_value=False, default_value=float(0),
       message_type=None, enum_type=None, containing_type=None,
@@ -2443,8 +1553,8 @@ _YELLIMSG = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=4071,
-  serialized_end=4206,
+  serialized_start=2758,
+  serialized_end=2847,
 )
 
 
@@ -2463,804 +1573,12 @@ _LIDARFRAME = _descriptor.Descriptor(
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='frame_id', full_name='ati.schema.LidarFrame.frame_id', index=1,
-      number=2, type=7, cpp_type=3, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='hw_frame_id', full_name='ati.schema.LidarFrame.hw_frame_id', index=2,
-      number=4, type=7, cpp_type=3, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='hw_timestamp', full_name='ati.schema.LidarFrame.hw_timestamp', index=3,
-      number=5, type=6, cpp_type=4, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='data', full_name='ati.schema.LidarFrame.data', index=4,
-      number=3, type=12, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b(""),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='major_version', full_name='ati.schema.LidarFrame.major_version', index=5,
-      number=6, type=7, cpp_type=3, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='minor_version', full_name='ati.schema.LidarFrame.minor_version', index=6,
-      number=7, type=7, cpp_type=3, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='num_missing_sectors', full_name='ati.schema.LidarFrame.num_missing_sectors', index=7,
-      number=8, type=7, cpp_type=3, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='missing_sectors', full_name='ati.schema.LidarFrame.missing_sectors', index=8,
-      number=9, type=9, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b("").decode('utf-8'),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-  ],
-  extensions=[
-  ],
-  nested_types=[],
-  enum_types=[
-  ],
-  serialized_options=None,
-  is_extendable=False,
-  syntax='proto3',
-  extension_ranges=[],
-  oneofs=[
-  ],
-  serialized_start=4209,
-  serialized_end=4410,
-)
-
-
-_LIDARLOOKUPTABLE = _descriptor.Descriptor(
-  name='LidarLookupTable',
-  full_name='ati.schema.LidarLookupTable',
-  filename=None,
-  file=DESCRIPTOR,
-  containing_type=None,
-  fields=[
-    _descriptor.FieldDescriptor(
-      name='data', full_name='ati.schema.LidarLookupTable.data', index=0,
-      number=1, type=12, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b(""),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='W', full_name='ati.schema.LidarLookupTable.W', index=1,
-      number=2, type=7, cpp_type=3, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='H', full_name='ati.schema.LidarLookupTable.H', index=2,
-      number=3, type=7, cpp_type=3, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='columns', full_name='ati.schema.LidarLookupTable.columns', index=3,
-      number=4, type=7, cpp_type=3, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-  ],
-  extensions=[
-  ],
-  nested_types=[],
-  enum_types=[
-  ],
-  serialized_options=None,
-  is_extendable=False,
-  syntax='proto3',
-  extension_ranges=[],
-  oneofs=[
-  ],
-  serialized_start=4412,
-  serialized_end=4483,
-)
-
-
-_LIDARSMALLHEADER = _descriptor.Descriptor(
-  name='LidarSmallHeader',
-  full_name='ati.schema.LidarSmallHeader',
-  filename=None,
-  file=DESCRIPTOR,
-  containing_type=None,
-  fields=[
-    _descriptor.FieldDescriptor(
-      name='vertical_angles', full_name='ati.schema.LidarSmallHeader.vertical_angles', index=0,
-      number=3, type=12, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b(""),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='horizontal_angles', full_name='ati.schema.LidarSmallHeader.horizontal_angles', index=1,
-      number=4, type=12, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b(""),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='lookup_table', full_name='ati.schema.LidarSmallHeader.lookup_table', index=2,
-      number=5, type=12, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b(""),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='major_version', full_name='ati.schema.LidarSmallHeader.major_version', index=3,
-      number=6, type=7, cpp_type=3, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='minor_version', full_name='ati.schema.LidarSmallHeader.minor_version', index=4,
-      number=7, type=7, cpp_type=3, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-  ],
-  extensions=[
-  ],
-  nested_types=[],
-  enum_types=[
-  ],
-  serialized_options=None,
-  is_extendable=False,
-  syntax='proto3',
-  extension_ranges=[],
-  oneofs=[
-  ],
-  serialized_start=4486,
-  serialized_end=4624,
-)
-
-
-_LIDARSMALLPACKET = _descriptor.Descriptor(
-  name='LidarSmallPacket',
-  full_name='ati.schema.LidarSmallPacket',
-  filename=None,
-  file=DESCRIPTOR,
-  containing_type=None,
-  fields=[
-    _descriptor.FieldDescriptor(
-      name='time', full_name='ati.schema.LidarSmallPacket.time', index=0,
-      number=1, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='frame_id', full_name='ati.schema.LidarSmallPacket.frame_id', index=1,
-      number=2, type=7, cpp_type=3, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='hw_frame_id', full_name='ati.schema.LidarSmallPacket.hw_frame_id', index=2,
-      number=4, type=7, cpp_type=3, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='hw_timestamp', full_name='ati.schema.LidarSmallPacket.hw_timestamp', index=3,
-      number=5, type=6, cpp_type=4, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='distances', full_name='ati.schema.LidarSmallPacket.distances', index=4,
-      number=3, type=12, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b(""),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='num_missing_sectors', full_name='ati.schema.LidarSmallPacket.num_missing_sectors', index=5,
-      number=6, type=7, cpp_type=3, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='missing_sectors', full_name='ati.schema.LidarSmallPacket.missing_sectors', index=6,
-      number=7, type=9, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b("").decode('utf-8'),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-  ],
-  extensions=[
-  ],
-  nested_types=[],
-  enum_types=[
-  ],
-  serialized_options=None,
-  is_extendable=False,
-  syntax='proto3',
-  extension_ranges=[],
-  oneofs=[
-  ],
-  serialized_start=4627,
-  serialized_end=4793,
-)
-
-
-_LIDAREXTRAPACKET = _descriptor.Descriptor(
-  name='LidarExtraPacket',
-  full_name='ati.schema.LidarExtraPacket',
-  filename=None,
-  file=DESCRIPTOR,
-  containing_type=None,
-  fields=[
-    _descriptor.FieldDescriptor(
-      name='time', full_name='ati.schema.LidarExtraPacket.time', index=0,
-      number=1, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='frame_id', full_name='ati.schema.LidarExtraPacket.frame_id', index=1,
-      number=2, type=7, cpp_type=3, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='intensity', full_name='ati.schema.LidarExtraPacket.intensity', index=2,
-      number=3, type=12, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b(""),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='reflectivity', full_name='ati.schema.LidarExtraPacket.reflectivity', index=3,
-      number=4, type=12, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b(""),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='noise', full_name='ati.schema.LidarExtraPacket.noise', index=4,
-      number=5, type=12, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b(""),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-  ],
-  extensions=[
-  ],
-  nested_types=[],
-  enum_types=[
-  ],
-  serialized_options=None,
-  is_extendable=False,
-  syntax='proto3',
-  extension_ranges=[],
-  oneofs=[
-  ],
-  serialized_start=4795,
-  serialized_end=4901,
-)
-
-
-_DEPRECATED_LIDARPOINT = _descriptor.Descriptor(
-  name='deprecated_LidarPoint',
-  full_name='ati.schema.deprecated_LidarPoint',
-  filename=None,
-  file=DESCRIPTOR,
-  containing_type=None,
-  fields=[
-    _descriptor.FieldDescriptor(
-      name='time', full_name='ati.schema.deprecated_LidarPoint.time', index=0,
-      number=5, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='frame_id', full_name='ati.schema.deprecated_LidarPoint.frame_id', index=1,
-      number=10, type=7, cpp_type=3, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='beams', full_name='ati.schema.deprecated_LidarPoint.beams', index=2,
-      number=6, type=13, cpp_type=3, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='slices', full_name='ati.schema.deprecated_LidarPoint.slices', index=3,
-      number=7, type=13, cpp_type=3, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='vertical_angles', full_name='ati.schema.deprecated_LidarPoint.vertical_angles', index=4,
-      number=1, type=12, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b(""),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='horizontal_angles', full_name='ati.schema.deprecated_LidarPoint.horizontal_angles', index=5,
-      number=2, type=12, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b(""),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='distances', full_name='ati.schema.deprecated_LidarPoint.distances', index=6,
-      number=3, type=12, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b(""),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='intensities', full_name='ati.schema.deprecated_LidarPoint.intensities', index=7,
-      number=4, type=12, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b(""),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='id', full_name='ati.schema.deprecated_LidarPoint.id', index=8,
-      number=8, type=12, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b(""),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='ptcloud', full_name='ati.schema.deprecated_LidarPoint.ptcloud', index=9,
-      number=9, type=12, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b(""),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-  ],
-  extensions=[
-  ],
-  nested_types=[],
-  enum_types=[
-  ],
-  serialized_options=None,
-  is_extendable=False,
-  syntax='proto3',
-  extension_ranges=[],
-  oneofs=[
-  ],
-  serialized_start=4904,
-  serialized_end=5111,
-)
-
-
-_BEDMSG = _descriptor.Descriptor(
-  name='BedMsg',
-  full_name='ati.schema.BedMsg',
-  filename=None,
-  file=DESCRIPTOR,
-  containing_type=None,
-  fields=[
-    _descriptor.FieldDescriptor(
-      name='time', full_name='ati.schema.BedMsg.time', index=0,
-      number=1, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='frame_id', full_name='ati.schema.BedMsg.frame_id', index=1,
-      number=2, type=7, cpp_type=3, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='ward_id', full_name='ati.schema.BedMsg.ward_id', index=2,
-      number=3, type=7, cpp_type=3, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='map_level', full_name='ati.schema.BedMsg.map_level', index=3,
-      number=4, type=7, cpp_type=3, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='detected_lines', full_name='ati.schema.BedMsg.detected_lines', index=4,
-      number=5, type=11, cpp_type=10, label=3,
-      has_default_value=False, default_value=[],
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='predicted_boxs', full_name='ati.schema.BedMsg.predicted_boxs', index=5,
-      number=6, type=11, cpp_type=10, label=3,
-      has_default_value=False, default_value=[],
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-  ],
-  extensions=[
-  ],
-  nested_types=[],
-  enum_types=[
-  ],
-  serialized_options=None,
-  is_extendable=False,
-  syntax='proto3',
-  extension_ranges=[],
-  oneofs=[
-  ],
-  serialized_start=5114,
-  serialized_end=5280,
-)
-
-
-_BEDSIDEMSG = _descriptor.Descriptor(
-  name='BedSideMsg',
-  full_name='ati.schema.BedSideMsg',
-  filename=None,
-  file=DESCRIPTOR,
-  containing_type=None,
-  fields=[
-    _descriptor.FieldDescriptor(
-      name='time', full_name='ati.schema.BedSideMsg.time', index=0,
-      number=1, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='frame_id', full_name='ati.schema.BedSideMsg.frame_id', index=1,
-      number=2, type=7, cpp_type=3, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='ward_id', full_name='ati.schema.BedSideMsg.ward_id', index=2,
-      number=3, type=7, cpp_type=3, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='map_level', full_name='ati.schema.BedSideMsg.map_level', index=3,
-      number=4, type=7, cpp_type=3, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='bedside_locs', full_name='ati.schema.BedSideMsg.bedside_locs', index=4,
-      number=5, type=11, cpp_type=10, label=3,
-      has_default_value=False, default_value=[],
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-  ],
-  extensions=[
-  ],
-  nested_types=[],
-  enum_types=[
-  ],
-  serialized_options=None,
-  is_extendable=False,
-  syntax='proto3',
-  extension_ranges=[],
-  oneofs=[
-  ],
-  serialized_start=5282,
-  serialized_end=5404,
-)
-
-
-_HUBMOTORCURRENTS = _descriptor.Descriptor(
-  name='HubMotorCurrents',
-  full_name='ati.schema.HubMotorCurrents',
-  filename=None,
-  file=DESCRIPTOR,
-  containing_type=None,
-  fields=[
-    _descriptor.FieldDescriptor(
-      name='time', full_name='ati.schema.HubMotorCurrents.time', index=0,
-      number=1, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='steer_motor_current', full_name='ati.schema.HubMotorCurrents.steer_motor_current', index=1,
-      number=2, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='battery_current', full_name='ati.schema.HubMotorCurrents.battery_current', index=2,
-      number=3, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='hub_motor_current', full_name='ati.schema.HubMotorCurrents.hub_motor_current', index=3,
-      number=4, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-  ],
-  extensions=[
-  ],
-  nested_types=[],
-  enum_types=[
-  ],
-  serialized_options=None,
-  is_extendable=False,
-  syntax='proto3',
-  extension_ranges=[],
-  oneofs=[
-  ],
-  serialized_start=5406,
-  serialized_end=5519,
-)
-
-
-_SENSORSTATUS = _descriptor.Descriptor(
-  name='SensorStatus',
-  full_name='ati.schema.SensorStatus',
-  filename=None,
-  file=DESCRIPTOR,
-  containing_type=None,
-  fields=[
-    _descriptor.FieldDescriptor(
-      name='time', full_name='ati.schema.SensorStatus.time', index=0,
-      number=1, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='sensor_id', full_name='ati.schema.SensorStatus.sensor_id', index=1,
-      number=2, type=7, cpp_type=3, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='frame_id', full_name='ati.schema.SensorStatus.frame_id', index=2,
-      number=3, type=7, cpp_type=3, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='data', full_name='ati.schema.SensorStatus.data', index=3,
-      number=4, type=12, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b(""),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='msg', full_name='ati.schema.SensorStatus.msg', index=4,
-      number=5, type=9, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b("").decode('utf-8'),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='severity', full_name='ati.schema.SensorStatus.severity', index=5,
-      number=9, type=5, cpp_type=1, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='status', full_name='ati.schema.SensorStatus.status', index=6,
-      number=10, type=8, cpp_type=7, label=1,
-      has_default_value=False, default_value=False,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-  ],
-  extensions=[
-  ],
-  nested_types=[],
-  enum_types=[
-  ],
-  serialized_options=None,
-  is_extendable=False,
-  syntax='proto3',
-  extension_ranges=[],
-  oneofs=[
-  ],
-  serialized_start=5521,
-  serialized_end=5647,
-)
-
-
-_ARUCOMSG = _descriptor.Descriptor(
-  name='ArucoMsg',
-  full_name='ati.schema.ArucoMsg',
-  filename=None,
-  file=DESCRIPTOR,
-  containing_type=None,
-  fields=[
-    _descriptor.FieldDescriptor(
-      name='time', full_name='ati.schema.ArucoMsg.time', index=0,
-      number=1, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='frame_id', full_name='ati.schema.ArucoMsg.frame_id', index=1,
-      number=2, type=7, cpp_type=3, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='translation', full_name='ati.schema.ArucoMsg.translation', index=2,
-      number=3, type=11, cpp_type=10, label=1,
-      has_default_value=False, default_value=None,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='rotation', full_name='ati.schema.ArucoMsg.rotation', index=3,
-      number=4, type=11, cpp_type=10, label=1,
-      has_default_value=False, default_value=None,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='marker_id', full_name='ati.schema.ArucoMsg.marker_id', index=4,
-      number=5, type=5, cpp_type=1, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-  ],
-  extensions=[
-  ],
-  nested_types=[],
-  enum_types=[
-  ],
-  serialized_options=None,
-  is_extendable=False,
-  syntax='proto3',
-  extension_ranges=[],
-  oneofs=[
-  ],
-  serialized_start=5650,
-  serialized_end=5790,
-)
-
-
-_ARUCOMULEPOSE = _descriptor.Descriptor(
-  name='ArucoMulePose',
-  full_name='ati.schema.ArucoMulePose',
-  filename=None,
-  file=DESCRIPTOR,
-  containing_type=None,
-  fields=[
-    _descriptor.FieldDescriptor(
-      name='time', full_name='ati.schema.ArucoMulePose.time', index=0,
-      number=1, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='pose', full_name='ati.schema.ArucoMulePose.pose', index=1,
-      number=2, type=11, cpp_type=10, label=1,
-      has_default_value=False, default_value=None,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='marker_id', full_name='ati.schema.ArucoMulePose.marker_id', index=2,
-      number=3, type=5, cpp_type=1, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-  ],
-  extensions=[
-  ],
-  nested_types=[],
-  enum_types=[
-  ],
-  serialized_options=None,
-  is_extendable=False,
-  syntax='proto3',
-  extension_ranges=[],
-  oneofs=[
-  ],
-  serialized_start=5792,
-  serialized_end=5882,
-)
-
-
-_TAGDETECTIONMSG = _descriptor.Descriptor(
-  name='TagDetectionMsg',
-  full_name='ati.schema.TagDetectionMsg',
-  filename=None,
-  file=DESCRIPTOR,
-  containing_type=None,
-  fields=[
-    _descriptor.FieldDescriptor(
-      name='time', full_name='ati.schema.TagDetectionMsg.time', index=0,
-      number=1, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='corners', full_name='ati.schema.TagDetectionMsg.corners', index=1,
+      name='pts', full_name='ati.schema.LidarFrame.pts', index=1,
       number=2, type=11, cpp_type=10, label=3,
       has_default_value=False, default_value=[],
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='tag_id', full_name='ati.schema.TagDetectionMsg.tag_id', index=2,
-      number=3, type=5, cpp_type=1, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='tag_type', full_name='ati.schema.TagDetectionMsg.tag_type', index=3,
-      number=4, type=9, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b("").decode('utf-8'),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
   ],
   extensions=[
   ],
@@ -3273,455 +1591,8 @@ _TAGDETECTIONMSG = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=5884,
-  serialized_end=5986,
-)
-
-
-_TAGMULEPOSE = _descriptor.Descriptor(
-  name='TagMulePose',
-  full_name='ati.schema.TagMulePose',
-  filename=None,
-  file=DESCRIPTOR,
-  containing_type=None,
-  fields=[
-    _descriptor.FieldDescriptor(
-      name='time', full_name='ati.schema.TagMulePose.time', index=0,
-      number=1, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='pose', full_name='ati.schema.TagMulePose.pose', index=1,
-      number=2, type=11, cpp_type=10, label=1,
-      has_default_value=False, default_value=None,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='tag_id', full_name='ati.schema.TagMulePose.tag_id', index=2,
-      number=3, type=5, cpp_type=1, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='tag_type', full_name='ati.schema.TagMulePose.tag_type', index=3,
-      number=4, type=9, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b("").decode('utf-8'),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-  ],
-  extensions=[
-  ],
-  nested_types=[],
-  enum_types=[
-  ],
-  serialized_options=None,
-  is_extendable=False,
-  syntax='proto3',
-  extension_ranges=[],
-  oneofs=[
-  ],
-  serialized_start=5988,
-  serialized_end=6091,
-)
-
-
-_TAGLOCALPOSE = _descriptor.Descriptor(
-  name='TagLocalPose',
-  full_name='ati.schema.TagLocalPose',
-  filename=None,
-  file=DESCRIPTOR,
-  containing_type=None,
-  fields=[
-    _descriptor.FieldDescriptor(
-      name='time', full_name='ati.schema.TagLocalPose.time', index=0,
-      number=1, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='rvec', full_name='ati.schema.TagLocalPose.rvec', index=1,
-      number=2, type=11, cpp_type=10, label=1,
-      has_default_value=False, default_value=None,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='tvec', full_name='ati.schema.TagLocalPose.tvec', index=2,
-      number=3, type=11, cpp_type=10, label=1,
-      has_default_value=False, default_value=None,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='tag_id', full_name='ati.schema.TagLocalPose.tag_id', index=3,
-      number=4, type=5, cpp_type=1, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='tag_type', full_name='ati.schema.TagLocalPose.tag_type', index=4,
-      number=5, type=9, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b("").decode('utf-8'),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-  ],
-  extensions=[
-  ],
-  nested_types=[],
-  enum_types=[
-  ],
-  serialized_options=None,
-  is_extendable=False,
-  syntax='proto3',
-  extension_ranges=[],
-  oneofs=[
-  ],
-  serialized_start=6094,
-  serialized_end=6224,
-)
-
-
-_PS4REPORT = _descriptor.Descriptor(
-  name='PS4Report',
-  full_name='ati.schema.PS4Report',
-  filename=None,
-  file=DESCRIPTOR,
-  containing_type=None,
-  fields=[
-    _descriptor.FieldDescriptor(
-      name='time', full_name='ati.schema.PS4Report.time', index=0,
-      number=1, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='report', full_name='ati.schema.PS4Report.report', index=1,
-      number=2, type=9, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b("").decode('utf-8'),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-  ],
-  extensions=[
-  ],
-  nested_types=[],
-  enum_types=[
-  ],
-  serialized_options=None,
-  is_extendable=False,
-  syntax='proto3',
-  extension_ranges=[],
-  oneofs=[
-  ],
-  serialized_start=6226,
-  serialized_end=6267,
-)
-
-
-_PS4STATE = _descriptor.Descriptor(
-  name='PS4State',
-  full_name='ati.schema.PS4State',
-  filename=None,
-  file=DESCRIPTOR,
-  containing_type=None,
-  fields=[
-    _descriptor.FieldDescriptor(
-      name='time', full_name='ati.schema.PS4State.time', index=0,
-      number=1, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='ref', full_name='ati.schema.PS4State.ref', index=1,
-      number=2, type=5, cpp_type=1, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-  ],
-  extensions=[
-  ],
-  nested_types=[],
-  enum_types=[
-  ],
-  serialized_options=None,
-  is_extendable=False,
-  syntax='proto3',
-  extension_ranges=[],
-  oneofs=[
-  ],
-  serialized_start=6269,
-  serialized_end=6306,
-)
-
-
-_CONVEYORUPDATE = _descriptor.Descriptor(
-  name='ConveyorUpdate',
-  full_name='ati.schema.ConveyorUpdate',
-  filename=None,
-  file=DESCRIPTOR,
-  containing_type=None,
-  fields=[
-    _descriptor.FieldDescriptor(
-      name='time', full_name='ati.schema.ConveyorUpdate.time', index=0,
-      number=1, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='pwm', full_name='ati.schema.ConveyorUpdate.pwm', index=1,
-      number=2, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='dir', full_name='ati.schema.ConveyorUpdate.dir', index=2,
-      number=3, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-  ],
-  extensions=[
-  ],
-  nested_types=[],
-  enum_types=[
-  ],
-  serialized_options=None,
-  is_extendable=False,
-  syntax='proto3',
-  extension_ranges=[],
-  oneofs=[
-  ],
-  serialized_start=6308,
-  serialized_end=6364,
-)
-
-
-_AUTOUNHITCHUPDATE = _descriptor.Descriptor(
-  name='AutoUnhitchUpdate',
-  full_name='ati.schema.AutoUnhitchUpdate',
-  filename=None,
-  file=DESCRIPTOR,
-  containing_type=None,
-  fields=[
-    _descriptor.FieldDescriptor(
-      name='time', full_name='ati.schema.AutoUnhitchUpdate.time', index=0,
-      number=1, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='unhitch_signal', full_name='ati.schema.AutoUnhitchUpdate.unhitch_signal', index=1,
-      number=2, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-  ],
-  extensions=[
-  ],
-  nested_types=[],
-  enum_types=[
-  ],
-  serialized_options=None,
-  is_extendable=False,
-  syntax='proto3',
-  extension_ranges=[],
-  oneofs=[
-  ],
-  serialized_start=6366,
-  serialized_end=6423,
-)
-
-
-_POSE2D = _descriptor.Descriptor(
-  name='Pose2d',
-  full_name='ati.schema.Pose2d',
-  filename=None,
-  file=DESCRIPTOR,
-  containing_type=None,
-  fields=[
-    _descriptor.FieldDescriptor(
-      name='x', full_name='ati.schema.Pose2d.x', index=0,
-      number=1, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='y', full_name='ati.schema.Pose2d.y', index=1,
-      number=2, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='theta', full_name='ati.schema.Pose2d.theta', index=2,
-      number=3, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-  ],
-  extensions=[
-  ],
-  nested_types=[],
-  enum_types=[
-  ],
-  serialized_options=None,
-  is_extendable=False,
-  syntax='proto3',
-  extension_ranges=[],
-  oneofs=[
-  ],
-  serialized_start=6425,
-  serialized_end=6470,
-)
-
-
-_TRACKERSTATE = _descriptor.Descriptor(
-  name='TrackerState',
-  full_name='ati.schema.TrackerState',
-  filename=None,
-  file=DESCRIPTOR,
-  containing_type=None,
-  fields=[
-    _descriptor.FieldDescriptor(
-      name='mode', full_name='ati.schema.TrackerState.mode', index=0,
-      number=1, type=9, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b("").decode('utf-8'),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='v', full_name='ati.schema.TrackerState.v', index=1,
-      number=2, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='w', full_name='ati.schema.TrackerState.w', index=2,
-      number=3, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='cte', full_name='ati.schema.TrackerState.cte', index=3,
-      number=4, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='te', full_name='ati.schema.TrackerState.te', index=4,
-      number=5, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='vel_factor', full_name='ati.schema.TrackerState.vel_factor', index=5,
-      number=6, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='steer_angle', full_name='ati.schema.TrackerState.steer_angle', index=6,
-      number=7, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='mule_pose', full_name='ati.schema.TrackerState.mule_pose', index=7,
-      number=8, type=11, cpp_type=10, label=1,
-      has_default_value=False, default_value=None,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='ref_pose', full_name='ati.schema.TrackerState.ref_pose', index=8,
-      number=9, type=11, cpp_type=10, label=1,
-      has_default_value=False, default_value=None,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='speed_profile', full_name='ati.schema.TrackerState.speed_profile', index=9,
-      number=10, type=7, cpp_type=3, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-  ],
-  extensions=[
-  ],
-  nested_types=[],
-  enum_types=[
-  ],
-  serialized_options=None,
-  is_extendable=False,
-  syntax='proto3',
-  extension_ranges=[],
-  oneofs=[
-  ],
-  serialized_start=6473,
-  serialized_end=6689,
-)
-
-
-_BATTERYMSG = _descriptor.Descriptor(
-  name='BatteryMsg',
-  full_name='ati.schema.BatteryMsg',
-  filename=None,
-  file=DESCRIPTOR,
-  containing_type=None,
-  fields=[
-    _descriptor.FieldDescriptor(
-      name='time', full_name='ati.schema.BatteryMsg.time', index=0,
-      number=1, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='soc', full_name='ati.schema.BatteryMsg.soc', index=1,
-      number=2, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-  ],
-  extensions=[
-  ],
-  nested_types=[],
-  enum_types=[
-  ],
-  serialized_options=None,
-  is_extendable=False,
-  syntax='proto3',
-  extension_ranges=[],
-  oneofs=[
-  ],
-  serialized_start=6691,
-  serialized_end=6730,
+  serialized_start=2849,
+  serialized_end=2910,
 )
 
 _ODOMETRYUPDATE.fields_by_name['Position'].message_type = _VECTOR
@@ -3743,31 +1614,20 @@ _RADARPOINT.fields_by_name['position'].message_type = _VECTOR
 _IMUUPDATE.fields_by_name['acceleration'].message_type = _VECTOR
 _IMUUPDATE.fields_by_name['welocity'].message_type = _VECTOR
 _IMUUPDATE.fields_by_name['field'].message_type = _VECTOR
-_GYROUPDATE.fields_by_name['gyro'].message_type = _VECTOR
-_GYROBIASUPDATE.fields_by_name['gyro_bias'].message_type = _VECTOR
 _RADARUPDATE.fields_by_name['points'].message_type = _RADARPOINT
 _POSEFRAME.fields_by_name['left'].message_type = _LINEPOSE
 _POSEFRAME.fields_by_name['right'].message_type = _LINEPOSE
-_BEDMSG.fields_by_name['detected_lines'].message_type = _POLYGON
-_BEDMSG.fields_by_name['predicted_boxs'].message_type = _POLYGON
-_BEDSIDEMSG.fields_by_name['bedside_locs'].message_type = _VECTOR
-_ARUCOMSG.fields_by_name['translation'].message_type = _VECTOR
-_ARUCOMSG.fields_by_name['rotation'].message_type = _VECTOR
-_ARUCOMULEPOSE.fields_by_name['pose'].message_type = _ODOMETRYUPDATE
-_TAGDETECTIONMSG.fields_by_name['corners'].message_type = _VECTOR
-_TAGMULEPOSE.fields_by_name['pose'].message_type = _ODOMETRYUPDATE
-_TAGLOCALPOSE.fields_by_name['rvec'].message_type = _VECTOR
-_TAGLOCALPOSE.fields_by_name['tvec'].message_type = _VECTOR
-_TRACKERSTATE.fields_by_name['mule_pose'].message_type = _POSE2D
-_TRACKERSTATE.fields_by_name['ref_pose'].message_type = _POSE2D
+_ICPPOSE.fields_by_name['Position'].message_type = _VECTOR
+_ICPPOSE.fields_by_name['Angle'].message_type = _VECTOR
+_ICPPOSE.fields_by_name['carto_position'].message_type = _VECTOR
+_ICPPOSE.fields_by_name['carto_angle'].message_type = _VECTOR
+_LIDARFRAME.fields_by_name['pts'].message_type = _LIDARPTS
 DESCRIPTOR.message_types_by_name['MuleCommand'] = _MULECOMMAND
 DESCRIPTOR.message_types_by_name['MuleStatus'] = _MULESTATUS
-DESCRIPTOR.message_types_by_name['SystemHealth'] = _SYSTEMHEALTH
-DESCRIPTOR.message_types_by_name['MulePeripherals'] = _MULEPERIPHERALS
-DESCRIPTOR.message_types_by_name['ControlStatus'] = _CONTROLSTATUS
 DESCRIPTOR.message_types_by_name['Vector'] = _VECTOR
 DESCRIPTOR.message_types_by_name['OdometryUpdate'] = _ODOMETRYUPDATE
 DESCRIPTOR.message_types_by_name['DriveUpdate'] = _DRIVEUPDATE
+DESCRIPTOR.message_types_by_name['Timestep'] = _TIMESTEP
 DESCRIPTOR.message_types_by_name['DetectedObjects'] = _DETECTEDOBJECTS
 DESCRIPTOR.message_types_by_name['DetectedRoads'] = _DETECTEDROADS
 DESCRIPTOR.message_types_by_name['Object'] = _OBJECT
@@ -3776,57 +1636,23 @@ DESCRIPTOR.message_types_by_name['Polygon'] = _POLYGON
 DESCRIPTOR.message_types_by_name['Line'] = _LINE
 DESCRIPTOR.message_types_by_name['LinePose'] = _LINEPOSE
 DESCRIPTOR.message_types_by_name['RadarPoint'] = _RADARPOINT
-DESCRIPTOR.message_types_by_name['LidarPoint2D'] = _LIDARPOINT2D
-DESCRIPTOR.message_types_by_name['LidarGround'] = _LIDARGROUND
-DESCRIPTOR.message_types_by_name['DrivableRegion'] = _DRIVABLEREGION
+DESCRIPTOR.message_types_by_name['LidarPoint'] = _LIDARPOINT
 DESCRIPTOR.message_types_by_name['ImuUpdate'] = _IMUUPDATE
-DESCRIPTOR.message_types_by_name['GyroUpdate'] = _GYROUPDATE
-DESCRIPTOR.message_types_by_name['GyroBiasUpdate'] = _GYROBIASUPDATE
-DESCRIPTOR.message_types_by_name['PitchRollUpdate'] = _PITCHROLLUPDATE
 DESCRIPTOR.message_types_by_name['CameraFrame'] = _CAMERAFRAME
 DESCRIPTOR.message_types_by_name['GpsReading'] = _GPSREADING
 DESCRIPTOR.message_types_by_name['EncoderReading'] = _ENCODERREADING
 DESCRIPTOR.message_types_by_name['EncoderDebugReading'] = _ENCODERDEBUGREADING
 DESCRIPTOR.message_types_by_name['RadarUpdate'] = _RADARUPDATE
-DESCRIPTOR.message_types_by_name['IrUpdate'] = _IRUPDATE
-DESCRIPTOR.message_types_by_name['AdcVals'] = _ADCVALS
 DESCRIPTOR.message_types_by_name['PoseFrame'] = _POSEFRAME
+DESCRIPTOR.message_types_by_name['TelemetryEvent'] = _TELEMETRYEVENT
 DESCRIPTOR.message_types_by_name['GenericMsg'] = _GENERICMSG
+DESCRIPTOR.message_types_by_name['ICPPose'] = _ICPPOSE
 DESCRIPTOR.message_types_by_name['LidarSlamPose'] = _LIDARSLAMPOSE
 DESCRIPTOR.message_types_by_name['Note'] = _NOTE
 DESCRIPTOR.message_types_by_name['HealthUpdate'] = _HEALTHUPDATE
-DESCRIPTOR.message_types_by_name['ControlUpdate'] = _CONTROLUPDATE
-DESCRIPTOR.message_types_by_name['LaneUpdate'] = _LANEUPDATE
-DESCRIPTOR.message_types_by_name['CameraNearObjects'] = _CAMERANEAROBJECTS
-DESCRIPTOR.message_types_by_name['PathOccupancy'] = _PATHOCCUPANCY
-DESCRIPTOR.message_types_by_name['SensorException'] = _SENSOREXCEPTION
-DESCRIPTOR.message_types_by_name['SystemMsg'] = _SYSTEMMSG
-DESCRIPTOR.message_types_by_name['YelliMsg'] = _YELLIMSG
+DESCRIPTOR.message_types_by_name['LidarPts'] = _LIDARPTS
 DESCRIPTOR.message_types_by_name['LidarFrame'] = _LIDARFRAME
-DESCRIPTOR.message_types_by_name['LidarLookupTable'] = _LIDARLOOKUPTABLE
-DESCRIPTOR.message_types_by_name['LidarSmallHeader'] = _LIDARSMALLHEADER
-DESCRIPTOR.message_types_by_name['LidarSmallPacket'] = _LIDARSMALLPACKET
-DESCRIPTOR.message_types_by_name['LidarExtraPacket'] = _LIDAREXTRAPACKET
-DESCRIPTOR.message_types_by_name['deprecated_LidarPoint'] = _DEPRECATED_LIDARPOINT
-DESCRIPTOR.message_types_by_name['BedMsg'] = _BEDMSG
-DESCRIPTOR.message_types_by_name['BedSideMsg'] = _BEDSIDEMSG
-DESCRIPTOR.message_types_by_name['HubMotorCurrents'] = _HUBMOTORCURRENTS
-DESCRIPTOR.message_types_by_name['SensorStatus'] = _SENSORSTATUS
-DESCRIPTOR.message_types_by_name['ArucoMsg'] = _ARUCOMSG
-DESCRIPTOR.message_types_by_name['ArucoMulePose'] = _ARUCOMULEPOSE
-DESCRIPTOR.message_types_by_name['TagDetectionMsg'] = _TAGDETECTIONMSG
-DESCRIPTOR.message_types_by_name['TagMulePose'] = _TAGMULEPOSE
-DESCRIPTOR.message_types_by_name['TagLocalPose'] = _TAGLOCALPOSE
-DESCRIPTOR.message_types_by_name['PS4Report'] = _PS4REPORT
-DESCRIPTOR.message_types_by_name['PS4State'] = _PS4STATE
-DESCRIPTOR.message_types_by_name['ConveyorUpdate'] = _CONVEYORUPDATE
-DESCRIPTOR.message_types_by_name['AutoUnhitchUpdate'] = _AUTOUNHITCHUPDATE
-DESCRIPTOR.message_types_by_name['Pose2d'] = _POSE2D
-DESCRIPTOR.message_types_by_name['TrackerState'] = _TRACKERSTATE
-DESCRIPTOR.message_types_by_name['BatteryMsg'] = _BATTERYMSG
 DESCRIPTOR.enum_types_by_name['ObjectType'] = _OBJECTTYPE
-DESCRIPTOR.enum_types_by_name['SensorId'] = _SENSORID
-DESCRIPTOR.enum_types_by_name['LidarMessageId'] = _LIDARMESSAGEID
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
 
 MuleCommand = _reflection.GeneratedProtocolMessageType('MuleCommand', (_message.Message,), dict(
@@ -3842,27 +1668,6 @@ MuleStatus = _reflection.GeneratedProtocolMessageType('MuleStatus', (_message.Me
   # @@protoc_insertion_point(class_scope:ati.schema.MuleStatus)
   ))
 _sym_db.RegisterMessage(MuleStatus)
-
-SystemHealth = _reflection.GeneratedProtocolMessageType('SystemHealth', (_message.Message,), dict(
-  DESCRIPTOR = _SYSTEMHEALTH,
-  __module__ = 'messages_pb2'
-  # @@protoc_insertion_point(class_scope:ati.schema.SystemHealth)
-  ))
-_sym_db.RegisterMessage(SystemHealth)
-
-MulePeripherals = _reflection.GeneratedProtocolMessageType('MulePeripherals', (_message.Message,), dict(
-  DESCRIPTOR = _MULEPERIPHERALS,
-  __module__ = 'messages_pb2'
-  # @@protoc_insertion_point(class_scope:ati.schema.MulePeripherals)
-  ))
-_sym_db.RegisterMessage(MulePeripherals)
-
-ControlStatus = _reflection.GeneratedProtocolMessageType('ControlStatus', (_message.Message,), dict(
-  DESCRIPTOR = _CONTROLSTATUS,
-  __module__ = 'messages_pb2'
-  # @@protoc_insertion_point(class_scope:ati.schema.ControlStatus)
-  ))
-_sym_db.RegisterMessage(ControlStatus)
 
 Vector = _reflection.GeneratedProtocolMessageType('Vector', (_message.Message,), dict(
   DESCRIPTOR = _VECTOR,
@@ -3884,6 +1689,13 @@ DriveUpdate = _reflection.GeneratedProtocolMessageType('DriveUpdate', (_message.
   # @@protoc_insertion_point(class_scope:ati.schema.DriveUpdate)
   ))
 _sym_db.RegisterMessage(DriveUpdate)
+
+Timestep = _reflection.GeneratedProtocolMessageType('Timestep', (_message.Message,), dict(
+  DESCRIPTOR = _TIMESTEP,
+  __module__ = 'messages_pb2'
+  # @@protoc_insertion_point(class_scope:ati.schema.Timestep)
+  ))
+_sym_db.RegisterMessage(Timestep)
 
 DetectedObjects = _reflection.GeneratedProtocolMessageType('DetectedObjects', (_message.Message,), dict(
   DESCRIPTOR = _DETECTEDOBJECTS,
@@ -3941,26 +1753,12 @@ RadarPoint = _reflection.GeneratedProtocolMessageType('RadarPoint', (_message.Me
   ))
 _sym_db.RegisterMessage(RadarPoint)
 
-LidarPoint2D = _reflection.GeneratedProtocolMessageType('LidarPoint2D', (_message.Message,), dict(
-  DESCRIPTOR = _LIDARPOINT2D,
+LidarPoint = _reflection.GeneratedProtocolMessageType('LidarPoint', (_message.Message,), dict(
+  DESCRIPTOR = _LIDARPOINT,
   __module__ = 'messages_pb2'
-  # @@protoc_insertion_point(class_scope:ati.schema.LidarPoint2D)
+  # @@protoc_insertion_point(class_scope:ati.schema.LidarPoint)
   ))
-_sym_db.RegisterMessage(LidarPoint2D)
-
-LidarGround = _reflection.GeneratedProtocolMessageType('LidarGround', (_message.Message,), dict(
-  DESCRIPTOR = _LIDARGROUND,
-  __module__ = 'messages_pb2'
-  # @@protoc_insertion_point(class_scope:ati.schema.LidarGround)
-  ))
-_sym_db.RegisterMessage(LidarGround)
-
-DrivableRegion = _reflection.GeneratedProtocolMessageType('DrivableRegion', (_message.Message,), dict(
-  DESCRIPTOR = _DRIVABLEREGION,
-  __module__ = 'messages_pb2'
-  # @@protoc_insertion_point(class_scope:ati.schema.DrivableRegion)
-  ))
-_sym_db.RegisterMessage(DrivableRegion)
+_sym_db.RegisterMessage(LidarPoint)
 
 ImuUpdate = _reflection.GeneratedProtocolMessageType('ImuUpdate', (_message.Message,), dict(
   DESCRIPTOR = _IMUUPDATE,
@@ -3968,27 +1766,6 @@ ImuUpdate = _reflection.GeneratedProtocolMessageType('ImuUpdate', (_message.Mess
   # @@protoc_insertion_point(class_scope:ati.schema.ImuUpdate)
   ))
 _sym_db.RegisterMessage(ImuUpdate)
-
-GyroUpdate = _reflection.GeneratedProtocolMessageType('GyroUpdate', (_message.Message,), dict(
-  DESCRIPTOR = _GYROUPDATE,
-  __module__ = 'messages_pb2'
-  # @@protoc_insertion_point(class_scope:ati.schema.GyroUpdate)
-  ))
-_sym_db.RegisterMessage(GyroUpdate)
-
-GyroBiasUpdate = _reflection.GeneratedProtocolMessageType('GyroBiasUpdate', (_message.Message,), dict(
-  DESCRIPTOR = _GYROBIASUPDATE,
-  __module__ = 'messages_pb2'
-  # @@protoc_insertion_point(class_scope:ati.schema.GyroBiasUpdate)
-  ))
-_sym_db.RegisterMessage(GyroBiasUpdate)
-
-PitchRollUpdate = _reflection.GeneratedProtocolMessageType('PitchRollUpdate', (_message.Message,), dict(
-  DESCRIPTOR = _PITCHROLLUPDATE,
-  __module__ = 'messages_pb2'
-  # @@protoc_insertion_point(class_scope:ati.schema.PitchRollUpdate)
-  ))
-_sym_db.RegisterMessage(PitchRollUpdate)
 
 CameraFrame = _reflection.GeneratedProtocolMessageType('CameraFrame', (_message.Message,), dict(
   DESCRIPTOR = _CAMERAFRAME,
@@ -4025,20 +1802,6 @@ RadarUpdate = _reflection.GeneratedProtocolMessageType('RadarUpdate', (_message.
   ))
 _sym_db.RegisterMessage(RadarUpdate)
 
-IrUpdate = _reflection.GeneratedProtocolMessageType('IrUpdate', (_message.Message,), dict(
-  DESCRIPTOR = _IRUPDATE,
-  __module__ = 'messages_pb2'
-  # @@protoc_insertion_point(class_scope:ati.schema.IrUpdate)
-  ))
-_sym_db.RegisterMessage(IrUpdate)
-
-AdcVals = _reflection.GeneratedProtocolMessageType('AdcVals', (_message.Message,), dict(
-  DESCRIPTOR = _ADCVALS,
-  __module__ = 'messages_pb2'
-  # @@protoc_insertion_point(class_scope:ati.schema.AdcVals)
-  ))
-_sym_db.RegisterMessage(AdcVals)
-
 PoseFrame = _reflection.GeneratedProtocolMessageType('PoseFrame', (_message.Message,), dict(
   DESCRIPTOR = _POSEFRAME,
   __module__ = 'messages_pb2'
@@ -4046,12 +1809,26 @@ PoseFrame = _reflection.GeneratedProtocolMessageType('PoseFrame', (_message.Mess
   ))
 _sym_db.RegisterMessage(PoseFrame)
 
+TelemetryEvent = _reflection.GeneratedProtocolMessageType('TelemetryEvent', (_message.Message,), dict(
+  DESCRIPTOR = _TELEMETRYEVENT,
+  __module__ = 'messages_pb2'
+  # @@protoc_insertion_point(class_scope:ati.schema.TelemetryEvent)
+  ))
+_sym_db.RegisterMessage(TelemetryEvent)
+
 GenericMsg = _reflection.GeneratedProtocolMessageType('GenericMsg', (_message.Message,), dict(
   DESCRIPTOR = _GENERICMSG,
   __module__ = 'messages_pb2'
   # @@protoc_insertion_point(class_scope:ati.schema.GenericMsg)
   ))
 _sym_db.RegisterMessage(GenericMsg)
+
+ICPPose = _reflection.GeneratedProtocolMessageType('ICPPose', (_message.Message,), dict(
+  DESCRIPTOR = _ICPPOSE,
+  __module__ = 'messages_pb2'
+  # @@protoc_insertion_point(class_scope:ati.schema.ICPPose)
+  ))
+_sym_db.RegisterMessage(ICPPose)
 
 LidarSlamPose = _reflection.GeneratedProtocolMessageType('LidarSlamPose', (_message.Message,), dict(
   DESCRIPTOR = _LIDARSLAMPOSE,
@@ -4074,54 +1851,12 @@ HealthUpdate = _reflection.GeneratedProtocolMessageType('HealthUpdate', (_messag
   ))
 _sym_db.RegisterMessage(HealthUpdate)
 
-ControlUpdate = _reflection.GeneratedProtocolMessageType('ControlUpdate', (_message.Message,), dict(
-  DESCRIPTOR = _CONTROLUPDATE,
+LidarPts = _reflection.GeneratedProtocolMessageType('LidarPts', (_message.Message,), dict(
+  DESCRIPTOR = _LIDARPTS,
   __module__ = 'messages_pb2'
-  # @@protoc_insertion_point(class_scope:ati.schema.ControlUpdate)
+  # @@protoc_insertion_point(class_scope:ati.schema.LidarPts)
   ))
-_sym_db.RegisterMessage(ControlUpdate)
-
-LaneUpdate = _reflection.GeneratedProtocolMessageType('LaneUpdate', (_message.Message,), dict(
-  DESCRIPTOR = _LANEUPDATE,
-  __module__ = 'messages_pb2'
-  # @@protoc_insertion_point(class_scope:ati.schema.LaneUpdate)
-  ))
-_sym_db.RegisterMessage(LaneUpdate)
-
-CameraNearObjects = _reflection.GeneratedProtocolMessageType('CameraNearObjects', (_message.Message,), dict(
-  DESCRIPTOR = _CAMERANEAROBJECTS,
-  __module__ = 'messages_pb2'
-  # @@protoc_insertion_point(class_scope:ati.schema.CameraNearObjects)
-  ))
-_sym_db.RegisterMessage(CameraNearObjects)
-
-PathOccupancy = _reflection.GeneratedProtocolMessageType('PathOccupancy', (_message.Message,), dict(
-  DESCRIPTOR = _PATHOCCUPANCY,
-  __module__ = 'messages_pb2'
-  # @@protoc_insertion_point(class_scope:ati.schema.PathOccupancy)
-  ))
-_sym_db.RegisterMessage(PathOccupancy)
-
-SensorException = _reflection.GeneratedProtocolMessageType('SensorException', (_message.Message,), dict(
-  DESCRIPTOR = _SENSOREXCEPTION,
-  __module__ = 'messages_pb2'
-  # @@protoc_insertion_point(class_scope:ati.schema.SensorException)
-  ))
-_sym_db.RegisterMessage(SensorException)
-
-SystemMsg = _reflection.GeneratedProtocolMessageType('SystemMsg', (_message.Message,), dict(
-  DESCRIPTOR = _SYSTEMMSG,
-  __module__ = 'messages_pb2'
-  # @@protoc_insertion_point(class_scope:ati.schema.SystemMsg)
-  ))
-_sym_db.RegisterMessage(SystemMsg)
-
-YelliMsg = _reflection.GeneratedProtocolMessageType('YelliMsg', (_message.Message,), dict(
-  DESCRIPTOR = _YELLIMSG,
-  __module__ = 'messages_pb2'
-  # @@protoc_insertion_point(class_scope:ati.schema.YelliMsg)
-  ))
-_sym_db.RegisterMessage(YelliMsg)
+_sym_db.RegisterMessage(LidarPts)
 
 LidarFrame = _reflection.GeneratedProtocolMessageType('LidarFrame', (_message.Message,), dict(
   DESCRIPTOR = _LIDARFRAME,
@@ -4129,153 +1864,6 @@ LidarFrame = _reflection.GeneratedProtocolMessageType('LidarFrame', (_message.Me
   # @@protoc_insertion_point(class_scope:ati.schema.LidarFrame)
   ))
 _sym_db.RegisterMessage(LidarFrame)
-
-LidarLookupTable = _reflection.GeneratedProtocolMessageType('LidarLookupTable', (_message.Message,), dict(
-  DESCRIPTOR = _LIDARLOOKUPTABLE,
-  __module__ = 'messages_pb2'
-  # @@protoc_insertion_point(class_scope:ati.schema.LidarLookupTable)
-  ))
-_sym_db.RegisterMessage(LidarLookupTable)
-
-LidarSmallHeader = _reflection.GeneratedProtocolMessageType('LidarSmallHeader', (_message.Message,), dict(
-  DESCRIPTOR = _LIDARSMALLHEADER,
-  __module__ = 'messages_pb2'
-  # @@protoc_insertion_point(class_scope:ati.schema.LidarSmallHeader)
-  ))
-_sym_db.RegisterMessage(LidarSmallHeader)
-
-LidarSmallPacket = _reflection.GeneratedProtocolMessageType('LidarSmallPacket', (_message.Message,), dict(
-  DESCRIPTOR = _LIDARSMALLPACKET,
-  __module__ = 'messages_pb2'
-  # @@protoc_insertion_point(class_scope:ati.schema.LidarSmallPacket)
-  ))
-_sym_db.RegisterMessage(LidarSmallPacket)
-
-LidarExtraPacket = _reflection.GeneratedProtocolMessageType('LidarExtraPacket', (_message.Message,), dict(
-  DESCRIPTOR = _LIDAREXTRAPACKET,
-  __module__ = 'messages_pb2'
-  # @@protoc_insertion_point(class_scope:ati.schema.LidarExtraPacket)
-  ))
-_sym_db.RegisterMessage(LidarExtraPacket)
-
-deprecated_LidarPoint = _reflection.GeneratedProtocolMessageType('deprecated_LidarPoint', (_message.Message,), dict(
-  DESCRIPTOR = _DEPRECATED_LIDARPOINT,
-  __module__ = 'messages_pb2'
-  # @@protoc_insertion_point(class_scope:ati.schema.deprecated_LidarPoint)
-  ))
-_sym_db.RegisterMessage(deprecated_LidarPoint)
-
-BedMsg = _reflection.GeneratedProtocolMessageType('BedMsg', (_message.Message,), dict(
-  DESCRIPTOR = _BEDMSG,
-  __module__ = 'messages_pb2'
-  # @@protoc_insertion_point(class_scope:ati.schema.BedMsg)
-  ))
-_sym_db.RegisterMessage(BedMsg)
-
-BedSideMsg = _reflection.GeneratedProtocolMessageType('BedSideMsg', (_message.Message,), dict(
-  DESCRIPTOR = _BEDSIDEMSG,
-  __module__ = 'messages_pb2'
-  # @@protoc_insertion_point(class_scope:ati.schema.BedSideMsg)
-  ))
-_sym_db.RegisterMessage(BedSideMsg)
-
-HubMotorCurrents = _reflection.GeneratedProtocolMessageType('HubMotorCurrents', (_message.Message,), dict(
-  DESCRIPTOR = _HUBMOTORCURRENTS,
-  __module__ = 'messages_pb2'
-  # @@protoc_insertion_point(class_scope:ati.schema.HubMotorCurrents)
-  ))
-_sym_db.RegisterMessage(HubMotorCurrents)
-
-SensorStatus = _reflection.GeneratedProtocolMessageType('SensorStatus', (_message.Message,), dict(
-  DESCRIPTOR = _SENSORSTATUS,
-  __module__ = 'messages_pb2'
-  # @@protoc_insertion_point(class_scope:ati.schema.SensorStatus)
-  ))
-_sym_db.RegisterMessage(SensorStatus)
-
-ArucoMsg = _reflection.GeneratedProtocolMessageType('ArucoMsg', (_message.Message,), dict(
-  DESCRIPTOR = _ARUCOMSG,
-  __module__ = 'messages_pb2'
-  # @@protoc_insertion_point(class_scope:ati.schema.ArucoMsg)
-  ))
-_sym_db.RegisterMessage(ArucoMsg)
-
-ArucoMulePose = _reflection.GeneratedProtocolMessageType('ArucoMulePose', (_message.Message,), dict(
-  DESCRIPTOR = _ARUCOMULEPOSE,
-  __module__ = 'messages_pb2'
-  # @@protoc_insertion_point(class_scope:ati.schema.ArucoMulePose)
-  ))
-_sym_db.RegisterMessage(ArucoMulePose)
-
-TagDetectionMsg = _reflection.GeneratedProtocolMessageType('TagDetectionMsg', (_message.Message,), dict(
-  DESCRIPTOR = _TAGDETECTIONMSG,
-  __module__ = 'messages_pb2'
-  # @@protoc_insertion_point(class_scope:ati.schema.TagDetectionMsg)
-  ))
-_sym_db.RegisterMessage(TagDetectionMsg)
-
-TagMulePose = _reflection.GeneratedProtocolMessageType('TagMulePose', (_message.Message,), dict(
-  DESCRIPTOR = _TAGMULEPOSE,
-  __module__ = 'messages_pb2'
-  # @@protoc_insertion_point(class_scope:ati.schema.TagMulePose)
-  ))
-_sym_db.RegisterMessage(TagMulePose)
-
-TagLocalPose = _reflection.GeneratedProtocolMessageType('TagLocalPose', (_message.Message,), dict(
-  DESCRIPTOR = _TAGLOCALPOSE,
-  __module__ = 'messages_pb2'
-  # @@protoc_insertion_point(class_scope:ati.schema.TagLocalPose)
-  ))
-_sym_db.RegisterMessage(TagLocalPose)
-
-PS4Report = _reflection.GeneratedProtocolMessageType('PS4Report', (_message.Message,), dict(
-  DESCRIPTOR = _PS4REPORT,
-  __module__ = 'messages_pb2'
-  # @@protoc_insertion_point(class_scope:ati.schema.PS4Report)
-  ))
-_sym_db.RegisterMessage(PS4Report)
-
-PS4State = _reflection.GeneratedProtocolMessageType('PS4State', (_message.Message,), dict(
-  DESCRIPTOR = _PS4STATE,
-  __module__ = 'messages_pb2'
-  # @@protoc_insertion_point(class_scope:ati.schema.PS4State)
-  ))
-_sym_db.RegisterMessage(PS4State)
-
-ConveyorUpdate = _reflection.GeneratedProtocolMessageType('ConveyorUpdate', (_message.Message,), dict(
-  DESCRIPTOR = _CONVEYORUPDATE,
-  __module__ = 'messages_pb2'
-  # @@protoc_insertion_point(class_scope:ati.schema.ConveyorUpdate)
-  ))
-_sym_db.RegisterMessage(ConveyorUpdate)
-
-AutoUnhitchUpdate = _reflection.GeneratedProtocolMessageType('AutoUnhitchUpdate', (_message.Message,), dict(
-  DESCRIPTOR = _AUTOUNHITCHUPDATE,
-  __module__ = 'messages_pb2'
-  # @@protoc_insertion_point(class_scope:ati.schema.AutoUnhitchUpdate)
-  ))
-_sym_db.RegisterMessage(AutoUnhitchUpdate)
-
-Pose2d = _reflection.GeneratedProtocolMessageType('Pose2d', (_message.Message,), dict(
-  DESCRIPTOR = _POSE2D,
-  __module__ = 'messages_pb2'
-  # @@protoc_insertion_point(class_scope:ati.schema.Pose2d)
-  ))
-_sym_db.RegisterMessage(Pose2d)
-
-TrackerState = _reflection.GeneratedProtocolMessageType('TrackerState', (_message.Message,), dict(
-  DESCRIPTOR = _TRACKERSTATE,
-  __module__ = 'messages_pb2'
-  # @@protoc_insertion_point(class_scope:ati.schema.TrackerState)
-  ))
-_sym_db.RegisterMessage(TrackerState)
-
-BatteryMsg = _reflection.GeneratedProtocolMessageType('BatteryMsg', (_message.Message,), dict(
-  DESCRIPTOR = _BATTERYMSG,
-  __module__ = 'messages_pb2'
-  # @@protoc_insertion_point(class_scope:ati.schema.BatteryMsg)
-  ))
-_sym_db.RegisterMessage(BatteryMsg)
 
 
 # @@protoc_insertion_point(module_scope)
