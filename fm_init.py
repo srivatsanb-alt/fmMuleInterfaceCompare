@@ -25,7 +25,6 @@ FLEET_CONFIG = config["fleet"]
 frontenduser = config["frontenduser"]
 optimal_dispatch_config = config["optimal_dispatch"]
 
-
 print(f"frontend user details in config {frontenduser}")
 
 time.sleep(5)
@@ -52,6 +51,7 @@ while not DB_UP:
         for fleet_name in fleet_names:
             try:
                 print(f"trying to update db tables for fleet : {fleet_name}")
+                fu.maybe_create_graph_object(fleet_name)
                 fu.add_update_fleet(
                     name=fleet_name,
                     site=FLEET_CONFIG["site"],
