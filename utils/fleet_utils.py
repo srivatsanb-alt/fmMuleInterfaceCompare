@@ -2,10 +2,12 @@ import hashlib
 import os
 import secrets
 from core.db import engine
+from core.db import session_maker
 import json
 import glob
 import importlib
 import inspect
+from sqlalchemy.exc import NoResultFound
 from utils.util import dt_to_str
 from models.fleet_models import (
     Fleet,
@@ -22,9 +24,9 @@ import datetime
 from models.visa_models import ExclusionZone, LinkedGates
 from models.frontend_models import FrontendUser
 from models.base_models import StationProperties
-
-from core.db import session_maker
-from sqlalchemy.exc import NoResultFound
+import mule.ati.tools.gmaj_creator as gmac
+import mule.ati.control.bridge.router_planner_interface as rpi
+import mule.ati.control.dynamic_router.graph_builder_utils as gbu
 
 
 def get_table_as_dict(model, model_obj):
@@ -298,16 +300,14 @@ def add_linked_gates_table(fleet):
 
 
 def add_update_map_files(fleet_name: str):
-    path_prefix = os.path.join(os.environ["FM_MAP_DIR"], f"{fleet_name}/map")
-    with open(f"{path_prefix}/map_files.txt") as f:
-        map_files = f.readlines()
-
+    fleet_path = os.path.join(os.environ["FM_MAP_DIR"], f"{fleet_name}/map")
+    map_files = get_filenames(fleet_path)
     with session_maker() as db:
         fleet: Fleet = db.query(Fleet).filter(Fleet.name == fleet_name).one()
         map_id = fleet.map_id
         for map_file_name in map_files:
             map_file_name = map_file_name.rstrip()
-            map_file_path = f"{path_prefix}/{map_file_name}"
+            map_file_path = f"{fleet_path}/{map_file_name}"
             sha1 = compute_sha1_hash(map_file_path)
             try:
                 map_file: MapFile = (
@@ -369,6 +369,89 @@ def delete_table_contents(Model):
 
 
 BUF_SIZE = 65536
+
+
+def get_filenames(directory):
+    """
+    This function will generate the file names in a directory, and ignores any sub-directories
+    """
+    file_names = []
+    flist = os.listdir(directory)
+    for item in flist:
+        if item[0] == ".":
+            # must be a meta file, ignoring this
+            continue
+        if os.path.isdir(directory + "/" + item):
+            # this is a directory, not a file. ignoring
+            continue
+        file_names.append(item)  # Add it to the list.
+    print(f"{directory} filenames: {file_names}")
+    return file_names
+
+
+def maybe_delete_file(fpath):
+    if os.path.isfile(fpath):  # file exists
+        try:
+            os.remove(fpath)
+            print(f"Deleted {fpath} file!")
+        except Exception as e:
+            print(f"Couldn't delete {fpath}. {e}")
+    else:
+        print(f"{fpath} doesn't exist!")
+    return
+
+
+def create_map_files_txt(fleet_name):
+    fleet_path = os.path.join(os.environ["FM_MAP_DIR"], f"{fleet_name}/map")
+    map_files_path = fleet_path + "/map_files.txt"
+    maybe_delete_file(map_files_path)
+    flist = get_filenames(fleet_path)
+    with open(map_files_path, "w") as fp:
+        for item in flist:
+            vals = f"{item}\n"
+            # write each item on a new line
+            fp.write(vals)
+    print(f"Created new {map_files_path} with {flist}")
+    return
+
+
+def maybe_create_gmaj_file(fleet_name):
+    gmaj_path = os.path.join(
+        os.environ["FM_MAP_DIR"], f"{fleet_name}/map/grid_map_attributes.json"
+    )
+    if os.path.isfile(gmaj_path):
+        print(f"Found the GMAJ file {gmaj_path}!")
+        return
+    else:
+        print(f"Couldn't find the GMAJ file {gmaj_path}, will generate one now!")
+        map_path = gmaj_path = os.path.join(os.environ["FM_MAP_DIR"], f"{fleet_name}/map/")
+        gmac.create_gmaj(map_path, gmaj_path)
+        print(f"Created a new GMAJ file {gmaj_path}!")
+    return
+
+
+def maybe_create_graph_object(fleet_name):
+    graph_object_path = os.path.join(
+        os.environ["FM_MAP_DIR"], f"{fleet_name}/map/graph_object.json"
+    )
+    gmaj_path = os.path.join(
+        os.environ["FM_MAP_DIR"], f"{fleet_name}/map/grid_map_attributes.json"
+    )
+    with open(gmaj_path, "r") as f:
+        gma = json.load(f)
+
+    # get terminal lines and stations object from json dict
+    terminal_lines = gma["terminal_lines_info"]
+    stations = gma["stations_info"]
+    terminal_lines_int = rpi.process_dict(terminal_lines)
+    stations_objects = rpi.process_stations_info(stations)
+    gbu.maybe_build_graph_object_json(
+        terminal_lines_int,
+        stations_objects,
+        gmaj_path=gmaj_path,
+        graph_object_path=graph_object_path,
+    )
+    return
 
 
 def compute_sha1_hash(fpath):
