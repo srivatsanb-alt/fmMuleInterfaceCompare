@@ -174,7 +174,7 @@ def update_map_file_info_with_certs(
         for filename in [f"{sherpa_hostname}_cert.pem", f"{sherpa_hostname}_key.pem"]
     ]
 
-    if not all([os.path.exists(filename) for filename in files_to_process]):
+    if not all([os.path.exists(filename) for filename in files_to_process]) or ip_changed:
         get_logger().info(
             f"will generate new cert files, HOSTNAME {sherpa_hostname}, ip_address: {sherpa_ip_address}, ip_changed: {ip_changed}"
         )
