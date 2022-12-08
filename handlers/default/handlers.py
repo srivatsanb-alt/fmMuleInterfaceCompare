@@ -943,18 +943,12 @@ class Handlers:
         sherpa: Sherpa = session.get_sherpa(sherpa_name)
         fleet_name = sherpa.fleet.name
         map_files = session.get_map_files(fleet_name)
+
+        ip_changed = sherpa.status.other_info.get("ip_changed", True)
+
         map_file_info = [
             MapFileInfo(file_name=mf.filename, hash=mf.file_hash) for mf in map_files
         ]
-
-        ip_changed = True
-        if sherpa.status.other_info:
-            ip_changed = sherpa.status.other_info.get("ip_changed", True)
-
-        if ip_changed:
-            get_logger().warning(
-                f"{sherpa_name} ip address has changed will generate new cert files"
-            )
 
         map_file_info = hutils.update_map_file_info_with_certs(
             map_file_info, sherpa.name, sherpa.ip_address, ip_changed=ip_changed

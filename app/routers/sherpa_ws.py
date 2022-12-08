@@ -16,6 +16,7 @@ from models.request_models import (
     Stoppages,
     StoppageInfo,
 )
+from sqlalchemy.orm.attributes import flag_modified
 import json
 from redis import Redis
 from utils.rq import Queues, enqueue
@@ -68,13 +69,13 @@ async def sherpa_status(
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
 
-    await websocket.accept()
     logging.getLogger().info(f"websocket connection started for {sherpa}")
     client_ip = websocket.client.host
+
     if x_real_ip is None:
         x_real_ip = client_ip
 
-    logging.getLogger().info(f"reverseproxy ip: {client_ip}")
+    logging.getLogger().info(f"fm_rev_proxy ip: {client_ip}")
     logging.getLogger().info(f"sherpa connected wiht x_real_ip: {x_real_ip}")
 
     db_sherpa = session.get_sherpa(sherpa)
@@ -86,14 +87,20 @@ async def sherpa_status(
         logging.info(
             f"{sherpa} ip has changed since last connection , last_connection_ip: {db_sherpa.ip_address}"
         )
-        db_sherpa.status.other_info.update({"ip_changed": True})
         db_sherpa.ip_address = x_real_ip
-    else:
-        logging.info(f"{sherpa} ip hasn't changed since last connection")
-        db_sherpa.status.other_info.update({"ip_changed": False})
+        db_sherpa.status.other_info.update({"ip_changed": True})
 
+        logging.info(f"Updated {sherpa} ip address, committed  it the ip change to DB")
+    else:
+        db_sherpa.status.other_info.update({"ip_changed": False})
+        logging.info(f"{sherpa} ip hasn't changed since last connection")
+
+    flag_modified(db_sherpa.status, "other_info")
     logging.getLogger().info(f"modified sherpa details {db_sherpa.__dict__}")
+    logging.getLogger().info(f"modified sherpa status details {db_sherpa.status.__dict__}")
     session.close()
+
+    await websocket.accept()
 
     rw = [
         asyncio.create_task(reader(websocket, sherpa)),

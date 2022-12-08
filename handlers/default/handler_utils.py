@@ -165,7 +165,7 @@ def find_best_sherpa():
 
 
 def update_map_file_info_with_certs(
-    map_file_info, sherpa_hostname, sherpa_ip_address, ip_changed=True
+    map_file_info, sherpa_hostname, sherpa_ip_address, ip_changed
 ):
     save_path = os.path.join(os.getenv("FM_MAP_DIR"), "certs")
 
@@ -174,8 +174,10 @@ def update_map_file_info_with_certs(
         for filename in [f"{sherpa_hostname}_cert.pem", f"{sherpa_hostname}_key.pem"]
     ]
 
-    ip_changed = False
-    if not all([os.path.exists(filename) for filename in files_to_process]) or ip_changed:
+    if not all([os.path.exists(filename) for filename in files_to_process]):
+        get_logger().info(
+            f"will generate new cert files, HOSTNAME {sherpa_hostname}, ip_address: {sherpa_ip_address}, ip_changed: {ip_changed}"
+        )
         generate_certs_for_sherpa(sherpa_hostname, sherpa_ip_address, save_path)
 
     all_file_hash = []
