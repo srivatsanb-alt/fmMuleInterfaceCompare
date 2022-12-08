@@ -945,6 +945,7 @@ class Handlers:
         map_files = session.get_map_files(fleet_name)
 
         ip_changed = sherpa.status.other_info.get("ip_changed", True)
+        get_logger().info(f"Has sherpa ip changed: {ip_changed}")
 
         map_file_info = [
             MapFileInfo(file_name=mf.filename, hash=mf.file_hash) for mf in map_files
