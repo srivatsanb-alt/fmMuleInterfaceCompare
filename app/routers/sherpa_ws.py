@@ -79,7 +79,6 @@ async def sherpa_status(
     logging.getLogger().info(f"sherpa connected wiht x_real_ip: {x_real_ip}")
 
     db_sherpa = session.get_sherpa(sherpa)
-
     if db_sherpa.status.other_info is None:
         db_sherpa.status.other_info = {}
 
@@ -88,8 +87,12 @@ async def sherpa_status(
             f"{sherpa} ip has changed since last connection , last_connection_ip: {db_sherpa.ip_address}"
         )
         db_sherpa.ip_address = x_real_ip
+        try:
+            os.remove(os.path.join(os.getenv("FM_MAP_DIR"), "certs", f"{sherpa}_cert.pem"))
+            logging.info(f"Removed {sherpa} cert file since ip has changed")
+        except Exception as e:
+            logging.info(f"Unable to remove cert file {e}")
         db_sherpa.status.other_info.update({"ip_changed": True})
-
         logging.info(f"Updated {sherpa} ip address, committed  it the ip change to DB")
     else:
         db_sherpa.status.other_info.update({"ip_changed": False})
