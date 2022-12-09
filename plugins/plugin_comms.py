@@ -5,44 +5,53 @@ import requests
 import logging
 import json
 from app.routers.dependencies import generate_jwt_token
-from plugins.plugin_rq import Plugin_Queues, enqueue
+from .plugin_rq import Plugin_Queues, enqueue
 
 logging.basicConfig(level=logging.INFO)
 
 
-async def ws_reader(websocket, name, handler_obj):
+async def ws_reader(websocket, name, handler_obj, unique_id=None):
     plugin_q = Plugin_Queues.queues_dict[f"plugin_{name}"]
     logging.info(f"Started websocket reader for {name}")
     while True:
         msg_recv = await websocket.receive_text()
         logging.info(f"Received msg: {msg_recv}")
-        msg = msg_recv.replace("'", "\"")
+        msg = msg_recv.replace("'", '"')
         count = 0
-        while (type(msg) is str):
+        while type(msg) is str:
             count += 1
             msg = json.loads(msg)
+        if unique_id is not None:
+            msg["unique_id"] = unique_id
         logging.info(f"Converted msg: {msg}, count: {count}")
         logging.info(f"Got a plugin msg {msg}")
         enqueue(plugin_q, handler_obj.handle, msg)
 
 
-async def ws_writer(websocket, name):
+async def ws_writer(websocket, name, format="json", unique_id=None):
     redis_conn = aioredis.Redis.from_url(
         os.getenv("FM_REDIS_URI"), max_connections=10, decode_responses=True
     )
     psub = redis_conn.pubsub()
 
     # subscribe redis message/data queue - similar to bus
-    await psub.subscribe(f"channel:plugin_{name}")
+    channel_name = f"plugin_{name}"
+    if unique_id is not None:
+        channel_name = channel_name + f"_{unique_id}"
 
-    logging.info(f"Started websocket writer for {name}")
+    await psub.subscribe(f"channel:{channel_name}")
+    logging.info(f"Started websocket writer for {channel_name}")
 
     while True:
         message = await psub.get_message(ignore_subscribe_messages=True, timeout=5)
         if message:
-            # logging.info(f"Got a message ws_writer {message}")
-            data = ast.literal_eval(message["data"])
-            await websocket.send_json(data)
+            logging.info(f"Got a message in {channel_name} ws_writer  {message}")
+
+            if format == "json":
+                data = ast.literal_eval(message["data"])
+                await websocket.send_json(data)
+            elif format == "text":
+                await websocket.send_text(message["data"])
 
 
 def check_response(response):

@@ -21,7 +21,6 @@ def get_seperate_logger(name):
 
 
 def get_redis_conn():
-
     redis_conn = redis.from_url(
         os.getenv("FM_REDIS_URI"), encoding="utf-8", decode_responses=True
     )
@@ -108,3 +107,17 @@ if __name__ == "__main__":
         # # start a worker for ies plugin
         Process(target=start_worker, args=("plugin_ies",)).start()
         ies_logger.info("started a worker for plugin_ies")
+
+    if "conveyor" in all_plugins:
+        from conveyor.conveyor_utils import ConvInfo, ConvTrips, populate_conv_info
+        from plugin_db import init_db
+
+        conveyor_logger = get_seperate_logger("plugin_conveyor")
+        init_db(str("plugin_conveyor"), [ConvInfo, ConvTrips])
+
+        populate_conv_info()
+        conveyor_logger.info("Populated conveyor_info table")
+
+        # start a worker for conveyor plugin
+        Process(target=start_worker, args=("plugin_conveyor",)).start()
+        conveyor_logger.info("started a worker for plugin_conveyor")

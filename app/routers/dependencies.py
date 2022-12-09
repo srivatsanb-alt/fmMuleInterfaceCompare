@@ -2,6 +2,7 @@ import hashlib
 import time
 import jwt
 from fastapi import HTTPException
+import logging
 from core.settings import settings
 from fastapi import Depends, Header
 from fastapi.param_functions import Query
@@ -105,6 +106,8 @@ def process_req_with_response(queue, req, user: str):
             break
 
         if status == "failed":
+            exc_info = Job.fetch(job.id, connection=redis_conn).exc_info
+            logging.info(f"Exception info: {exc_info}")
 
             # for recovery
             rq_fails = redis_conn.get("rq_fails")

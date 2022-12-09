@@ -103,3 +103,8 @@ def send_status_update(msg):
 def send_ws_msg_to_sherpa(msg, sherpa):
     pub = redis.from_url(os.getenv("FM_REDIS_URI"), decode_responses=True)
     pub.publish(f"channel:{sherpa.name}", str(msg))
+
+
+def send_msg_to_conveyor(msg, conveyor_name):
+    pub = redis.from_url(os.getenv("FM_REDIS_URI"), decode_responses=True)
+    pub.publish(f"channel:plugin_conveyor_{conveyor_name}", str(msg))

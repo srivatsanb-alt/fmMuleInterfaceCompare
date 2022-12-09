@@ -53,7 +53,13 @@ from models.trip_models import (
 )
 
 from requests import Response
-from utils.comms import get, send_move_msg, send_msg_to_sherpa, send_status_update
+from utils.comms import (
+    get,
+    send_move_msg,
+    send_msg_to_sherpa,
+    send_status_update,
+    send_msg_to_conveyor,
+)
 from utils.util import (
     are_poses_close,
     check_if_timestamp_has_passed,
@@ -743,6 +749,13 @@ class Handlers:
         get_logger().info(
             f"will send conveyor msg(direction: {req.direction}, num_units: {req.num_units}) to {current_station}"
         )
+
+        if req.num_units == 2:
+            msg = "transfer_2totes"
+        elif req.num_units == 1:
+            msg = "transfer_tote"
+
+        send_msg_to_conveyor(msg, current_station)
 
     def handle_conveyor(self, req: ConveyorReq, ongoing_trip: OngoingTrip):
         sherpa_name = ongoing_trip.sherpa_name
