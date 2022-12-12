@@ -5,8 +5,12 @@ from sqlalchemy.dialects.postgresql import JSONB
 import os
 import json
 from sqlalchemy.ext.declarative import declarative_base
+from plugins.plugin_comms import send_req_to_FM
+import logging
+from models.base_models import StationProperties
 
 Base = declarative_base()
+logger_name = "plugin_conveyor"
 
 
 class ConvTrips(Base):
@@ -45,14 +49,29 @@ def populate_conv_info():
         )
         with open(api_key_conveyor_mapper, "r") as f:
             api_key_conveyor_mapping = json.load(f)
-        for api, conveyor in api_key_conveyor_mapping.items():
-            info = ConvInfo(
-                name=conveyor["name"],
-                api_key=api,
-                num_totes=0,
-                nearest_chute=conveyor["nearest_chute"],
-                fleet_name="all_hands_map",
-                pose=conveyor["pose"],
+        for api_key, conveyor_details in api_key_conveyor_mapping.items():
+            conveyor_name = conveyor_details["name"]
+            status_code, response_json = send_req_to_FM(
+                "plugin_conveyor",
+                "station_info",
+                req_type="get",
+                query=conveyor_name,
             )
-            db.add(info)
-        db.commit()
+
+            if response_json is not None:
+                station_info = response_json
+                # if StationProperties.CONVEYOR in station_info["properties"]:
+                logging.getLogger(logger_name).info(f"Will add {conveyor_name} to DB")
+                station_type = "conveyor"
+                conv_info = ConvInfo(
+                    name=conveyor_details["name"],
+                    api_key=api_key,
+                    num_totes=0,
+                    type=station_type,
+                    nearest_chute=conveyor_details["nearest_chute"],
+                    fleet_name=station_info["fleet_name"],
+                    pose=station_info["pose"],
+                    disabled=station_info["disabled"],
+                )
+                db.add(conv_info)
+            db.commit()

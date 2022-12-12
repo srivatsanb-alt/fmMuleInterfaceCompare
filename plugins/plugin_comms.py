@@ -5,7 +5,7 @@ import requests
 import logging
 import json
 from app.routers.dependencies import generate_jwt_token
-from .plugin_rq import Plugin_Queues, enqueue
+from plugins.plugin_rq import Plugin_Queues, enqueue
 
 logging.basicConfig(level=logging.INFO)
 
@@ -23,6 +23,7 @@ async def ws_reader(websocket, name, handler_obj, unique_id=None):
             msg = json.loads(msg)
         if unique_id is not None:
             msg["unique_id"] = unique_id
+
         logging.info(f"Converted msg: {msg}, count: {count}")
         logging.info(f"Got a plugin msg {msg}")
         enqueue(plugin_q, handler_obj.handle, msg)
@@ -106,6 +107,9 @@ def get_fm_url(endpoint, query):
         ),
         "delete_booked_trip": os.path.join(
             "http://", fm_ip, "api/v1/trips/booking/", str(query)
+        ),
+        "station_info": os.path.join(
+            "http://", fm_ip, "api/v1/station/", str(query), "info"
         ),
     }
     return fm_endpoints.get(endpoint, None)

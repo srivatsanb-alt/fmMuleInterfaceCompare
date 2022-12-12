@@ -3,8 +3,6 @@ import logging
 from dataclasses import dataclass
 import redis
 from .conveyor_utils import ConvInfo, session, ConvTrips
-
-sys.path.append("/app")
 from plugins.plugin_comms import send_req_to_FM
 from models.base_models import JsonMixin
 

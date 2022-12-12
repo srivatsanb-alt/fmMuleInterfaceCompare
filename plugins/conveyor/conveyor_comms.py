@@ -44,7 +44,7 @@ async def conveyor_trips():
     return db_info
 
 
-@router.websocket("/plugin/ws/api/v1/conveyor/")
+@router.websocket("/plugin/ws/api/v1/conveyor")
 async def conveyor_ws(
     websocket: WebSocket,
 ):  # get conveyor station name from Header (Depends)
