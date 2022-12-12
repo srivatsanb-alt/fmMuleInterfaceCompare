@@ -22,6 +22,7 @@ ENV FM_REDIS_URI="redis://localhost:$REDIS_PORT" \
     ATI_CONSOLIDATED_CONFIG="/app/static/mule_config/consolidated.toml" \
     FM_IMAGE_INFO=$FM_IMAGE_INFO \
     HOSTNAME=$HOSTNAME \
+    PYTHONPATH="/app" \
     MULE_IMAGE_ID=$MULE_IMAGE_ID
 
 RUN ln -fs /usr/share/zoneinfo/Asia/Kolkata /etc/localtime && \
