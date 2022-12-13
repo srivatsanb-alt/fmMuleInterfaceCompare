@@ -12,7 +12,7 @@ def create_db(database_name, models):
 
     # database might exsist already
     try:
-        engine = create_engine(path_to_db)
+        engine = create_engine(os.getenv("FM_DATABASE_URI"))
         with engine.connect() as conn:
             conn.execute("commit")
             conn.execute(f"CREATE DATABASE {database_name}")
