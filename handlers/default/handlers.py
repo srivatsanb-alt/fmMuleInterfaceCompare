@@ -736,7 +736,8 @@ class Handlers:
             self.handle_conveyor(req.conveyor, ongoing_trip)
 
     def handle_conveyor_ack(self, req: ConveyorReq, ongoing_trip: OngoingTrip):
-        current_station = ongoing_trip.curr_station()
+        current_station_name = ongoing_trip.curr_station()
+        current_station: Station = session.get_station(current_station_name)
 
         conveyor_start_state = getattr(
             TripState, f"WAITING_STATION_CONV_{req.direction.upper()}_START"
@@ -747,15 +748,15 @@ class Handlers:
             raise ValueError(error)
 
         get_logger().info(
-            f"will send conveyor msg(direction: {req.direction}, num_units: {req.num_units}) to {current_station}"
+            f"will send conveyor msg(direction: {req.direction}, num_units: {req.num_units}) to {current_station_name}"
         )
 
-        if req.num_units == 2:
-            msg = "transfer_2totes"
-        elif req.num_units == 1:
-            msg = "transfer_tote"
-
-        send_msg_to_conveyor(msg, current_station)
+        if StationProperties.CONVEYOR in current_station.properties:
+            if req.num_units == 2:
+                msg = "transfer_2totes"
+            elif req.num_units == 1:
+                msg = "transfer_tote"
+            send_msg_to_conveyor(msg, current_station_name)
 
     def handle_conveyor(self, req: ConveyorReq, ongoing_trip: OngoingTrip):
         sherpa_name = ongoing_trip.sherpa_name
