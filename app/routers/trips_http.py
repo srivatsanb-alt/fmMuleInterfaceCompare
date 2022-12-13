@@ -120,6 +120,20 @@ async def trip_status(
     return response
 
 
+@router.get("/ongoing_trip_status")
+async def ongoing_trip_status(user_name=Depends(get_user_from_header)):
+    if not user_name:
+        raise HTTPException(status_code=403, detail="Unknown requester")
+
+    response = {}
+    all_ongoing_trips = session.get_all_ongoing_trips()
+
+    for ongoing_trip in all_ongoing_trips:
+        response.update({ongoing_trip.trip_id: tu.get_trip_status(ongoing_trip.trip)})
+
+    return response
+
+
 @router.post("/analytics")
 async def trip_analytics(
     trip_analytics_req: TripStatusReq, user_name=Depends(get_user_from_header)
