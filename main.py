@@ -12,7 +12,8 @@ from core.logs import init_logging
 from utils.rq import Queues
 
 from scripts.periodic_updates import send_periodic_updates
-from optimal_dispatch.router import start_router_module
+from scripts.periodic_backup import backup_data
+
 from scripts.periodic_assigner import assign_next_task
 
 
@@ -53,6 +54,9 @@ if __name__ == "__main__":
 
     # start periodic assigner scripts
     Process(target=assign_next_task).start()
+
+    # start backup data
+    Process(target=backup_data).start()
 
     redis_conn.set("is_fleet_manager_up", json.dumps(True))
     logging.info("Ati Fleet Manager started")
