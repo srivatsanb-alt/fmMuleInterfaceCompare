@@ -4,12 +4,11 @@ from sqlalchemy import create_engine
 from sqlalchemy.dialects.postgresql import JSONB
 import os
 import json
-from sqlalchemy.ext.declarative import declarative_base
+from models.base_models import Base
 from plugins.plugin_comms import send_req_to_FM
 import logging
 import hashlib
 
-Base = declarative_base()
 logger_name = "plugin_conveyor"
 
 
