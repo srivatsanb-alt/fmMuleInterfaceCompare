@@ -2,29 +2,29 @@ import asyncio
 import hashlib
 from fastapi import APIRouter, WebSocket
 from plugins.plugin_comms import ws_reader, ws_writer
-from fastapi import Depends, Header
+from fastapi import Depends, Header, status
 from .conveyor_utils import ConvTrips, ConvInfo, session
 from .conveyor_handler import CONV_HANDLER
-import logging
 
 router = APIRouter()
 
 
 def get_conveyor(x_api_key: str = Header(None)):
+    conveyor_name = None
     if x_api_key is None:
         return None
-    logging.info(f"API key: {x_api_key}")
-    return None
 
     hashed_api_key = hashlib.sha256(x_api_key.encode("utf-8")).hexdigest()
-    info: ConvInfo = (
-        session.query(ConvInfo).filter(hashed_api_key=ConvInfo.api_key).one_or_none()
+    conv_info: ConvInfo = (
+        session.query(ConvInfo)
+        .filter(ConvInfo.hashed_api_key == hashed_api_key)
+        .one_or_none()
     )
-    if info:
-        conveyor = info["name"]  # make this file!
-    else:
-        conveyor = None
-    return conveyor
+
+    if conv_info is not None:
+        conveyor_name = conv_info.name
+
+    return conveyor_name
 
 
 @router.get("/plugin/ws/api/v1/plugin_conveyor")
@@ -45,12 +45,13 @@ async def conveyor_trips():
 
 
 @router.websocket("/plugin/ws/api/v1/conveyor")
-async def conveyor_ws(
-    websocket: WebSocket,
-):  # get conveyor station name from Header (Depends)
+async def conveyor_ws(websocket: WebSocket, conveyor_name=Depends(get_conveyor)):
+
+    if conveyor_name is None:
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
 
     await websocket.accept()
-    conveyor_name = "Conveyor1"
+
     conv_handler = CONV_HANDLER()
     rw = [
         asyncio.create_task(

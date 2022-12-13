@@ -7,7 +7,7 @@ import json
 from sqlalchemy.ext.declarative import declarative_base
 from plugins.plugin_comms import send_req_to_FM
 import logging
-from models.base_models import StationProperties
+import hashlib
 
 Base = declarative_base()
 logger_name = "plugin_conveyor"
@@ -28,7 +28,7 @@ class ConvInfo(Base):
     __table_args__ = {"extend_existing": True}
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, unique=True)
-    api_key = Column(String, unique=True)
+    hashed_api_key = Column(String, unique=True)
     type = Column(String)
     pose = Column(ARRAY(Float))
     num_totes = Column(Integer)
@@ -63,9 +63,10 @@ def populate_conv_info():
                 # if StationProperties.CONVEYOR in station_info["properties"]:
                 logging.getLogger(logger_name).info(f"Will add {conveyor_name} to DB")
                 station_type = "conveyor"
+                hashed_api_key = hashlib.sha256(api_key.encode("utf-8")).hexdigest()
                 conv_info = ConvInfo(
                     name=conveyor_details["name"],
-                    api_key=api_key,
+                    hashed_api_key=hashed_api_key,
                     num_totes=0,
                     type=station_type,
                     nearest_chute=conveyor_details["nearest_chute"],
