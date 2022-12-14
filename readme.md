@@ -12,6 +12,7 @@
 ## FM installation prerequisites ##
 1. Install docker
 2. Install docker-compose
+3. Works only on x86 arch
 
 ## Setup FM ##
 1. Clone fleet manager repository
@@ -85,7 +86,7 @@
     ls > map_files.txt
     ```  
 
-5. If server has internet, allows you to download open-source packages
+5. If server has internet, allows you to download open-source packages 
 
     a. If you want to setup fm on a remote location, run push_fm script to create all the docker images on the server
     ```markdown
