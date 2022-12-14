@@ -120,7 +120,6 @@ async def sherpa_status(
 
 
 async def reader(websocket, sherpa):
-    redis_db = redis.from_url(os.getenv("FM_REDIS_URI"))
     handler_obj = Config.get_handler()
     while True:
         try:
