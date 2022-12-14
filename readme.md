@@ -186,6 +186,7 @@ copy latest mmts_utils.sh, ati_mule_maintenance.sh from ati_core folder to /etc/
 copy ati_mule_maintenance.service from ati_core folder to /etc/systemd/system directory in sherpa
 
 #stop the ati_mule_maintenance service and delete maintenance fifo file
+ssh into mule
 sudo systemctl stop ati_mule_maintenance
 sudo systemctl disable ati_mule_maintenance
 sudo rm /opt/ati/run/maintenance_req_fifo
