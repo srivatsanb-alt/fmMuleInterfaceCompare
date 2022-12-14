@@ -50,7 +50,7 @@ if [ $cert_reqd == 1 ]; then
       echo "FM cert files present"
    else 
       echo "cert files not present at either at static/certs or dashboard/static"
-      echo "Please update server ip in fleet_config.toml, run cd utils && python3 set_up_certs.py ../static/fleet_config/fleet_config.toml ../static"
+      echo "Please update server ip in fleet_config.toml, run cd utils && python3 setup_certs.py ../static/fleet_config/fleet_config.toml ../static"
       echo "Generated cert files need to be copied to the sherpas" 
       exit
    fi 
