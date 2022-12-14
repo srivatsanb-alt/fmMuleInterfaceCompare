@@ -1,19 +1,17 @@
 # FM SETUP INSTRUCTIONS #
 
 # Index #
-1. Setup FM
-2. Start/Restart FM
-3. Run FM Simulator
-4. Copy cert files and modify mule config
-
+1. [Setup FM](#setup-fm)
+2. [Start/Restart FM](#start-or-restart-fm)
+3. [Run FM Simulator](#run-fm-simulator)
+4. [Copy cert files and modify mule config](#copy-cert-files-and-modify-mule-config)
+5. [Setup plugin](#setup-plugin)
 
 # FM Installation #
 
 ## FM installation prerequisites ##
 1. Install docker
 2. Install docker-compose
-3. Works only on x86 arch
-
 
 ## Setup FM ##
 1. Clone fleet manager repository
@@ -47,7 +45,7 @@
 
     3.3 *Upon successful installation of the above mentioned packages, run setup_certs.py to generate FM cert file*
    ```markdown
-   cd utils && python3 setup_certs.py ../static/fleet_config/fleet_config.toml ../static"
+   cd utils && python3 setup_certs.py ../static/fleet_config/fleet_config.toml ../static
    ```
 
    3.4 *Copy the cert file(static/certs/fm_rev_proxy_cert.pem) to all the sherpas(/opt/ati/config/fm_rev_proxy_cert.pem)*
@@ -118,6 +116,8 @@
     ```markdown
     ./scripts/push_fm.sh -WbD
 
+7. Setup plugins if any [setup_plugin](#setup-plugin)
+
 # Start or Restart FM #
 
    1. Modify timezone if required by setting environment variables TZ, PGTZ in services fleet_manager, db enlisted in static/docker-compose.yml.
@@ -142,7 +142,7 @@
 
 
 # Run FM Simulator #
-  a. Follow Setup FM, steps 1-2
+  a. Follow [Setup FM](#setup-fm) , steps 1-2
 
   b. Set simulate in static/fleet_config/fleet_config.toml
 
@@ -159,12 +159,12 @@
    ]
   ```
 
-  d.Follow Setup FM, steps 3-5
+  d.Follow [Setup FM](#setup-fm), steps 3-5
 
 
 # Copy cert files and modify mule config #
 
-a. Copy fm cert file(fm_rev_proxy_cert.pem) generated in Setup FM(step 3) to sherpa's /opt/ati/config directory
+a. Copy fm cert file(fm_rev_proxy_cert.pem) generated in [Setup FM](#setup-fm) step 3 to sherpa's /opt/ati/config directory
 
 
 b. Add this patch to /opt/ati/config/config.toml in the mule
@@ -176,4 +176,41 @@ data_url = "https://<fm_ip_address>:443/api/static"
 fm_ip = "https://<fm_ip_address>:443"
 ws_url = "wss://<fm_ip_address>:443/ws/api/v1/sherpa/"
 fm_cert_file="/app/config/fm_rev_proxy_cert.pem
+```
+
+# Setup Plugin #
+a. [Setup IES](#setup-ies)
+
+b. [Setup conveyor booking](#setup-conveyor-booking)
+
+# Setup IES #
+a. Add IES plugin to static/fleet_config/plugin_config.toml
+```markdown
+all_plugins=["ies"]
+```
+
+b. Modify static/plugin_ies/locationID_station_mapping.json file. Map IES station names to corresponding ati station names as the template indicates. 
+```markdown
+{
+    "Warehouse_Pick": "ECFA start",
+    "HP02_FA02": "ECFA-2",
+    "HP03_FA01": "ECFA-1",
+}
+```
+
+# Setup conveyor booking #
+a. Add conveyor plugin to static/fleet_config/plugin_config.toml
+```markdown
+all_plugins=["conveyor"]
+```
+b. Modify static/plugin_conveyor/api_key_conveyor_mapping.json. Map api keys to conveyor station names, also specify the nearest chute station.
+
+```markdown
+{
+
+"E2bKHiYNMk5kCvSKZfOVThr5t8oUQ_8mrot36QVrk9E_CONV1": {"name": "Conveyor1", "nearest_chute": "Meeting Room 1"},
+
+"B2bKHiYNMk5kCvSKZfOVThr5t8oUQ_8mrot36QVrk9K_CONV2": {"name": "Conveyor2", "nearest_chute": "Meeting Room 2"}
+
+}
 ```
