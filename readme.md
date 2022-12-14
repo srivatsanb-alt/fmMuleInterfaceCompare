@@ -40,7 +40,7 @@
         http_scheme="https"
     ```
 
-    3.2 *Install toml, crytography in your machine(not server)*
+    3.2 *Install toml, crytography in your machine(not server)- these packages are required to generate cert files*
     ```markdown
     pip install toml cryptography
     ```
@@ -52,9 +52,9 @@
 
    3.4 *Copy the cert file(static/certs/fm_rev_proxy_cert.pem) to all the sherpas(/opt/ati/config/fm_rev_proxy_cert.pem)*
 
-3. Update static directory with map_files, sherpa_details  
+4. Update static directory with map_files, sherpa_details  
 
-    3.1 *Add fleet names, customer details, server_ip to the static/fleet_config/fleet_config.toml*
+    4.1 *Add fleet names, customer details, server_ip to the static/fleet_config/fleet_config.toml*
 
     ```markdown
     server_ip="xyz"
@@ -64,7 +64,7 @@
     location="xyz"
     ```  
 
-    3.2. *Add sherpa details of all the sherpas to the fleet_config following the sample given below- make sure sherpa names match hostname in the mule*
+    4.2. *Add sherpa details of all the sherpas to the fleet_config following the sample given below- make sure sherpa names match hostname in the mule*
 
     ```markdown
     [fleet_sherpas.<sherpa_name>]
@@ -78,7 +78,7 @@
     fleet_name="sample_fleet_1"
     ```
 
-    3.3. *Create map folders, map_files.txt for all the fleet names present in fleet_config.toml. Make sure grid_map_attributes.json is present*
+    4.3. *Create map folders, map_files.txt for all the fleet names present in fleet_config.toml. Make sure grid_map_attributes.json is present*
 
     ```markdown
     mkdir static/sample_fleet/map/
@@ -87,7 +87,7 @@
     ls > map_files.txt
     ```  
 
-4. If server has internet, allows you to download open-source packages
+5. If server has internet, allows you to download open-source packages
 
     a. If you want to setup fm on a remote location, run push_fm script to create all the docker images on the server
     ```markdown
@@ -99,7 +99,7 @@
     ./scripts/push_fm.sh -WD
      ```
 
-5. If server doesn't have internet access, copy built docker images to the server from Ati server(data@192.168.10.21:/atidata/datasets/FM_v2.0_docker_images), run the following commands
+6. If server doesn't have internet access, copy built docker images to the server from Ati server(data@192.168.10.21:/atidata/datasets/FM_v2.0_docker_images), run the following commands
 
     a. Load base images on server/localhost
     ```markdown
@@ -162,9 +162,10 @@
   d.Follow Setup FM, steps 3-5
 
 
-# Copy cert file and modify mule config #
+# Copy cert files and modify mule config #
 
 a. Copy fm cert file(fm_rev_proxy_cert.pem) generated in Setup FM(step 3) to sherpa's /opt/ati/config directory
+
 
 b. Add this patch to /opt/ati/config/config.toml in the mule
 ```markdown
