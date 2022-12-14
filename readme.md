@@ -4,7 +4,7 @@
 1. [Setup FM](#setup-fm)
 2. [Start/Restart FM](#start-or-restart-fm)
 3. [Run FM Simulator](#run-fm-simulator)
-4. [Copy cert files and modify mule config](#copy-cert-files-and-modify-mule-config)
+4. [Setup sherpas](#setup-sherpas)
 5. [Setup plugin](#setup-plugin)
 
 # FM Installation #
@@ -162,7 +162,7 @@
   d.Follow [Setup FM](#setup-fm), steps 3-5
 
 
-# Copy cert files and modify mule config #
+# Setup sherpas #
 
 a. Copy fm cert file(fm_rev_proxy_cert.pem) generated in [Setup FM](#setup-fm) step 3 to sherpa's /opt/ati/config directory
 
@@ -176,6 +176,27 @@ data_url = "https://<fm_ip_address>:443/api/static"
 fm_ip = "https://<fm_ip_address>:443"
 ws_url = "wss://<fm_ip_address>:443/ws/api/v1/sherpa/"
 fm_cert_file="/app/config/fm_rev_proxy_cert.pem
+```
+
+c. Setup/update ati_mule_maintenance service
+```markdown
+git clone https://github.com/AtiMotors/system
+
+copy latest mmts_utils.sh, ati_mule_maintenance.sh from ati_core folder to /etc/systemd directory in sherpa
+copy ati_mule_maintenance.service from ati_core folder to /etc/systemd/system directory in sherpa
+
+#stop the ati_mule_maintenance service and delete maintenance fifo file
+sudo systemctl stop ati_mule_maintenance
+sudo systemctl disable ati_mule_maintenance
+sudo rm /opt/ati/run/maintenance_req_fifo
+
+#start maintenance service 
+ssh into mule
+cd /etc/systemd
+chmod ugo+rwx mmts_utils.sh
+chmod ugo+rwx ati_mule_maintenance.sh
+sudo systemctl enable ati_mule_maintenance
+sudo systemctl start ati_mule_maintenance
 ```
 
 # Setup Plugin #
