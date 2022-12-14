@@ -166,6 +166,7 @@
 
 a. Copy fm cert file(fm_rev_proxy_cert.pem) generated in Setup FM(step 3) to sherpa's /opt/ati/config directory
 
+
 b. Add this patch to /opt/ati/config/config.toml in the mule
 ```markdown
 [fleet]
