@@ -195,8 +195,8 @@ sudo rm /opt/ati/run/maintenance_req_fifo
 #start maintenance service 
 ssh into mule
 cd /etc/systemd
-chmod ugo+rwx mmts_utils.sh
-chmod ugo+rwx ati_mule_maintenance.sh
+sudo chmod ugo+rwx mmts_utils.sh
+sudo chmod ugo+rwx ati_mule_maintenance.sh
 sudo systemctl enable ati_mule_maintenance
 sudo systemctl start ati_mule_maintenance
 ```
