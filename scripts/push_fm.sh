@@ -43,20 +43,6 @@ do
   esac
 done
 
-
-if [ $cert_reqd == 1 ]; then 
-   echo "Checking if cert files are present"
-   if [[ -f "static/certs/fm_rev_proxy_cert.pem" ]] && [[ -f "dashboard/static/fm_rev_proxy_cert.pem" ]] ; then
-      echo "FM cert files present"
-   else 
-      echo "cert files not present at either at static/certs or dashboard/static"
-      echo "Please update server ip in fleet_config.toml, run cd utils && python3 setup_certs.py ../static/fleet_config/fleet_config.toml ../static"
-      echo "Generated cert files need to be copied to the sherpas" 
-      exit
-   fi 
-fi
-
-
 if [ $server == 1 ]; then
   export DOCKER_HOST=ssh://$IP_ADDRESS
   FM_SERVER_HOSTNAME=`echo $IP_ADDRESS | cut -d@ -f1`
@@ -82,6 +68,7 @@ if [[ $copy_static == 1 ]] && [[ $server == 1 ]] ; then
   echo "Copying \"static\" folder from the FM server $DOCKER_HOST"
   {
 	  rsync -azP $IP_ADDRESS:static/* -exclude data_backup static/.
+	  cp static/certs/fm_rev_proxy_cert.pem dashboard/static/. || true
   } || {
 	  echo "couldn't find fleet_manager container, cannot copy static files"
   }
@@ -112,6 +99,18 @@ if [ $clear_db == 1 ] ; then
   echo "clear db $clear_db"
   clear_db_on_fm_server
 }
+fi
+
+if [ $cert_reqd == 1 ]; then
+   echo "Checking if cert files are present"
+   if [[ -f "static/certs/fm_rev_proxy_cert.pem" ]] && [[ -f "dashboard/static/fm_rev_proxy_cert.pem" ]] ; then
+      echo "FM cert files present"
+   else
+      echo "cert files not present at either at static/certs or dashboard/static"
+      echo "Please update server ip in fleet_config.toml, run cd utils && python3 setup_certs.py ../static/fleet_config/fleet_config.toml ../static"
+      echo "Generated cert files need to be copied to the sherpas"
+      exit
+   fi
 fi
 
 BRANCH=$(git rev-parse --abbrev-ref HEAD)
