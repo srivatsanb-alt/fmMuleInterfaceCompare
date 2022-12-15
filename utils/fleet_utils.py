@@ -454,6 +454,10 @@ def maybe_create_graph_object(fleet_name):
     return
 
 
+def maybe_update_map_files(fleet_name):
+    maybe_create_graph_object(fleet_name)
+
+
 def compute_sha1_hash(fpath):
     sha1 = hashlib.sha1()
     with open(fpath, "rb") as f:

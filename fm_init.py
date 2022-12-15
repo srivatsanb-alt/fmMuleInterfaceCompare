@@ -51,7 +51,7 @@ while not DB_UP:
         for fleet_name in fleet_names:
             try:
                 print(f"trying to update db tables for fleet : {fleet_name}")
-                fu.maybe_create_graph_object(fleet_name)
+                fu.maybe_update_map_files(fleet_name)
                 fu.add_update_fleet(
                     name=fleet_name,
                     site=FLEET_CONFIG["site"],
