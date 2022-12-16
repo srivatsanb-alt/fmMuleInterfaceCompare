@@ -68,25 +68,26 @@ async def master_data(
 
     sample_sherpa_status = {}
     all_sherpa_status = session.get_all_sherpa_status()
-    sample_sherpa_status.update(
-        {all_sherpa_status[0].sherpa_name: all_sherpa_status[0].__dict__}
-    )
-    sample_sherpa_status[all_sherpa_status[0].sherpa_name].update(
-        all_sherpa_status[0].sherpa.__dict__
-    )
-    response.update({"sample_sherpa_status": sample_sherpa_status})
+    if len(all_sherpa_status) > 0:
+        sample_sherpa_status.update(
+            {all_sherpa_status[0].sherpa_name: all_sherpa_status[0].__dict__}
+        )
+        sample_sherpa_status[all_sherpa_status[0].sherpa_name].update(
+            all_sherpa_status[0].sherpa.__dict__
+        )
+        response.update({"sample_sherpa_status": sample_sherpa_status})
 
     sample_station_status = {}
     all_station_status = session.get_all_station_status()
-    sample_station_status.update(
-        {all_station_status[0].station_name: all_station_status[0].__dict__}
-    )
+    if len(all_station_status) > 0:
+        sample_station_status.update(
+            {all_station_status[0].station_name: all_station_status[0].__dict__}
+        )
 
-    sample_station_status[all_station_status[0].station_name].update(
-        all_station_status[0].station.__dict__
-    )
-
-    response.update({"sample_station_status": sample_station_status})
+        sample_station_status[all_station_status[0].station_name].update(
+            all_station_status[0].station.__dict__
+        )
+        response.update({"sample_station_status": sample_station_status})
 
     return response
 
