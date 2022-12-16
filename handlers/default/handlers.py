@@ -3,7 +3,6 @@ from core.logs import get_logger
 from models.base_models import StationProperties
 from models.db_session import session
 from models.fleet_models import Fleet, Sherpa, SherpaStatus, Station, SherpaEvent
-import pickle
 from optimal_dispatch.dispatcher import OptimalDispatch
 from models.request_models import (
     AccessType,
@@ -54,7 +53,13 @@ from models.trip_models import (
 )
 
 from requests import Response
-from utils.comms import get, send_move_msg, send_msg_to_sherpa, send_status_update
+from utils.comms import (
+    get,
+    send_move_msg,
+    send_msg_to_sherpa,
+    send_status_update,
+    send_msg_to_conveyor,
+)
 from utils.util import (
     are_poses_close,
     check_if_timestamp_has_passed,
@@ -81,7 +86,7 @@ req_ctxt = RequestContext()
 
 def init_request_context(req):
     req_ctxt.msg_type = req.type
-    req_ctxt.source = None
+    req_ctxt.source = req.source
     if isinstance(req, SherpaReq) or isinstance(req, SherpaMsg):
         req_ctxt.sherpa_name = req.source
         req_ctxt.source = req.source
@@ -673,7 +678,9 @@ class Handlers:
         image_tag = os.getenv("MULE_IMAGE_ID")
         fm_host_name = os.getenv("HOSTNAME")
         time_zone = os.getenv("PGTZ")
-        ip_address = fleet_config["fleet"]["server_ip"]
+
+        # temp sol - needs modification - all_server_ips
+        ip_address = fleet_config["fleet"]["all_server_ips"][0]
         registry_port = fleet_config["docker_registry"]["port"]
         image_update_req: SherpaImgUpdate = SherpaImgUpdate(
             ip_address=ip_address,
@@ -729,7 +736,8 @@ class Handlers:
             self.handle_conveyor(req.conveyor, ongoing_trip)
 
     def handle_conveyor_ack(self, req: ConveyorReq, ongoing_trip: OngoingTrip):
-        current_station = ongoing_trip.curr_station()
+        current_station_name = ongoing_trip.curr_station()
+        current_station: Station = session.get_station(current_station_name)
 
         conveyor_start_state = getattr(
             TripState, f"WAITING_STATION_CONV_{req.direction.upper()}_START"
@@ -740,8 +748,15 @@ class Handlers:
             raise ValueError(error)
 
         get_logger().info(
-            f"will send conveyor msg(direction: {req.direction}, num_units: {req.num_units}) to {current_station}"
+            f"will send conveyor msg(direction: {req.direction}, num_units: {req.num_units}) to {current_station_name}"
         )
+
+        if StationProperties.CONVEYOR in current_station.properties:
+            if req.num_units == 2:
+                msg = "transfer_2totes"
+            elif req.num_units == 1:
+                msg = "transfer_tote"
+            send_msg_to_conveyor(msg, current_station_name)
 
     def handle_conveyor(self, req: ConveyorReq, ongoing_trip: OngoingTrip):
         sherpa_name = ongoing_trip.sherpa_name
@@ -822,6 +837,9 @@ class Handlers:
                     fleet_name,
                 )
                 session.create_pending_trip(trip.id)
+                response.update(
+                    {trip.id: {"booking_id": trip.booking_id, "status": trip.status}}
+                )
                 get_logger().info(
                     f"Created a pending trip : trip_id: {trip.id}, booking_id: {trip.booking_id}"
                 )
@@ -939,9 +957,17 @@ class Handlers:
         sherpa: Sherpa = session.get_sherpa(sherpa_name)
         fleet_name = sherpa.fleet.name
         map_files = session.get_map_files(fleet_name)
+
+        ip_changed = sherpa.status.other_info.get("ip_changed", True)
+        get_logger().info(f"Has sherpa ip changed: {ip_changed}")
+
         map_file_info = [
             MapFileInfo(file_name=mf.filename, hash=mf.file_hash) for mf in map_files
         ]
+
+        map_file_info = hutils.update_map_file_info_with_certs(
+            map_file_info, sherpa.name, sherpa.ip_address, ip_changed=ip_changed
+        )
         response: VerifyFleetFilesResp = VerifyFleetFilesResp(
             fleet_name=fleet_name, files_info=map_file_info
         )
@@ -969,6 +995,8 @@ class Handlers:
         response: ResourceResp = ResourceResp(
             granted=True, visa=req, access_type=AccessType.RELEASE
         )
+        get_logger().info(f"visa released by {sherpa_name}")
+
         return response.to_json()
 
     def handle_visa_request(self, req: VisaReq, sherpa_name):
@@ -1053,6 +1081,7 @@ class Handlers:
             "delete_ongoing_trip",
             "delete_booked_trip",
             "induct_sherpa",
+            "pass_to_sherpa",
         ]
 
         if msg.type in optimal_dispatch_influencers:

@@ -8,6 +8,7 @@ copy_static=1
 clear_db=0
 server=0
 build_base=1
+cert_reqd=1
 
 # Set variables
 IP_ADDRESS="localhost"
@@ -15,6 +16,7 @@ NETWORK_TYPE="wlp"
 FM_SERVER_HOSTNAME="localhost"
 DOCKER_REGISTRY_PORT=443
 FM_PORT=8001
+PLUGIN_PORT=8002
 REDIS_PORT=6379
 
 # Get the options
@@ -65,7 +67,8 @@ if [[ $copy_static == 1 ]] && [[ $server == 1 ]] ; then
   printf "\n \n \n"
   echo "Copying \"static\" folder from the FM server $DOCKER_HOST"
   {
-	  rsync -azP $IP_ADDRESS:static/* static/.
+	  rsync -azP $IP_ADDRESS:static/* -exclude data_backup static/.
+	  cp static/certs/fm_rev_proxy_cert.pem dashboard/static/. || true
   } || {
 	  echo "couldn't find fleet_manager container, cannot copy static files"
   }
@@ -86,6 +89,9 @@ fi
 
 if [ $server == 1 ] ; then
   create_static_backup $IP_ADDRESS # function defined in push_utils
+else
+  cp misc/docker-compose.yml static/
+  cp misc/clear_db.sh static/
 fi
 
 if [ $clear_db == 1 ] ; then
@@ -93,6 +99,18 @@ if [ $clear_db == 1 ] ; then
   echo "clear db $clear_db"
   clear_db_on_fm_server
 }
+fi
+
+if [ $cert_reqd == 1 ]; then
+   echo "Checking if cert files are present"
+   if [[ -f "static/certs/fm_rev_proxy_cert.pem" ]] && [[ -f "dashboard/static/fm_rev_proxy_cert.pem" ]] ; then
+      echo "FM cert files present"
+   else
+      echo "cert files not present at either at static/certs or dashboard/static"
+      echo "Please update server ip in fleet_config.toml, run cd utils && python3 setup_certs.py ../static/fleet_config/fleet_config.toml ../static"
+      echo "Generated cert files need to be copied to the sherpas"
+      exit
+   fi
 fi
 
 BRANCH=$(git rev-parse --abbrev-ref HEAD)
@@ -132,6 +150,7 @@ docker image build --build-arg FM_IMAGE_INFO="${FM_IMAGE_INFO}" \
 		   --build-arg FM_SERVER_IP="${FM_SERVER_IP}" \
 		   --build-arg FM_PORT="${FM_PORT}" \
 		   --build-arg REDIS_PORT="${REDIS_PORT}" \
+		   --build-arg PLUGIN_PORT="${PLUGIN_PORT}" \
 		   -t fleet_manager:dev -f docker_files/Dockerfile .
 
 FM_IMAGE_ID=$(docker images --format {{.ID}} fleet_manager:dev)

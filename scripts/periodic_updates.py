@@ -58,9 +58,8 @@ def get_fleet_status_msg(session, fleet):
 
 def get_ongoing_trips_status(session, fleet):
     msg = {}
-    _ = session.get_all_ongoing_trips()
-    all_ongoing_trips_fleet = session.get_all_ongoing_trips_fleet(fleet.name)
 
+    all_ongoing_trips_fleet = session.get_all_ongoing_trips_fleet(fleet.name)
     for ongoing_trip in all_ongoing_trips_fleet:
         msg.update({ongoing_trip.trip_id: tu.get_trip_status(ongoing_trip.trip)})
 

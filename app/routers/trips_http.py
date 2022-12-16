@@ -25,7 +25,7 @@ router = APIRouter(
 )
 
 
-@router.post("/book/")
+@router.post("/book")
 async def book(booking_req: BookingReq, user_name=Depends(get_user_from_header)):
     response = process_req_with_response(None, booking_req, user_name)
     return response
@@ -117,6 +117,20 @@ async def trip_status(
         if not trip:
             raise HTTPException(status_code=403, detail="invalid trip id")
         response.update({trip_id: tu.get_trip_status(trip)})
+    return response
+
+
+@router.get("/ongoing_trip_status")
+async def ongoing_trip_status(user_name=Depends(get_user_from_header)):
+    if not user_name:
+        raise HTTPException(status_code=403, detail="Unknown requester")
+
+    response = {}
+    all_ongoing_trips = session.get_all_ongoing_trips()
+
+    for ongoing_trip in all_ongoing_trips:
+        response.update({ongoing_trip.trip_id: tu.get_trip_status(ongoing_trip.trip)})
+
     return response
 
 

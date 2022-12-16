@@ -2,6 +2,7 @@ import hashlib
 import time
 import jwt
 from fastapi import HTTPException
+import logging
 from core.settings import settings
 from fastapi import Depends, Header
 from fastapi.param_functions import Query
@@ -46,11 +47,16 @@ def get_user_from_query(token: str = Query(None)):
     return decode_token(token)
 
 
+def get_real_ip_from_header(x_real_ip: str = Header(None)):
+    return x_real_ip
+
+
 def decode_token(token: str):
+    redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
     try:
         details = jwt.decode(
             token,
-            settings.FM_SECRET_KEY,
+            redis_conn.get("FM_SECRET_TOKEN"),
             algorithms=["HS256"],
             options={"require": ["exp", "sub"]},
         )
@@ -61,9 +67,10 @@ def decode_token(token: str):
 
 
 def generate_jwt_token(username: str):
+    redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
     access_token = jwt.encode(
         {"sub": username, "exp": time.time() + 64800},
-        settings.FM_SECRET_KEY,
+        redis_conn.get("FM_SECRET_TOKEN"),
         algorithm="HS256",
     )
     return access_token
@@ -74,8 +81,7 @@ def process_req(queue, req, user, dt=None):
     if not user:
         raise HTTPException(status_code=403, detail=f"Unknown requeter {user}")
 
-    if isinstance(req, SherpaReq):
-        req.source = user
+    req.source = user
 
     handler_obj = Config.get_handler()
 
@@ -100,6 +106,8 @@ def process_req_with_response(queue, req, user: str):
             break
 
         if status == "failed":
+            exc_info = Job.fetch(job.id, connection=redis_conn).exc_info
+            logging.info(f"Exception info: {exc_info}")
 
             # for recovery
             rq_fails = redis_conn.get("rq_fails")

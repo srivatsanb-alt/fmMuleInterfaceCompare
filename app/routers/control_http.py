@@ -2,7 +2,6 @@ import requests
 from typing import Union
 from app.routers.dependencies import (
     get_user_from_header,
-    process_req,
     process_req_with_response,
 )
 from core.constants import FleetStatus, DisabledReason
@@ -73,9 +72,9 @@ async def diagnostics(
         )
 
     diagnostics_req = DiagnosticsReq(sherpa_name=entity_name)
-    base_url = get_sherpa_url(sherpa_status.sherpa)
+    base_url, verify = get_sherpa_url(sherpa_status.sherpa)
     url = f"{base_url}/{diagnostics_req.endpoint}"
-    response = requests.get(url)
+    response = requests.get(url, verify=verify)
 
     if response.status_code == 200:
         response = response.json()
