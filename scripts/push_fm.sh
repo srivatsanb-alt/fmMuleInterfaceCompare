@@ -130,7 +130,7 @@ if [ $build_base == 1 ] ; then
   docker image build -t fleet_manager_base:dev -f docker_files/Dockerfile.base .
   docker pull nginx:1.14.0
   docker pull postgres:14.0
-
+  docker pull registry:2
 }
 else
 {
