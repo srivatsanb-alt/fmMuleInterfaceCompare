@@ -71,10 +71,14 @@ def get_visas_held_msg(session):
     all_visas_held = session.get_all_visas_held()
     visa_msg = {}
     for visa_held in all_visas_held:
-        temp = visa_msg.get(visa_held.sherpa_name, [])
-        temp.append(visa_held.zone_id.rsplit("_", 1)[0])
-        visa_msg.update({visa_held.sherpa_name: temp})
-
+        sherpa_visas = visa_msg.get(visa_held.sherpa_name, {})
+        zone_ids = sherpa_visas.get("zone_ids", [])
+        zone_ids.append(visa_held.zone_id.rsplit("_", 1)[0])
+        zone_types = sherpa_visas.get("zone_types", [])
+        zone_types.append(visa_held.zone_id.rsplit("_", 1)[1])
+        visa_msg.update(
+            {visa_held.sherpa_name: {"zone_ids": zone_ids, "zone_types": zone_types}}
+        )
     visa_msg["type"] = "visas_held"
     return visa_msg
 
