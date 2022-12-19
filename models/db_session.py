@@ -91,6 +91,9 @@ class DBSession:
         ezone.prev_linked_gates.append(linked_ezone)
         linked_ezone.next_linked_gates.append(ezone)
 
+    def get_all_visas_held(self):
+        return self.session.query(VisaAssignment).all()
+
     def get_visa_held(self, sherpa_name: str):
         return (
             self.session.query(VisaAssignment)

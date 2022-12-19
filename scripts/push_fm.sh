@@ -67,7 +67,8 @@ if [[ $copy_static == 1 ]] && [[ $server == 1 ]] ; then
   printf "\n \n \n"
   echo "Copying \"static\" folder from the FM server $DOCKER_HOST"
   {
-	  rsync -azP $IP_ADDRESS:static/* -exclude data_backup static/.
+	  rsync -azP $IP_ADDRESS:static/fleet_config static/
+	  rsync -azP $IP_ADDRESS:static/certs static/
 	  cp static/certs/fm_rev_proxy_cert.pem dashboard/static/. || true
   } || {
 	  echo "couldn't find fleet_manager container, cannot copy static files"

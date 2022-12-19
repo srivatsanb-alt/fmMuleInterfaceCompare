@@ -67,6 +67,22 @@ def get_ongoing_trips_status(session, fleet):
     return msg
 
 
+def get_visas_held_msg(session):
+    all_visas_held = session.get_all_visas_held()
+    visa_msg = {}
+    for visa_held in all_visas_held:
+        sherpa_visas = visa_msg.get(visa_held.sherpa_name, {})
+        zone_ids = sherpa_visas.get("zone_ids", [])
+        zone_ids.append(visa_held.zone_id.rsplit("_", 1)[0])
+        zone_types = sherpa_visas.get("zone_types", [])
+        zone_types.append(visa_held.zone_id.rsplit("_", 1)[1])
+        visa_msg.update(
+            {visa_held.sherpa_name: {"zone_ids": zone_ids, "zone_types": zone_types}}
+        )
+    visa_msg["type"] = "visas_held"
+    return visa_msg
+
+
 def send_periodic_updates():
     while True:
         try:
@@ -82,6 +98,9 @@ def send_periodic_updates():
 
                         ongoing_trip_msg = get_ongoing_trips_status(session, fleet)
                         send_status_update(ongoing_trip_msg)
+
+                    visa_msg = get_visas_held_msg(session)
+                    send_status_update(visa_msg)
 
                     time.sleep(2)
         except Exception as e:

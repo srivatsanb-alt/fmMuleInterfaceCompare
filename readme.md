@@ -176,7 +176,7 @@ chassis_number = " "
 data_url = "https://<fm_ip_address>:443/api/static"
 fm_ip = "https://<fm_ip_address>:443"
 ws_url = "wss://<fm_ip_address>:443/ws/api/v1/sherpa/"
-fm_cert_file="/app/config/fm_rev_proxy_cert.pem
+fm_cert_file="/app/config/fm_rev_proxy_cert.pem"
 ```
 
 c. Setup/update ati_mule_maintenance service
@@ -195,8 +195,8 @@ sudo rm /opt/ati/run/maintenance_req_fifo
 #start maintenance service 
 ssh into mule
 cd /etc/systemd
-chmod ugo+rwx mmts_utils.sh
-chmod ugo+rwx ati_mule_maintenance.sh
+sudo chmod ugo+rwx mmts_utils.sh
+sudo chmod ugo+rwx ati_mule_maintenance.sh
 sudo systemctl enable ati_mule_maintenance
 sudo systemctl start ati_mule_maintenance
 ```
