@@ -86,7 +86,7 @@
     ls > map_files.txt
     ```  
 
-5. If server has internet, allows you to download open-source packages 
+5. If server has internet, allows you to download open-source packages (Recommended to use step 6 instead of this step) 
 
     a. If you want to setup fm on a remote location, run push_fm script to create all the docker images on the server
     ```markdown
@@ -117,7 +117,9 @@
     ```markdown
     ./scripts/push_fm.sh -WbD
 
-7. Setup plugins if any [setup_plugin](#setup-plugin)
+7. [Setup plugins](#setup-plugin) if any.
+
+8. [Setup sherpas](#setup-sherpas).
 
 # Start or Restart FM #
 
@@ -199,7 +201,38 @@ sudo chmod ugo+rwx mmts_utils.sh
 sudo chmod ugo+rwx ati_mule_maintenance.sh
 sudo systemctl enable ati_mule_maintenance
 sudo systemctl start ati_mule_maintenance
+
+#enable 443 port
+sudo ufw allow 443
 ```
+
+d. Setup mule nginx container (if not already present)
+1. Check if mule nginx container is running: (below command should show container running)
+    ```markdown
+    ssh into mule
+    docker ps | grep mule_nginx 
+    ```
+
+2. Build container (if nginx container is not present):
+-  Make a new folder, shell_scripts
+    ```markdown
+    cd /opt/ati
+    mkdir shell_scripts
+    ```
+
+- Copy load_mule_nginx.sh file from server(data@192.168.10.21:/atidata/datasets/FM_v2.0_docker_images/load_mule_nginx.sh) to mule (/opt/ati/shell_scripts). (DO NOT copy this script to /opt/ati folder on mule)
+
+- Run load_mule_nginx.sh
+    ```markdown
+    cd /opt/ati/shell_scripts
+    bash load_mule_nginx.sh
+    ```
+
+- Restart mule docker
+    ```markdown
+    docker restart mule
+    ```
+
 
 # Setup Plugin #
 a. [Setup IES](#setup-ies)
