@@ -10,12 +10,10 @@ import pandas as pd
 import os
 from fastapi.responses import HTMLResponse
 
-router = APIRouter(
-    responses={404: {"description": "Not found"}},
-)
+router = APIRouter(responses={404: {"description": "Not found"}}, prefix="/api/v1")
 
 
-@router.get("/api/v1/site_info")
+@router.get("/site_info")
 async def site_info(
     user_name=Depends(get_user_from_header), session=Depends(get_db_session)
 ):
@@ -34,7 +32,7 @@ async def site_info(
     return response
 
 
-@router.post("/api/v1/master_data/fleet")
+@router.post("/master_data/fleet")
 async def master_data(
     master_data_info: MasterDataInfo,
     user_name=Depends(get_user_from_header),
@@ -94,7 +92,7 @@ async def master_data(
 
 # temporary addition for first release
 # TODO : remove viewable code after frontend is enabled to read sherpa_summary
-@router.get("/api/v1/sherpa_summary/{sherpa_name}/{viewable}")
+@router.get("/sherpa_summary/{sherpa_name}/{viewable}")
 async def sherpa_summary(
     sherpa_name: str, viewable: int, user_name=Depends(get_user_from_header)
 ):
@@ -137,7 +135,7 @@ async def sherpa_summary(
     return response
 
 
-@router.post("/api/v1/trips/get_route_wps")
+@router.post("/trips/get_route_wps")
 async def get_route_wps(
     route_preview_req: RoutePreview,
     user_name=Depends(get_user_from_header),
