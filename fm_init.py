@@ -2,13 +2,13 @@ import sys
 import time
 import toml
 import os
-import utils.fleet_utils as fu
 from models.frontend_models import FrontendUser
 from models.fleet_models import MapFile, AvailableSherpas, OptimalDispatchState
 from models.visa_models import LinkedGates
 
 sys.path.append("/app/mule")
-from ati.common.config import load_mule_config
+import utils.fleet_utils as fu
+from mule.ati.common.config import load_mule_config
 
 
 def regenerate_config():

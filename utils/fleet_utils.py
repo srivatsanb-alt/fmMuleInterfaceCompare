@@ -1,6 +1,7 @@
 import hashlib
 import os
 import secrets
+import logging
 from core.db import engine
 from core.db import session_maker
 import json
@@ -24,6 +25,8 @@ import datetime
 from models.visa_models import ExclusionZone, LinkedGates
 from models.frontend_models import FrontendUser
 from models.base_models import StationProperties
+
+logging.getLogger().level == logging.ERROR
 import mule.ati.tools.gmaj_creator as gmac
 import mule.ati.control.bridge.router_planner_interface as rpi
 import mule.ati.control.dynamic_router.graph_builder_utils as gbu
