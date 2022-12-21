@@ -1,9 +1,11 @@
+import pandas as pd
+from typing import Union
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import HTMLResponse
 from app.routers.dependencies import (
     get_user_from_header,
     process_req_with_response,
 )
-from typing import Union
-from fastapi import APIRouter, Depends, HTTPException
 from models.request_models import (
     BookingReq,
     TripStatusReq,
@@ -12,11 +14,9 @@ from models.request_models import (
     DeleteOptimalDispatchAssignments,
 )
 from models.trip_models import TripStatus, PendingTrip, Trip, TripAnalytics
-from fastapi.responses import HTMLResponse
 from models.db_session import session
 from utils.util import str_to_dt
 import utils.trip_utils as tu
-import pandas as pd
 
 router = APIRouter(
     prefix="/api/v1/trips",

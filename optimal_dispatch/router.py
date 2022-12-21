@@ -1,9 +1,10 @@
 import redis
 import json
 import time
-import numpy as np
-import sys
+import os
 import logging
+import sys
+import numpy as np
 
 logging.getLogger().level == logging.ERROR
 
@@ -11,8 +12,6 @@ sys.path.append("/app")
 from core.logs import get_seperate_logger
 from utils.util import are_poses_close
 from utils.router_utils import AllRouterModules
-import os
-import logging
 
 
 def start_router_module():
