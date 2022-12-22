@@ -189,6 +189,11 @@ class AssignNextTask(BaseModel):
     type: str = MessageType.ASSIGN_NEXT_TASK
 
 
+class FMHealthCheck(BaseModel):
+    source: str = "self"
+    type: str = MessageType.FM_HEALTH_CHECK
+
+
 #################################################
 # Messages from frontend
 class ClientReq(BaseModel):

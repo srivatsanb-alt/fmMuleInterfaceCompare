@@ -9,3 +9,4 @@ class Notifications(TimestampMixin, Base):
     log = Column(String)
     log_level = Column(String)
     module = Column(String)
+    cleared_by = Column(ARRAY(String))

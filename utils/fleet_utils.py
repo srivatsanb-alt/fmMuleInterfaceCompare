@@ -82,7 +82,7 @@ def add_update_sherpa(
                 fleet_id=fleet_id,
             )
             print(f"Added sherpa: {sherpa.__dict__}")
-            sherpa_status = SherpaStatus(sherpa_name=sherpa_name)
+            sherpa_status = SherpaStatus(sherpa_name=sherpa_name, other_info={})
             db.add(sherpa)
             db.add(sherpa_status)
         db.commit()
