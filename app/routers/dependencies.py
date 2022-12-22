@@ -3,35 +3,38 @@ import time
 import jwt
 from fastapi import HTTPException
 import logging
-from core.settings import settings
 from fastapi import Depends, Header
 from fastapi.param_functions import Query
-from models.db_session import DBSession
 from rq.job import Job
 from utils.rq import enqueue, enqueue_at, Queues
 from core.config import Config
 import redis
 import os
 import json
-from models.request_models import SherpaReq
 
 
-def get_db_session():
-    session = DBSession()
-    try:
-        yield session
-    finally:
-        session.close()
+def close_session_and_raise_error(session, detail):
+    session.close_on_error()
+    raise HTTPException(status_code=403, detail=detail)
 
 
-def get_sherpa(x_api_key: str = Header(None), session=Depends(get_db_session)):
+def close_session(session, commit=False):
+    if commit:
+        session.session.commit()
+    session.session.close()
+
+
+def get_sherpa(x_api_key: str = Header(None)):
     if x_api_key is None:
         return None
+
+    from models.db_session import session
 
     hashed_api_key = hashlib.sha256(x_api_key.encode("utf-8")).hexdigest()
     sherpa = session.get_sherpa_by_api_key(hashed_api_key)
     sherpa_name = sherpa.name if sherpa else None
 
+    close_session(session)
     return sherpa_name
 
 

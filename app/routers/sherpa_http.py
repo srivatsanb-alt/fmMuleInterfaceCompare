@@ -1,5 +1,9 @@
 import time
-from app.routers.dependencies import get_sherpa, process_req, process_req_with_response
+from app.routers.dependencies import (
+    get_sherpa,
+    process_req,
+    process_req_with_response,
+)
 from models.request_models import (
     InitMsg,
     ReachedReq,

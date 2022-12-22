@@ -1,7 +1,11 @@
-from app.routers.dependencies import get_user_from_header
+from app.routers.dependencies import (
+    get_user_from_header,
+    close_session_and_raise_error,
+    close_session,
+)
 from models.fleet_models import StationStatus
 from models.base_models import StationProperties
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from models.db_session import session
 
 
@@ -18,15 +22,15 @@ async def get_station_info(entity_name: str, user_name=Depends(get_user_from_hea
     response = {}
 
     if not user_name:
-        raise HTTPException(status_code=403, detail="Unknown requester")
+        close_session_and_raise_error(session, "Unknown requester")
 
     if not entity_name:
-        raise HTTPException(status_code=403, detail="No entity name")
+        close_session_and_raise_error(session, "No entity name")
 
     station_status: StationStatus = session.get_station_status(entity_name)
 
     if not station_status:
-        raise HTTPException(status_code=403, detail="Bad station name")
+        close_session_and_raise_error(session, "Bad station name")
 
     station_props = [
         StationProperties(prop).name for prop in station_status.station.properties
@@ -42,4 +46,5 @@ async def get_station_info(entity_name: str, user_name=Depends(get_user_from_hea
 
     response.update(station_info)
 
+    close_session(session)
     return response
