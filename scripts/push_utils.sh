@@ -36,7 +36,7 @@ create_static_backup()
     echo "Directory static already exists"
   fi
 
-  ssh $usr_name@$ip_address "rsync -aP /home/$usr_name/static/. /home/$usr_name/static_old/."
+  ssh $usr_name@$ip_address "rsync -aP --exclude data_backup/ /home/$usr_name/static/. /home/$usr_name/static_old/."
   rsync -azP --no-o --no-g --no-perms ./static/* $usr_name@$ip_address:/home/$usr_name/static/.
   rsync -azP ./misc/docker-compose.yml $usr_name@$ip_address:/home/$usr_name/static/.
   rsync -azP ./misc/clear_db.sh $usr_name@$ip_address:/home/$usr_name/static/.

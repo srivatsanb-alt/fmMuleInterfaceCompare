@@ -96,9 +96,9 @@ def process_req(queue, req, user, dt=None):
     if not queue:
         queue = Queues.queues_dict["generic_handler"]
 
-    # add retry only for SherpaReq(comes from Sherpa)
+    # add retry only for SherpaReq(req comes from Sherpa)
     if isinstance(req, SherpaReq):
-        kwargs.update({"retry", Retry(max=3, interval=[0.5, 1, 2])})
+        kwargs.update({"retry": Retry(max=3, interval=[0.5, 1, 2])})
 
     if dt:
         return enqueue_at(queue, dt, handle, *args, **kwargs)
