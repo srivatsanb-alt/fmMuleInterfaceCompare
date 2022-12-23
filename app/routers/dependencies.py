@@ -3,14 +3,17 @@ import time
 import jwt
 from fastapi import HTTPException
 import logging
-from fastapi import Depends, Header
+from fastapi import Header
 from fastapi.param_functions import Query
 from rq.job import Job
+from rq import Retry
 from utils.rq import enqueue, enqueue_at, Queues
 from core.config import Config
 import redis
 import os
 import json
+
+from models.request_models import SherpaReq
 
 
 def close_session_and_raise_error(session, detail):
@@ -87,14 +90,20 @@ def process_req(queue, req, user, dt=None):
     req.source = user
 
     handler_obj = Config.get_handler()
+    args = [handler_obj, req]
+    kwargs = {}
 
     if not queue:
         queue = Queues.queues_dict["generic_handler"]
 
-    if dt:
-        enqueue_at(queue, dt, handle, handler_obj, req)
+    # add retry only for SherpaReq(comes from Sherpa)
+    if isinstance(req, SherpaReq):
+        kwargs.update({"retry", Retry(max=3, interval=[0.5, 1, 2])})
 
-    return enqueue(queue, handle, handler_obj, req)
+    if dt:
+        return enqueue_at(queue, dt, handle, *args, **kwargs)
+
+    return enqueue(queue, handle, *args, **kwargs)
 
 
 def process_req_with_response(queue, req, user: str):
@@ -102,32 +111,15 @@ def process_req_with_response(queue, req, user: str):
     redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
 
     while True:
-        status = Job.fetch(job.id, connection=redis_conn).get_status(refresh=True)
+        job = Job.fetch(job.id, connection=redis_conn)
+        status = job.get_status(refresh=True)
 
         if status == "finished":
-            response = Job.fetch(job.id, connection=redis_conn).result
+            response = job.result
             break
-
         if status == "failed":
-            exc_info = Job.fetch(job.id, connection=redis_conn).exc_info
-            logging.info(f"Exception info: {exc_info}")
-
-            # for recovery
-            rq_fails = redis_conn.get("rq_fails")
-            if not rq_fails:
-                rq_fails = b"[]"
-
-            rq_fails = json.loads(rq_fails)
-
-            try:
-                rq_fails.append([user, req.__dict__])
-            except:
-                pass
-
-            redis_conn.set("rq_fails", json.dumps(rq_fails))
-
+            job.cancel()
             raise HTTPException(status_code=500, detail="Unable to process the request")
-
         time.sleep(0.01)
 
     return response

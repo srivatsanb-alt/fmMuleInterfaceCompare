@@ -3,7 +3,7 @@ import os
 import redis
 from core.config import Config
 from models.db_session import session
-from rq import Queue, Retry
+from rq import Queue
 
 
 class Queues:
@@ -72,7 +72,6 @@ def enqueue(queue: Queue, func, data, *args, **kwargs):
     kwargs.setdefault("failure_ttl", 0)
     kwargs.setdefault("on_failure", report_failure)
     kwargs.setdefault("on_success", report_success)
-    kwargs.setdefault("retry", Retry(max=3, interval=3))
     return queue.enqueue(
         func,
         data,
