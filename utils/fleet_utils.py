@@ -283,16 +283,20 @@ def add_linked_gates_table(fleet):
                                 gates_dict[str(linked_gate)]["name"] + zone_type_2
                             )
                             print(f"linked_gate_id is {linked_gate_id}!")
-                            new_linked_gate = LinkedGates(
-                                prev_zone_id=prev_zone_id, next_zone_id=linked_gate_id
-                            )
-                            db.add(new_linked_gate)
-                            db.flush()
-                            db.refresh(new_linked_gate)
-                            print(
-                                f"created a link between {prev_zone_id} and {linked_gate_id}"
-                            )
-                            print(f"Added the linkedgate {new_linked_gate}!")
+                            try:
+                                new_linked_gate = LinkedGates(
+                                    prev_zone_id=prev_zone_id, next_zone_id=linked_gate_id
+                                )
+                                db.add(new_linked_gate)
+                                db.flush()
+                                db.refresh(new_linked_gate)
+                                print(
+                                    f"created a link between {prev_zone_id} and {linked_gate_id}"
+                                )
+                                print(f"Added the linkedgate {new_linked_gate}!")
+
+                            except Exception as e:
+                                print(f"Unable to add a linked gate entry, exception: {e}")
         db.commit()
     return
 
