@@ -100,6 +100,7 @@ if __name__ == "__main__":
     if "ies" in all_plugins:
         from ies.ies_utils import TripsIES
         from plugin_db import init_db
+        # from ies.periodic_job_updates import send_job_updates
 
         ies_logger = get_seperate_logger("plugin_ies")
         init_db(str("plugin_ies"), [TripsIES])
@@ -107,6 +108,10 @@ if __name__ == "__main__":
         # # start a worker for ies plugin
         Process(target=start_worker, args=("plugin_ies",)).start()
         ies_logger.info("started a worker for plugin_ies")
+
+        from ies.periodic_job_updates import send_job_updates
+        Process(target=send_job_updates, args=[]).start()
+        ies_logger.info("Sending periodic job updates")
 
     if "conveyor" in all_plugins:
         from conveyor.conveyor_utils import ConvInfo, ConvTrips, populate_conv_info
