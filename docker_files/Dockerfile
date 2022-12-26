@@ -2,7 +2,7 @@ FROM fleet_manager_base:dev
 
 ARG FM_IMAGE_INFO
 ARG MULE_IMAGE_ID
-ARG HOSTNAME
+ARG FM_SERVER_USERNAME
 ARG FM_SERVER_IP
 ARG FM_PORT
 ARG REDIS_PORT
@@ -21,7 +21,7 @@ ENV FM_REDIS_URI="redis://localhost:$REDIS_PORT" \
     ATI_CONFIG="/app/static/mule_config/config.toml" \
     ATI_CONSOLIDATED_CONFIG="/app/static/mule_config/consolidated.toml" \
     FM_IMAGE_INFO=$FM_IMAGE_INFO \
-    HOSTNAME=$HOSTNAME \
+    FM_SERVER_USERNAME=$FM_SERVER_USERNAME \
     PYTHONPATH="/app" \
     MULE_IMAGE_ID=$MULE_IMAGE_ID
 
