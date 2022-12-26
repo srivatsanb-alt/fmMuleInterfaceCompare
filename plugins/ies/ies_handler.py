@@ -7,9 +7,10 @@ import pytz
 
 sys.path.append("/app")
 from plugins.plugin_comms import send_req_to_FM
-from .ies_utils import TripsIES, session
+from .ies_utils import TripsIES, session, JobCreate, JobCancel, JobQuery
 from utils.util import str_to_dt, str_to_dt_UTC, dt_to_str
 from models.trip_models import TripStatus
+from models.base_models import JsonMixin
 
 
 IES_JOB_STATUS_MAPPING = {
@@ -41,8 +42,8 @@ class IES_HANDLER:
         pub = redis.from_url(os.getenv("FM_REDIS_URI"), decode_responses=True)
         pub.publish("channel:plugin_ies", str(msg))
 
-    def handle_JobCreate(self, msg):
-
+    def handle_JobCreate(self, msg: dict):
+        job_create = JobCreate.from_dict(msg)
         msg_to_ies = {
             "messageType": "JobCreate",
             "externalReferenceId": msg["externalReferenceId"],
@@ -51,7 +52,7 @@ class IES_HANDLER:
 
         trip_ies: TripsIES = (
             session.query(TripsIES)
-            .filter(TripsIES.externalReferenceId == msg["externalReferenceId"])
+            .filter(TripsIES.externalReferenceId == job_create.externalReferenceId)
             .one_or_none()
         )
         if trip_ies:
@@ -61,8 +62,8 @@ class IES_HANDLER:
 
         endpoint = "trip_book"
         routes = []
-        priority = msg.get("priority", 1.0)
-        for task in msg["taskList"]:
+        priority = job_create.priority
+        for task in job_create.taskList:
             try:
                 station = self.locationID_station_mapping[task["LocationId"]]
                 routes.append(station)
@@ -87,10 +88,10 @@ class IES_HANDLER:
                 trip = TripsIES(
                     trip_id=trip_id,
                     booking_id=trip_details["booking_id"],
-                    externalReferenceId=msg["externalReferenceId"],
-                    status=trip_details["status"],
-                    actions=[tr.get("ActionName", None) for tr in msg["taskList"]],
-                    locations=[tr["LocationId"] for tr in msg["taskList"]],
+                    externalReferenceId=job_create.externalReferenceId,
+                    status="None",
+                    actions=[task.get("ActionName", None) for task in job_create.taskList],
+                    locations=[task["LocationId"] for task in job_create.taskList],
                 )
                 session.add(trip)
                 self.logger.info(f"adding trip entry to db {trip.__dict__}")
@@ -100,11 +101,11 @@ class IES_HANDLER:
         self.send_msg(msg_to_ies)
 
     def handle_JobCancel(self, msg):
-
+        job_cancel = JobCancel.from_dict(msg)
         if not msg.get("externalReferenceId"):
             raise ValueError("JobCancel request sent without externalReferenceId")
 
-        ext_ref_id = msg["externalReferenceId"]
+        ext_ref_id = job_cancel.externalReferenceId
 
         trip_ies: TripsIES = (
             session.query(TripsIES)
@@ -177,11 +178,11 @@ class IES_HANDLER:
         self.send_msg(msg_to_ies)
 
     def handle_JobQuery(self, msg):
-
+        job_query = JobQuery.from_dict(msg)
         tz = os.getenv("PGTZ")
         # enforcing UTC time zone info here (+0000), need to check Bosch's msg format!
-        trips_from = str_to_dt_UTC(msg["since"] + " +0000").astimezone(pytz.timezone(tz))  # conv str to dt
-        trips_till = str_to_dt_UTC(msg["until"] + " +0000").astimezone(pytz.timezone(tz))  # UTC time to local time
+        trips_from = str_to_dt_UTC(job_query.since + " +0000").astimezone(pytz.timezone(tz))  # conv str to dt
+        trips_till = str_to_dt_UTC(job_query.until + " +0000").astimezone(pytz.timezone(tz))  # UTC time to local time
 
         req_json = {"booked_from": dt_to_str(trips_from), "booked_till": dt_to_str(trips_till)}
 
