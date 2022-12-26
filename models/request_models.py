@@ -352,10 +352,8 @@ class DiagnosticsReq(FMReq):
 
 class SherpaImgUpdate(FMReq):
     endpoint: str = "img_update"
-    ip_address: str
     image_tag: str
-    registry_port: str
-    fm_host_name: str
+    fm_server_username: str
     time_zone: str
 
 
