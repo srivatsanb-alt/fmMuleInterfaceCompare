@@ -49,7 +49,6 @@ def get_fleet_status_msg(session, fleet):
     msg.update({"sherpa_status": sherpa_status_update})
     msg.update({"station_status": station_status_update})
     msg.update({"fleet_status": fu.get_table_as_dict(Fleet, fleet)})
-    # logging.getLogger().info(f"fleet msg 2 {fleet.__dict__}")
     msg.update({"fleet_name": fleet.name})
     msg.update({"type": "fleet_status"})
     msg.update({"timestamp": time.time()})
