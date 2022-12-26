@@ -102,8 +102,6 @@ if __name__ == "__main__":
         from ies.ies_utils import TripsIES
         from plugin_db import init_db
 
-        # from ies.periodic_job_updates import send_job_updates
-
         ies_logger = get_seperate_logger("plugin_ies")
         init_db(str("plugin_ies"), [TripsIES])
 
@@ -111,7 +109,7 @@ if __name__ == "__main__":
         Process(target=start_worker, args=("plugin_ies",)).start()
         ies_logger.info("started a worker for plugin_ies")
 
-        from ies.periodic_job_updates import send_job_updates
+        from ies.ies_job_updates import send_job_updates
 
         Process(target=send_job_updates, args=[]).start()
         ies_logger.info("Sending periodic job updates")
