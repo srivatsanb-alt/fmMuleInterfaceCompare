@@ -53,11 +53,10 @@ class CONV_HANDLER:
     def handle_tote_status(self, msg: dict):
         self.logger.info("Handling tote_status:")
         tote_status = ToteStatus.from_dict(msg)
-        logging.info(f"conveyor name: {tote_status.name}")
+        # logging.info(f"conveyor name: {tote_status.name}")
         conv_info: ConvInfo = (
             session.query(ConvInfo).filter(ConvInfo.name == tote_status.name).one_or_none()
         )
-        logging.info(f"conv_info:{conv_info}")
         if conv_info is not None:
             if tote_status.num_totes > conv_info.num_totes:
                 route = []
@@ -99,11 +98,11 @@ class CONV_HANDLER:
                         )
                         session.add(trip)
             else:
-                logging.info(
-                    f"Num totes on conveyor ({tote_status.num_totes}) not greater than db info ({conv_info.num_totes})."
+                self.logger.info(
+                    f"Num totes on conveyor {tote_status.name} ({tote_status.num_totes}) not greater than db info ({conv_info.num_totes})."
                 )
         else:
-            logging.info(f"No conveyor named {msg['name']} in gmaj!")
+            self.logger.info(f"No conveyor named {msg['name']} in gmaj!")
         conv_info.num_totes = tote_status.num_totes
 
     def handle(self, msg):

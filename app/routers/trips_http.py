@@ -5,7 +5,14 @@ from fastapi.responses import HTMLResponse
 from app.routers.dependencies import (
     get_user_from_header,
     process_req_with_response,
+    close_session_and_raise_error,
+    close_session,
 )
+<<<<<<< HEAD
+=======
+from typing import Union
+from fastapi import APIRouter, Depends
+>>>>>>> origin/FM_v2.0
 from models.request_models import (
     BookingReq,
     TripStatusReq,
@@ -13,7 +20,11 @@ from models.request_models import (
     DeleteBookedTripReq,
     DeleteOptimalDispatchAssignments,
 )
+<<<<<<< HEAD
 from models.trip_models import TripStatus, PendingTrip, Trip, TripAnalytics
+=======
+from models.trip_models import Trip, TripAnalytics
+>>>>>>> origin/FM_v2.0
 from models.db_session import session
 from utils.util import str_to_dt
 import utils.trip_utils as tu
@@ -34,17 +45,20 @@ async def book(booking_req: BookingReq, user_name=Depends(get_user_from_header))
 @router.delete("/ongoing/{booking_id}")
 async def delete_ongoing_trip(booking_id: int, user_name=Depends(get_user_from_header)):
     if not user_name:
-        raise HTTPException(status_code=403, detail="Unknown requester")
+        close_session_and_raise_error(session, "Unknown requester")
 
     trips = session.get_trip_with_booking_id(booking_id)
 
     if not trips:
-        raise HTTPException(status_code=403, detail="no trip with the given booking_id")
+        close_session_and_raise_error(session, "no trip with the given booking_id")
 
     delete_ongoing_trip_req: DeleteOngoingTripReq = DeleteOngoingTripReq(
         booking_id=booking_id
     )
+
+    close_session(session)
     response = process_req_with_response(None, delete_ongoing_trip_req, user_name)
+
     return response
 
 
@@ -53,14 +67,16 @@ async def delete_pending_trip(booking_id: int, user_name=Depends(get_user_from_h
 
     response = {}
     if not user_name:
-        raise HTTPException(status_code=403, detail="Unknown requester")
+        close_session_and_raise_error(session, "Unknown requester")
 
     trips = session.get_trip_with_booking_id(booking_id)
 
     if not trips:
-        raise HTTPException(status_code=403, detail="no trip with the given booking_id")
+        close_session_and_raise_error(session, "no trip with the given booking_id")
 
     delete_booked_trip_req: DeleteBookedTripReq = DeleteBookedTripReq(booking_id=booking_id)
+
+    close_session(session)
     response = process_req_with_response(None, delete_booked_trip_req, user_name)
 
     return response
@@ -74,15 +90,16 @@ async def clear_optimal_dispatch_assignments(
     response = {}
 
     if not user_name:
-        raise HTTPException(status_code=403, detail="Unknown requester")
+        close_session_and_raise_error(session, "Unknown requester")
 
     if not entity_name:
-        raise HTTPException(status_code=403, detail="No entity name")
+        close_session_and_raise_error(session, "No entity name")
 
     delete_optimal_dispatch_assignments_req = DeleteOptimalDispatchAssignments(
         fleet_name=entity_name
     )
 
+    close_session(session)
     response = process_req_with_response(
         None, delete_optimal_dispatch_assignments_req, user_name
     )
@@ -95,7 +112,7 @@ async def trip_status(
     trip_status_req: TripStatusReq, user_name=Depends(get_user_from_header)
 ):
     if not user_name:
-        raise HTTPException(status_code=403, detail="Unknown requester")
+        close_session_and_raise_error(session, "Unknown requester")
 
     response = {}
     if trip_status_req.booked_from and trip_status_req.booked_till:
@@ -107,23 +124,24 @@ async def trip_status(
         )
 
     if not trip_status_req.trip_ids:
-        raise HTTPException(
-            status_code=403,
-            detail="no trip id given or available in the given timeframe",
+        close_session_and_raise_error(
+            session, "no trip id given or available in the given timeframe"
         )
 
     for trip_id in trip_status_req.trip_ids:
         trip: Trip = session.get_trip(trip_id)
         if not trip:
-            raise HTTPException(status_code=403, detail="invalid trip id")
+            close_session_and_raise_error(session, "invalid trip id")
         response.update({trip_id: tu.get_trip_status(trip)})
+
+    close_session(session)
     return response
 
 
 @router.get("/ongoing_trip_status")
 async def ongoing_trip_status(user_name=Depends(get_user_from_header)):
     if not user_name:
-        raise HTTPException(status_code=403, detail="Unknown requester")
+        close_session_and_raise_error(session, "Unknown requester")
 
     response = {}
     all_ongoing_trips = session.get_all_ongoing_trips()
@@ -131,6 +149,7 @@ async def ongoing_trip_status(user_name=Depends(get_user_from_header)):
     for ongoing_trip in all_ongoing_trips:
         response.update({ongoing_trip.trip_id: tu.get_trip_status(ongoing_trip.trip)})
 
+    close_session(session)
     return response
 
 
@@ -139,7 +158,7 @@ async def trip_analytics(
     trip_analytics_req: TripStatusReq, user_name=Depends(get_user_from_header)
 ):
     if not user_name:
-        raise HTTPException(status_code=403, detail="Unknown requester")
+        close_session_and_raise_error(session, "Unknown requester")
 
     response = {}
     if trip_analytics_req.booked_from and trip_analytics_req.booked_till:
@@ -151,49 +170,19 @@ async def trip_analytics(
         )
 
     if not trip_analytics_req.trip_ids:
-        raise HTTPException(
-            status_code=403,
-            detail="no trip id given or available in the given timeframe",
+        close_session_and_raise_error(
+            session, "no trip id given or available in the given timeframe"
         )
 
     for trip_id in trip_analytics_req.trip_ids:
         trip_legs_id = session.get_all_trip_legs(trip_id)
         for trip_leg_id in trip_legs_id:
             trip_analytics: TripAnalytics = session.get_trip_analytics(trip_leg_id)
-
-            # any trip_leg where from_station and to_station are same won't have trip leg
             if not trip_analytics:
                 continue
             response.update({trip_leg_id: tu.get_trip_analytics(trip_analytics)})
 
-    return response
-
-
-# debug tool
-# temporary addition for first release
-# TODO : remove viewable code after frontend is enabled to read trips table
-@router.get("/status/{num_trips}/{viewable}")
-def get_last_n_trip_status(num_trips: int, viewable: int):
-    response = {}
-    trips = session.get_last_n_trips(num_trips)
-    trip_ids = [trip.id for trip in trips]
-
-    if not trip_ids:
-        raise HTTPException(status_code=403, detail="bad request, no trip_ids")
-
-    for trip_id in trip_ids:
-        trip: Trip = session.get_trip(trip_id)
-        if not trip:
-            raise HTTPException(status_code=403, detail="invalid trip id")
-
-        response.update({trip_id: tu.get_trip_status(trip)})
-
-    if viewable:
-        df = pd.DataFrame(data=response)
-        df = df.fillna(" ")
-        response = df.to_html()
-        return HTMLResponse(content=response, status_code=200)
-
+    close_session(session)
     return response
 
 

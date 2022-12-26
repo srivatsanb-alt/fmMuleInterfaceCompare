@@ -1,4 +1,4 @@
-from core.constants import FleetStatus, DisabledReason
+from core.constants import FleetStatus, DisabledReason, MessageType
 from core.logs import get_logger
 from models.base_models import StationProperties
 from models.db_session import session
@@ -161,13 +161,28 @@ class Handlers:
         ongoing_trip.clear_states()
         self.do_pre_actions(ongoing_trip)
         hutils.start_leg(ongoing_trip, session)
-        get_logger(sherpa_name).info(
-            f"{sherpa_name} started leg of trip {trip.id} from {ongoing_trip.curr_station()} to {ongoing_trip.next_station()}"
-        )
+        started_leg_log = f"{sherpa_name} started a trip leg of trip (trip_id: {trip.id}) from {ongoing_trip.curr_station()} to {ongoing_trip.next_station()}"
+        get_logger(sherpa_name).info(started_leg_log)
         response: Response = send_move_msg(sherpa, ongoing_trip, next_station)
         get_logger(sherpa_name).info(
             f"received from {sherpa_name}: status {response.status_code}"
         )
+        session.add_notification([sherpa_name], started_leg_log, "info", "")
+
+    def delete_notifications(self):
+        notification_timeout = {"info": 120, "alert": 300, "action_request": 300}
+        all_notifications = session.get_notifications()
+        for notification in all_notifications:
+            time_since_notification = datetime.datetime.now() - notification.created_at
+            timeout = notification_timeout.get(notification.log_level, 120)
+
+            if notification.module == "visa module":
+                timeout = 20
+
+            if time_since_notification.seconds > timeout:
+                if notification.log_level != "info" and len(notification.cleared_by) == 0:
+                    continue
+                session.delete_notification(notification.id)
 
     def check_sherpa_status(self):
         MULE_HEARTBEAT_INTERVAL = Config.get_fleet_comms_params()["mule_heartbeat_interval"]
@@ -229,13 +244,13 @@ class Handlers:
                 f"{sherpa_name} finished leg of trip {trip.id} \n trip_analytics: {get_table_as_dict(TripAnalytics, trip_analytics)}"
             )
 
-        get_logger(sherpa_name).info(
-            f"{sherpa_name} finished leg of trip {trip.id} from {ongoing_trip.trip_leg.from_station} to {ongoing_trip.trip_leg.to_station} "
-        )
+        end_leg_log = f"{sherpa_name} finished a trip leg of trip (trip_id: {trip.id}) from {ongoing_trip.trip_leg.from_station} to {ongoing_trip.trip_leg.to_station}"
+        get_logger(sherpa_name).info(end_leg_log)
 
         hutils.end_leg(ongoing_trip)
 
         self.do_post_actions(ongoing_trip)
+        session.add_notification([sherpa_name], end_leg_log, "info", "")
 
     def should_recreate_scheduled_trip(self, pending_trip: PendingTrip):
 
@@ -410,6 +425,7 @@ class Handlers:
     def do_post_actions(self, ongoing_trip: OngoingTrip):
         curr_station = ongoing_trip.curr_station()
         sherpa_name = ongoing_trip.sherpa_name
+        device_types = []
 
         if not curr_station:
             get_logger(sherpa_name).info(
@@ -420,23 +436,30 @@ class Handlers:
 
         # if at hitch station send hitch command.
         if StationProperties.AUTO_HITCH in station.properties:
+            device_types.append(StationProperties.AUTO_HITCH)
             get_logger(sherpa_name).info(f"{sherpa_name} reached a auto hitch station")
             self.add_auto_hitch_start_to_ongoing_trip(ongoing_trip)
 
         # if at unhitch station send unhitch command.
         if StationProperties.AUTO_UNHITCH in station.properties:
+            device_types.append(StationProperties.AUTO_UNHITCH)
             get_logger(sherpa_name).info(f"{sherpa_name} reached an auto-unhitch station")
             self.add_auto_unhitch_start_to_ongoing_trip(ongoing_trip)
 
         if StationProperties.DISPATCH_NOT_REQD not in station.properties:
             get_logger(sherpa_name).info(f"{sherpa_name} reached a dispatch station")
             self.add_dispatch_start_to_ongoing_trip(ongoing_trip)
-
+            session.add_notification(
+                [sherpa_name],
+                f"Need a dispatch button press on {sherpa_name} which is parked at {ongoing_trip.curr_station()}",
+                "action_request",
+                "",
+            )
         if any(
             prop in station.properties
             for prop in [StationProperties.CONVEYOR, StationProperties.CHUTE]
         ):
-            get_logger(sherpa_name).info(f"{sherpa_name} reached a dispatch station")
+            get_logger(sherpa_name).info(f"{sherpa_name} reached a conveyor/chute station")
             self.add_conveyor_start_to_ongoing_trip(ongoing_trip, station)
 
     def resolve_auto_hitch_error(self, req: SherpaPeripheralsReq):
@@ -452,10 +475,12 @@ class Handlers:
         if not peripheral_info.hitch:
             if TripState.WAITING_STATION_AUTO_UNHITCH_START in ongoing_trip.states:
                 ongoing_trip.add_state(TripState.WAITING_STATION_AUTO_UNHITCH_END)
-                get_logger().info(
-                    f"Resolving {req.error_device} error for {sherpa_name}, will wait for dispatch button to continue"
-                )
+                peripheral_msg = f"Resolving {req.error_device} error for {sherpa_name}, will wait for dispatch button press to continue"
+                get_logger().info(peripheral_msg)
                 self.add_dispatch_start_to_ongoing_trip(ongoing_trip)
+                session.add_notification(
+                    [sherpa_name], peripheral_msg, "action_request", "peripherals"
+                )
 
             else:
                 get_logger().info(
@@ -485,8 +510,10 @@ class Handlers:
         )
         if conveyor_start_state in ongoing_trip.states:
             ongoing_trip.add_state(conveyor_end_state)
-            get_logger().info(
-                f"Resolving {req.error_device} error for {sherpa_name}, will wait for dispatch button to continue"
+            peripheral_msg = f"Resolving {req.error_device} error for {sherpa_name}, will wait for dispatch button press to continue"
+            get_logger().info(peripheral_msg)
+            session.add_notification(
+                [sherpa_name], peripheral_msg, "action_request", "peripherals"
             )
             self.add_dispatch_start_to_ongoing_trip(ongoing_trip)
         else:
@@ -747,16 +774,21 @@ class Handlers:
             error = f"{ongoing_trip.sherpa_name} sent a invalid conveyor ack message, {ongoing_trip.states} doesn't match ack msg"
             raise ValueError(error)
 
-        get_logger().info(
-            f"will send conveyor msg(direction: {req.direction}, num_units: {req.num_units}) to {current_station_name}"
-        )
-
         if StationProperties.CONVEYOR in current_station.properties:
+            transfer_tote_msg = f"will send conveyor msg(direction: {req.direction}, num_units: {req.num_units}) to {current_station_name}"
+            get_logger().info(transfer_tote_msg)
+
             if req.num_units == 2:
                 msg = "transfer_2totes"
             elif req.num_units == 1:
                 msg = "transfer_tote"
             send_msg_to_conveyor(msg, current_station_name)
+            session.add_notification(
+                [current_station_name],
+                transfer_tote_msg,
+                "info",
+                "",
+            )
 
     def handle_conveyor(self, req: ConveyorReq, ongoing_trip: OngoingTrip):
         sherpa_name = ongoing_trip.sherpa_name
@@ -959,6 +991,7 @@ class Handlers:
         map_files = session.get_map_files(fleet_name)
 
         ip_changed = sherpa.status.other_info.get("ip_changed", True)
+
         get_logger().info(f"Has sherpa ip changed: {ip_changed}")
 
         map_file_info = [
@@ -971,6 +1004,11 @@ class Handlers:
         response: VerifyFleetFilesResp = VerifyFleetFilesResp(
             fleet_name=fleet_name, files_info=map_file_info
         )
+
+        session.add_notification(
+            [sherpa_name], f"{sherpa_name} connected to fleet manager!", "info", ""
+        )
+
         return response.to_json()
 
     def handle_pass_to_sherpa(self, req):
@@ -1011,6 +1049,14 @@ class Handlers:
             granted=granted, visa=req, access_type=AccessType.REQUEST
         )
         get_logger().info(f"visa {granted_message} to {sherpa_name}")
+
+        session.add_notification(
+            [sherpa_name],
+            f"{sherpa_name} {granted_message} visa for {zone_name}, {visa_type}!",
+            "info",
+            "visa module",
+        )
+
         return response.to_json()
 
     def handle_visa_access(self, req: VisaReq, access_type: AccessType, sherpa_name):
@@ -1033,6 +1079,13 @@ class Handlers:
 
     def handle(self, msg):
         init_request_context(msg)
+
+        if msg.type == MessageType.FM_HEALTH_CHECK:
+            self.check_sherpa_status()
+            self.delete_notifications()
+            get_logger("status_updates").info("Ran a FM health check")
+            return
+
         update_msgs = ["trip_status", "sherpa_status"]
 
         if req_ctxt.sherpa_name and msg.type not in update_msgs:
@@ -1061,7 +1114,7 @@ class Handlers:
             return
 
         assign_next_task_reason = None
-        if msg.type == "assign_next_task":
+        if msg.type == MessageType.ASSIGN_NEXT_TASK:
             if msg.sherpa_name is None:
                 self.run_optimal_dispatch()
                 return
@@ -1072,8 +1125,6 @@ class Handlers:
 
         if req_ctxt.sherpa_name:
             done, next_task = self.should_assign_next_task(req_ctxt.sherpa_name)
-
-        self.check_sherpa_status()
 
         # status updates, visa request - wouldn't modify optimal dispatch assignment
         optimal_dispatch_influencers = [

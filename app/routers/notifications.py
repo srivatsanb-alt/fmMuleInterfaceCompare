@@ -1,0 +1,131 @@
+from fastapi import (
+    APIRouter,
+    Depends,
+    WebSocket,
+    WebSocketDisconnect,
+    status,
+    HTTPException,
+)
+from models.misc_models import Notifications
+import asyncio
+import logging
+from app.routers.dependencies import (
+    get_user_from_query,
+    close_session_and_raise_error,
+    close_session,
+)
+import aioredis
+import os
+import ast
+from models.db_session import session
+from sqlalchemy.orm.attributes import flag_modified
+
+
+router = APIRouter()
+
+
+@router.delete("/api/v1/notification/clear/{id}/{token}")
+async def clear_notification(id: int, token: str, user_name=Depends(get_user_from_query)):
+
+    response = {}
+    if not user_name:
+        close_session_and_raise_error(session, "Unknown requeter")
+
+    notification = session.get_notifications_with_id(id)
+
+    if not notification:
+        session.close_on_error()
+        raise HTTPException(status_code=403, detail="Bad detail")
+
+    if notification.cleared_by is None:
+        notification.cleared_by = []
+
+    notification.cleared_by.append(token)
+    flag_modified(notification, "cleared_by")
+
+    close_session(session, commit=True)
+
+    return response
+
+
+@router.get("/api/v1/notifications/clear_all/{token}")
+async def clear_notifications(token: str, user_name=Depends(get_user_from_query)):
+    response = {}
+    if not user_name:
+        close_session_and_raise_error(session, "Unknown requeter")
+
+    all_notifications = session.session.query(Notifications).all()
+    for notification in all_notifications:
+
+        if notification.cleared_by is None:
+            notification.cleared_by = []
+
+        notification.cleared_by.append(token)
+        flag_modified(notification, "cleared_by")
+
+    close_session(session, commit=True)
+
+    return response
+
+
+@router.websocket("/ws/api/v1/notifications/{token}")
+async def notifications(
+    websocket: WebSocket,
+    token: str,
+    user_name=Depends(get_user_from_query),
+):
+    if not user_name:
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
+
+    await websocket.accept()
+
+    rw = [
+        asyncio.create_task(reader(websocket, token)),
+        asyncio.create_task(
+            writer(websocket, token),
+        ),
+    ]
+
+    try:
+        await asyncio.gather(*rw)
+    except Exception:
+        [t.cancel() for t in rw]
+    finally:
+        [t.cancel() for t in rw]
+
+
+async def reader(websocket, token):
+    while True:
+        try:
+            _ = await websocket.receive_json()
+            pass
+        except WebSocketDisconnect as e:
+            logging.info(f"websocket with {websocket.client.host} disconnected")
+            raise e
+
+
+async def writer(websocket, token):
+    redis = aioredis.Redis.from_url(
+        os.getenv("FM_REDIS_URI"), max_connections=10, decode_responses=True
+    )
+    psub = redis.pubsub()
+    await psub.subscribe("channel:notifications")
+
+    while True:
+        message = await psub.get_message(ignore_subscribe_messages=True, timeout=5)
+        if message:
+            try:
+                notification = {}
+                data = ast.literal_eval(message["data"])
+                for id, details in data.items():
+                    if not isinstance(details, dict):
+                        notification.update({id: details})
+                    elif token not in details.get("cleared_by", []):
+                        notification.update({id: details})
+                        num_actions = len(notification[id]["cleared_by"])
+                        notification[id]["num_actions"] = num_actions
+                        del notification[id]["cleared_by"]
+                await websocket.send_json(notification)
+            except Exception as e:
+                logging.info(f"Exception in notification webSocket writer {e}")

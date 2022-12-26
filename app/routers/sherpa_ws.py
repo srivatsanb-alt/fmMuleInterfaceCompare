@@ -5,7 +5,12 @@ import math
 import os
 from datetime import timedelta
 import aioredis
-from app.routers.dependencies import get_db_session, get_sherpa, get_real_ip_from_header
+from app.routers.dependencies import (
+    get_sherpa,
+    get_real_ip_from_header,
+    close_session,
+)
+from models.db_session import session
 from core.config import Config
 from core.constants import MessageType
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, status
@@ -17,7 +22,6 @@ from models.request_models import (
     StoppageInfo,
 )
 from sqlalchemy.orm.attributes import flag_modified
-import json
 from redis import Redis
 from utils.rq import Queues, enqueue
 
@@ -63,7 +67,6 @@ async def sherpa_status(
     websocket: WebSocket,
     sherpa=Depends(get_sherpa),
     x_real_ip=Depends(get_real_ip_from_header),
-    session=Depends(get_db_session),
 ):
     if not sherpa:
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
@@ -74,9 +77,6 @@ async def sherpa_status(
 
     if x_real_ip is None:
         x_real_ip = client_ip
-
-    logging.getLogger().info(f"fm_rev_proxy ip: {client_ip}")
-    logging.getLogger().info(f"sherpa connected wiht x_real_ip: {x_real_ip}")
 
     db_sherpa = session.get_sherpa(sherpa)
     if db_sherpa.status.other_info is None:
@@ -99,9 +99,7 @@ async def sherpa_status(
         logging.info(f"{sherpa} ip hasn't changed since last connection")
 
     flag_modified(db_sherpa.status, "other_info")
-    logging.getLogger().info(f"modified sherpa details {db_sherpa.__dict__}")
-    logging.getLogger().info(f"modified sherpa status details {db_sherpa.status.__dict__}")
-    session.close()
+    close_session(session, commit=True)
 
     await websocket.accept()
 

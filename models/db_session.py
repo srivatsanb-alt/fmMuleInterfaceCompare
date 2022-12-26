@@ -3,6 +3,7 @@ from core.db import session_maker
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 from models.frontend_models import FrontendUser
+from models.misc_models import Notifications
 from models.fleet_models import (
     Fleet,
     MapFile,
@@ -356,6 +357,27 @@ class DBSession:
 
     def delete_ongoing_trip(self, ongoing_trip):
         self.session.delete(ongoing_trip)
+
+    def add_notification(self, entity_names, log, log_level, module):
+        new_notification = Notifications(
+            entity_names=entity_names,
+            log=log,
+            log_level=log_level,
+            module=module,
+            cleared_by=[],
+        )
+        self.add_to_session(new_notification)
+
+    def get_notifications(self):
+        return self.session.query(Notifications).all()
+
+    def get_notifications_with_id(self, id):
+        return (
+            self.session.query(Notifications).filter(Notifications.id == id).one_or_none()
+        )
+
+    def delete_notification(self, id):
+        self.session.query(Notifications).filter(Notifications.id == id).delete()
 
 
 session = DBSession()

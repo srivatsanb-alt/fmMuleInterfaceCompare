@@ -10,9 +10,6 @@ from core.logs import get_logger
 from models.fleet_models import Sherpa, Station
 from models.request_models import FMReq, MoveReq
 from models.trip_models import OngoingTrip
-import json
-
-redis_db = redis.from_url(os.getenv("FM_REDIS_URI"))
 
 
 def get_sherpa_url(
@@ -108,3 +105,8 @@ def send_ws_msg_to_sherpa(msg, sherpa):
 def send_msg_to_conveyor(msg, conveyor_name):
     pub = redis.from_url(os.getenv("FM_REDIS_URI"), decode_responses=True)
     pub.publish(f"channel:plugin_conveyor_{conveyor_name}", str(msg))
+
+
+def send_notification(msg):
+    pub = redis.from_url(os.getenv("FM_REDIS_URI"), decode_responses=True)
+    pub.publish("channel:notifications", str(msg))

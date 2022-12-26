@@ -1,9 +1,10 @@
-from utils.comms import send_status_update
+from utils.comms import send_status_update, send_notification
 import utils.fleet_utils as fu
 import utils.trip_utils as tu
 import logging
 from models.db_session import DBSession
 from models.fleet_models import SherpaStatus, Sherpa, Fleet, Station, StationStatus
+from models.misc_models import Notifications
 import time
 
 
@@ -83,6 +84,18 @@ def get_visas_held_msg(session):
     return visa_msg
 
 
+def get_notifications(session):
+    all_notifications = session.get_notifications()
+    notification_msg = {}
+    notification_msg["type"] = "notifications"
+    for notification in all_notifications:
+        notification_msg.update(
+            {notification.id: fu.get_table_as_dict(Notifications, notification)}
+        )
+
+    return notification_msg
+
+
 def send_periodic_updates():
     while True:
         try:
@@ -92,7 +105,6 @@ def send_periodic_updates():
                     all_fleets = session.get_all_fleets()
                     for fleet in all_fleets:
                         session.session.refresh(fleet)
-                        # logging.getLogger().info(f"fleet msg 1 {fleet.__dict__}")
                         fleet_status_msg = get_fleet_status_msg(session, fleet)
                         send_status_update(fleet_status_msg)
 
@@ -101,8 +113,11 @@ def send_periodic_updates():
 
                     visa_msg = get_visas_held_msg(session)
                     send_status_update(visa_msg)
+                    notification_msg = get_notifications(session)
 
+                    send_notification(notification_msg)
                     time.sleep(2)
+
         except Exception as e:
             logging.getLogger().info(f"exception in periodic updates script {e}")
             time.sleep(2)

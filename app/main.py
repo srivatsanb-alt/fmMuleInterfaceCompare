@@ -11,6 +11,7 @@ from .routers import (
     misc_http,
     control_http,
     station_http,
+    notifications,
 )
 
 
@@ -45,3 +46,4 @@ app.include_router(auth.router)
 app.include_router(misc_http.router)
 app.include_router(control_http.router)
 app.include_router(station_http.router)
+app.include_router(notifications.router)

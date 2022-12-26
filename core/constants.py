@@ -13,6 +13,7 @@ class MessageType:
     DELETE_VISA_ASSIGNMENTS = "delete_visa_assignments"
     DELETE_OPTIMAL_DISPATCH_ASSIGNMENTS = "delete_optimal_dispatch_assignments"
     ASSIGN_NEXT_TASK = "assign_next_task"
+    FM_HEALTH_CHECK = "fm_health_check"
 
 
 class FleetStatus:
