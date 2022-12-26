@@ -13,8 +13,7 @@ cert_reqd=1
 # Set variables
 IP_ADDRESS="localhost"
 NETWORK_TYPE="wlp"
-FM_SERVER_HOSTNAME="localhost"
-DOCKER_REGISTRY_PORT=443
+FM_SERVER_USERNAME="ati"
 FM_PORT=8001
 PLUGIN_PORT=8002
 REDIS_PORT=6379
@@ -45,11 +44,11 @@ done
 
 if [ $server == 1 ]; then
   export DOCKER_HOST=ssh://$IP_ADDRESS
-  FM_SERVER_HOSTNAME=`echo $IP_ADDRESS | cut -d@ -f1`
+  FM_SERVER_USERNAME=`echo $IP_ADDRESS | cut -d@ -f1`
   FM_SERVER_IP=`echo $IP_ADDRESS | cut -d@ -f2`
   echo "DOCKER_HOST $DOCKER_HOST"
 else
-  FM_SERVER_HOSTNAME=$HOSTNAME
+  FM_SERVER_USERNAME=$USER
   FM_SERVER_IP=$(get_localhost_ip $IP_ADDRESS $NETWORK_TYPE)
 fi
 
@@ -92,7 +91,6 @@ if [ $server == 1 ] ; then
   create_static_backup $IP_ADDRESS # function defined in push_utils
 else
   cp misc/docker-compose.yml static/
-  cp misc/clear_db.sh static/
 fi
 
 if [ $clear_db == 1 ] ; then
@@ -145,9 +143,10 @@ echo "Successfully built nginx image"
 
 MULE_IMAGE_ID=$(docker images --format {{.ID}} localhost:$DOCKER_REGISTRY_PORT/mule)
 echo "MULE_IMAGE_ID $MULE_IMAGE_ID"
+
 docker image build --build-arg FM_IMAGE_INFO="${FM_IMAGE_INFO}" \
                    --build-arg MULE_IMAGE_ID="${MULE_IMAGE_ID}" \
-		   --build-arg HOSTNAME="${FM_SERVER_HOSTNAME}" \
+		   --build-arg FM_SERVER_USERNAME="${FM_SERVER_USERNAME}" \
 		   --build-arg FM_SERVER_IP="${FM_SERVER_IP}" \
 		   --build-arg FM_PORT="${FM_PORT}" \
 		   --build-arg REDIS_PORT="${REDIS_PORT}" \

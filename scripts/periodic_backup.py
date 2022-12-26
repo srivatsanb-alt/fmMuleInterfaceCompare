@@ -36,6 +36,9 @@ def backup_data():
 
     logs_save_path = os.path.join(fm_backup_path, current_data, "logs")
 
+    with open(os.path.join(fm_backup_path, current_data, "info.txt"), "w") as info_file:
+        info_file.write(os.getenv("FM_IMAGE_INFO"))
+
     while True:
         for db_name in valid_dbs:
             path_to_db = os.path.join(os.getenv("FM_DATABASE_URI"), db_name)

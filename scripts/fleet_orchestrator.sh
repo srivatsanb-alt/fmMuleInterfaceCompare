@@ -1,4 +1,6 @@
 #! /bin/bash
+set -e
+
 LOGS=$FM_LOG_DIR
 TS=$(date +'%H%M%S')
 
