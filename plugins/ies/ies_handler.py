@@ -57,7 +57,7 @@ class IES_HANDLER:
         )
         if trip_ies:
             self.send_msg(msg_to_ies)
-            self.logger.info(f"Reference ID {msg['externalReferenceId']} already exists, can't book trip!")
+            self.logger.info(f"Reference ID {job_create.externalReferenceId} already exists, can't book trip!")
             return
 
         endpoint = "trip_book"
@@ -80,7 +80,7 @@ class IES_HANDLER:
             self.plugin_name, endpoint, req_type="post", req_json=req_json
         )
 
-        self.logger.info(f"Trip book response from FM {response_json}")
+        self.logger.debug(f"Trip book response from FM {response_json}")
 
         if response_json is not None:
             msg_to_ies["jobStatus"] = "ACCEPTED"
@@ -94,7 +94,7 @@ class IES_HANDLER:
                     locations=[task["LocationId"] for task in job_create.taskList],
                 )
                 session.add(trip)
-                self.logger.info(f"adding trip entry to db {trip.__dict__}")
+                self.logger.debug(f"adding trip entry to db {trip.__dict__}")
         else:
             self.logger.info(f"Req to FM failed, response json: {response_json} and response code: {status_code}")
 
@@ -137,7 +137,7 @@ class IES_HANDLER:
                 self.plugin_name, "trip_status", req_type="post", req_json=status_req_json
             )
 
-            self.logger.info(
+            self.logger.debug(
                 f"trip_status_response {trip_status_response}, status_code: {status_code}"
             )
 
@@ -164,8 +164,7 @@ class IES_HANDLER:
                     "externalReferenceId": ext_ref_id,
                     "jobStatus": "CANCELLED",
                 }
-
-                trip_ies.status = TripStatus.CANCELLED
+                # trip_ies.status = TripStatus.CANCELLED
                 self.logger.info(
                     f"successfully deleted trip with externalReferenceId: {ext_ref_id}"
                 )
@@ -201,11 +200,10 @@ class IES_HANDLER:
                 if trip_ies:
                     trip_status = trip_details["trip_details"]["status"]
                     next_idx_aug = trip_details["trip_details"]["next_idx_aug"]
-                    self.logger.info(f"Trip status, next_idx = {trip_status, next_idx_aug}")
+                    self.logger.debug(f"Trip status, next_idx = {trip_status, next_idx_aug}")
 
                     if next_idx_aug == 0:
                         next_idx_aug = None
-                    self.logger.info(f"trip_status == TripStatus.SUCCEEDED is {trip_status == TripStatus.SUCCEEDED}")
                     if trip_status == TripStatus.SUCCEEDED:
                         next_idx_aug = 0
 

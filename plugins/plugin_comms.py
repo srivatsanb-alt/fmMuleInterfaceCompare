@@ -24,8 +24,7 @@ async def ws_reader(websocket, name, handler_obj, unique_id=None):
         if unique_id is not None:
             msg["unique_id"] = unique_id
 
-        logging.info(f"Converted msg: {msg}, count: {count}")
-        logging.info(f"Got a plugin msg {msg}")
+        logging.debug(f"Converted msg: {msg}, count: {count}")
         enqueue(plugin_q, handler_obj.handle, msg)
 
 
