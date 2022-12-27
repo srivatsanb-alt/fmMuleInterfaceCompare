@@ -1113,6 +1113,10 @@ class Handlers:
 
             _, assign_next_task_reason = self.should_assign_next_task(msg.sherpa_name)
 
+            # run optimal_dispatch on ending sherpa's ongoing trip
+            if assign_next_task_reason == "end_ongoing_trip":
+                self.run_optimal_dispatch()
+
         response = msg_handler(msg)
 
         if req_ctxt.sherpa_name:
