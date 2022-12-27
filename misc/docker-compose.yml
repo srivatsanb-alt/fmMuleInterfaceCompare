@@ -50,4 +50,13 @@ services:
     restart: always
     links:
       - fleet_manager
+      - registry
+    network_mode: bridge
+  
+  registry:
+    restart: always
+    image: registry:2
+    container_name: fm_docker_registry
+    expose:
+      - 5000
     network_mode: bridge

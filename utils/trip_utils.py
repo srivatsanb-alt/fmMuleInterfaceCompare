@@ -1,6 +1,10 @@
+import sys
+import os
 from models.trip_models import Trip, OngoingTrip, TripAnalytics
 from models.db_session import session
 from utils import util
+
+sys.path.append(os.environ["MULE_ROOT"])
 from utils.fleet_utils import get_table_as_dict
 
 

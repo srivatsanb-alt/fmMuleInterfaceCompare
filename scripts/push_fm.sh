@@ -115,8 +115,12 @@ if [ $cert_reqd == 1 ]; then
 fi
 
 BRANCH=$(git rev-parse --abbrev-ref HEAD)
+GIT_COMMIT="$(git rev-parse HEAD)"
 GIT_TAG="$(git rev-parse HEAD) $(git diff --quiet || echo 'dirty')"
-FM_IMAGE_INFO="Image built on $USER@$(hostname)_from $GIT_TAG branch $BRANCH_$(date)"
+IS_DIRTY="$(git diff --quiet || echo 'dirty')"
+FM_IMAGE_INFO="FM image built on $USER@$(hostname) branch $BRANCH $GIT_COMMIT (tags $GIT_TAG) IS_DIRTY $IS_DIRTY $(date)" 
+
+
 echo "FM_IMAGE_INFO: $FM_IMAGE_INFO"
 
 echo "Building fleet manager docker image"
@@ -126,7 +130,7 @@ if [ $build_base == 1 ] ; then
   docker image build -t fleet_manager_base:dev -f docker_files/Dockerfile.base .
   docker pull nginx:1.14.0
   docker pull postgres:14.0
-
+  docker pull registry:2
 }
 else
 {
