@@ -107,6 +107,7 @@ async def sherpa_summary(sherpa_name: str, user_name=Depends(get_user_from_heade
     response.update({"recent_events": {"events": result}})
     sherpa: Sherpa = session.get_sherpa(sherpa_name)
     response.update({"sherpa": get_table_as_dict(Sherpa, sherpa)})
+    response.update({"fleet_name": sherpa.fleet.name})
     sherpa_status: SherpaStatus = session.get_sherpa_status(sherpa_name)
     response.update({"sherpa_status": get_table_as_dict(SherpaStatus, sherpa_status)})
 
