@@ -14,7 +14,7 @@ import os
 router = APIRouter(responses={404: {"description": "Not found"}}, prefix="/api/v1")
 
 
-@router.get("/api/v1/site_info")
+@router.get("/site_info")
 async def site_info(user_name=Depends(get_user_from_header)):
 
     if not user_name:
@@ -92,7 +92,7 @@ async def master_data(
     return response
 
 
-@router.get("/api/v1/sherpa_summary/{sherpa_name}")
+@router.get("/sherpa_summary/{sherpa_name}")
 async def sherpa_summary(sherpa_name: str, user_name=Depends(get_user_from_header)):
     response = {}
     if not user_name:
