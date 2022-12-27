@@ -28,7 +28,13 @@ def send_job_updates():
     logger = logging.getLogger("plugin_ies")
     while True:
         with session_maker() as db_session:
-            all_active_trips = db_session.query(TripsIES).filter(TripsIES.status != TripStatus.CANCELLED).filter(TripsIES.status != TripStatus.SUCCEEDED).filter(TripsIES.status != TripStatus.FAILED).all()
+            all_active_trips = (
+                db_session.query(TripsIES)
+                .filter(TripsIES.status != TripStatus.CANCELLED)
+                .filter(TripsIES.status != TripStatus.SUCCEEDED)
+                .filter(TripsIES.status != TripStatus.FAILED)
+                .all()
+            )
             for trip in all_active_trips:
                 # send_trip status req to FM using trip ID
                 req_json = {"trip_ids": [trip.trip_id]}
@@ -47,20 +53,28 @@ def send_job_updates():
                             "messageType": "JobUpdate",
                             "externalReferenceId": trip.externalReferenceId,
                             "lastCompletedTask": {
-                                "ActionName": trip.actions[next_idx_aug - 1] if next_idx_aug is not None else "",
-                                "LocationId": trip.locations[next_idx_aug - 1] if next_idx_aug is not None else "",
+                                "ActionName": trip.actions[next_idx_aug - 1]
+                                if next_idx_aug is not None
+                                else "",
+                                "LocationId": trip.locations[next_idx_aug - 1]
+                                if next_idx_aug is not None
+                                else "",
                             },
-                            "jobStatus": IES_JOB_STATUS_MAPPING[trip_status]
+                            "jobStatus": IES_JOB_STATUS_MAPPING[trip_status],
                         }
                         logging.info(f"DB status: {trip.status}")
                         logging.info(f"FM Req status: {trip_status}")
 
                         if trip.status != trip_status:
-                            logger.info(f"trip_id: {trip_id}, FM_response_status: {trip_status}, db_status: {trip.status}")
+                            logger.info(
+                                f"trip_id: {trip_id}, FM_response_status: {trip_status}, db_status: {trip.status}"
+                            )
                             send_msg(msg_to_ies)
                             trip.status = trip_status
                         elif trip.status == TripStatus.EN_ROUTE:
-                            logger.info(f"Trip status: {trip.status}, sending continuous updates!")
+                            logger.info(
+                                f"Trip status: {trip.status}, sending continuous updates!"
+                            )
                             send_msg(msg_to_ies)
 
             db_session.commit()
