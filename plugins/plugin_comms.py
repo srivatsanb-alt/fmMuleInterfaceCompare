@@ -110,5 +110,8 @@ def get_fm_url(endpoint, query):
         "station_info": os.path.join(
             "http://", fm_ip, "api/v1/station/", str(query), "info"
         ),
+        "sherpa_summary": os.path.join(
+            "http://", fm_ip, "api/v1/sherpa_summary/", str(query)
+        )
     }
     return fm_endpoints.get(endpoint, None)
