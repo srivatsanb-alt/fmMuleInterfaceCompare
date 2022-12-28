@@ -365,13 +365,18 @@ class Handlers:
             )
             return
 
-    def add_dispatch_start_to_ongoing_trip(self, ongoing_trip):
+    def add_dispatch_start_to_ongoing_trip(self, ongoing_trip,timeout=False):
         ongoing_trip.add_state(TripState.WAITING_STATION_DISPATCH_START)
-        sound_msg = PeripheralsReq(
+        dispatch_mesg=DispatchButtonReq(value=True)
+        if timeout:
+            dispatch_timeout = Config.get_dispatch_timeout()
+            dispatch_mesg=DispatchButtonReq(value=True,timeout=dispatch_timeout)
+        sherpa_action_msg = PeripheralsReq(
+            dispatch_button=dispatch_mesg,
             speaker=SpeakerReq(sound=SoundEnum.wait_for_dispatch, play=True),
             indicator=IndicatorReq(pattern=PatternEnum.wait_for_dispatch, activate=True),
         )
-        response = send_msg_to_sherpa(ongoing_trip.trip.sherpa, sound_msg)
+        response = send_msg_to_sherpa(ongoing_trip.trip.sherpa, sherpa_action_msg)
         get_logger(ongoing_trip.sherpa_name).info(
             f"sent speaker and indicator request to {ongoing_trip.sherpa_name}: response status {response.status_code}"
         )
@@ -448,7 +453,8 @@ class Handlers:
 
         if StationProperties.DISPATCH_NOT_REQD not in station.properties:
             get_logger(sherpa_name).info(f"{sherpa_name} reached a dispatch station")
-            self.add_dispatch_start_to_ongoing_trip(ongoing_trip)
+            timeout=StationProperties.DISPATCH_OPTIONAL in station.properties
+            self.add_dispatch_start_to_ongoing_trip(ongoing_trip,timeout)
             session.add_notification(
                 [sherpa_name],
                 f"Need a dispatch button press on {sherpa_name} which is parked at {ongoing_trip.curr_station()}",

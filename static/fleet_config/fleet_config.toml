@@ -34,3 +34,6 @@ hwid=" "
 api_key=""
 fleet_name=""
 
+[fleet.stations]
+dispatch_timeout=10.0
+
