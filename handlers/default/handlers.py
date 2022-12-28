@@ -706,20 +706,12 @@ class Handlers:
     def handle_sherpa_img_update(self, req: SherpaImgUpdateCtrlReq):
         sherpa_name = req.sherpa_name
         sherpa = session.get_sherpa(sherpa_name)
-        fleet_config = Config.read_config()
-        # ip_address = os.getenv("FM_SERVER_IP")
-        image_tag = os.getenv("MULE_IMAGE_ID")
-        fm_host_name = os.getenv("HOSTNAME")
+        image_tag = "fm"
+        fm_server_username = os.getenv("FM_SERVER_USERNAME")
         time_zone = os.getenv("PGTZ")
-
-        # temp sol - needs modification - all_server_ips
-        ip_address = fleet_config["fleet"]["all_server_ips"][0]
-        registry_port = fleet_config["docker_registry"]["port"]
         image_update_req: SherpaImgUpdate = SherpaImgUpdate(
-            ip_address=ip_address,
             image_tag=image_tag,
-            registry_port=registry_port,
-            fm_host_name=fm_host_name,
+            fm_server_username=fm_server_username,
             time_zone=time_zone,
         )
         get_logger().info(
@@ -1126,6 +1118,10 @@ class Handlers:
                 return
 
             _, assign_next_task_reason = self.should_assign_next_task(msg.sherpa_name)
+
+            # run optimal_dispatch on ending sherpa's ongoing trip
+            if assign_next_task_reason == "end_ongoing_trip":
+                self.run_optimal_dispatch()
 
         response = msg_handler(msg)
 

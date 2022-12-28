@@ -14,7 +14,7 @@ import shutil
 def backup_data():
     logging.getLogger().info("Starting periodic data_backup")
     fm_backup_path = os.path.join(os.getenv("FM_MAP_DIR"), "data_backup")
-    start_time = datetime.datetime.now().strftime("%d-%m-%Y-%H-%M-%S")
+    start_time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
     current_data = f"{start_time}_data"
 
     if not os.path.exists(fm_backup_path):
@@ -35,6 +35,9 @@ def backup_data():
             valid_dbs.append(database_name)
 
     logs_save_path = os.path.join(fm_backup_path, current_data, "logs")
+
+    with open(os.path.join(fm_backup_path, current_data, "info.txt"), "w") as info_file:
+        info_file.write(os.getenv("FM_IMAGE_INFO"))
 
     while True:
         for db_name in valid_dbs:

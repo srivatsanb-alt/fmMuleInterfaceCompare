@@ -80,12 +80,6 @@ class Config:
         return cls.config["fleet"]["comms"]
 
     @classmethod
-    def get_rq_job_params(cls):
-        if not cls.config:
-            cls.config = cls.read_config()
-        return cls.config["rq"]["jobs"]
-
-    @classmethod
     def get_all_fleets(cls):
         if not cls.config:
             cls.config = cls.read_config()

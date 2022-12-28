@@ -27,7 +27,7 @@
 2.  Checkout to release/branch, update mule submodule.
     ```markdown
     git checkout <branch>
-    git submodule update --recursive
+    git submodule update --remote --merge
     ```
 
 3. Setup cert files - You will need python installed in your machine to carry out this step
@@ -86,7 +86,7 @@
     ls > map_files.txt
     ```  
 
-5. If server has internet, allows you to download open-source packages (Recommended to use step 6 instead of this step) 
+5. If server has internet, allows you to download open-source packages (Recommended to use step 6 instead of this step)
 
     a. If you want to setup fm on a remote location, run push_fm script to create all the docker images on the server
     ```markdown
@@ -194,7 +194,7 @@ sudo systemctl stop ati_mule_maintenance
 sudo systemctl disable ati_mule_maintenance
 sudo rm /opt/ati/run/maintenance_req_fifo
 
-#start maintenance service 
+#start maintenance service
 ssh into mule
 cd /etc/systemd
 sudo chmod ugo+rwx mmts_utils.sh
@@ -210,7 +210,7 @@ d. Setup mule nginx container (if not already present)
 1. Check if mule nginx container is running: (below command should show container running)
     ```markdown
     ssh into mule
-    docker ps | grep mule_nginx 
+    docker ps | grep mule_nginx
     ```
 
 2. Build container (if nginx container is not present):
@@ -245,7 +245,7 @@ a. Add IES plugin to static/fleet_config/plugin_config.toml
 all_plugins=["ies"]
 ```
 
-b. Modify static/plugin_ies/locationID_station_mapping.json file. Map IES station names to corresponding ati station names as the template indicates. 
+b. Modify static/plugin_ies/locationID_station_mapping.json file. Map IES station names to corresponding ati station names as the template indicates.
 ```markdown
 {
     "Warehouse_Pick": "ECFA start",

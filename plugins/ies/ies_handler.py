@@ -7,9 +7,10 @@ import pytz
 
 sys.path.append("/app")
 from plugins.plugin_comms import send_req_to_FM
-from .ies_utils import TripsIES, session
+from .ies_utils import TripsIES, session, JobCreate, JobCancel, JobQuery
 from utils.util import str_to_dt, str_to_dt_UTC, dt_to_str
 from models.trip_models import TripStatus
+from models.base_models import JsonMixin
 
 
 IES_JOB_STATUS_MAPPING = {
@@ -41,8 +42,8 @@ class IES_HANDLER:
         pub = redis.from_url(os.getenv("FM_REDIS_URI"), decode_responses=True)
         pub.publish("channel:plugin_ies", str(msg))
 
-    def handle_JobCreate(self, msg):
-
+    def handle_JobCreate(self, msg: dict):
+        job_create = JobCreate.from_dict(msg)
         msg_to_ies = {
             "messageType": "JobCreate",
             "externalReferenceId": msg["externalReferenceId"],
@@ -51,18 +52,18 @@ class IES_HANDLER:
 
         trip_ies: TripsIES = (
             session.query(TripsIES)
-            .filter(TripsIES.externalReferenceId == msg["externalReferenceId"])
+            .filter(TripsIES.externalReferenceId == job_create.externalReferenceId)
             .one_or_none()
         )
         if trip_ies:
             self.send_msg(msg_to_ies)
-            self.logger.info(f"Reference ID {msg['externalReferenceId']} already exists, can't book trip!")
+            self.logger.info(f"Reference ID {job_create.externalReferenceId} already exists, can't book trip!")
             return
 
         endpoint = "trip_book"
         routes = []
-        priority = msg.get("priority", 1.0)
-        for task in msg["taskList"]:
+        priority = job_create.priority
+        for task in job_create.taskList:
             try:
                 station = self.locationID_station_mapping[task["LocationId"]]
                 routes.append(station)
@@ -79,7 +80,7 @@ class IES_HANDLER:
             self.plugin_name, endpoint, req_type="post", req_json=req_json
         )
 
-        self.logger.info(f"Trip book response from FM {response_json}")
+        self.logger.debug(f"Trip book response from FM {response_json}")
 
         if response_json is not None:
             msg_to_ies["jobStatus"] = "ACCEPTED"
@@ -87,24 +88,24 @@ class IES_HANDLER:
                 trip = TripsIES(
                     trip_id=trip_id,
                     booking_id=trip_details["booking_id"],
-                    externalReferenceId=msg["externalReferenceId"],
-                    status=trip_details["status"],
-                    actions=[tr.get("ActionName", None) for tr in msg["taskList"]],
-                    locations=[tr["LocationId"] for tr in msg["taskList"]],
+                    externalReferenceId=job_create.externalReferenceId,
+                    status="None",
+                    actions=[task.get("ActionName", None) for task in job_create.taskList],
+                    locations=[task["LocationId"] for task in job_create.taskList],
                 )
                 session.add(trip)
-                self.logger.info(f"adding trip entry to db {trip.__dict__}")
+                self.logger.debug(f"adding trip entry to db {trip.__dict__}")
         else:
             self.logger.info(f"Req to FM failed, response json: {response_json} and response code: {status_code}")
 
         self.send_msg(msg_to_ies)
 
     def handle_JobCancel(self, msg):
-
+        job_cancel = JobCancel.from_dict(msg)
         if not msg.get("externalReferenceId"):
             raise ValueError("JobCancel request sent without externalReferenceId")
 
-        ext_ref_id = msg["externalReferenceId"]
+        ext_ref_id = job_cancel.externalReferenceId
 
         trip_ies: TripsIES = (
             session.query(TripsIES)
@@ -136,7 +137,7 @@ class IES_HANDLER:
                 self.plugin_name, "trip_status", req_type="post", req_json=status_req_json
             )
 
-            self.logger.info(
+            self.logger.debug(
                 f"trip_status_response {trip_status_response}, status_code: {status_code}"
             )
 
@@ -163,8 +164,7 @@ class IES_HANDLER:
                     "externalReferenceId": ext_ref_id,
                     "jobStatus": "CANCELLED",
                 }
-
-                trip_ies.status = TripStatus.CANCELLED
+                # trip_ies.status = TripStatus.CANCELLED
                 self.logger.info(
                     f"successfully deleted trip with externalReferenceId: {ext_ref_id}"
                 )
@@ -177,11 +177,11 @@ class IES_HANDLER:
         self.send_msg(msg_to_ies)
 
     def handle_JobQuery(self, msg):
-
+        job_query = JobQuery.from_dict(msg)
         tz = os.getenv("PGTZ")
         # enforcing UTC time zone info here (+0000), need to check Bosch's msg format!
-        trips_from = str_to_dt_UTC(msg["since"] + " +0000").astimezone(pytz.timezone(tz))  # conv str to dt
-        trips_till = str_to_dt_UTC(msg["until"] + " +0000").astimezone(pytz.timezone(tz))  # UTC time to local time
+        trips_from = str_to_dt_UTC(job_query.since + " +0000").astimezone(pytz.timezone(tz))  # conv str to dt
+        trips_till = str_to_dt_UTC(job_query.until + " +0000").astimezone(pytz.timezone(tz))  # UTC time to local time
 
         req_json = {"booked_from": dt_to_str(trips_from), "booked_till": dt_to_str(trips_till)}
 
@@ -200,11 +200,10 @@ class IES_HANDLER:
                 if trip_ies:
                     trip_status = trip_details["trip_details"]["status"]
                     next_idx_aug = trip_details["trip_details"]["next_idx_aug"]
-                    self.logger.info(f"Trip status, next_idx = {trip_status, next_idx_aug}")
+                    self.logger.debug(f"Trip status, next_idx = {trip_status, next_idx_aug}")
 
                     if next_idx_aug == 0:
                         next_idx_aug = None
-                    self.logger.info(f"trip_status == TripStatus.SUCCEEDED is {trip_status == TripStatus.SUCCEEDED}")
                     if trip_status == TripStatus.SUCCEEDED:
                         next_idx_aug = 0
 

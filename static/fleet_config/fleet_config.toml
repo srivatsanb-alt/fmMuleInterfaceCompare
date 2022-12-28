@@ -4,9 +4,6 @@ mule_heartbeat_interval=60
 [frontenduser.admin]
 hashed_password="03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4"
 
-[docker_registry]
-port=443
-
 [fleet.simulator]
 simulate=false
 book_trips=false
@@ -24,15 +21,15 @@ handler_class="Handlers"
 sherpa_port="5000"
 http_scheme="https"
 all_server_ips=["127.0.0.1"]
-fleet_names=[" "]
+fleet_names=["sample_fleet"]
 customer=" "
 site=" "
 location=" "
 
-[fleet_sherpas.<sherpa_name>]
-hwid=" "
-api_key=""
-fleet_name=""
+[fleet_sherpas.sample_sherpa]
+hwid="XYZ"
+api_key="ABC"
+fleet_name="sample_fleet"
 
 [fleet.stations]
 dispatch_timeout=10.0

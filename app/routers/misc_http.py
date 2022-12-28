@@ -14,7 +14,7 @@ import os
 router = APIRouter(responses={404: {"description": "Not found"}}, prefix="/api/v1")
 
 
-@router.get("/api/v1/site_info")
+@router.get("/site_info")
 async def site_info(user_name=Depends(get_user_from_header)):
 
     if not user_name:
@@ -92,7 +92,7 @@ async def master_data(
     return response
 
 
-@router.get("/api/v1/sherpa_summary/{sherpa_name}")
+@router.get("/sherpa_summary/{sherpa_name}")
 async def sherpa_summary(sherpa_name: str, user_name=Depends(get_user_from_header)):
     response = {}
     if not user_name:
@@ -107,6 +107,7 @@ async def sherpa_summary(sherpa_name: str, user_name=Depends(get_user_from_heade
     response.update({"recent_events": {"events": result}})
     sherpa: Sherpa = session.get_sherpa(sherpa_name)
     response.update({"sherpa": get_table_as_dict(Sherpa, sherpa)})
+    response.update({"fleet_name": sherpa.fleet.name})
     sherpa_status: SherpaStatus = session.get_sherpa_status(sherpa_name)
     response.update({"sherpa_status": get_table_as_dict(SherpaStatus, sherpa_status)})
 

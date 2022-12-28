@@ -3,10 +3,34 @@ from sqlalchemy import Integer, String, Column, ARRAY
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
 import os
-
+from dataclasses import dataclass
 
 sys.path.append("/app")
 from models.base_models import Base, TimestampMixin
+from models.base_models import JsonMixin
+
+
+@dataclass
+class JobCreate(JsonMixin):
+    messageType: str
+    externalReferenceId: str
+    taskList: list
+    priority: int = 1
+    jobStatus = str
+
+
+@dataclass
+class JobCancel(JsonMixin):
+    messageType: str
+    externalReferenceId: str
+    jobStatus: str
+
+
+@dataclass
+class JobQuery(JsonMixin):
+    messageType: str
+    since: str
+    until: str
 
 
 # IES DB models

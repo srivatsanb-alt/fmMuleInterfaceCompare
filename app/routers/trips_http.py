@@ -8,11 +8,9 @@ from app.routers.dependencies import (
     close_session_and_raise_error,
     close_session,
 )
-<<<<<<< HEAD
-=======
+
 from typing import Union
 from fastapi import APIRouter, Depends
->>>>>>> origin/FM_v2.0
 from models.request_models import (
     BookingReq,
     TripStatusReq,
@@ -20,11 +18,8 @@ from models.request_models import (
     DeleteBookedTripReq,
     DeleteOptimalDispatchAssignments,
 )
-<<<<<<< HEAD
-from models.trip_models import TripStatus, PendingTrip, Trip, TripAnalytics
-=======
+
 from models.trip_models import Trip, TripAnalytics
->>>>>>> origin/FM_v2.0
 from models.db_session import session
 from utils.util import str_to_dt
 import utils.trip_utils as tu

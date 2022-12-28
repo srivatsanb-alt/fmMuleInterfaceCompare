@@ -1,6 +1,17 @@
 from fastapi import FastAPI
 import os
 import toml
+import json
+import redis
+
+plugins_workers_db_init = False
+redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
+
+# app cannot come up until db and workers are initialised
+while not plugins_workers_db_init:
+    plugin_init = redis_conn.get("plugins_workers_db_init")
+    if plugin_init is not None:
+        plugins_workers_db_init = json.loads(plugin_init)
 
 app = FastAPI()
 
