@@ -1,16 +1,11 @@
-import pandas as pd
 from typing import Union
-from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import HTMLResponse
+from fastapi import APIRouter, Depends
 from app.routers.dependencies import (
     get_user_from_header,
     process_req_with_response,
     close_session_and_raise_error,
     close_session,
 )
-
-from typing import Union
-from fastapi import APIRouter, Depends
 from models.request_models import (
     BookingReq,
     TripStatusReq,
@@ -18,7 +13,6 @@ from models.request_models import (
     DeleteBookedTripReq,
     DeleteOptimalDispatchAssignments,
 )
-
 from models.trip_models import Trip, TripAnalytics
 from models.db_session import session
 from utils.util import str_to_dt
