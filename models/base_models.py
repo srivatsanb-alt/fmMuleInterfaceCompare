@@ -48,3 +48,4 @@ class StationProperties(enum.Enum):
     EXCLUSIVE_PARKING = 8
     CONVEYOR = 9
     CHUTE = 10
+    DISPATCH_OPTIONAL = 11

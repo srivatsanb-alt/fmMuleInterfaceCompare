@@ -102,6 +102,14 @@ class Config:
         if not cls.config:
             cls.config = cls.read_config()
         return cls.config["optimal_dispatch"]
+   
+   @classmethod
+    def get_dispatch_timeout(cls):
+        #default is set to 10.0 seconds
+        if not cls.config:
+            cls.config = cls.read_config()
+        station_config = cls.config["fleet"]["stations"]
+        return station_config.get("dispatch_timeout", 10.0)
 
 
 if __name__ == "__main__":

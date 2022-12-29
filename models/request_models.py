@@ -62,6 +62,7 @@ class IndicatorReq(BaseModel):
 
 class DispatchButtonReq(BaseModel):
     value: bool
+    timeout: float
 
 
 @pydantic.dataclasses.dataclass
@@ -321,6 +322,7 @@ class PeripheralsReq(FMReq):
     conveyor: Optional[ConveyorReq]
     speaker: Optional[SpeakerReq]
     indicator: Optional[IndicatorReq]
+    dispatch_button: Optional[DispatchButtonReq]
 
 
 class PauseResumeReq(FMReq):
