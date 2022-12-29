@@ -22,3 +22,5 @@ bazel-*
 .env
 .pytest_cache
 logs/
+static/
+!static/certs
