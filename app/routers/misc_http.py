@@ -92,8 +92,10 @@ async def master_data(
     return response
 
 
-@router.get("/sherpa_summary/{sherpa_name}")
-async def sherpa_summary(sherpa_name: str, user_name=Depends(get_user_from_header)):
+@router.get("/sherpa_summary/{sherpa_name}/{viewable}")
+async def sherpa_summary(
+    sherpa_name: str, viewable: int, user_name=Depends(get_user_from_header)
+):
     response = {}
     if not user_name:
         close_session_and_raise_error(session, "Unknown requester")
