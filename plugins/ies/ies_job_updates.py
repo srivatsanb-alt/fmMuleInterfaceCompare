@@ -46,7 +46,7 @@ def send_agv_update_and_fault(sherpa_name, externalReferenceId):
                 "externalReferenceId": externalReferenceId,
                 "vehicleId": sherpa_summary["sherpa"]["hwid"],
                 "vehicleTypeID": "ati-sherpa",
-                "errorMessage": sherpa_summary["sherpa_status"]["error"],
+                "errorMessage": "ati-sherpa in error",
             }
             send_msg(agv_fault)
         else:
