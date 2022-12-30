@@ -62,7 +62,7 @@ class IndicatorReq(BaseModel):
 
 class DispatchButtonReq(BaseModel):
     value: bool
-    timeout: float
+    timeout: Optional[float]
 
 
 @pydantic.dataclasses.dataclass
