@@ -29,11 +29,15 @@ class DBSession:
     def __enter__(self):
         return self
 
-    def __exit__(self, *args, **kwargs):
-        self.close()
+    def __exit__(self, exc_type, exc_value, traceback):
+        if exc_type or exc_value or traceback:
+            self.close(commit=False)
+        else:
+            self.close()
 
-    def close(self):
-        self.session.commit()
+    def close(self, commit=True):
+        if commit:
+            self.session.commit()
         self.session.close()
 
     def close_on_error(self):
