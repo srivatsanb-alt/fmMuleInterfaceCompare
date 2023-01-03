@@ -16,7 +16,6 @@ import sys
 import json
 import os
 import uvicorn
-from models.db_session import session
 from multiprocessing import Process
 import redis
 import numpy as np
@@ -54,37 +53,37 @@ class MuleAPP:
 
     def host_all_mule_app(self):
         self.kill_all_mule_app()
-        all_sherpas = session.get_all_sherpas()
+        with DBSession() as dbsession:
+            all_sherpas = dbsession.get_all_sherpas()
 
-        sys.path.append(os.environ["MULE_ROOT"])
-        os.environ["ATI_SUB"] = "ipc:////app/out/zmq_sub"
-        os.environ["ATI_PUB"] = "ipc:////app/out/zmq_sub"
-        redis_db = redis.from_url(os.getenv("FM_REDIS_URI"))
+            sys.path.append(os.environ["MULE_ROOT"])
+            os.environ["ATI_SUB"] = "ipc:////app/out/zmq_sub"
+            os.environ["ATI_PUB"] = "ipc:////app/out/zmq_sub"
+            redis_db = redis.from_url(os.getenv("FM_REDIS_URI"))
 
-        # mule looks for control_init to accept move_to req
-        redis_db.set("control_init", json.dumps(True))
+            # mule looks for control_init to accept move_to req
+            redis_db.set("control_init", json.dumps(True))
 
-        from mule.ati.fastapi.mule_app import mule_app
+            from mule.ati.fastapi.mule_app import mule_app
 
-        port = 5001
-        for sherpa in all_sherpas:
-            config = uvicorn.Config(mule_app, host="0.0.0.0", port=port, reload=True)
-            sherpa.ip_address = "0.0.0.0"
-            sherpa.port = str(port)
-            self.sherpa_apps.append(
-                Process(target=self.host_uvicorn, args=[config], daemon=True)
-            )
-            self.sherpa_apps[-1].start()
-            port = port + 1
-
-        session.close()
+            port = 5001
+            for sherpa in all_sherpas:
+                config = uvicorn.Config(mule_app, host="0.0.0.0", port=port, reload=True)
+                sherpa.ip_address = "0.0.0.0"
+                sherpa.port = str(port)
+                self.sherpa_apps.append(
+                    Process(target=self.host_uvicorn, args=[config], daemon=True)
+                )
+                self.sherpa_apps[-1].start()
+                port = port + 1
 
     def kill_all_mule_app(self):
-        all_sherpas = session.get_all_sherpas()
-        for sherpa in all_sherpas:
-            sherpa.port = None
-        for proc in self.sherpa_apps:
-            proc.kill()
+        with DBSession() as dbsession:
+            all_sherpas = dbsession.get_all_sherpas()
+            for sherpa in all_sherpas:
+                sherpa.port = None
+            for proc in self.sherpa_apps:
+                proc.kill()
 
 
 class FleetSimulator:
@@ -99,23 +98,25 @@ class FleetSimulator:
             self.router_modules.update({fleet_name: RouterModule(map_path)})
 
     def initialize_sherpas(self):
-        sherpas: List[Sherpa] = session.get_all_sherpas()
-        stations: List[Station] = session.get_all_stations()
 
-        for sherpa in sherpas:
-            self.send_verify_fleet_files_req(sherpa.name)
-            print(f"sending verify fleet files req sherpa: {sherpa.name}")
+        with DBSession() as dbsession:
+            sherpas: List[Sherpa] = dbsession.get_all_sherpas()
+            stations: List[Station] = dbsession.get_all_stations()
 
-        time.sleep(5)
+            for sherpa in sherpas:
+                self.send_verify_fleet_files_req(sherpa.name)
+                print(f"sending verify fleet files req sherpa: {sherpa.name}")
 
-        for sherpa in sherpas:
-            station_fleet_name = None
-            while sherpa.fleet.name != station_fleet_name:
-                i = np.random.randint(0, len(stations))
-                station_fleet_name = stations[i].fleet.name
+                time.sleep(5)
 
-            st = stations[i]
-            self.send_sherpa_status(sherpa.name, mode="fleet", pose=st.pose)
+                for sherpa in sherpas:
+                    station_fleet_name = None
+                    while sherpa.fleet.name != station_fleet_name:
+                        i = np.random.randint(0, len(stations))
+                        station_fleet_name = stations[i].fleet.name
+
+                    st = stations[i]
+                    self.send_sherpa_status(sherpa.name, mode="fleet", pose=st.pose)
 
     def send_verify_fleet_files_req(self, sherpa_name):
         generic_q = Queues.queues_dict["generic_handler"]
@@ -260,28 +261,30 @@ class FleetSimulator:
 
     def send_reached_msg(self, sherpa_name):
         queue = Queues.queues_dict["generic_handler"]
-        ongoing_trip: OngoingTrip = session.get_ongoing_trip(sherpa_name)
-        st_pose = session.get_station(ongoing_trip.trip_leg.to_station).pose
-        reached_req = ReachedReq(
-            timestamp=time.time(),
-            trip_id=ongoing_trip.trip_id,
-            trip_leg_id=ongoing_trip.trip_leg_id,
-            destination_pose=st_pose,
-            destination_name=ongoing_trip.trip_leg.to_station,
-        )
-        reached_req.source = sherpa_name
-        print(f"will send a reached msg for {sherpa_name}, {reached_req}")
-        enqueue(queue, handle, self.handler_obj, reached_req, ttl=1)
+
+        with DBSession() as dbsession:
+            ongoing_trip: OngoingTrip = dbsession.get_ongoing_trip(sherpa_name)
+            st_pose = dbsession.get_station(ongoing_trip.trip_leg.to_station).pose
+            reached_req = ReachedReq(
+                timestamp=time.time(),
+                trip_id=ongoing_trip.trip_id,
+                trip_leg_id=ongoing_trip.trip_leg_id,
+                destination_pose=st_pose,
+                destination_name=ongoing_trip.trip_leg.to_station,
+            )
+            reached_req.source = sherpa_name
+            print(f"will send a reached msg for {sherpa_name}, {reached_req}")
+            enqueue(queue, handle, self.handler_obj, reached_req, ttl=1)
 
     def act_on_sherpa_events(self):
         simulated_trip_legs = []
         print("Will act on sherpa events")
-        with DBSession() as session:
+        with DBSession() as dbsession:
             while True:
-                sherpas = session.get_all_sherpas()
+                sherpas = dbsession.get_all_sherpas()
                 for sherpa in sherpas:
-                    session.session.refresh(sherpa)
-                    trip_leg = session.get_trip_leg(sherpa.name)
+                    dbsession.session.refresh(sherpa)
+                    trip_leg = dbsession.get_trip_leg(sherpa.name)
                     if trip_leg:
                         if trip_leg.id not in simulated_trip_legs:
                             print(

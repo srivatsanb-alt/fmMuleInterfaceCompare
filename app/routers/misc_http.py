@@ -1,14 +1,12 @@
 from app.routers.dependencies import (
     get_user_from_header,
-    close_session_and_raise_error,
-    close_session,
+    raise_error,
 )
 from models.request_models import MasterDataInfo, RoutePreview
 from models.fleet_models import SherpaEvent, Sherpa, SherpaStatus
 from utils.util import get_table_as_dict
-
 from fastapi import APIRouter, Depends
-from models.db_session import session
+from models.db_session import DBSession
 import os
 
 router = APIRouter(responses={404: {"description": "Not found"}}, prefix="/api/v1")
@@ -18,17 +16,14 @@ router = APIRouter(responses={404: {"description": "Not found"}}, prefix="/api/v
 async def site_info(user_name=Depends(get_user_from_header)):
 
     if not user_name:
-        close_session_and_raise_error(
-            session, "Sherpa not yet connected to the fleet manager"
-        )
+        raise_error("Sherpa not yet connected to the fleet manager")
 
     timezone = os.environ["PGTZ"]
 
-    all_fleets = session.get_all_fleets()
-    fleet_list = [fleet.name for fleet in all_fleets]
-    response = {"fleet_names": fleet_list, "timezone": timezone}
-
-    close_session(session)
+    with DBSession() as session:
+        all_fleets = session.get_all_fleets()
+        fleet_list = [fleet.name for fleet in all_fleets]
+        response = {"fleet_names": fleet_list, "timezone": timezone}
 
     return response
 
@@ -39,55 +34,53 @@ async def master_data(
 ):
 
     if not user_name:
-        close_session_and_raise_error(
-            session, "Sherpa not yet connected to the fleet manager"
-        )
-    all_fleets = session.get_all_fleets()
-    fleet_list = [fleet.name for fleet in all_fleets]
+        raise_error("Sherpa not yet connected to the fleet manager")
 
-    if master_data_info.fleet_name not in fleet_list:
-        close_session_and_raise_error(session, "Unknown fleet")
+    with DBSession() as session:
+        all_fleets = session.get_all_fleets()
+        fleet_list = [fleet.name for fleet in all_fleets]
 
-    all_sherpas = session.get_all_sherpas_in_fleet(master_data_info.fleet_name)
-    all_stations = session.get_all_stations_in_fleet(master_data_info.fleet_name)
+        if master_data_info.fleet_name not in fleet_list:
+            raise_error("Unknown fleet")
 
-    response = {}
-    sherpa_list = []
-    station_list = []
+        all_sherpas = session.get_all_sherpas_in_fleet(master_data_info.fleet_name)
+        all_stations = session.get_all_stations_in_fleet(master_data_info.fleet_name)
 
-    if all_sherpas:
-        sherpa_list = [sherpa.name for sherpa in all_sherpas]
+        response = {}
+        sherpa_list = []
+        station_list = []
 
-    if all_stations:
-        station_list = [station.name for station in all_stations]
+        if all_sherpas:
+            sherpa_list = [sherpa.name for sherpa in all_sherpas]
 
-    response.update({"sherpa_list": sherpa_list})
-    response.update({"station_list": station_list})
+        if all_stations:
+            station_list = [station.name for station in all_stations]
 
-    sample_sherpa_status = {}
-    all_sherpa_status = session.get_all_sherpa_status()
-    if len(all_sherpa_status) > 0:
-        sample_sherpa_status.update(
-            {all_sherpa_status[0].sherpa_name: all_sherpa_status[0].__dict__}
-        )
-        sample_sherpa_status[all_sherpa_status[0].sherpa_name].update(
-            all_sherpa_status[0].sherpa.__dict__
-        )
-        response.update({"sample_sherpa_status": sample_sherpa_status})
+        response.update({"sherpa_list": sherpa_list})
+        response.update({"station_list": station_list})
 
-    sample_station_status = {}
-    all_station_status = session.get_all_station_status()
-    if len(all_station_status) > 0:
-        sample_station_status.update(
-            {all_station_status[0].station_name: all_station_status[0].__dict__}
-        )
+        sample_sherpa_status = {}
+        all_sherpa_status = session.get_all_sherpa_status()
+        if len(all_sherpa_status) > 0:
+            sample_sherpa_status.update(
+                {all_sherpa_status[0].sherpa_name: all_sherpa_status[0].__dict__}
+            )
+            sample_sherpa_status[all_sherpa_status[0].sherpa_name].update(
+                all_sherpa_status[0].sherpa.__dict__
+            )
+            response.update({"sample_sherpa_status": sample_sherpa_status})
 
-        sample_station_status[all_station_status[0].station_name].update(
-            all_station_status[0].station.__dict__
-        )
-        response.update({"sample_station_status": sample_station_status})
+        sample_station_status = {}
+        all_station_status = session.get_all_station_status()
+        if len(all_station_status) > 0:
+            sample_station_status.update(
+                {all_station_status[0].station_name: all_station_status[0].__dict__}
+            )
 
-    close_session(session)
+            sample_station_status[all_station_status[0].station_name].update(
+                all_station_status[0].station.__dict__
+            )
+            response.update({"sample_station_status": sample_station_status})
 
     return response
 
@@ -98,22 +91,21 @@ async def sherpa_summary(
 ):
     response = {}
     if not user_name:
-        close_session_and_raise_error(session, "Unknown requester")
+        raise_error("Unknown requester")
 
-    recent_events = session.get_sherpa_events(sherpa_name)
-    result = []
-    for recent_event in recent_events:
-        temp = get_table_as_dict(SherpaEvent, recent_event)
-        result.append(temp)
+    with DBSession() as session:
+        recent_events = session.get_sherpa_events(sherpa_name)
+        result = []
+        for recent_event in recent_events:
+            temp = get_table_as_dict(SherpaEvent, recent_event)
+            result.append(temp)
 
-    response.update({"recent_events": {"events": result}})
-    sherpa: Sherpa = session.get_sherpa(sherpa_name)
-    response.update({"sherpa": get_table_as_dict(Sherpa, sherpa)})
-    response.update({"fleet_name": sherpa.fleet.name})
-    sherpa_status: SherpaStatus = session.get_sherpa_status(sherpa_name)
-    response.update({"sherpa_status": get_table_as_dict(SherpaStatus, sherpa_status)})
-
-    close_session(session)
+        response.update({"recent_events": {"events": result}})
+        sherpa: Sherpa = session.get_sherpa(sherpa_name)
+        response.update({"sherpa": get_table_as_dict(Sherpa, sherpa)})
+        response.update({"fleet_name": sherpa.fleet.name})
+        sherpa_status: SherpaStatus = session.get_sherpa_status(sherpa_name)
+        response.update({"sherpa_status": get_table_as_dict(SherpaStatus, sherpa_status)})
 
     return response
 
@@ -124,12 +116,13 @@ async def get_route_wps(
     user_name=Depends(get_user_from_header),
 ):
     if not user_name:
-        close_session_and_raise_error(session, "Unknown requester")
+        raise_error("Unknown requester")
 
-    stations_poses = []
-    fleet_name = route_preview_req.fleet_name
-    for station_name in route_preview_req.route:
-        station = session.get_station(station_name)
-        stations_poses.append(station.pose)
+    with DBSession() as session:
+        stations_poses = []
+        fleet_name = route_preview_req.fleet_name
+        for station_name in route_preview_req.route:
+            station = session.get_station(station_name)
+            stations_poses.append(station.pose)
 
     return {}

@@ -1,6 +1,6 @@
 from typing import Dict, List
 from core.logs import get_logger
-from models.db_session import DBSession, session
+from models.db_session import DBSession
 from models.fleet_models import SherpaStatus
 from models.trip_models import OngoingTrip, Trip, TripLeg
 from utils.util import generate_random_job_id

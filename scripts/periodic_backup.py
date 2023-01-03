@@ -61,6 +61,8 @@ def backup_data():
                 except:
                     pass
 
+            session.close()
+
         try:
             shutil.rmtree(logs_save_path)
         except:

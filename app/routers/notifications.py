@@ -1,23 +1,11 @@
-from fastapi import (
-    APIRouter,
-    Depends,
-    WebSocket,
-    WebSocketDisconnect,
-    status,
-    HTTPException,
-)
-from models.misc_models import Notifications
+from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, status
 import asyncio
 import logging
-from app.routers.dependencies import (
-    get_user_from_query,
-    close_session_and_raise_error,
-    close_session,
-)
+from app.routers.dependencies import get_user_from_query, raise_error
 import aioredis
 import os
 import ast
-from models.db_session import session
+from models.db_session import DBSession
 from sqlalchemy.orm.attributes import flag_modified
 
 
@@ -29,21 +17,18 @@ async def clear_notification(id: int, token: str, user_name=Depends(get_user_fro
 
     response = {}
     if not user_name:
-        close_session_and_raise_error(session, "Unknown requeter")
+        raise_error("Unknown requeter")
 
-    notification = session.get_notifications_with_id(id)
+    with DBSession() as dbsession:
+        notification = dbsession.get_notifications_with_id(id)
+        if not notification:
+            raise_error("Bad detail")
 
-    if not notification:
-        session.close_on_error()
-        raise HTTPException(status_code=403, detail="Bad detail")
+        if notification.cleared_by is None:
+            notification.cleared_by = []
 
-    if notification.cleared_by is None:
-        notification.cleared_by = []
-
-    notification.cleared_by.append(token)
-    flag_modified(notification, "cleared_by")
-
-    close_session(session, commit=True)
+        notification.cleared_by.append(token)
+        flag_modified(notification, "cleared_by")
 
     return response
 
@@ -52,18 +37,17 @@ async def clear_notification(id: int, token: str, user_name=Depends(get_user_fro
 async def clear_notifications(token: str, user_name=Depends(get_user_from_query)):
     response = {}
     if not user_name:
-        close_session_and_raise_error(session, "Unknown requeter")
+        raise_error("Unknown requeter")
 
-    all_notifications = session.session.query(Notifications).all()
-    for notification in all_notifications:
+    with DBSession() as dbsession:
+        all_notifications = dbsession.get_notifications()
+        for notification in all_notifications:
 
-        if notification.cleared_by is None:
-            notification.cleared_by = []
+            if notification.cleared_by is None:
+                notification.cleared_by = []
 
-        notification.cleared_by.append(token)
-        flag_modified(notification, "cleared_by")
-
-    close_session(session, commit=True)
+            notification.cleared_by.append(token)
+            flag_modified(notification, "cleared_by")
 
     return response
 

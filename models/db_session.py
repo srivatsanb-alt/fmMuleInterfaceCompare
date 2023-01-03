@@ -15,9 +15,7 @@ from models.fleet_models import (
     AvailableSherpas,
 )
 from models.trip_models import OngoingTrip, PendingTrip, Trip, TripLeg, TripAnalytics
-
 from models.visa_models import ExclusionZone, VisaAssignment
-from models.trip_models import TripStatus
 from utils.util import check_if_timestamp_has_passed
 import datetime
 
@@ -382,6 +380,3 @@ class DBSession:
 
     def delete_notification(self, id):
         self.session.query(Notifications).filter(Notifications.id == id).delete()
-
-
-session = DBSession()

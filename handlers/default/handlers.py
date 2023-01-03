@@ -135,7 +135,7 @@ class Handlers:
         get_logger(sherpa_name).info(
             f"{sherpa_name} continuing leg of trip {trip.id} from {ongoing_trip.curr_station()} to {ongoing_trip.next_station()}"
         )
-        response: Response = send_move_msg(sherpa, ongoing_trip, next_station)
+        response: Response = send_move_msg(self.session, sherpa, ongoing_trip, next_station)
         get_logger(sherpa_name).info(
             f"received from {sherpa_name}: status {response.status_code}"
         )
@@ -161,7 +161,7 @@ class Handlers:
         hutils.start_leg(ongoing_trip, self.session)
         started_leg_log = f"{sherpa_name} started a trip leg of trip (trip_id: {trip.id}) from {ongoing_trip.curr_station()} to {ongoing_trip.next_station()}"
         get_logger(sherpa_name).info(started_leg_log)
-        response: Response = send_move_msg(sherpa, ongoing_trip, next_station)
+        response: Response = send_move_msg(self.session, sherpa, ongoing_trip, next_station)
         get_logger(sherpa_name).info(
             f"received from {sherpa_name}: status {response.status_code}"
         )
@@ -373,14 +373,16 @@ class Handlers:
             speaker=SpeakerReq(sound=SoundEnum.wait_for_dispatch, play=True),
             indicator=IndicatorReq(pattern=PatternEnum.wait_for_dispatch, activate=True),
         )
-        response = send_msg_to_sherpa(ongoing_trip.trip.sherpa, sherpa_action_msg)
+        response = send_msg_to_sherpa(
+            self.session, ongoing_trip.trip.sherpa, sherpa_action_msg
+        )
         get_logger(ongoing_trip.sherpa_name).info(
             f"sent speaker and indicator request to {ongoing_trip.sherpa_name}: response status {response.status_code}"
         )
 
     def add_auto_hitch_start_to_ongoing_trip(self, ongoing_trip):
         hitch_msg = PeripheralsReq(auto_hitch=HitchReq(hitch=True))
-        response = send_msg_to_sherpa(ongoing_trip.trip.sherpa, hitch_msg)
+        response = send_msg_to_sherpa(self.session, ongoing_trip.trip.sherpa, hitch_msg)
         get_logger(ongoing_trip.sherpa_name).info(
             f"received from {ongoing_trip.sherpa_name}: status {response.status_code}"
         )
@@ -388,7 +390,7 @@ class Handlers:
 
     def add_auto_unhitch_start_to_ongoing_trip(self, ongoing_trip):
         unhitch_msg = PeripheralsReq(auto_hitch=HitchReq(hitch=False))
-        response = send_msg_to_sherpa(ongoing_trip.trip.sherpa, unhitch_msg)
+        response = send_msg_to_sherpa(self.session, ongoing_trip.trip.sherpa, unhitch_msg)
         get_logger(ongoing_trip.sherpa_name).info(
             f"received from {ongoing_trip.sherpa_name}: status {response.status_code}"
         )
@@ -415,7 +417,9 @@ class Handlers:
         conveyor_send_msg = PeripheralsReq(
             conveyor=ConveyorReq(direction=direction, num_units=num_units)
         )
-        response = send_msg_to_sherpa(ongoing_trip.trip.sherpa, conveyor_send_msg)
+        response = send_msg_to_sherpa(
+            self.session, ongoing_trip.trip.sherpa, conveyor_send_msg
+        )
         get_logger(ongoing_trip.sherpa_name).info(
             f"received from {ongoing_trip.sherpa_name}: status {response.status_code}"
         )
@@ -538,7 +542,7 @@ class Handlers:
                 terminate_trip_msg = TerminateTripReq(
                     trip_id=ongoing_trip.trip_id, trip_leg_id=ongoing_trip.trip_leg_id
                 )
-                _ = send_msg_to_sherpa(sherpa, terminate_trip_msg)
+                _ = send_msg_to_sherpa(self.session, sherpa, terminate_trip_msg)
                 get_logger().info(
                     f"Deleted ongoing trip successfully - trip_id: {trip.id}, booking_id: {req.booking_id}"
                 )
@@ -714,7 +718,7 @@ class Handlers:
         get_logger().info(
             f"Sending request {image_update_req} to update docker image on {sherpa_name}"
         )
-        send_msg_to_sherpa(sherpa, image_update_req)
+        send_msg_to_sherpa(self.session, sherpa, image_update_req)
         return
 
     def handle_peripheral_error(self, req: SherpaPeripheralsReq):
@@ -839,7 +843,7 @@ class Handlers:
             speaker=SpeakerReq(sound=SoundEnum.wait_for_dispatch, play=False),
             indicator=IndicatorReq(pattern=PatternEnum.free, activate=True),
         )
-        response = send_msg_to_sherpa(ongoing_trip.trip.sherpa, sound_msg)
+        response = send_msg_to_sherpa(self.session, ongoing_trip.trip.sherpa, sound_msg)
         get_logger(sherpa_name).info(
             f"sent speaker request to {sherpa_name}: response status {response.status_code}"
         )
@@ -870,6 +874,7 @@ class Handlers:
                 get_logger().info(
                     f"Created a pending trip : trip_id: {trip.id}, booking_id: {trip.booking_id}"
                 )
+
         return response
 
     def handle_delete_ongoing_trip(self, req: DeleteOngoingTripReq):
@@ -1013,16 +1018,16 @@ class Handlers:
         get_logger(sherpa.name).info(
             f"passing control request to sherpa {sherpa.name}, {req.dict()} "
         )
-        send_msg_to_sherpa(sherpa, req)
+        send_msg_to_sherpa(self.session, sherpa, req)
 
     def handle_visa_release(self, req: VisaReq, sherpa_name):
         visa_type = req.visa_type
         zone_name = req.zone_name
         if visa_type in [VisaType.UNPARKING, VisaType.SEZ]:
-            unlock_exclusion_zone(zone_name, "station", sherpa_name)
-            unlock_exclusion_zone(zone_name, "lane", sherpa_name)
+            unlock_exclusion_zone(self.session, zone_name, "station", sherpa_name)
+            unlock_exclusion_zone(self.session, zone_name, "lane", sherpa_name)
         elif visa_type == VisaType.TRANSIT:
-            unlock_exclusion_zone(zone_name, "lane", sherpa_name)
+            unlock_exclusion_zone(self.session, zone_name, "lane", sherpa_name)
 
         get_logger(sherpa_name).info(
             f"{sherpa_name} released {visa_type} visa to zone {zone_name}"
@@ -1037,7 +1042,7 @@ class Handlers:
     def handle_visa_request(self, req: VisaReq, sherpa_name):
         visa_type = req.visa_type
         zone_name = req.zone_name
-        granted = maybe_grant_visa(zone_name, visa_type, sherpa_name)
+        granted = maybe_grant_visa(self.session, zone_name, visa_type, sherpa_name)
         granted_message = "granted" if granted else "not granted"
         get_logger(sherpa_name).info(
             f"{sherpa_name} requested {visa_type} visa to zone {zone_name}: {granted_message}"

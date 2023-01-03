@@ -3,15 +3,14 @@ from typing import Union
 from app.routers.dependencies import (
     get_user_from_header,
     process_req_with_response,
-    close_session_and_raise_error,
-    close_session,
+    raise_error,
 )
 from core.constants import FleetStatus, DisabledReason
 from models.fleet_models import Fleet, SherpaStatus
 
 from utils.comms import get_sherpa_url
-from fastapi import APIRouter, Depends, HTTPException
-from models.db_session import session
+from fastapi import APIRouter, Depends
+from models.db_session import DBSession
 from models.request_models import (
     PauseResumeReq,
     SwitchModeReq,
@@ -42,12 +41,11 @@ def handle(handler, msg):
 async def clear_all_visa_assignments(user_name=Depends(get_user_from_header)):
 
     if not user_name:
-        close_session_and_raise_error(session, "Unknown requester")
+        raise_error("Unknown requester")
 
     delete_visas_req = DeleteVisaAssignments()
     response = process_req_with_response(None, delete_visas_req, user_name)
 
-    close_session(session)
     return response
 
 
@@ -60,34 +58,29 @@ async def diagnostics(
     response = {}
 
     if not user_name:
-        close_session_and_raise_error(session, "Unknown requester")
+        raise_error("Unknown requester")
 
     if not entity_name:
-        close_session_and_raise_error(session, "No entity name")
+        raise_error("No entity name")
 
-    sherpa_status = session.get_sherpa_status(entity_name)
-    if not sherpa_status:
-        close_session_and_raise_error(session, "Bad sherpa name")
+    with DBSession() as dbsession:
+        sherpa_status = dbsession.get_sherpa_status(entity_name)
+        if not sherpa_status:
+            raise_error("Bad sherpa name")
 
-    if not sherpa_status.sherpa.ip_address:
-        close_session_and_raise_error(
-            session, "Sherpa not yet connected to the fleet manager"
-        )
+        if not sherpa_status.sherpa.ip_address:
+            raise_error("Sherpa not yet connected to the fleet manager")
 
-    diagnostics_req = DiagnosticsReq(sherpa_name=entity_name)
-    base_url, verify = get_sherpa_url(sherpa_status.sherpa)
-    url = f"{base_url}/{diagnostics_req.endpoint}"
-    response = requests.get(url, verify=verify)
+        diagnostics_req = DiagnosticsReq(sherpa_name=entity_name)
+        base_url, verify = get_sherpa_url(sherpa_status.sherpa)
+        url = f"{base_url}/{diagnostics_req.endpoint}"
+        response = requests.get(url, verify=verify)
 
-    if response.status_code == 200:
-        response = response.json()
+        if response.status_code == 200:
+            response = response.json()
+        else:
+            raise_error(f"Bad response from sherpa, {response.status_code}")
 
-    else:
-        close_session_and_raise_error(
-            session, f"Bad response from sherpa, {response.status_code}"
-        )
-
-    close_session(session)
     return response
 
 
@@ -100,22 +93,20 @@ async def update_sherpa_img(
     response = {}
 
     if not user_name:
-        close_session_and_raise_error(session, "Unknown requester")
+        raise_error("Unknown requester")
 
     if not entity_name:
-        close_session_and_raise_error(session, "No entity name")
+        raise_error("No entity name")
 
-    sherpa_status = session.get_sherpa_status(entity_name)
+    with DBSession() as dbsession:
+        sherpa_status = dbsession.get_sherpa_status(entity_name)
 
-    if not sherpa_status.sherpa.ip_address:
-        close_session_and_raise_error(
-            session, "Sherpa not yet connected to the fleet manager"
-        )
+        if not sherpa_status.sherpa.ip_address:
+            raise_error("Sherpa not yet connected to the fleet manager")
 
-    update_image_req = SherpaImgUpdateCtrlReq(sherpa_name=entity_name)
-    _ = process_req_with_response(None, update_image_req, user_name)
+        update_image_req = SherpaImgUpdateCtrlReq(sherpa_name=entity_name)
+        _ = process_req_with_response(None, update_image_req, user_name)
 
-    close_session(session)
     return response
 
 
@@ -129,18 +120,20 @@ async def start_stop(
     response = {}
 
     if not user_name:
-        raise HTTPException(status_code=403, detail="Unknown requester")
+        raise_error("Unknown requester")
 
     if not entity_name:
-        raise HTTPException(status_code=403, detail="No entity name")
+        raise_error(detail="No entity name")
 
-    fleet: Fleet = session.get_fleet(entity_name)
-    if not fleet:
-        raise HTTPException(status_code=403, detail="Fleet not found")
+    with DBSession() as dbsession:
+        fleet: Fleet = dbsession.get_fleet(entity_name)
+        if not fleet:
+            raise_error("Fleet not found")
 
-    fleet.status = FleetStatus.STARTED if start_stop_ctrl_req.start else FleetStatus.STOPPED
+        fleet.status = (
+            FleetStatus.STARTED if start_stop_ctrl_req.start else FleetStatus.STOPPED
+        )
 
-    close_session(session, commit=True)
     return response
 
 
@@ -154,38 +147,38 @@ async def emergency_stop(
     response = {}
 
     if not user_name:
-        close_session_and_raise_error(session, "Unknown requester")
+        raise_error("Unknown requester")
 
     if not entity_name:
-        close_session_and_raise_error(session, "No entity name")
+        raise_error("No entity name")
 
-    fleet: Fleet = session.get_fleet(entity_name)
-    if not fleet:
-        close_session_and_raise_error(session, "Fleet not found")
+    with DBSession() as dbsession:
+        fleet: Fleet = dbsession.get_fleet(entity_name)
+        if not fleet:
+            raise_error("Fleet not found")
 
-    fleet.status = (
-        FleetStatus.PAUSED if pause_resume_ctrl_req.pause else FleetStatus.STARTED
-    )
-
-    all_sherpa_status = session.get_all_sherpa_status()
-    unconnected_sherpas = []
-    for sherpa_status in all_sherpa_status:
-        sherpa_status.disabled = pause_resume_ctrl_req.pause
-        if pause_resume_ctrl_req.pause:
-            sherpa_status.disabled_reason = DisabledReason.EMERGENCY_STOP
-        else:
-            sherpa_status.disabled_reason = None
-
-        pause_resume_req = PauseResumeReq(
-            pause=pause_resume_ctrl_req.pause, sherpa_name=sherpa_status.sherpa_name
+        fleet.status = (
+            FleetStatus.PAUSED if pause_resume_ctrl_req.pause else FleetStatus.STARTED
         )
 
-        try:
-            _ = process_req_with_response(None, pause_resume_req, user_name)
-        except Exception as e:
-            unconnected_sherpas.append([sherpa_status.sherpa_name, e])
+        all_sherpa_status = dbsession.get_all_sherpa_status()
+        unconnected_sherpas = []
+        for sherpa_status in all_sherpa_status:
+            sherpa_status.disabled = pause_resume_ctrl_req.pause
+            if pause_resume_ctrl_req.pause:
+                sherpa_status.disabled_reason = DisabledReason.EMERGENCY_STOP
+            else:
+                sherpa_status.disabled_reason = None
 
-    close_session(session, commit=True)
+            pause_resume_req = PauseResumeReq(
+                pause=pause_resume_ctrl_req.pause, sherpa_name=sherpa_status.sherpa_name
+            )
+
+            try:
+                _ = process_req_with_response(None, pause_resume_req, user_name)
+            except Exception as e:
+                unconnected_sherpas.append([sherpa_status.sherpa_name, e])
+
     return response
 
 
@@ -199,37 +192,35 @@ async def sherpa_emergency_stop(
     response = {}
 
     if not user_name:
-        close_session_and_raise_error(session, "Unknown requester")
+        raise_error("Unknown requester")
 
     if not entity_name:
-        close_session_and_raise_error(session, "No entity name")
+        raise_error("No entity name")
 
-    sherpa_status: SherpaStatus = session.get_sherpa_status(entity_name)
-    if not sherpa_status:
-        close_session_and_raise_error(session, "Bad sherpa name")
+    with DBSession() as dbsession:
+        sherpa_status: SherpaStatus = dbsession.get_sherpa_status(entity_name)
+        if not sherpa_status:
+            raise_error("Bad sherpa name")
 
-    if not sherpa_status.sherpa.ip_address:
-        close_session_and_raise_error(
-            session, "Sherpa not yet connected to the fleet manager"
+        if not sherpa_status.sherpa.ip_address:
+            raise_error("Sherpa not yet connected to the fleet manager")
+
+        fleet_name = sherpa_status.sherpa.fleet.name
+        fleet_status = dbsession.get_fleet(fleet_name)
+
+        if fleet_status.status == "emergency_stop":
+            raise_error("Start/resume fleet to resume/pause sherpas")
+
+        sherpa_status.disabled = pause_resume_ctrl_req.pause
+        if pause_resume_ctrl_req.pause:
+            sherpa_status.disabled_reason = DisabledReason.EMERGENCY_STOP
+        else:
+            sherpa_status.disabled_reason = None
+
+        pause_resume_req = PauseResumeReq(
+            pause=pause_resume_ctrl_req.pause, sherpa_name=entity_name
         )
 
-    fleet_name = sherpa_status.sherpa.fleet.name
-    fleet_status = session.get_fleet(fleet_name)
-
-    if fleet_status.status == "emergency_stop":
-        close_session_and_raise_error(session, "Start/resume fleet to resume/pause sherpas")
-
-    sherpa_status.disabled = pause_resume_ctrl_req.pause
-    if pause_resume_ctrl_req.pause:
-        sherpa_status.disabled_reason = DisabledReason.EMERGENCY_STOP
-    else:
-        sherpa_status.disabled_reason = None
-
-    pause_resume_req = PauseResumeReq(
-        pause=pause_resume_ctrl_req.pause, sherpa_name=entity_name
-    )
-
-    close_session(session, commit=True)
     _ = process_req_with_response(None, pause_resume_req, user_name)
 
     return response
@@ -245,24 +236,24 @@ async def switch_mode(
     response = {}
 
     if not user_name:
-        close_session_and_raise_error(session, "Unknown requester")
+        raise_error("Unknown requester")
 
     if not entity_name:
-        close_session_and_raise_error(session, "No entity name")
+        raise_error("No entity name")
 
-    sherpa_status = session.get_sherpa_status(entity_name)
+    with DBSession() as dbsession:
+        sherpa_status = dbsession.get_sherpa_status(entity_name)
 
-    if not sherpa_status:
-        close_session_and_raise_error(session, "Bad sherpa name")
+        if not sherpa_status:
+            raise_error("Bad sherpa name")
 
-    if not sherpa_status.sherpa.ip_address:
-        close_session_and_raise_error(
-            session, "Sherpa not yet connected to the fleet manager"
+        if not sherpa_status.sherpa.ip_address:
+            raise_error("Sherpa not yet connected to the fleet manager")
+
+        switch_mode_req = SwitchModeReq(
+            mode=switch_mode_ctrl_req.mode, sherpa_name=entity_name
         )
 
-    switch_mode_req = SwitchModeReq(mode=switch_mode_ctrl_req.mode, sherpa_name=entity_name)
-
-    close_session(session)
     _ = process_req_with_response(None, switch_mode_req, user_name)
 
     return response
@@ -278,34 +269,32 @@ async def reset_pose(
     response = {}
 
     if not user_name:
-        close_session_and_raise_error(session, "Unknown requester")
+        raise_error("Unknown requester")
 
     if not entity_name:
-        close_session_and_raise_error(session, "No entity name")
+        raise_error("No entity name")
 
     if not reset_pose_ctrl_req.fleet_station:
-        close_session_and_raise_error(session, "No fleet staion detail")
+        raise_error("No fleet staion detail")
 
-    sherpa_status = session.get_sherpa_status(entity_name)
-    if not sherpa_status:
-        close_session_and_raise_error(session, "Bad sherpa name")
+    with DBSession() as dbsession:
+        sherpa_status = dbsession.get_sherpa_status(entity_name)
+        if not sherpa_status:
+            raise_error("Bad sherpa name")
 
-    if not sherpa_status.sherpa.ip_address:
-        close_session_and_raise_error(
-            session, "Sherpa not yet connected to the fleet manager"
+        if not sherpa_status.sherpa.ip_address:
+            raise_error("Sherpa not yet connected to the fleet manager")
+
+        station = dbsession.get_station(reset_pose_ctrl_req.fleet_station)
+
+        if not station:
+            raise_error("Bad fleet staion detail")
+
+        reset_pose_req = ResetPoseReq(
+            pose=station.pose,
+            sherpa_name=entity_name,
         )
 
-    station = session.get_station(reset_pose_ctrl_req.fleet_station)
-
-    if not station:
-        close_session_and_raise_error(session, "Bad fleet staion detail")
-
-    reset_pose_req = ResetPoseReq(
-        pose=station.pose,
-        sherpa_name=entity_name,
-    )
-
-    close_session(session)
     _ = process_req_with_response(None, reset_pose_req, user_name)
 
     return response
@@ -319,26 +308,22 @@ async def induct_sherpa(
 ):
     respone = {}
     sherpa_induct_req.sherpa_name = sherpa_name
-    sherpa = session.get_sherpa(sherpa_name)
 
-    if not sherpa.ip_address:
-        close_session_and_raise_error(
-            session, "Sherpa not yet connected to the fleet manager"
-        )
+    with DBSession() as dbsession:
+        sherpa = dbsession.get_sherpa(sherpa_name)
 
-    if sherpa.status.pose is None:
-        close_session_and_raise_error(
-            session, f"Cannot induct a {sherpa_name} into fleet, sherpa pose is None"
-        )
+        if not sherpa.ip_address:
+            raise_error("Sherpa not yet connected to the fleet manager")
 
-    if sherpa.status.trip_id and not sherpa_induct_req.induct:
-        trip = session.get_trip(sherpa.status.trip_id)
-        close_session_and_raise_error(
-            session,
-            f"delete the ongoing trip with booking_id: {trip.booking_id}, to induct {sherpa_name} out of fleet",
-        )
+        if sherpa.status.pose is None:
+            raise_error(f"Cannot induct a {sherpa_name} into fleet, sherpa pose is None")
 
-    close_session(session)
+        if sherpa.status.trip_id and not sherpa_induct_req.induct:
+            trip = dbsession.get_trip(sherpa.status.trip_id)
+            raise_error(
+                f"delete the ongoing trip with booking_id: {trip.booking_id}, to induct {sherpa_name} out of fleet"
+            )
+
     _ = process_req_with_response(None, sherpa_induct_req, user_name)
 
     return respone

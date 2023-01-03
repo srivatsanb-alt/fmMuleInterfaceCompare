@@ -8,9 +8,8 @@ import aioredis
 from app.routers.dependencies import (
     get_sherpa,
     get_real_ip_from_header,
-    close_session,
 )
-from models.db_session import session
+from models.db_session import DBSession
 from core.config import Config
 from core.constants import MessageType
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, status
@@ -33,6 +32,31 @@ MSG_TYPE_REPEATED = "msg_type_repeated_within_time_window"
 MSG_TS_INVALID = "msg_timestamp_invalid"
 
 expire_after_ms = timedelta(milliseconds=500)
+
+
+def manage_sherpa_ip_change(sherpa, x_real_ip):
+    if sherpa.ip_address != x_real_ip:
+        logging.info(
+            f"{sherpa.name} ip has changed since last connection , last_connection_ip: {sherpa.ip_address}"
+        )
+        sherpa.ip_address = x_real_ip
+
+        try:
+            os.remove(
+                os.path.join(os.getenv("FM_MAP_DIR"), "certs", f"{sherpa.name}_cert.pem")
+            )
+            logging.info(f"Removed {sherpa.name} cert file since ip has changed")
+        except Exception as e:
+            logging.info(f"Unable to remove cert file {e}")
+            sherpa.status.other_info.update({"ip_changed": True})
+            logging.info(
+                f"Updated {sherpa.name} ip address, committed  it the ip change to DB"
+            )
+    else:
+        sherpa.status.other_info.update({"ip_changed": False})
+        logging.info(f"{sherpa.name} ip hasn't changed since last connection")
+
+    flag_modified(sherpa.status, "other_info")
 
 
 def accept_message(sherpa: str, msg):
@@ -65,48 +89,34 @@ def accept_message(sherpa: str, msg):
 @router.websocket("/ws/api/v1/sherpa/")
 async def sherpa_status(
     websocket: WebSocket,
-    sherpa=Depends(get_sherpa),
+    sherpa_name=Depends(get_sherpa),
     x_real_ip=Depends(get_real_ip_from_header),
 ):
-    if not sherpa:
+    if not sherpa_name:
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
 
-    logging.getLogger().info(f"websocket connection started for {sherpa}")
+    logging.getLogger().info(f"websocket connection initiated by {sherpa_name}")
+
+    # client.host will be nginx container ip
     client_ip = websocket.client.host
 
+    # x_real_ip will be denoting sherpas real ip
     if x_real_ip is None:
         x_real_ip = client_ip
 
-    db_sherpa = session.get_sherpa(sherpa)
-    if db_sherpa.status.other_info is None:
-        db_sherpa.status.other_info = {}
-
-    if db_sherpa.ip_address != x_real_ip:
-        logging.info(
-            f"{sherpa} ip has changed since last connection , last_connection_ip: {db_sherpa.ip_address}"
-        )
-        db_sherpa.ip_address = x_real_ip
-        try:
-            os.remove(os.path.join(os.getenv("FM_MAP_DIR"), "certs", f"{sherpa}_cert.pem"))
-            logging.info(f"Removed {sherpa} cert file since ip has changed")
-        except Exception as e:
-            logging.info(f"Unable to remove cert file {e}")
-        db_sherpa.status.other_info.update({"ip_changed": True})
-        logging.info(f"Updated {sherpa} ip address, committed  it the ip change to DB")
-    else:
-        db_sherpa.status.other_info.update({"ip_changed": False})
-        logging.info(f"{sherpa} ip hasn't changed since last connection")
-
-    flag_modified(db_sherpa.status, "other_info")
-    close_session(session, commit=True)
+    with DBSession() as dbsession:
+        sherpa = dbsession.get_sherpa(sherpa_name)
+        if sherpa.status.other_info is None:
+            sherpa.status.other_info = {}
+        manage_sherpa_ip_change(sherpa, x_real_ip)
 
     await websocket.accept()
 
     rw = [
-        asyncio.create_task(reader(websocket, sherpa)),
+        asyncio.create_task(reader(websocket, sherpa_name)),
         asyncio.create_task(
-            writer(websocket, sherpa),
+            writer(websocket, sherpa_name),
         ),
     ]
     try:

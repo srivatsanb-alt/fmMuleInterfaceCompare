@@ -2,7 +2,6 @@ import os
 import time
 from typing import Dict
 import redis
-from models.db_session import session
 from models.fleet_models import SherpaEvent
 import requests
 from core.config import Config
@@ -38,7 +37,7 @@ def get(sherpa: Sherpa, req: FMReq) -> Dict:
     return process_response(response, url, req, sherpa)
 
 
-def send_msg_to_sherpa(sherpa: Sherpa, msg: FMReq) -> Dict:
+def send_msg_to_sherpa(dbsession, sherpa: Sherpa, msg: FMReq) -> Dict:
 
     body = msg.dict()
     body["timestamp"] = time.time()
@@ -59,7 +58,7 @@ def send_msg_to_sherpa(sherpa: Sherpa, msg: FMReq) -> Dict:
         msg_type=endpoint,
         context="sent to sherpa",
     )
-    session.add_to_session(sherpa_event)
+    dbsession.add_to_session(sherpa_event)
 
     return post(url, verify, body, sherpa)
 
@@ -70,6 +69,7 @@ def process_response(
     req=None,
     sherpa=None,
 ) -> Dict:
+
     response.raise_for_status()
     if sherpa:
         get_logger().info(
@@ -82,14 +82,16 @@ def process_response(
     return response
 
 
-def send_move_msg(sherpa: Sherpa, ongoing_trip: OngoingTrip, station: Station) -> Dict:
+def send_move_msg(
+    dbsession, sherpa: Sherpa, ongoing_trip: OngoingTrip, station: Station
+) -> Dict:
     move_msg = MoveReq(
         trip_id=ongoing_trip.trip_id,
         trip_leg_id=ongoing_trip.trip_leg_id,
         destination_pose=station.pose,
         destination_name=station.name,
     )
-    return send_msg_to_sherpa(sherpa, move_msg)
+    return send_msg_to_sherpa(dbsession, sherpa, move_msg)
 
 
 def send_status_update(msg):

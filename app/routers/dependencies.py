@@ -11,20 +11,11 @@ from utils.rq import enqueue, enqueue_at, Queues
 from core.config import Config
 import redis
 import os
-import json
-
 from models.request_models import SherpaReq
 
 
-def close_session_and_raise_error(session, detail):
-    session.close_on_error()
+def raise_error(detail):
     raise HTTPException(status_code=403, detail=detail)
-
-
-def close_session(session, commit=False):
-    if commit:
-        session.session.commit()
-    session.session.close()
 
 
 def get_sherpa(x_api_key: str = Header(None)):
