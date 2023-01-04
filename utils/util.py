@@ -81,6 +81,6 @@ def get_all_map_names():
     )
     map_names_file = open(os.path.join(os.getenv("FM_MAP_DIR"), "map_names.txt"), "r")
     for line in map_names_file.readlines():
-        map_names.append(line)
+        map_names.append(line[:-1])
 
     return map_names
