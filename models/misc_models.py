@@ -7,6 +7,6 @@ class Notifications(TimestampMixin, Base):
     id = Column(Integer, primary_key=True, index=True)
     entity_names = Column(ARRAY(String))
     log = Column(String)
-    log_level = Column(String)
+    log_level = Column(String, index=True)
     module = Column(String)
     cleared_by = Column(ARRAY(String))
