@@ -34,6 +34,7 @@ def get_trip_status(trip: Trip):
             "next_idx_aug": ongoing_trip.next_idx_aug if ongoing_trip else None,
             "trip_leg_from_station": trip_leg.from_station if trip_leg else None,
             "trip_leg_to_station": trip_leg.to_station if trip_leg else None,
+            "trip_metadata": trip.trip_metadata,
             "route": trip.augmented_route,
             "priority": trip.priority,
             "scheduled": trip.scheduled,

@@ -72,3 +72,15 @@ def get_table_as_dict(model, model_obj):
 def generate_random_job_id():
     N = 10
     return "".join(secrets.choice(string.ascii_uppercase + string.digits) for i in range(N))
+
+
+def get_all_map_names():
+    map_names = []
+    _ = os.system(
+        "find $FM_MAP_DIR -name 'map' -printf '%h\n' | awk -'F/' '{ print $NF }' > /app/static/map_names.txt"
+    )
+    map_names_file = open(os.path.join(os.getenv("FM_MAP_DIR"), "map_names.txt"), "r")
+    for line in map_names_file.readlines():
+        map_names.append(line)
+
+    return map_names
