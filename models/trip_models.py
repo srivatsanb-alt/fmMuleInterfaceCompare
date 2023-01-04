@@ -62,7 +62,7 @@ class Trip(Base, TimestampMixin):
     __tablename__ = "trips"
 
     id = Column(Integer, primary_key=True, index=True)
-    booking_id = Column(Integer)
+    booking_id = Column(Integer, index=True)
 
     # sherpa doing the trip
     sherpa_name = Column(String, ForeignKey("sherpas.name"))
@@ -159,7 +159,7 @@ class Trip(Base, TimestampMixin):
 class PendingTrip(Base, TimestampMixin):
     __tablename__ = "pending_trips"
     trip_id = Column(Integer, ForeignKey("trips.id"), primary_key=True)
-    sherpa_name = Column(String)
+    sherpa_name = Column(String, index=True)
     trip = relationship("Trip")
 
 

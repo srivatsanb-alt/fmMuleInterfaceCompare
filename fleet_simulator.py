@@ -8,6 +8,8 @@ from models.request_models import (
     Stoppages,
     StoppageInfo,
     SherpaReq,
+    BookingReq,
+    TripMsg,
 )
 from utils.router_utils import RouterModule, get_dense_path
 from models.trip_models import OngoingTrip
@@ -91,7 +93,7 @@ class FleetSimulator:
         self.handler_obj = Config.get_handler()
         self.fleet_names = Config.get_all_fleets()
         self.simulator_config = Config.get_simulator_config()
-        self.book_trips = self.simulator_config["book_trips"]
+        self.should_book_trips = self.simulator_config["book_trips"]
         self.router_modules = {}
         for fleet_name in self.fleet_names:
             map_path = os.path.join(os.environ["FM_MAP_DIR"], f"{fleet_name}/map")
@@ -117,6 +119,25 @@ class FleetSimulator:
 
                     st = stations[i]
                     self.send_sherpa_status(sherpa.name, mode="fleet", pose=st.pose)
+
+    def book_trip(self, route, freq):
+        generic_q = Queues.queues_dict["generic_handler"]
+        trip_msg = TripMsg(route=route)
+        book_req = BookingReq(trips=[trip_msg], source="simulator")
+        while True:
+            enqueue(generic_q, handle, self.handler_obj, book_req)
+            time.sleep(freq)
+
+    def book_predefined_trips(self):
+        all_route_details = self.simulator_config.get("routes", {})
+        if self.should_book_trips:
+            for route_name, route_detail in all_route_details.items():
+                route = route_detail[0]
+                freq = route_detail[1][0]
+                print(f"will book trip with route {route} every {freq} seconds")
+                t = threading.Thread(target=self.book_trip, args=[route, freq])
+                t.daemon = True
+                t.start()
 
     def send_verify_fleet_files_req(self, sherpa_name):
         generic_q = Queues.queues_dict["generic_handler"]

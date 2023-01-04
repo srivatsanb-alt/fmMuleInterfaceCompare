@@ -9,10 +9,6 @@ import os
 if __name__ == "__main__":
     simulator_config = Config.get_simulator_config()
 
-    fs = FleetSimulator()
-    if sys.argv[1] == "send_sherpa_status":
-        getattr(fs, sys.argv[1])(sys.argv[2])
-
     if sys.argv[1] == "host_all_mule_app" and simulator_config["simulate"]:
         mule_app = MuleAPP()
         getattr(mule_app, sys.argv[1])()
@@ -20,9 +16,9 @@ if __name__ == "__main__":
             pass
 
     if sys.argv[1] == "simulate" and simulator_config["simulate"]:
+        fs = FleetSimulator()
         fleet_manager_up = False
         redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
-
         while not fleet_manager_up:
             fleet_manager_up = redis_conn.get("is_fleet_manager_up")
             print("waiting for fleet-manager to start")
@@ -32,4 +28,5 @@ if __name__ == "__main__":
 
         fs.initialize_sherpas()
         time.sleep(2)
+        fs.book_predefined_trips()
         fs.act_on_sherpa_events()

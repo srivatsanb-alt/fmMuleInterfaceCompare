@@ -231,6 +231,11 @@ class Handlers:
         trip: Trip = ongoing_trip.trip
         sherpa_name = trip.sherpa_name
 
+        end_leg_log = f"{sherpa_name} finished a trip leg of trip (trip_id: {trip.id}) from {ongoing_trip.trip_leg.from_station} to {ongoing_trip.trip_leg.to_station}"
+        get_logger(sherpa_name).info(end_leg_log)
+
+        hutils.end_leg(ongoing_trip)
+
         trip_analytics = self.session.get_trip_analytics(ongoing_trip.trip_leg_id)
 
         # ongoing_trip.trip_leg.end_time is set only hutils.end_leg using current time for analytics end time
@@ -242,11 +247,7 @@ class Handlers:
                 f"{sherpa_name} finished leg of trip {trip.id} \n trip_analytics: {get_table_as_dict(TripAnalytics, trip_analytics)}"
             )
 
-        end_leg_log = f"{sherpa_name} finished a trip leg of trip (trip_id: {trip.id}) from {ongoing_trip.trip_leg.from_station} to {ongoing_trip.trip_leg.to_station}"
-        get_logger(sherpa_name).info(end_leg_log)
-
-        hutils.end_leg(ongoing_trip)
-
+        self.do_post_actions(ongoing_trip)
         self.session.add_notification([sherpa_name], end_leg_log, "info", "")
 
     def should_recreate_scheduled_trip(self, pending_trip: PendingTrip):
@@ -636,7 +637,6 @@ class Handlers:
     def handle_reached(self, msg: ReachedReq):
         sherpa_name = msg.source
         sherpa: SherpaStatus = self.session.get_sherpa_status(sherpa_name)
-
         ongoing_trip: OngoingTrip = self.session.get_ongoing_trip(sherpa_name)
 
         if (
@@ -919,7 +919,6 @@ class Handlers:
             return
 
         ongoing_trip.trip.update_etas(float(req.trip_info.eta), ongoing_trip.next_idx_aug)
-
         trip_analytics = self.session.get_trip_analytics(ongoing_trip.trip_leg_id)
 
         if trip_analytics:
