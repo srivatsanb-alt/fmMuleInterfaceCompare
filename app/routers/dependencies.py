@@ -12,6 +12,7 @@ from core.config import Config
 import redis
 import os
 from models.request_models import SherpaReq
+from models.db_session import DBSession
 
 
 def raise_error(detail):
@@ -22,13 +23,12 @@ def get_sherpa(x_api_key: str = Header(None)):
     if x_api_key is None:
         return None
 
-    from models.db_session import session
-
     hashed_api_key = hashlib.sha256(x_api_key.encode("utf-8")).hexdigest()
-    sherpa = session.get_sherpa_by_api_key(hashed_api_key)
-    sherpa_name = sherpa.name if sherpa else None
 
-    close_session(session)
+    with DBSession() as dbsession:
+        sherpa = dbsession.get_sherpa_by_api_key(hashed_api_key)
+        sherpa_name = sherpa.name if sherpa else None
+
     return sherpa_name
 
 
