@@ -1028,9 +1028,7 @@ class Handlers:
         elif visa_type == VisaType.TRANSIT:
             unlock_exclusion_zone(self.session, zone_name, "lane", sherpa_name)
 
-        get_logger(sherpa_name).info(
-            f"{sherpa_name} released {visa_type} visa to zone {zone_name}"
-        )
+        get_logger().info(f"{sherpa_name} released {visa_type} visa to zone {zone_name}")
         response: ResourceResp = ResourceResp(
             granted=True, visa=req, access_type=AccessType.RELEASE
         )
@@ -1043,7 +1041,7 @@ class Handlers:
         zone_name = req.zone_name
         granted = maybe_grant_visa(self.session, zone_name, visa_type, sherpa_name)
         granted_message = "granted" if granted else "not granted"
-        get_logger(sherpa_name).info(
+        get_logger().info(
             f"{sherpa_name} requested {visa_type} visa to zone {zone_name}: {granted_message}"
         )
         response: ResourceResp = ResourceResp(
