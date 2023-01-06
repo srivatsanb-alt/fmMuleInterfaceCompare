@@ -12,6 +12,7 @@ from .routers import (
     control_http,
     station_http,
     notifications,
+    configure_fleet,
 )
 
 
@@ -47,3 +48,4 @@ app.include_router(misc_http.router)
 app.include_router(control_http.router)
 app.include_router(station_http.router)
 app.include_router(notifications.router)
+app.include_router(configure_fleet.router)
