@@ -22,19 +22,7 @@ start() {
     poetry run python plugins/plugin_rq.py > $LOGS/plugin_rq.out 2>&1 &
 }
 
-save_fleet_log() {
-    echo "saving old fleet manager logs"
-    mkdir -p $LOGS/backup
-    for f in $(ls $LOGS); do
-      [[ "$f" == "backup" ]] && continue
-      mv $LOGS/$f $LOGS/backup/$f.$TS 2>/dev/null
-    done
-}
-
 fm_init() {
-   echo "regeneraing mule config"
-   cd /app/mule
-   #make build
    cd /app
    poetry run python scripts/set_token.py
    poetry run python fm_init.py
@@ -49,10 +37,9 @@ run_simulator() {
 redis-server --port $REDIS_PORT > $LOGS/redis.log 2>&1 &
 sleep 2
 fm_init
-save_fleet_log
 start
 
-#will be run only if simulate is set to true in fleet_config
+#simulator will be started only if simulate is set to true in fleet_config
 run_simulator
 
 #to keep the docker alive - run a never ending process
