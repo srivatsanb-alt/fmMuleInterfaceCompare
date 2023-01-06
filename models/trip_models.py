@@ -75,9 +75,9 @@ class Trip(Base, TimestampMixin):
     # when trip was booked
     booking_time = Column(DateTime)
     # when trip started
-    start_time = Column(DateTime)
+    start_time = Column(DateTime, index=True)
     # when trip ended (sherpa could go to a parking station after this)
-    end_time = Column(DateTime)
+    end_time = Column(DateTime, index=True)
 
     # station names on route
     route = Column(ARRAY(String))

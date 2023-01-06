@@ -10,3 +10,8 @@ class Notifications(TimestampMixin, Base):
     log_level = Column(String, index=True)
     module = Column(String)
     cleared_by = Column(ARRAY(String))
+
+
+class FMVersion(Base):
+    __tablename__ = "fm_version"
+    version = Column(String, primary_key=True)

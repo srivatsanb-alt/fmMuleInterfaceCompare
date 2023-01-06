@@ -31,7 +31,7 @@ class MapFile(TimestampMixin, Base):
     map_id = Column(Integer, ForeignKey("maps.id"))
     map = relationship("Map", back_populates="files")
 
-    filename = Column(String)
+    filename = Column(String, index=True)
     file_hash = Column(String)
 
 
@@ -42,7 +42,7 @@ class Fleet(Base):
     customer = Column(String)
     site = Column(String)
     location = Column(String)
-    status = Column(String)
+    status = Column(String, index=True)
 
     map_id = Column(Integer, ForeignKey("maps.id"))
     map = relationship("Map")
@@ -73,9 +73,9 @@ class SherpaEvent(TimestampMixin, Base):
     __tablename__ = "sherpa_events"
 
     id = Column(Integer, primary_key=True, index=True)
-    sherpa_name = Column(String)
-    msg_type = Column(String)
-    context = Column(String)
+    sherpa_name = Column(String, index=True)
+    msg_type = Column(String, index=True)
+    context = Column(String, index=True)
 
 
 class SherpaStatus(TimestampMixin, Base):
@@ -85,16 +85,16 @@ class SherpaStatus(TimestampMixin, Base):
     sherpa = relationship("Sherpa", back_populates="status")
 
     initialized = Column(Boolean)
-    disabled = Column(Boolean)
-    inducted = Column(Boolean)
+    disabled = Column(Boolean, index=True)
+    inducted = Column(Boolean, index=True)
     idle = Column(Boolean)
     error = Column(String)
     pose = Column(ARRAY(Float))
     battery_status = Column(Float)
-    mode = Column(String)
+    mode = Column(String, index=True)
     trip_id = Column(Integer)
     trip_leg_id = Column(Integer)
-    assign_next_task = Column(Boolean)
+    assign_next_task = Column(Boolean, index=True)
     continue_curr_task = Column(Boolean)
     disabled_reason = Column(String)
     other_info = Column(JSONB)
@@ -126,11 +126,11 @@ class StationStatus(TimestampMixin, Base):
 class AvailableSherpas(TimestampMixin, Base):
     __tablename__ = "available_sherpas"
     sherpa_name = Column(String, primary_key=True, index=True)
-    fleet_name = Column(String)
-    available = Column(Boolean)
+    fleet_name = Column(String, index=True)
+    available = Column(Boolean, index=True)
 
 
 class OptimalDispatchState(Base):
     __tablename__ = "optimal_dispatch_state"
     fleet_name = Column(String, primary_key=True, index=True)
-    last_assignment_time = Column(DateTime)
+    last_assignment_time = Column(DateTime, index=True)
