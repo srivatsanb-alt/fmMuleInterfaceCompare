@@ -5,7 +5,6 @@ source ./scripts/push_utils.sh
 
 clean_static_dir=0
 copy_static=1
-clear_db=0
 server=0
 build_base=1
 cert_reqd=1
@@ -29,8 +28,6 @@ do
       clean_static_dir=1;;
     W) # WILL NOT copy from the remote folder
       copy_static=0;;
-    D) # Will clear existing db tables
-      clear_db=1;;
     i) # input IP_ADDRESS
       IP_ADDRESS=$OPTARG
       echo $IP_ADDRESS;server=1;;
@@ -93,13 +90,6 @@ if [ $server == 1 ] ; then
   create_static_backup $IP_ADDRESS # function defined in push_utils
 else
   cp misc/docker-compose.yml static/
-fi
-
-if [ $clear_db == 1 ] ; then
-{
-  echo "clear db $clear_db"
-  clear_db_on_fm_server
-}
 fi
 
 if [ $cert_reqd == 1 ]; then
