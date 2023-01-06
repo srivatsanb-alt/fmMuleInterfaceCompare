@@ -33,10 +33,6 @@ router = APIRouter(
 )
 
 
-def handle(handler, msg):
-    handler.handle(msg)
-
-
 @router.get("/fleet/clear_all_visa_assignments")
 async def clear_all_visa_assignments(user_name=Depends(get_user_from_header)):
 
