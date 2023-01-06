@@ -2,12 +2,11 @@ import sys
 import time
 import toml
 import os
-from models.frontend_models import FrontendUser
-from models.fleet_models import MapFile, AvailableSherpas, OptimalDispatchState
-from models.visa_models import LinkedGates
+import utils.fleet_utils as fu
+from utils.upgrade_db import upgrade_db_schema
+
 
 sys.path.append("/app/mule")
-import utils.fleet_utils as fu
 from mule.ati.common.config import load_mule_config
 
 
@@ -25,53 +24,45 @@ fleet_sherpas = config["fleet_sherpas"]
 frontenduser = config["frontenduser"]
 optimal_dispatch_config = config["optimal_dispatch"]
 
-
 time.sleep(5)
 
-# create all tables
 DB_UP = False
+
 while not DB_UP:
     try:
         fu.create_all_tables()
-        print("created all the tables")
-        # clear all the data that has no state information
-        fu.delete_table_contents(MapFile)
-        fu.delete_table_contents(FrontendUser)
-        fu.delete_table_contents(LinkedGates)
-        fu.delete_table_contents(AvailableSherpas)
-        fu.delete_table_contents(OptimalDispatchState)
+        upgrade_db_schema()
         DB_UP = True
     except Exception as e:
         print(f"unable to create/clear data in db, \n Exception: {e}")
 
 
+# always modify frontend user - no state information
 print(f"frontend user details in config {frontenduser}")
 for user_name, user_details in frontenduser.items():
-    fu.add_frontend_user(user_name, user_details["hashed_password"])
+    fu.add_update_frontend_user(user_name, user_details["hashed_password"])
 
 
-# create fleet, update map details
+# will add new sherpas, fleets only - update should happen via endpoints
 for fleet_name in fleet_names:
     print(f"trying to update db tables for fleet : {fleet_name}")
     fu.maybe_update_map_files(fleet_name)
-    fu.add_update_fleet(
+    fu.add_fleet(
         name=fleet_name,
         site=FLEET_CONFIG["site"],
         customer=FLEET_CONFIG["customer"],
         location=FLEET_CONFIG["location"],
     )
-    fu.add_update_map(fleet_name)
+    fu.add_map(fleet_name)
 
 # add sherpas to the db with info from config
 for sherpa_name, sherpa_detail in fleet_sherpas.items():
-    fu.add_update_sherpa(
+    fu.add_sherpa(
         sherpa_name=sherpa_name,
         hwid=sherpa_detail["hwid"],
         api_key=sherpa_detail["api_key"],
-        fleet_id=1,
+        fleet_name=sherpa_detail["fleet_name"],
     )
-    fu.add_sherpa_to_fleet(sherpa=sherpa_name, fleet=sherpa_detail["fleet_name"])
-    fu.add_update_sherpa_availability(sherpa_name, sherpa_detail["fleet_name"], False)
     print(f"added {sherpa_name}, {sherpa_detail} to db")
 
 # regenerate_mule_config for routing

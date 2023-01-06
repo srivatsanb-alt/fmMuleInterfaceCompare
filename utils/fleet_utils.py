@@ -10,6 +10,8 @@ import glob
 import importlib
 import inspect
 from sqlalchemy.exc import NoResultFound
+from sqlalchemy import inspect as sql_inspect
+from sqlalchemy.sql import not_
 from utils.util import dt_to_str
 from models.fleet_models import (
     Fleet,
@@ -63,9 +65,7 @@ def gen_api_key(hwid):
     return secrets.token_urlsafe(32) + "_" + hwid
 
 
-def add_update_sherpa(
-    sherpa_name: str, hwid=None, ip_address=None, api_key=None, fleet_id=None
-):
+def add_sherpa(sherpa_name: str, hwid=None, ip_address=None, api_key=None, fleet_name=None):
     if not hwid:
         raise ValueError("Sherpa hardware id cannot be null")
     if not api_key:
@@ -74,29 +74,26 @@ def add_update_sherpa(
     with session_maker() as db:
         try:
             sherpa: Sherpa = db.query(Sherpa).filter(Sherpa.name == sherpa_name).one()
-            sherpa.name = sherpa_name
-            sherpa.hwid = hwid
-            sherpa.ip_address = ip_address
-            sherpa.hashed_api_key = hashed_api_key
-            sherpa.fleet_id = fleet_id
-            print(f"Updated sherpa details: {sherpa.__dict__}")
         except NoResultFound:
             sherpa = Sherpa(
                 name=sherpa_name,
                 hwid=hwid,
                 ip_address=ip_address,
                 hashed_api_key=hashed_api_key,
-                fleet_id=fleet_id,
+                fleet_id=1,
             )
             print(f"Added sherpa: {sherpa.__dict__}")
             sherpa_status = SherpaStatus(sherpa_name=sherpa_name, other_info={})
             db.add(sherpa)
             db.add(sherpa_status)
-        db.commit()
+            db.commit()
+
+            add_sherpa_to_fleet(sherpa=sherpa_name, fleet=fleet_name)
+            add_sherpa_availability(sherpa_name, fleet_name, False)
     return api_key
 
 
-def add_update_sherpa_availability(sherpa_name: str, fleet_name: str, available):
+def add_sherpa_availability(sherpa_name: str, fleet_name: str, available):
     with session_maker() as db:
         try:
             sherpa_availability: AvailableSherpas = (
@@ -104,9 +101,6 @@ def add_update_sherpa_availability(sherpa_name: str, fleet_name: str, available)
                 .filter(AvailableSherpas.sherpa_name == sherpa_name)
                 .one()
             )
-            sherpa_availability.fleet_name = fleet_name
-            sherpa_availability.available = available
-
         except NoResultFound:
             sherpa_availability = AvailableSherpas(
                 sherpa_name=sherpa_name,
@@ -114,20 +108,10 @@ def add_update_sherpa_availability(sherpa_name: str, fleet_name: str, available)
                 available=available,
             )
             db.add(sherpa_availability)
-
-        try:
-            sherpa_status: SherpaStatus = (
-                db.query(SherpaStatus).filter(SherpaStatus.sherpa_name == sherpa_name).one()
-            )
-            sherpa_status.inducted = available
-
-        except NoResultFound:
-            print(f"unable to populate sherpa status for {sherpa_name}")
-
-        db.commit()
+            db.commit()
 
 
-def add_update_fleet(**kwargs):
+def add_fleet(**kwargs):
     fleet_name = kwargs.get("name")
     if not fleet_name:
         raise ValueError("fleet name should not be null")
@@ -137,19 +121,16 @@ def add_update_fleet(**kwargs):
         except NoResultFound:
             fleet = Fleet()
             db.add(fleet)
-        for col in Fleet.__table__.columns.keys():
-            val = kwargs.get(col)
-            if not val:
-                continue
-            setattr(fleet, col, val)
-
-        # add optimal dispatch state
-        optimal_dispatch_state = OptimalDispatchState(
-            fleet_name=fleet_name, last_assignment_time=datetime.datetime.now()
-        )
-        db.add(optimal_dispatch_state)
-        db.commit()
-
+            optimal_dispatch_state = OptimalDispatchState(
+                fleet_name=fleet_name, last_assignment_time=datetime.datetime.now()
+            )
+            db.add(optimal_dispatch_state)
+            for col in Fleet.__table__.columns.keys():
+                val = kwargs.get(col)
+                if not val:
+                    continue
+                setattr(fleet, col, val)
+            db.commit()
     return fleet
 
 
@@ -163,30 +144,60 @@ def add_sherpa_to_fleet(sherpa: str, fleet: str):
         db.commit()
 
 
-def add_update_station(**kwargs):
-    station_name = kwargs.get("name")
-    properties = kwargs.get("properties")
-    if not station_name:
-        raise ValueError("station name should not be null")
-    with session_maker() as db:
+def add_update_station(dbsession, station_info, fleet_id):
+    properties = []
+    for tag in station_info["station_tags"]:
         try:
-            station: Station = db.query(Station).filter_by(name=station_name).one()
-        except NoResultFound:
-            station = Station(properties=properties)
-            db.add(station)
-            station_status = StationStatus(
-                station_name=station_name, disabled=False, arriving_sherpas=[]
+            properties.append(getattr(StationProperties, tag.upper()))
+        except Exception as e:
+            print(f"unable to add station properties, {e}")
+            pass
+
+    station_name = station_info["station_name"]
+    station_pose = station_info["pose"]
+    station: Station = dbsession.query(Station).filter_by(name=station_name).one_or_none()
+    if station is None:
+        station = Station(
+            name=station_name,
+            pose=station_pose,
+            properties=properties,
+            fleet_id=fleet_id,
+        )
+        dbsession.add(station)
+        station_status = StationStatus(
+            station_name=station_name, disabled=False, arriving_sherpas=[]
+        )
+        dbsession.add(station_status)
+    else:
+        station.pose = station_info["pose"]
+        station.properties = properties
+
+
+def add_update_map_files(dbsession, fleet_name):
+    fleet_path = os.path.join(os.environ["FM_MAP_DIR"], f"{fleet_name}/map")
+    map_files = get_filenames(fleet_path)
+    fleet: Fleet = dbsession.query(Fleet).filter(Fleet.name == fleet_name).one()
+    map_id = fleet.map_id
+    for map_file_name in map_files:
+        map_file_name = map_file_name.rstrip()
+        map_file_path = f"{fleet_path}/{map_file_name}"
+        sha1 = compute_sha1_hash(map_file_path)
+        try:
+            map_file: MapFile = (
+                dbsession.query(MapFile)
+                .filter_by(map_id=map_id)
+                .filter_by(filename=map_file_name)
+                .one()
             )
-            db.add(station_status)
-        for col in Station.__table__.columns.keys():
-            val = kwargs.get(col)
-            if not val:
-                continue
-            setattr(station, col, val)
-        db.commit()
+            map_file.file_hash = sha1
+        except NoResultFound:
+            map_file = MapFile(map_id=map_id, filename=map_file_name, file_hash=sha1)
+            dbsession.add(map_file)
+            dbsession.flush()
+            dbsession.refresh(map_file)
 
 
-def add_update_map(fleet: str):
+def add_map(fleet: str):
     with session_maker() as db:
         try:
             map: Map = db.query(Map).filter_by(name=fleet).one()
@@ -195,85 +206,74 @@ def add_update_map(fleet: str):
             db.add(map)
             db.flush()
             db.refresh(map)
-        fleet_obj: Fleet = db.query(Fleet).filter(Fleet.name == fleet).one()
-        fleet_id = fleet_obj.id
-        fleet_obj.map_id = map.id
-        db.commit()
+            fleet_obj: Fleet = db.query(Fleet).filter(Fleet.name == fleet).one()
+            fleet_id = fleet_obj.id
+            fleet_obj.map_id = map.id
+            db.commit()
 
-    add_update_map_files(fleet)
-    grid_map_attributes_path = os.path.join(
-        f"{os.environ['FM_MAP_DIR']}", f"{fleet}", "map", "grid_map_attributes.json"
-    )
-    if not os.path.exists(grid_map_attributes_path):
-        return
-    with open(grid_map_attributes_path) as f:
-        gmas = json.load(f)
-        stations_info = gmas["stations_info"]
-        for _, station_info in stations_info.items():
-            properties = []
-            for tag in station_info["station_tags"]:
-                try:
-                    properties.append(getattr(StationProperties, tag.upper()))
-                except Exception as e:
-                    print(f"unable to add station properties, {e}")
-                    pass
-            add_update_station(
-                name=station_info["station_name"],
-                pose=station_info["pose"],
-                fleet_id=fleet_id,
-                properties=properties,
+            add_update_map_files(db, fleet)
+            db.commit()
+
+            grid_map_attributes_path = os.path.join(
+                f"{os.environ['FM_MAP_DIR']}", f"{fleet}", "map", "grid_map_attributes.json"
             )
-    add_exclusion_zones(fleet)
-    add_linked_gates_table(fleet)
+            if not os.path.exists(grid_map_attributes_path):
+                return
+            with open(grid_map_attributes_path) as f:
+                gmas = json.load(f)
+                stations_info = gmas["stations_info"]
+                for _, station_info in stations_info.items():
+                    add_update_station(db, station_info, fleet_id)
+                    db.commit()
+
+            add_exclusion_zones(db, fleet)
+            db.commit()
+
+            add_linked_gates_table(db, fleet)
+            db.commit()
 
 
-def add_exclusion_zones(fleet):
+def add_exclusion_zones(dbsession, fleet):
     ez_path = os.path.join(f"{os.environ['FM_MAP_DIR']}", f"{fleet}", "map", "ez.json")
     if not os.path.exists(ez_path):
         return
     with open(ez_path, "r") as f:
         ez_gates = json.load(f)
-    with session_maker() as db:
-        for gate in ez_gates["ez_gates"].values():
-            gate_name = gate["name"]
-            lane_zone_id = f"{gate_name}_lane"
-            station_zone_id = f"{gate_name}_station"
-            exclusivity = gate["exclusive_parking"]
-            try:
-                ezone_lane: ExclusionZone = (
-                    db.query(ExclusionZone).filter_by(zone_id=lane_zone_id).one()
-                )
-                print(f"EZ gate {lane_zone_id} exists!")
-            except Exception as E:
-                print(f"{E} Adding new EZ gate {lane_zone_id}")
-                ezone_lane = ExclusionZone(zone_id=lane_zone_id)
-                db.add(ezone_lane)
-                db.flush()
-                db.refresh(ezone_lane)
-            try:
-                ezone_station: ExclusionZone = (
-                    db.query(ExclusionZone).filter_by(zone_id=station_zone_id).one()
-                )
-                ezone_station.exclusivity = exclusivity
-                print(f"EZ gate {station_zone_id} exists!")
-            except Exception as E:
-                print(f"{E} Adding new EZ gate {station_zone_id}")
-                ezone_station = ExclusionZone(
-                    zone_id=station_zone_id, exclusivity=exclusivity
-                )
-                db.add(ezone_station)
-                db.flush()
-                db.refresh(ezone_station)
-        db.commit()
+    for gate in ez_gates["ez_gates"].values():
+        gate_name = gate["name"]
+        lane_zone_id = f"{gate_name}_lane"
+        station_zone_id = f"{gate_name}_station"
+        exclusivity = gate["exclusive_parking"]
+        try:
+            ezone_lane: ExclusionZone = (
+                dbsession.query(ExclusionZone).filter_by(zone_id=lane_zone_id).one()
+            )
+            print(f"EZ gate {lane_zone_id} exists!")
+        except Exception as E:
+            print(f"{E} Adding new EZ gate {lane_zone_id}")
+            ezone_lane = ExclusionZone(zone_id=lane_zone_id)
+            dbsession.add(ezone_lane)
+            dbsession.flush()
+            dbsession.refresh(ezone_lane)
+        try:
+            ezone_station: ExclusionZone = (
+                dbsession.query(ExclusionZone).filter_by(zone_id=station_zone_id).one()
+            )
+            print(f"EZ gate {station_zone_id} exists!")
+        except Exception as E:
+            print(f"{E} Adding new EZ gate {station_zone_id}")
+            ezone_station = ExclusionZone(zone_id=station_zone_id, exclusivity=exclusivity)
+            dbsession.add(ezone_station)
+            dbsession.flush()
+            dbsession.refresh(ezone_station)
 
 
-def add_linked_gates_table(fleet):
+def add_linked_gates_table(dbsession, fleet):
     ez_path = os.path.join(f"{os.environ['FM_MAP_DIR']}", f"{fleet}", "map", "ez.json")
     if not os.path.exists(ez_path):
         return
     with open(ez_path, "r") as f:
         ez_gates = json.load(f)
-    with session_maker() as db:
         gates_dict = ez_gates["ez_gates"]
         for gate in gates_dict.values():
             if gate["linked_gate"]:
@@ -291,50 +291,28 @@ def add_linked_gates_table(fleet):
                             )
                             print(f"linked_gate_id is {linked_gate_id}!")
                             try:
+                                _ = (
+                                    dbsession.query(LinkedGates)
+                                    .filter(LinkedGates.prev_zone_id == prev_zone_id)
+                                    .filter(LinkedGates.next_zone_id == linked_gate_id)
+                                ).one()
+                                print(
+                                    f"link between {prev_zone_id} and {linked_gate_id} already exists"
+                                )
+                            except Exception as e:
                                 new_linked_gate = LinkedGates(
                                     prev_zone_id=prev_zone_id, next_zone_id=linked_gate_id
                                 )
-                                db.add(new_linked_gate)
-                                db.flush()
-                                db.refresh(new_linked_gate)
+                                dbsession.add(new_linked_gate)
+                                dbsession.flush()
+                                dbsession.refresh(new_linked_gate)
                                 print(
                                     f"created a link between {prev_zone_id} and {linked_gate_id}"
                                 )
-                                print(f"Added the linkedgate {new_linked_gate}!")
-
-                            except Exception as e:
-                                print(f"Unable to add a linked gate entry, exception: {e}")
-        db.commit()
     return
 
 
-def add_update_map_files(fleet_name: str):
-    fleet_path = os.path.join(os.environ["FM_MAP_DIR"], f"{fleet_name}/map")
-    map_files = get_filenames(fleet_path)
-    with session_maker() as db:
-        fleet: Fleet = db.query(Fleet).filter(Fleet.name == fleet_name).one()
-        map_id = fleet.map_id
-        for map_file_name in map_files:
-            map_file_name = map_file_name.rstrip()
-            map_file_path = f"{fleet_path}/{map_file_name}"
-            sha1 = compute_sha1_hash(map_file_path)
-            try:
-                map_file: MapFile = (
-                    db.query(MapFile)
-                    .filter_by(map_id=map_id)
-                    .filter_by(filename=map_file_name)
-                    .one()
-                )
-                map_file.file_hash = sha1
-            except NoResultFound:
-                map_file = MapFile(map_id=map_id, filename=map_file_name, file_hash=sha1)
-                db.add(map_file)
-                db.flush()
-                db.refresh(map_file)
-            db.commit()
-
-
-def add_frontend_user(user_name: str, hashed_password: str):
+def add_update_frontend_user(user_name: str, hashed_password: str):
     with session_maker() as db:
         try:
             user: FrontendUser = (
@@ -351,7 +329,7 @@ def add_frontend_user(user_name: str, hashed_password: str):
         db.commit()
 
 
-def create_all_tables(drop=False):
+def create_all_tables():
     all_files = glob.glob("models/*.py")
     for file in all_files:
         module = file.split(".")[0]
@@ -365,10 +343,14 @@ def create_all_tables(drop=False):
             print(f"failed to create tables from {module}, {e}")
 
 
-def create_table(model, drop=False):
-    if drop:
-        model.__table__.drop(engine)
+def create_table(model):
     model.__table__.metadata(bind=engine)
+
+
+def get_all_table_names():
+    inspector = sql_inspect(engine)
+    all_table_names = inspector.get_table_names("public")
+    return all_table_names
 
 
 def delete_table_contents(Model):
@@ -461,6 +443,60 @@ def maybe_create_graph_object(fleet_name):
         graph_object_path=graph_object_path,
     )
     return
+
+
+def update_delete_stations(dbsession, grid_map_attributes_path, fleet_id):
+    with open(grid_map_attributes_path) as f:
+        gmas = json.load(f)
+        stations_info = gmas["stations_info"]
+        valid_stations = []
+        for _, station_info in stations_info.items():
+            valid_stations.append(station_info["station_name"])
+            add_update_station(dbsession, station_info, fleet_id)
+
+        print(f"valid stations: {valid_stations} fleet_id: {fleet_id}")
+        print("will delete stations not present in valid_stations list from the db")
+
+        # delete stations removed from gmaj
+        invalid_stations_status = (
+            dbsession.query(StationStatus)
+            .join(StationStatus.station)
+            .filter(Station.fleet_id == fleet_id)
+            .filter(not_(StationStatus.station_name.in_(valid_stations)))
+            .all()
+        )
+        for st_status in invalid_stations_status:
+            dbsession.delete(st_status)
+
+        invalid_stations = (
+            dbsession.query(Station)
+            .filter(Station.fleet_id == fleet_id)
+            .filter(not_(Station.name.in_(valid_stations)))
+            .all()
+        )
+        for st in invalid_stations:
+            dbsession.delete(st)
+
+
+def reset_fleet(dbsession, fleet_name: str):
+    fleet_obj: Fleet = dbsession.get_fleet(fleet_name)
+    fleet_id = fleet_obj.id
+
+    grid_map_attributes_path = os.path.join(
+        f"{os.environ['FM_MAP_DIR']}", f"{fleet_name}", "map", "grid_map_attributes.json"
+    )
+
+    if not os.path.exists(grid_map_attributes_path):
+        raise ValueError("gmaj not available")
+
+    maybe_update_map_files(fleet_name)
+    add_update_map_files(dbsession.session, fleet_name)
+    update_delete_stations(dbsession.session, grid_map_attributes_path, fleet_id)
+
+    # remove gate not needed removing gate from ez.json should do
+
+    add_exclusion_zones(dbsession.session, fleet_name)
+    add_linked_gates_table(dbsession.session, fleet_name)
 
 
 def maybe_update_map_files(fleet_name):
