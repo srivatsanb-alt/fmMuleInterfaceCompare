@@ -219,6 +219,8 @@ class OptimalDispatch:
 
     def assemble_cost_matrix(self, fleet_name):
         redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
+        w1 = self.config["eta_power_factor"]
+        w2 = self.config["priority_power_factor"]
         cost_matrix = np.ones((len(self.pickup_q), len(self.sherpa_q))) * np.inf
         priority_normalised_cost_matrix = (
             np.ones((len(self.pickup_q), len(self.sherpa_q))) * np.inf
@@ -244,9 +246,6 @@ class OptimalDispatch:
 
                 total_eta = route_length + sherpa_q_val["remaining_eta"]
 
-                w1 = self.config["eta_power_factor"]
-                w2 = self.config["priority_power_factor"]
-
                 # to handle w1 == 0  and eta == np.inf case
                 weighted_total_eta = (
                     (total_eta**w1) if (total_eta == np.inf) else total_eta
@@ -261,6 +260,14 @@ class OptimalDispatch:
 
                 j += 1
             i += 1
+
+        """
+        Reasons for adding epsilon:
+            1. making sure that the values in priority_normalised_cost_matrix are not below 10-3 incase waiting times are higher
+            2. It also helps in differentiating multiple entries with eta==0
+        """
+        epsilon = np.max(priority_matrix)
+        priority_normalised_cost_matrix += epsilon**w2
 
         return cost_matrix, priority_matrix, priority_normalised_cost_matrix
 
