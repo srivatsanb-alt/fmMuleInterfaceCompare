@@ -165,7 +165,9 @@ class Handlers:
         get_logger(sherpa_name).info(
             f"received from {sherpa_name}: status {response.status_code}"
         )
-        self.session.add_notification([sherpa_name], started_leg_log, "info", "")
+        self.session.add_notification(
+            [sherpa_name, fleet.name], started_leg_log, "info", ""
+        )
 
     def delete_notifications(self):
         notification_timeout = {"info": 120, "alert": 300, "action_request": 300}
@@ -230,6 +232,7 @@ class Handlers:
     def end_leg(self, ongoing_trip: OngoingTrip):
         trip: Trip = ongoing_trip.trip
         sherpa_name = trip.sherpa_name
+        fleet_name = ongoing_trip.trip.fleet_name
 
         end_leg_log = f"{sherpa_name} finished a trip leg of trip (trip_id: {trip.id}) from {ongoing_trip.trip_leg.from_station} to {ongoing_trip.trip_leg.to_station}"
         get_logger(sherpa_name).info(end_leg_log)
@@ -248,7 +251,7 @@ class Handlers:
             )
 
         self.do_post_actions(ongoing_trip)
-        self.session.add_notification([sherpa_name], end_leg_log, "info", "")
+        self.session.add_notification([fleet_name, sherpa_name], end_leg_log, "info", "")
 
     def should_recreate_scheduled_trip(self, pending_trip: PendingTrip):
 
@@ -432,6 +435,7 @@ class Handlers:
     def do_post_actions(self, ongoing_trip: OngoingTrip):
         curr_station = ongoing_trip.curr_station()
         sherpa_name = ongoing_trip.sherpa_name
+        fleet_name = ongoing_trip.trip.fleet_name
         device_types = []
 
         if not curr_station:
@@ -458,7 +462,7 @@ class Handlers:
             timeout = StationProperties.DISPATCH_OPTIONAL in station.properties
             self.add_dispatch_start_to_ongoing_trip(ongoing_trip, timeout)
             self.session.add_notification(
-                [sherpa_name],
+                [fleet_name, sherpa_name],
                 f"Need a dispatch button press on {sherpa_name} which is parked at {ongoing_trip.curr_station()}",
                 "action_request",
                 "",
@@ -473,6 +477,7 @@ class Handlers:
     def resolve_auto_hitch_error(self, req: SherpaPeripheralsReq):
         sherpa_name = req.source
         ongoing_trip: OngoingTrip = self.session.get_ongoing_trip(sherpa_name)
+        fleet_name = ongoing_trip.trip.fleet_name
 
         if not ongoing_trip:
             raise ValueError(
@@ -487,7 +492,10 @@ class Handlers:
                 get_logger().info(peripheral_msg)
                 self.add_dispatch_start_to_ongoing_trip(ongoing_trip)
                 self.session.add_notification(
-                    [sherpa_name], peripheral_msg, "action_request", "peripherals"
+                    [fleet_name, sherpa_name],
+                    peripheral_msg,
+                    "action_request",
+                    "peripherals",
                 )
 
             else:
@@ -503,7 +511,7 @@ class Handlers:
     def resolve_conveyor_error(self, req: SherpaPeripheralsReq):
         sherpa_name = req.source
         ongoing_trip: OngoingTrip = self.session.get_ongoing_trip(sherpa_name)
-
+        fleet_name = ongoing_trip.trip.fleet_name
         if not ongoing_trip:
             raise ValueError(
                 f"Cannot resolve {req.error_device} error for {sherpa_name}, reason: no ongoing_trip"
@@ -516,12 +524,14 @@ class Handlers:
         conveyor_end_state = getattr(
             TripState, f"WAITING_STATION_CONV_{direction.upper()}_END"
         )
+
         if conveyor_start_state in ongoing_trip.states:
+            num_units = hutils.get_conveyor_ops_info(ongoing_trip.trip.trip_metadata)
             ongoing_trip.add_state(conveyor_end_state)
-            peripheral_msg = f"Resolving {req.error_device} error for {sherpa_name}, will wait for dispatch button press to continue"
+            peripheral_msg = f"Resolving {req.error_device} error for {sherpa_name}, move {num_units} tote(s) to the mule and press dispatch button"
             get_logger().info(peripheral_msg)
             self.session.add_notification(
-                [sherpa_name], peripheral_msg, "action_request", "peripherals"
+                [fleet_name, sherpa_name], peripheral_msg, "action_request", "peripherals"
             )
             self.add_dispatch_start_to_ongoing_trip(ongoing_trip)
         else:
@@ -763,6 +773,7 @@ class Handlers:
 
     def handle_conveyor_ack(self, req: ConveyorReq, ongoing_trip: OngoingTrip):
         current_station_name = ongoing_trip.curr_station()
+        fleet_name = ongoing_trip.trip.fleet_name
         current_station: Station = self.session.get_station(current_station_name)
 
         conveyor_start_state = getattr(
@@ -783,7 +794,7 @@ class Handlers:
                 msg = "transfer_tote"
             send_msg_to_conveyor(msg, current_station_name)
             self.session.add_notification(
-                [current_station_name],
+                [fleet_name, current_station_name],
                 transfer_tote_msg,
                 "info",
                 "",
@@ -1007,7 +1018,10 @@ class Handlers:
         )
 
         self.session.add_notification(
-            [sherpa_name], f"{sherpa_name} connected to fleet manager!", "info", ""
+            [fleet_name, sherpa_name],
+            f"{sherpa_name} connected to fleet manager!",
+            "info",
+            "",
         )
 
         return response.to_json()
