@@ -1,5 +1,7 @@
 from typing import Union
 from fastapi import APIRouter, Depends
+from sqlalchemy.orm.attributes import flag_modified
+
 from app.routers.dependencies import (
     get_user_from_header,
     process_req_with_response,
@@ -16,6 +18,7 @@ from models.trip_models import Trip, TripAnalytics
 from models.db_session import DBSession
 from utils.util import str_to_dt
 import utils.trip_utils as tu
+
 
 router = APIRouter(
     prefix="/api/v1/trips",
@@ -163,6 +166,25 @@ async def trip_analytics(
                 if not trip_analytics:
                     continue
                 response.update({trip_leg_id: tu.get_trip_analytics(trip_analytics)})
+
+    return response
+
+
+@router.get("/{trip_id}/add_trip_description/{description}")
+async def add_trip_description(
+    trip_id: int, description: str, user_name=Depends(get_user_from_header)
+):
+
+    response = {}
+    if not user_name:
+        raise_error("Unknown requester")
+
+    with DBSession() as dbsession:
+        trip: Trip = dbsession.get_trip(trip_id)
+        if trip.trip_metadata is None:
+            trip.trip_metadata = {}
+        trip.trip_metadata.update({"description": description})
+        flag_modified(trip, "trip_metadata")
 
     return response
 
