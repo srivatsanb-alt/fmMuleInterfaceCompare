@@ -85,6 +85,8 @@ def process_req(queue, req, user, dt=None):
     kwargs = {}
 
     if not queue:
+        # generic handler - is high priority queue - cannot wait for default timeout(180 seconds)
+        kwargs.update({"job_timeout": 30})
         queue = Queues.queues_dict["generic_handler"]
 
     # add retry only for SherpaReq(req comes from Sherpa)

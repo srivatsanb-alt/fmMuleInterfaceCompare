@@ -179,7 +179,7 @@ class OptimalDispatch:
         pending_trips = self.get_valid_pending_trips(pending_trips)
 
         waiting_time_priorities = [1] * len(pending_trips)
-        if self.config["prioritise_waiting_stations"]:
+        if self.config.get("prioritise_waiting_stations", True):
             waiting_time_priorities = self.get_waiting_time_priorities(pending_trips)
             self.logger.info(f"waiting_time_priorities : {waiting_time_priorities}")
 
@@ -266,8 +266,11 @@ class OptimalDispatch:
             1. making sure that the values in priority_normalised_cost_matrix are not below 10-3 incase waiting times are higher
             2. It also helps in differentiating multiple entries with eta==0
         """
-        epsilon = np.max(priority_matrix)
-        priority_normalised_cost_matrix += epsilon**w2
+
+        epsilon = np.max(priority_matrix, initial=1)
+
+        if len(priority_normalised_cost_matrix) > 0:
+            priority_normalised_cost_matrix += epsilon**w2
 
         return cost_matrix, priority_matrix, priority_normalised_cost_matrix
 
