@@ -40,7 +40,8 @@ while not DB_UP:
 # always modify frontend user - no state information
 print(f"frontend user details in config {frontenduser}")
 for user_name, user_details in frontenduser.items():
-    fu.add_update_frontend_user(user_name, user_details["hashed_password"])
+    role = user_details.get("role", "operator")
+    fu.add_update_frontend_user(user_name, user_details["hashed_password"], role)
 
 
 # will add new sherpas, fleets only - update should happen via endpoints

@@ -312,16 +312,17 @@ def add_linked_gates_table(dbsession, fleet):
     return
 
 
-def add_update_frontend_user(user_name: str, hashed_password: str):
+def add_update_frontend_user(user_name: str, hashed_password: str, role: str):
     with session_maker() as db:
         try:
             user: FrontendUser = (
                 db.query(FrontendUser).filter(FrontendUser.name == user_name).one()
             )
             user.hashed_password = hashed_password
+            user.role = role
             print(f"updated frontend user successfully {user.__dict__}")
         except NoResultFound:
-            user = FrontendUser(name=user_name, hashed_password=hashed_password)
+            user = FrontendUser(name=user_name, hashed_password=hashed_password, role=role)
             db.add(user)
             db.flush()
             db.refresh(user)

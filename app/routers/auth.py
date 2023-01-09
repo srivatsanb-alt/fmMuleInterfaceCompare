@@ -24,10 +24,9 @@ async def login(user_login: UserLogin):
         if user is None:
             raise_error("Unknown requester")
 
-        role = "admin"
         response = {
             "access_token": generate_jwt_token(user_login.name),
-            "user_details": {"user_name": user_login.name, "role": role},
+            "user_details": {"user_name": user_login.name, "role": user.role},
         }
 
     return response
