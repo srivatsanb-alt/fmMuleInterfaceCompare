@@ -179,6 +179,11 @@ async def writer(websocket, sherpa):
         message = await psub.get_message(ignore_subscribe_messages=True, timeout=5)
         if message:
             data = ast.literal_eval(message["data"])
+
+            # close WebSocket message
+            if data.get("close_ws", False):
+                await websocket.close()
+
             await websocket.send_json(data)
 
 

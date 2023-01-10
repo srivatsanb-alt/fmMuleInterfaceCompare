@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends
 from typing import Union
 from models.db_session import DBSession
 from utils import fleet_utils as fu
+from utils.comms import close_websocket_for_sherpa
 from core.constants import FleetStatus
 from models.fleet_models import Fleet, Sherpa, SherpaStatus, AvailableSherpas
 from app.routers.dependencies import (
@@ -36,6 +37,11 @@ async def reset_fleet(
         dbsession.session.commit()
 
         fu.reset_fleet(dbsession, fleet_name)
+        all_fleet_sherpas = dbsession.get_all_sherpas_in_fleet(fleet_name)
+
+        # close ws connection to make sure new map files are downloaded by sherpa on reconnect
+        for sherpa in all_fleet_sherpas:
+            close_websocket_for_sherpa(sherpa.name)
 
     return response
 
@@ -58,6 +64,9 @@ async def diagnostics(
 
         if not sherpa_status:
             raise_error("Invalid sherpa name")
+
+        # close ws connection
+        close_websocket_for_sherpa(sherpa_name)
 
         # delete sherpa status
         dbsession.session.delete(sherpa_status)

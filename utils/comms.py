@@ -112,3 +112,9 @@ def send_msg_to_conveyor(msg, conveyor_name):
 def send_notification(msg):
     pub = redis.from_url(os.getenv("FM_REDIS_URI"), decode_responses=True)
     pub.publish("channel:notifications", str(msg))
+
+
+def close_websocket_for_sherpa(sherpa_name):
+    msg = {"close_ws": True}
+    pub = redis.from_url(os.getenv("FM_REDIS_URI"), decode_responses=True)
+    pub.publish(f"channel:{sherpa_name}", str(msg))
