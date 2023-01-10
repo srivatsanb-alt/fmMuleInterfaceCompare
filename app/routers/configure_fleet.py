@@ -32,7 +32,15 @@ async def reset_fleet(
         raise_error("No fleet name")
 
     with DBSession() as dbsession:
+
+        all_ongoing_trips_fleet = dbsession.get_all_ongoing_trips_fleet(fleet_name)
+        if len(all_ongoing_trips_fleet):
+            raise_error("Cancel all the ongoing trips before resetting the fleet")
+
         fleet: Fleet = dbsession.get_fleet(fleet_name)
+        if not fleet:
+            raise_error("Bad detail invalid fleet name")
+
         fleet.status = FleetStatus.STOPPED
         dbsession.session.commit()
 
@@ -63,7 +71,7 @@ async def diagnostics(
         sherpa_status: SherpaStatus = dbsession.get_sherpa_status(sherpa_name)
 
         if not sherpa_status:
-            raise_error("Invalid sherpa name")
+            raise_error("Bad detail invalid sherpa name")
 
         # close ws connection
         close_websocket_for_sherpa(sherpa_name)
