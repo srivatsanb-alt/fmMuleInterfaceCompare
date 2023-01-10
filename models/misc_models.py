@@ -2,6 +2,14 @@ from models.base_models import Base, TimestampMixin
 from sqlalchemy import Column, Integer, String, ARRAY
 
 
+class NotificationModules:
+    generic = "generic"
+    trip = "trip"
+    visa = "visa"
+    obstructed = "obstructed"
+    peripheral_devices = "peripheral_devices"
+
+
 class Notifications(TimestampMixin, Base):
     __tablename__ = "notifications"
     id = Column(Integer, primary_key=True, index=True)

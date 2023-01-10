@@ -4,6 +4,7 @@ from models.base_models import StationProperties
 from models.db_session import DBSession
 from models.fleet_models import Fleet, Sherpa, SherpaStatus, Station, SherpaEvent
 from optimal_dispatch.dispatcher import OptimalDispatch
+from models.misc_models import NotificationModules
 from models.request_models import (
     AccessType,
     BookingReq,
@@ -166,7 +167,7 @@ class Handlers:
             f"received from {sherpa_name}: status {response.status_code}"
         )
         self.session.add_notification(
-            [sherpa_name, fleet.name], started_leg_log, "info", ""
+            [sherpa_name, fleet.name], started_leg_log, "info", NotificationModules.trip
         )
 
     def delete_notifications(self):
@@ -251,7 +252,9 @@ class Handlers:
             )
 
         self.do_post_actions(ongoing_trip)
-        self.session.add_notification([fleet_name, sherpa_name], end_leg_log, "info", "")
+        self.session.add_notification(
+            [fleet_name, sherpa_name], end_leg_log, "info", NotificationModules.trip
+        )
 
     def should_recreate_scheduled_trip(self, pending_trip: PendingTrip):
 
@@ -465,7 +468,7 @@ class Handlers:
                 [fleet_name, sherpa_name],
                 f"Need a dispatch button press on {sherpa_name} which is parked at {ongoing_trip.curr_station()}",
                 "action_request",
-                "",
+                NotificationModules.peripheral_devices,
             )
         if any(
             prop in station.properties
@@ -495,7 +498,7 @@ class Handlers:
                     [fleet_name, sherpa_name],
                     peripheral_msg,
                     "action_request",
-                    "peripherals",
+                    NotificationModules.peripheral_devices,
                 )
 
             else:
@@ -531,7 +534,10 @@ class Handlers:
             peripheral_msg = f"Resolving {req.error_device} error for {sherpa_name}, move {num_units} tote(s) to the mule and press dispatch button"
             get_logger().info(peripheral_msg)
             self.session.add_notification(
-                [fleet_name, sherpa_name], peripheral_msg, "action_request", "peripherals"
+                [fleet_name, sherpa_name],
+                peripheral_msg,
+                "action_request",
+                NotificationModules.peripheral_devices,
             )
             self.add_dispatch_start_to_ongoing_trip(ongoing_trip)
         else:
@@ -797,7 +803,7 @@ class Handlers:
                 [fleet_name, current_station_name],
                 transfer_tote_msg,
                 "info",
-                "",
+                NotificationModules.peripheral_devices,
             )
 
     def handle_conveyor(self, req: ConveyorReq, ongoing_trip: OngoingTrip):
@@ -1021,7 +1027,7 @@ class Handlers:
             [fleet_name, sherpa_name],
             f"{sherpa_name} connected to fleet manager!",
             "info",
-            "",
+            NotificationModules.generic,
         )
 
         return response.to_json()
@@ -1067,7 +1073,7 @@ class Handlers:
             [sherpa_name],
             f"{sherpa_name} {granted_message} visa for {zone_name}, {visa_type}!",
             "info",
-            "visa module",
+            NotificationModules.visa,
         )
 
         return response.to_json()
