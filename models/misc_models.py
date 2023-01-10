@@ -10,6 +10,19 @@ class NotificationModules:
     peripheral_devices = "peripheral_devices"
 
 
+class NotificationLevels:
+    info = "info"
+    alert = "alert"
+    action_request = "action_request"
+
+
+NotificationTimeout = {
+    NotificationLevels.info: 120,
+    NotificationLevels.action_request: 300,
+    NotificationLevels.alert: 300,
+}
+
+
 class Notifications(TimestampMixin, Base):
     __tablename__ = "notifications"
     id = Column(Integer, primary_key=True, index=True)

@@ -4,7 +4,7 @@ from models.base_models import StationProperties
 from models.db_session import DBSession
 from models.fleet_models import Fleet, Sherpa, SherpaStatus, Station, SherpaEvent
 from optimal_dispatch.dispatcher import OptimalDispatch
-from models.misc_models import NotificationModules
+from models.misc_models import NotificationModules, NotificationTimeout, NotificationLevels
 from models.request_models import (
     AccessType,
     BookingReq,
@@ -171,13 +171,12 @@ class Handlers:
         )
 
     def delete_notifications(self):
-        notification_timeout = {"info": 120, "alert": 300, "action_request": 300}
         all_notifications = self.session.get_notifications()
         for notification in all_notifications:
             time_since_notification = datetime.datetime.now() - notification.created_at
-            timeout = notification_timeout.get(notification.log_level, 120)
+            timeout = NotificationTimeout.get(notification.log_level, 120)
 
-            if notification.module == "visa module":
+            if notification.module == NotificationModules.visa:
                 timeout = 20
 
             if time_since_notification.seconds > timeout:
