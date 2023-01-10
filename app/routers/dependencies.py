@@ -73,7 +73,7 @@ def generate_jwt_token(username: str):
     return access_token
 
 
-def process_req(queue, req, user, dt=None):
+def process_req(queue, req, user, dt=None, ttl=None):
 
     if not user:
         raise HTTPException(status_code=403, detail=f"Unknown requeter {user}")
@@ -84,9 +84,12 @@ def process_req(queue, req, user, dt=None):
     args = [handler_obj, req]
     kwargs = {}
 
+    if ttl:
+        kwargs.update({"ttl": ttl})
+
     if not queue:
         # generic handler - is high priority queue - cannot wait for default timeout(180 seconds)
-        kwargs.update({"job_timeout": 30})
+        kwargs.update({"job_timeout": 10})
         queue = Queues.queues_dict["generic_handler"]
 
     # add retry only for SherpaReq(req comes from Sherpa)

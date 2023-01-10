@@ -59,7 +59,7 @@ def assign_next_task():
 
                     fm_health_check = FMHealthCheck()
                     q = Queues.queues_dict.get("misc_handler")
-                    process_req(q, fm_health_check, "self")
+                    process_req(q, fm_health_check, "self", ttl=2)
                     time.sleep(2)
 
         except Exception as e:
