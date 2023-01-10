@@ -192,7 +192,8 @@ class FleetSimulator:
             final_route = rm.get_route(from_pose, to_pose)[0]
             eta_at_start = rm.get_route_length(from_pose, to_pose)
             x_vals, y_vals, t_vals, _ = get_dense_path(final_route)
-            steps = 10
+            # sleep_time = 1
+            steps = 1000
             sleep_time = steps * (eta_at_start / len(x_vals))
             print(
                 f"{sherpa.name}, trip_leg_id: {ongoing_trip.trip_leg_id} sleep time {sleep_time}"
@@ -206,7 +207,7 @@ class FleetSimulator:
                     )
                     return
 
-                stoppage_type = None
+                stoppage_type = ""
                 local_obstacle = [-999.0, -999.0]
 
                 obst_random = np.random.rand(1)[0]
