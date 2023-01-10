@@ -167,7 +167,10 @@ class Handlers:
             f"received from {sherpa_name}: status {response.status_code}"
         )
         self.session.add_notification(
-            [sherpa_name, fleet.name], started_leg_log, "info", NotificationModules.trip
+            [sherpa_name, fleet.name],
+            started_leg_log,
+            NotificationLevels.info,
+            NotificationModules.trip,
         )
 
     def delete_notifications(self):
@@ -180,7 +183,10 @@ class Handlers:
                 timeout = 20
 
             if time_since_notification.seconds > timeout:
-                if notification.log_level != "info" and len(notification.cleared_by) == 0:
+                if (
+                    notification.log_level != NotificationLevels.info
+                    and len(notification.cleared_by) == 0
+                ):
                     continue
                 self.session.delete_notification(notification.id)
 
@@ -252,7 +258,10 @@ class Handlers:
 
         self.do_post_actions(ongoing_trip)
         self.session.add_notification(
-            [fleet_name, sherpa_name], end_leg_log, "info", NotificationModules.trip
+            [fleet_name, sherpa_name],
+            end_leg_log,
+            NotificationLevels.info,
+            NotificationModules.trip,
         )
 
     def should_recreate_scheduled_trip(self, pending_trip: PendingTrip):
@@ -466,7 +475,7 @@ class Handlers:
             self.session.add_notification(
                 [fleet_name, sherpa_name],
                 f"Need a dispatch button press on {sherpa_name} which is parked at {ongoing_trip.curr_station()}",
-                "action_request",
+                NotificationLevels.action_request,
                 NotificationModules.peripheral_devices,
             )
         if any(
@@ -496,7 +505,7 @@ class Handlers:
                 self.session.add_notification(
                     [fleet_name, sherpa_name],
                     peripheral_msg,
-                    "action_request",
+                    NotificationLevels.action_request,
                     NotificationModules.peripheral_devices,
                 )
 
@@ -535,7 +544,7 @@ class Handlers:
             self.session.add_notification(
                 [fleet_name, sherpa_name],
                 peripheral_msg,
-                "action_request",
+                NotificationLevels.action_request,
                 NotificationModules.peripheral_devices,
             )
             self.add_dispatch_start_to_ongoing_trip(ongoing_trip)
@@ -801,7 +810,7 @@ class Handlers:
             self.session.add_notification(
                 [fleet_name, current_station_name],
                 transfer_tote_msg,
-                "info",
+                NotificationLevels.info,
                 NotificationModules.peripheral_devices,
             )
 
@@ -1025,7 +1034,7 @@ class Handlers:
         self.session.add_notification(
             [fleet_name, sherpa_name],
             f"{sherpa_name} connected to fleet manager!",
-            "info",
+            NotificationLevels.info,
             NotificationModules.generic,
         )
 
@@ -1071,7 +1080,7 @@ class Handlers:
         self.session.add_notification(
             [sherpa_name],
             f"{sherpa_name} {granted_message} visa for {zone_name}, {visa_type}!",
-            "info",
+            NotificationLevels.info,
             NotificationModules.visa,
         )
 
