@@ -1,6 +1,7 @@
 import ast
 import asyncio
-import logging, logging.config
+import logging
+import logging.config
 import math
 import os
 from datetime import timedelta
@@ -47,7 +48,7 @@ expire_after_ms = timedelta(milliseconds=500)
 
 def manage_sherpa_ip_change(sherpa, x_real_ip):
     if sherpa.ip_address != x_real_ip:
-        logging.info(
+        logger.info(
             f"{sherpa.name} ip has changed since last connection , last_connection_ip: {sherpa.ip_address}"
         )
         sherpa.ip_address = x_real_ip
@@ -56,16 +57,16 @@ def manage_sherpa_ip_change(sherpa, x_real_ip):
             os.remove(
                 os.path.join(os.getenv("FM_MAP_DIR"), "certs", f"{sherpa.name}_cert.pem")
             )
-            logging.info(f"Removed {sherpa.name} cert file since ip has changed")
+            logger.info(f"Removed {sherpa.name} cert file since ip has changed")
         except Exception as e:
-            logging.info(f"Unable to remove cert file {e}")
+            logger.info(f"Unable to remove cert file {e}")
             sherpa.status.other_info.update({"ip_changed": True})
-            logging.info(
+            logger.info(
                 f"Updated {sherpa.name} ip address, committed  it the ip change to DB"
             )
     else:
         sherpa.status.other_info.update({"ip_changed": False})
-        logging.info(f"{sherpa.name} ip hasn't changed since last connection")
+        logger.info(f"{sherpa.name} ip hasn't changed since last connection")
 
     flag_modified(sherpa.status, "other_info")
 
@@ -107,7 +108,7 @@ async def sherpa_status(
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
 
-    logging.info(f"websocket connection initiated by {sherpa_name}")
+    logger.info(f"websocket connection initiated by {sherpa_name}")
 
     # client.host will be nginx container ip
     client_ip = websocket.client.host
@@ -144,7 +145,7 @@ async def reader(websocket, sherpa):
         try:
             msg = await websocket.receive_json()
         except WebSocketDisconnect as e:
-            logging.info(f"websocket with {websocket.client.host} disconnected")
+            logger.info(f"websocket with {websocket.client.host} disconnected")
             raise e
 
         msg_type = msg.get("type")
@@ -161,7 +162,7 @@ async def reader(websocket, sherpa):
         sherpa_trip_q = Queues.queues_dict[f"{sherpa}_trip_update_handler"]
 
         if msg_type == MessageType.TRIP_STATUS:
-            # logging.info(f"got a trip status {msg}")
+            # logger.info(f"got a trip status {msg}")
             msg["source"] = sherpa
             trip_status_msg = TripStatusMsg.from_dict(msg)
             trip_status_msg.trip_info = TripInfo.from_dict(msg["trip_info"])

@@ -1,8 +1,8 @@
 import ast
 import asyncio
-import logging, logging.config
+import logging
+import logging.config
 import os
-
 import aioredis
 from fastapi import APIRouter, Depends, WebSocket, status
 

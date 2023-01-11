@@ -1,13 +1,13 @@
-from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, status
 import asyncio
 import logging
 import logging.config
-from app.routers.dependencies import get_user_from_query, raise_error
 import aioredis
 import os
 import ast
-from models.db_session import DBSession
+from app.routers.dependencies import get_user_from_query, raise_error
+from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, status
 from sqlalchemy.orm.attributes import flag_modified
+from models.db_session import DBSession
 
 
 # setup logging
@@ -91,7 +91,7 @@ async def reader(websocket, token):
             _ = await websocket.receive_json()
             pass
         except WebSocketDisconnect as e:
-            logging.info(f"websocket with {websocket.client.host} disconnected")
+            logger.info(f"websocket with {websocket.client.host} disconnected")
             raise e
 
 
@@ -118,4 +118,4 @@ async def writer(websocket, token):
                         del notification[id]["cleared_by"]
                 await websocket.send_json(notification)
             except Exception as e:
-                logging.info(f"Exception in notification webSocket writer {e}")
+                logger.info(f"Exception in notification webSocket writer {e}")
