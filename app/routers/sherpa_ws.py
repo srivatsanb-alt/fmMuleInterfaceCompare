@@ -1,6 +1,6 @@
 import ast
 import asyncio
-import logging
+import logging, logging.config
 import math
 import os
 from datetime import timedelta
@@ -24,12 +24,22 @@ from sqlalchemy.orm.attributes import flag_modified
 from redis import Redis
 from utils.rq_utils import Queues, enqueue
 
-redis = Redis.from_url(os.getenv("FM_REDIS_URI"))
-router = APIRouter()
 
 MSG_INVALID = "msg_invalid"
 MSG_TYPE_REPEATED = "msg_type_repeated_within_time_window"
 MSG_TS_INVALID = "msg_timestamp_invalid"
+
+
+# setup logging
+log_conf_path = os.path.join(os.getenv("FM_CONFIG_DIR"), "logging.conf")
+logging.config.fileConfig(log_conf_path)
+
+
+redis = Redis.from_url(os.getenv("FM_REDIS_URI"))
+
+
+router = APIRouter()
+
 
 expire_after_ms = timedelta(milliseconds=500)
 
@@ -96,7 +106,7 @@ async def sherpa_status(
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
 
-    logging.getLogger().info(f"websocket connection initiated by {sherpa_name}")
+    logging.info(f"websocket connection initiated by {sherpa_name}")
 
     # client.host will be nginx container ip
     client_ip = websocket.client.host
@@ -165,7 +175,7 @@ async def reader(websocket, sherpa):
             status_msg = SherpaStatusMsg.from_dict(msg)
             enqueue(sherpa_update_q, handle, handler_obj, status_msg, ttl=1)
         else:
-            logging.getLogger().error(f"Unsupported message type {msg_type}")
+            logging.error(f"Unsupported message type {msg_type}")
 
 
 async def writer(websocket, sherpa):

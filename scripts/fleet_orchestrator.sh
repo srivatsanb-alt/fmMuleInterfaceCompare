@@ -13,7 +13,7 @@ start() {
     poetry run python /app/main.py > $LOGS/fm.out 2>&1 &
 
     echo "starting fleet manager uvicorn, listening on port $FM_PORT"
-    poetry run uvicorn app.main:app --host 0.0.0.0 --port $FM_PORT > $LOGS/uvicorn.out 2>&1 &
+    poetry run uvicorn app.main:app --host 0.0.0.0 --port $FM_PORT 2>&1 &
 
     echo "starting plugins uvicorn, listening on port $PLUGIN_PORT"
     poetry run uvicorn plugins.plugin_app:app --host 0.0.0.0 --port $PLUGIN_PORT > $LOGS/plugin_uvicorn.out 2>&1 &

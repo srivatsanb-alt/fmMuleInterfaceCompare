@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, status
 import asyncio
-import logging
+import logging, logging.config
 from app.routers.dependencies import get_user_from_query, raise_error
 import aioredis
 import os
@@ -8,6 +8,10 @@ import ast
 from models.db_session import DBSession
 from sqlalchemy.orm.attributes import flag_modified
 
+
+# setup logging
+log_conf_path = os.path.join(os.getenv("FM_CONFIG_DIR"), "logging.conf")
+logging.config.fileConfig(log_conf_path)
 
 router = APIRouter()
 

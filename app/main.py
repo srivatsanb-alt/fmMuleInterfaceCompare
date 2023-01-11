@@ -1,7 +1,12 @@
 import time
+import logging, logging.config
+import os
+
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+
 from .routers import (
     sherpa_http,
     sherpa_ws,
@@ -15,7 +20,11 @@ from .routers import (
     configure_fleet,
 )
 
+# setup logging
+log_conf_path = os.path.join(os.getenv("FM_CONFIG_DIR"), "logging.conf")
+logging.config.fileConfig(log_conf_path)
 
+# create FastAPI object
 app = FastAPI()
 
 app.add_middleware(
