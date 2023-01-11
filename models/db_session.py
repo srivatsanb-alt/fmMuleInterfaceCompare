@@ -206,7 +206,7 @@ class DBSession:
     def get_all_stations_in_fleet(self, fleet_name: str) -> List[Station]:
         return (
             self.session.query(Station)
-            .join(Sherpa.fleet)
+            .join(Station.fleet)
             .filter(Fleet.name == fleet_name)
             .all()
         )
