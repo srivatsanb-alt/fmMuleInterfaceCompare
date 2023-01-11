@@ -11,6 +11,7 @@ from app.routers.dependencies import get_user_from_query
 # setup logging
 log_conf_path = os.path.join(os.getenv("FM_CONFIG_DIR"), "logging.conf")
 logging.config.fileConfig(log_conf_path)
+logger = logging.getLogger("uvicorn")
 
 router = APIRouter()
 
@@ -24,7 +25,7 @@ async def update_ws(websocket: WebSocket, user_name=Depends(get_user_from_query)
 
     await websocket.accept()
 
-    logging.info(f"websocket connection started for {user_name}")
+    logger.info(f"websocket connection started for {user_name}")
 
     rw = [
         asyncio.create_task(reader(websocket)),
