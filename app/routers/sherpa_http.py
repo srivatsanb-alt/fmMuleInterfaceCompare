@@ -14,8 +14,7 @@ from models.request_models import (
     VerifyFleetFilesResp,
 )
 from fastapi import Depends, APIRouter
-from utils.rq import Queues
-
+from utils.rq_utils import Queues
 
 router = APIRouter(
     prefix="/api/v1/sherpa",

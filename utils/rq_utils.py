@@ -1,8 +1,8 @@
 import logging
 import os
 import redis
-from core.config import Config
 from rq import Queue
+from core.config import Config
 
 
 class Queues:

@@ -22,7 +22,7 @@ from models.request_models import (
 )
 from sqlalchemy.orm.attributes import flag_modified
 from redis import Redis
-from utils.rq import Queues, enqueue
+from utils.rq_utils import Queues, enqueue
 
 redis = Redis.from_url(os.getenv("FM_REDIS_URI"))
 router = APIRouter()

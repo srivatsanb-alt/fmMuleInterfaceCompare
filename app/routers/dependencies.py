@@ -7,7 +7,7 @@ from fastapi import Header
 from fastapi.param_functions import Query
 from rq.job import Job
 from rq import Retry
-from utils.rq import enqueue, enqueue_at, Queues
+from utils.rq_utils import enqueue, enqueue_at, Queues
 from core.config import Config
 import redis
 import os

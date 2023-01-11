@@ -6,7 +6,7 @@ from models.trip_models import PendingTrip
 from utils.util import check_if_timestamp_has_passed
 import time
 import logging
-from utils.rq import Queues, enqueue
+from utils.rq_utils import Queues, enqueue
 
 
 def enqueue_scheduled_trips(db_session: DBSession, schdeuled_job_id):
