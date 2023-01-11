@@ -66,8 +66,6 @@ if [[ $copy_static == 1 ]] && [[ $server == 1 ]] ; then
 	  rsync -azP --no-o --no-g --no-perms $IP_ADDRESS:static/fleet_config static/
 	  rsync -azP --no-o --no-g --no-perms $IP_ADDRESS:static/certs static/
 	  rsync -azP --no-o --no-g --no-perms $IP_ADDRESS:static/plugin* static/ || echo "Unable to copy plugin data"
-
-	  cp static/certs/fm_rev_proxy_cert.pem dashboard/static/. || true
   } || {
 	  echo "couldn't find fleet_manager container, cannot copy static files"
   }
@@ -94,7 +92,7 @@ fi
 
 if [ $cert_reqd == 1 ]; then
    echo "Checking if cert files are present"
-   if [[ -f "static/certs/fm_rev_proxy_cert.pem" ]] && [[ -f "dashboard/static/fm_rev_proxy_cert.pem" ]] ; then
+   if [[ -f "static/certs/fm_rev_proxy_cert.pem" ]]; then
       echo "FM cert files present"
    else
       echo "cert files not present at either at static/certs or dashboard/static"

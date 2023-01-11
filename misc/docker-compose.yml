@@ -40,7 +40,7 @@ services:
     expose:
       - 5432
     volumes:
-      - ./psql_backup:/var/lib/postgresql/data:rw
+      - ./psql/psql_backup:/var/lib/postgresql/data:rw
     network_mode: bridge
 
   reverseproxy:
