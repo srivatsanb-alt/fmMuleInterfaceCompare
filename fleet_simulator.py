@@ -1,5 +1,5 @@
 import time
-from utils.rq import Queues, enqueue
+from utils.rq_utils import Queues, enqueue
 from core.config import Config
 from models.request_models import (
     SherpaStatusMsg,
