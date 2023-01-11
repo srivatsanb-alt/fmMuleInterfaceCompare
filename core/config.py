@@ -110,9 +110,3 @@ class Config:
             cls.config = cls.read_config()
         station_config = cls.config["fleet"]["stations"]
         return station_config.get("dispatch_timeout", 10.0)
-
-
-if __name__ == "__main__":
-    d = {"a": [1, 2, 3], "b": {"c": 2, "d": {"e": 3}, "f": {"g": [4, 5]}}}
-    fd = flatten_config(d)
-    print(fd)
