@@ -3,19 +3,23 @@ import os
 import ast
 import requests
 import logging
+import logging.config
 import json
 from app.routers.dependencies import generate_jwt_token
 from plugins.plugin_rq import Plugin_Queues, enqueue
 
-logging.basicConfig(level=logging.INFO)
+# setup logging
+log_conf_path = os.path.join(os.getenv("FM_CONFIG_DIR"), "logging.conf")
+logging.config.fileConfig(log_conf_path)
+logger = logging.getLogger("PluginUvicorn")
 
 
 async def ws_reader(websocket, name, handler_obj, unique_id=None):
     plugin_q = Plugin_Queues.queues_dict[f"plugin_{name}"]
-    logging.info(f"Started websocket reader for {name}")
+    logger.info(f"Started websocket reader for {name}")
     while True:
         msg_recv = await websocket.receive_text()
-        logging.info(f"Received msg: {msg_recv}")
+        logger.info(f"Received msg: {msg_recv}")
         msg = msg_recv.replace("'", '"')
         count = 0
         while type(msg) is str:
@@ -24,7 +28,7 @@ async def ws_reader(websocket, name, handler_obj, unique_id=None):
         if unique_id is not None:
             msg["unique_id"] = unique_id
 
-        logging.debug(f"Converted msg: {msg}, count: {count}")
+        logger.debug(f"Converted msg: {msg}, count: {count}")
         enqueue(plugin_q, handler_obj.handle, msg)
 
 
@@ -40,12 +44,12 @@ async def ws_writer(websocket, name, format="json", unique_id=None):
         channel_name = channel_name + f"_{unique_id}"
 
     await psub.subscribe(f"channel:{channel_name}")
-    logging.info(f"Started websocket writer for {channel_name}")
+    logger.info(f"Started websocket writer for {channel_name}")
 
     while True:
         message = await psub.get_message(ignore_subscribe_messages=True, timeout=5)
         if message:
-            logging.info(f"Got a message in {channel_name} ws_writer  {message}")
+            logger.info(f"Got a message in {channel_name} ws_writer  {message}")
 
             if format == "json":
                 data = ast.literal_eval(message["data"])
@@ -112,6 +116,6 @@ def get_fm_url(endpoint, query):
         ),
         "sherpa_summary": os.path.join(
             "http://", fm_ip, "api/v1/sherpa_summary/", str(query)
-        )
+        ),
     }
     return fm_endpoints.get(endpoint, None)

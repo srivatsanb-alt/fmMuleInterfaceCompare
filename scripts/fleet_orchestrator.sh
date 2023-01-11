@@ -16,7 +16,7 @@ start() {
     poetry run uvicorn app.main:app --host 0.0.0.0 --port $FM_PORT 2>&1 &
 
     echo "starting plugins uvicorn, listening on port $PLUGIN_PORT"
-    poetry run uvicorn plugins.plugin_app:app --host 0.0.0.0 --port $PLUGIN_PORT > $LOGS/plugin_uvicorn.out 2>&1 &
+    poetry run uvicorn plugins.plugin_app:app --host 0.0.0.0 --port $PLUGIN_PORT 2>&1 &
 
     echo "starting plugins worker"
     poetry run python plugins/plugin_rq.py > $LOGS/plugin_rq.out 2>&1 &
