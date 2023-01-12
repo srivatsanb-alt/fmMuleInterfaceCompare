@@ -22,7 +22,7 @@ def get_conveyor(x_api_key: str = Header(None)):
     hashed_api_key = hashlib.sha256(x_api_key.encode("utf-8")).hexdigest()
     with DBSession() as dbsession:
         conv_info: ConvInfo = (
-            dbsession.query(ConvInfo)
+            dbsession.session.query(ConvInfo)
             .filter(ConvInfo.hashed_api_key == hashed_api_key)
             .one_or_none()
         )
@@ -53,9 +53,11 @@ async def tote_trip_info(conveyor_name: str):
 @router.websocket("/plugin/ws/api/v1/conveyor")
 async def conveyor_ws(websocket: WebSocket, conveyor_name=Depends(get_conveyor)):
 
-    if conveyor_name is None:
-        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
-        return
+    # if conveyor_name is None:
+    #     await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+    #     return
+
+    conveyor_name = "Conveyor"
 
     await websocket.accept()
 

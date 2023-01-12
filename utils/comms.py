@@ -6,7 +6,7 @@ import math
 import requests
 import threading
 import json
-from rq import Job
+from rq.job import Job
 
 
 from core.config import Config

@@ -51,7 +51,7 @@ class CONV_HANDLER:
         msg_type = msg.get("type", "unknown")
         self.init_handler
         with DBSession() as dbsession:
-            self.session = dbsession
+            self.session = dbsession.session
 
             # setup logger
             self.logger = logging.getLogger("plugin_conveyor")

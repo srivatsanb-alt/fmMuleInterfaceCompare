@@ -42,7 +42,7 @@ def book_trip(dbsession, route, plugin_name):
             route=route,
             completed=False,
         )
-        dbsession.add(trip)
+        dbsession.session.add(trip)
 
 
 def has_sherpa_passed_conveyor(trip_id, conveyor_name, plugin_name):
@@ -61,7 +61,9 @@ def has_sherpa_passed_conveyor(trip_id, conveyor_name, plugin_name):
 
 def get_tote_trip_info(dbsession, num_totes, conveyor_name, plugin_name):
     MAX_TOTE_PER_TRIP = 2
-    incomplete_trips = dbsession.query(ConvTrips).filter(ConvTrips.active.is_(False)).all()
+    incomplete_trips = (
+        dbsession.session.query(ConvTrips).filter(ConvTrips.active.is_(False)).all()
+    )
     epsilon = 1e-6
     num_trips = 0
     for trip in incomplete_trips:
@@ -98,7 +100,7 @@ def populate_conv_info():
                 station_type = "conveyor"
                 hashed_api_key = hashlib.sha256(api_key.encode("utf-8")).hexdigest()
                 conv_info = (
-                    dbsession.query(ConvInfo)
+                    dbsession.session.query(ConvInfo)
                     .filter(ConvInfo.name == conveyor_name)
                     .one_or_none()
                 )
@@ -111,11 +113,11 @@ def populate_conv_info():
                         nearest_chute=conveyor_details["nearest_chute"],
                         fleet_name=station_info["fleet_name"],
                     )
-                    dbsession.add(conv_info)
+                    dbsession.session.add(conv_info)
                 else:
                     conv_info.nearest_chute = conv_info
                     conv_info.fleet_name = station_info["fleet_name"]
 
-            dbsession.commit()
+            dbsession.session.commit()
 
         return all_conveyors

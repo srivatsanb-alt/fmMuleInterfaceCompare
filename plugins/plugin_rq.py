@@ -1,4 +1,5 @@
-from rq import Queue, Worker, Connection, Job
+from rq import Queue, Worker, Connection
+from rq.job import Job
 import redis
 import time
 import toml
@@ -110,6 +111,7 @@ def get_job_result(job_id):
 
 
 if __name__ == "__main__":
+    time.sleep(30)
 
     redis_conn = get_redis_conn()
     all_plugins = get_all_plugins()
