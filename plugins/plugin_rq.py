@@ -1,8 +1,10 @@
-from rq import Queue, Worker, Connection
+from rq import Queue, Worker, Connection, Job
 import redis
+import time
 import toml
 import os
 from multiprocessing import Process
+from fastapi import HTTPException
 import logging
 import json
 
@@ -80,17 +82,31 @@ def report_success(job, connection, result, *args, **kwargs):
     pass
 
 
-def enqueue(queue: Queue, func, data, *args, **kwargs):
+def enqueue(queue: Queue, func, *args, **kwargs):
     kwargs.setdefault("result_ttl", 100)
     kwargs.setdefault("failure_ttl", 0)
     kwargs.setdefault("on_failure", report_failure)
     kwargs.setdefault("on_success", report_success)
     return queue.enqueue(
         func,
-        data,
         *args,
         **kwargs,
     )
+
+
+def get_job_result(job_id):
+    job = Job.fetch(job_id, connection=redis_conn)
+    while True:
+        status = job.get_status(refresh=True)
+        if status == "finished":
+            response = job.result
+            break
+        if status == "failed":
+            job.cancel()
+            raise HTTPException(status_code=500, detail="Unable to process the request")
+        time.sleep(0.01)
+
+    return response
 
 
 if __name__ == "__main__":
@@ -121,11 +137,13 @@ if __name__ == "__main__":
         conveyor_logger = get_seperate_logger("plugin_conveyor")
         init_db(str("plugin_conveyor"), [ConvInfo, ConvTrips])
 
-        populate_conv_info()
+        all_conveyors = populate_conv_info()
+
         conveyor_logger.info("Populated conveyor_info table")
 
         # start a worker for conveyor plugin
-        Process(target=start_worker, args=("plugin_conveyor",)).start()
-        conveyor_logger.info("started a worker for plugin_conveyor")
+        for conveyor_name in all_conveyors:
+            Process(target=start_worker, args=(f"plugin_conveyor_{conveyor_name}",)).start()
+            conveyor_logger.info(f"started a worker for plugin_conveyor_{conveyor_name}")
 
     redis_conn.set("plugins_workers_db_init", json.dumps(True))

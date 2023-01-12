@@ -2,7 +2,6 @@ import hashlib
 import time
 import jwt
 from fastapi import HTTPException
-import logging
 from fastapi import Header
 from fastapi.param_functions import Query
 from rq.job import Job
@@ -11,8 +10,48 @@ from utils.rq_utils import enqueue, enqueue_at, Queues
 from core.config import Config
 import redis
 import os
+import json
 from models.request_models import SherpaReq
 from models.db_session import DBSession
+
+
+def add_job_to_queued_jobs(job_id, source):
+    redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
+    queued_jobs = redis_conn.get("queued_jobs")
+    if queued_jobs is None:
+        queued_jobs = b"{}"
+
+    queued_jobs = json.loads(queued_jobs)
+
+    jobs_source = queued_jobs.get(source)
+
+    if jobs_source is None:
+        jobs_source = []
+    jobs_source.append(job_id)
+
+    queued_jobs.update({source: jobs_source})
+    redis_conn.set("queued_jobs", json.dumps(queued_jobs))
+    redis_conn.close()
+
+
+def remove_job_from_queued_jobs(job_id, source):
+    redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
+    queued_jobs = redis_conn.get("queued_jobs")
+    if queued_jobs is None:
+        return
+
+    queued_jobs = json.loads(queued_jobs)
+
+    jobs_source = queued_jobs.get(source)
+    if jobs_source is None:
+        return
+
+    if job_id in jobs_source:
+        jobs_source.remove(job_id)
+
+    queued_jobs.update({source: jobs_source})
+    redis_conn.set("queued_jobs", json.dumps(queued_jobs))
+    redis_conn.close()
 
 
 def raise_error(detail):
@@ -78,6 +117,8 @@ def process_req(queue, req, user, dt=None, ttl=None):
     if not user:
         raise HTTPException(status_code=403, detail=f"Unknown requeter {user}")
 
+    job = None
+
     req.source = user
 
     handler_obj = Config.get_handler()
@@ -97,18 +138,25 @@ def process_req(queue, req, user, dt=None, ttl=None):
         kwargs.update({"retry": Retry(max=3, interval=[0.5, 1, 2])})
 
     if dt:
-        return enqueue_at(queue, dt, handle, *args, **kwargs)
+        job = enqueue_at(queue, dt, handle, *args, **kwargs)
+        return job
 
-    return enqueue(queue, handle, *args, **kwargs)
+    job = enqueue(queue, handle, *args, **kwargs)
+    return job
 
 
 def process_req_with_response(queue, req, user: str):
     job: Job = process_req(queue, req, user)
+    add_job_to_queued_jobs(job.id, req.source)
+
     redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
 
     while True:
         job = Job.fetch(job.id, connection=redis_conn)
         status = job.get_status(refresh=True)
+
+        if status in ["finished", "failed"]:
+            remove_job_from_queued_jobs(job.id, req.source)
 
         if status == "finished":
             response = job.result
@@ -116,6 +164,7 @@ def process_req_with_response(queue, req, user: str):
         if status == "failed":
             job.cancel()
             raise HTTPException(status_code=500, detail="Unable to process the request")
+
         time.sleep(0.01)
 
     return response

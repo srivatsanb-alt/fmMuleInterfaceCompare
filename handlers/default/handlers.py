@@ -60,6 +60,7 @@ from utils.comms import (
     send_msg_to_sherpa,
     send_status_update,
     send_msg_to_conveyor,
+    get_num_units_converyor,
 )
 from utils.util import (
     are_poses_close,
@@ -412,8 +413,11 @@ class Handlers:
         ongoing_trip.add_state(TripState.WAITING_STATION_AUTO_UNHITCH_START)
 
     def add_conveyor_start_to_ongoing_trip(self, ongoing_trip, station):
+        num_units = get_num_units_converyor(station.name)
+
+        # update metadata with num totes
         trip_metadata = ongoing_trip.trip.trip_metadata
-        num_units = hutils.get_conveyor_ops_info(trip_metadata)
+        trip_metadata["num_units"] = num_units
 
         if num_units == 0:
             get_logger().info(

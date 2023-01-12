@@ -1,9 +1,14 @@
 import asyncio
 import hashlib
-from fastapi import APIRouter, WebSocket
+from fastapi import APIRouter, WebSocket, Depends, Header, status
+from rq import Queue
+
+
 from plugins.plugin_comms import ws_reader, ws_writer
-from fastapi import Depends, Header, status
-from .conveyor_utils import ConvTrips, ConvInfo, session
+from plugins.plugin_rq import enqueue, get_redis_conn, get_job_result
+
+
+from .conveyor_models import ConvInfo, DBSession
 from .conveyor_handler import CONV_HANDLER
 
 router = APIRouter()
@@ -15,14 +20,15 @@ def get_conveyor(x_api_key: str = Header(None)):
         return None
 
     hashed_api_key = hashlib.sha256(x_api_key.encode("utf-8")).hexdigest()
-    conv_info: ConvInfo = (
-        session.query(ConvInfo)
-        .filter(ConvInfo.hashed_api_key == hashed_api_key)
-        .one_or_none()
-    )
+    with DBSession() as dbsession:
+        conv_info: ConvInfo = (
+            dbsession.query(ConvInfo)
+            .filter(ConvInfo.hashed_api_key == hashed_api_key)
+            .one_or_none()
+        )
 
-    if conv_info is not None:
-        conveyor_name = conv_info.name
+        if conv_info is not None:
+            conveyor_name = conv_info.name
 
     return conveyor_name
 
@@ -32,16 +38,16 @@ async def check_connection():
     return {"uvicorn": "I Am Alive"}
 
 
-@router.get("/plugin/ws/api/v1/conveyor_info")
-async def conveyor_info():
-    db_info: ConvInfo = session.Query(ConvInfo).all()
-    return db_info
+@router.get("/plugin/conveyor/tote_trip_info/{conveyor_name}")
+async def tote_trip_info(conveyor_name: str):
+    response = {}
+    q = Queue(f"plugin_conveyor_{conveyor_name}", connection=get_redis_conn())
+    conv_handler = CONV_HANDLER()
+    msg = {"type": "tote_trip_info", "unique_id": conveyor_name}
+    job = enqueue(q, conv_handler.handle, msg)
+    response = get_job_result(job.id)
 
-
-@router.get("/plugin/ws/api/v1/conveyor_trips")
-async def conveyor_trips():
-    db_info: ConvInfo = session.Query(ConvTrips).all()
-    return db_info
+    return response
 
 
 @router.websocket("/plugin/ws/api/v1/conveyor")

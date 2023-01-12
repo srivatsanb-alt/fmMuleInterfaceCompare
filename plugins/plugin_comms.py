@@ -5,8 +5,10 @@ import requests
 import logging
 import logging.config
 import json
+from rq import Queue
 from app.routers.dependencies import generate_jwt_token
-from plugins.plugin_rq import Plugin_Queues, enqueue
+import redis
+from .plugin_rq import enqueue
 
 # setup logging
 log_conf_path = os.path.join(os.getenv("FM_CONFIG_DIR"), "logging.conf")
@@ -15,7 +17,16 @@ logger = logging.getLogger("PluginUvicorn")
 
 
 async def ws_reader(websocket, name, handler_obj, unique_id=None):
-    plugin_q = Plugin_Queues.queues_dict[f"plugin_{name}"]
+    if not unique_id:
+        plugin_q = Queue(
+            f"plugin_{name}", connection=redis.from_url(os.getenv("FM_REDIS_URI"))
+        )
+    else:
+        plugin_q = Queue(
+            f"plugin_{name}_{unique_id}",
+            connection=redis.from_url(os.getenv("FM_REDIS_URI")),
+        )
+
     logger.info(f"Started websocket reader for {name}")
     while True:
         msg_recv = await websocket.receive_text()
