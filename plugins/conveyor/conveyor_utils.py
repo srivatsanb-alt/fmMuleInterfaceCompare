@@ -115,7 +115,7 @@ def populate_conv_info():
                     )
                     dbsession.session.add(conv_info)
                 else:
-                    conv_info.nearest_chute = conv_info
+                    conv_info.nearest_chute = conveyor_details["nearest_chute"]
                     conv_info.fleet_name = station_info["fleet_name"]
 
             dbsession.session.commit()
