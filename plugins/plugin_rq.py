@@ -141,7 +141,7 @@ if __name__ == "__main__":
 
         all_conveyors = populate_conv_info()
 
-        conveyor_logger.info("Populated conveyor_info table")
+        conveyor_logger.info(f"Populated conveyor_info table with info of {all_conveyors}")
 
         # start a worker for conveyor plugin
         for conveyor_name in all_conveyors:

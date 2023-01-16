@@ -95,9 +95,9 @@ def populate_conv_info():
             if response_json is not None:
                 all_conveyors.append(conveyor_name)
                 station_info = response_json
-                # if StationProperties.CONVEYOR in station_info["properties"]:
-                logging.getLogger(logger_name).info(f"Will add {conveyor_name} to DB")
-                station_type = "conveyor"
+                logging.getLogger(logger_name).info(
+                    f"Will add the conveyor '{conveyor_name}' to DB"
+                )
                 hashed_api_key = hashlib.sha256(api_key.encode("utf-8")).hexdigest()
                 conv_info = (
                     dbsession.session.query(ConvInfo)
@@ -109,7 +109,6 @@ def populate_conv_info():
                         name=conveyor_details["name"],
                         hashed_api_key=hashed_api_key,
                         num_totes=0,
-                        type=station_type,
                         nearest_chute=conveyor_details["nearest_chute"],
                         fleet_name=station_info["fleet_name"],
                     )
@@ -118,6 +117,6 @@ def populate_conv_info():
                     conv_info.nearest_chute = conveyor_details["nearest_chute"]
                     conv_info.fleet_name = station_info["fleet_name"]
 
-            dbsession.session.commit()
+        dbsession.session.commit()
 
         return all_conveyors

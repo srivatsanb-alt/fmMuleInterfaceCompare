@@ -9,9 +9,8 @@ class CONV_HANDLER:
 
     def handle_tote_status(self, msg: dict):
         tote_status = ToteStatus.from_dict(msg)
-
         conv_info: ConvInfo = (
-            self.session.query(ConvInfo)
+            self.session.session.query(ConvInfo)
             .filter(ConvInfo.name == tote_status.name)
             .one_or_none()
         )
@@ -26,7 +25,9 @@ class CONV_HANDLER:
             self.session, conv_info.num_totes, tote_status.name, self.plugin_name
         )
 
-        if tote_trip_info.get("book", False):
+        self.logger.info(f"Tote trip info for {tote_status.name} : {tote_trip_info}")
+
+        if tote_trip_info.get("book_trip", False):
             route = []
             nearest_chute = conv_info.nearest_chute
             route = [conv_info.name, nearest_chute]
@@ -49,7 +50,7 @@ class CONV_HANDLER:
 
     def handle(self, msg):
         msg_type = msg.get("type", "unknown")
-        self.init_handler
+        self.init_handler()
         with DBSession() as dbsession:
             self.session = dbsession
 
