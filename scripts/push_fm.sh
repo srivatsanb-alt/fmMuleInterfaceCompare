@@ -104,7 +104,7 @@ fi
 
 BRANCH=$(git rev-parse --abbrev-ref HEAD)
 GIT_COMMIT="$(git rev-parse HEAD)"
-GIT_TAG="$(git rev-parse HEAD) $(git diff --quiet || echo 'dirty')"
+GIT_TAG="$(git describe --tags)"
 IS_DIRTY="$(git diff --quiet || echo 'dirty')"
 FM_IMAGE_INFO="FM image built on $USER@$(hostname) branch $BRANCH $GIT_COMMIT (tags $GIT_TAG) IS_DIRTY $IS_DIRTY $(date)" 
 
@@ -135,7 +135,8 @@ MULE_IMAGE_ID=$(docker images --format {{.ID}} localhost:$DOCKER_REGISTRY_PORT/m
 echo "MULE_IMAGE_ID $MULE_IMAGE_ID"
 
 docker image build --build-arg FM_IMAGE_INFO="${FM_IMAGE_INFO}" \
-                   --build-arg MULE_IMAGE_ID="${MULE_IMAGE_ID}" \
+                   --build-arg FM_TAG="${GIT_TAG}" \
+	           --build-arg MULE_IMAGE_ID="${MULE_IMAGE_ID}" \
 		   --build-arg FM_SERVER_USERNAME="${FM_SERVER_USERNAME}" \
 		   --build-arg FM_SERVER_IP="${FM_SERVER_IP}" \
 		   --build-arg FM_PORT="${FM_PORT}" \

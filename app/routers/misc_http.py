@@ -12,7 +12,7 @@ import os
 import json
 import secrets
 from models.request_models import FleetConfigUpdate
-from models.config_models import BasicConfig, FrontendUser, FleetSherpa, OptimalDispatch
+from models.config_models import BasicConfig, FrontendUser, FleetSherpa
 
 router = APIRouter(responses={404: {"description": "Not found"}}, prefix="/api/v1")
 
@@ -24,11 +24,12 @@ async def site_info(user_name=Depends(get_user_from_header)):
         raise_error("Sherpa not yet connected to the fleet manager")
 
     timezone = os.environ["PGTZ"]
+    version = os.environ["FM_TAG"]
 
     with DBSession() as session:
         all_fleets = session.get_all_fleets()
         fleet_list = [fleet.name for fleet in all_fleets]
-        response = {"fleet_names": fleet_list, "timezone": timezone}
+        response = {"fleet_names": fleet_list, "timezone": timezone, "version": version}
 
     return response
 
@@ -144,14 +145,13 @@ async def get_fleet_config(
     fleet_config = toml.load(fleet_config_path)
 
     response = BasicConfig.from_dict(fleet_config["fleet"])
-    #response_json = {"basic_config": json.loads(response.to_json())}
-
+    # response_json = {"basic_config": json.loads(response.to_json())}
 
     fleets = {}
     for fleet_name in response.fleet_names:
         fleet_map_mapping = fleet_config["fleet"].get("fleet_map_mapping")
         map_name = fleet_name
-        fleets[fleet_name]= map_name
+        fleets[fleet_name] = map_name
     if fleet_map_mapping:
         pass
     else:
@@ -160,13 +160,13 @@ async def get_fleet_config(
     map_names = fleet_config["fleet"].get("map_names")
     if map_names:
         pass
-    else: 
+    else:
         response.map_names = get_all_map_names()
-    
+
     response_json = {"fleet": json.loads(response.to_json())}
 
-    #fleets = []
-    #for fleet_name in response.fleet_names:
+    # fleets = []
+    # for fleet_name in response.fleet_names:
     #    fleet_map_mapping = fleet_config["fleet"].get("fleet_map_mapping")
     #    map_name = fleet_name
 
@@ -179,7 +179,11 @@ async def get_fleet_config(
     frontendusers = []
     for user, user_details in fleet_config["frontenduser"].items():
         frontendusers.append(
-            FrontendUser(name=user, role=user_details.get("role", "default"), hashed_password=user_details.get("hashed_password"))
+            FrontendUser(
+                name=user,
+                role=user_details.get("role", "default"),
+                hashed_password=user_details.get("hashed_password"),
+            )
         )
 
     # fleet_sherpas
@@ -194,10 +198,10 @@ async def get_fleet_config(
             )
         )
 
-    #optimal_dispatch = []
+    # optimal_dispatch = []
 
     response_json.update({"optimal_dispatch": fleet_config["optimal_dispatch"]})
-    #response_json.update({"fleets": fleets})
+    # response_json.update({"fleets": fleets})
     response_json.update({"frontendusers": frontendusers})
     response_json.update({"fleet_sherpas": fleetsherpas})
 
@@ -212,11 +216,12 @@ async def update_fleet_config(
         raise_error("Unknown requester")
 
     fleet_config_path = os.path.join(os.getenv("FM_CONFIG_DIR"), "fleet_config.toml")
-    previous_fleet_config_path = os.path.join(os.getenv("FM_CONFIG_DIR"), "previous_fleet_config.toml")
+    previous_fleet_config_path = os.path.join(
+        os.getenv("FM_CONFIG_DIR"), "previous_fleet_config.toml"
+    )
     previous_fleet_config = toml.load(fleet_config_path)
-    with open( previous_fleet_config_path, "w") as f:
+    with open(previous_fleet_config_path, "w") as f:
         f.write(toml.dumps(previous_fleet_config))
-
 
     new_config = {}
 
@@ -225,9 +230,8 @@ async def update_fleet_config(
     new_config.update({"fleet": new_fleet})
     new_config.update({"optimal_dispatch": new_optimal_dispatch})
 
-    #new_config.update({"fleet": fleet_config_update.dict()["fleet"]})
-    #new_config.update({"optimal_dispatch": fleet_config_update.dict()["optimal_dispatch"]})
-    
+    # new_config.update({"fleet": fleet_config_update.dict()["fleet"]})
+    # new_config.update({"optimal_dispatch": fleet_config_update.dict()["optimal_dispatch"]})
 
     new_config["fleet_sherpas"] = {}
     for fleet_sherpa in fleet_config_update.fleet_sherpas:
@@ -248,14 +252,12 @@ async def update_fleet_config(
 
     for fleet_name, map_name in fleet_config_update.fleet.fleet_map_mapping.items():
         if fleet_name != map_name:
-            try :
+            try:
                 fleet_static_dir = os.getenv("FM_MAP_DIR")
                 os.system(f"cd {fleet_static_dir} ; ln -s {map_name} {fleet_name}")
             except:
                 pass
 
-
-
-    with open( fleet_config_path, "w") as f:
+    with open(fleet_config_path, "w") as f:
         f.write(toml.dumps(new_config))
-    #return new_config
+    # return new_config
