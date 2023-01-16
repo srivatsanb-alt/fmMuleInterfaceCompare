@@ -137,6 +137,7 @@ def cancel_jobs_from_user(user, event):
             jobs_source = []
 
         for job_id in jobs_source:
+            get_logger().info(f"Will cancel job(id:{job_id} from {user})")
             job = Job.fetch(job_id, connection=redis_conn)
             job.cancel()
 
