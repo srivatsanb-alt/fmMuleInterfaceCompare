@@ -216,7 +216,7 @@ class FleetConfigUpdate(BaseModel):
     fleet_sherpas: List[FleetSherpa]
     frontendusers: List[FrontendUser]
     optimal_dispatch: OptimalDispatch
-    #fleets: List[Fleets]
+    # fleets: List[Fleets]
     #
     # fleets: List[Fleet]
 
@@ -229,7 +229,7 @@ class TripMsg(ClientReq):
     route: List[str]
     priority: Optional[float] = 1.0
     tasks: Optional[Dict[str, str]] = None
-    metadata: Optional[Dict[str, Union[List[int], bool, str, int, Dict]]] = None
+    metadata: Optional[Dict[str, str]] = None
 
 
 class RoutePreview(ClientReq):

@@ -25,7 +25,7 @@ def book_trip(dbsession, route, plugin_name):
     trip = {
         "route": route,
         "priority": 1,
-        "metadata": {"conveyor_ops": True, "num_units": "0"},
+        "metadata": {"conveyor_ops": "true", "num_units": "0"},
     }
     req_json = {"trips": [trip]}
     status_code, trip_book_response = send_req_to_FM(

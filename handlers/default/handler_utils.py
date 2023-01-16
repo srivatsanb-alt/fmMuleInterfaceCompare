@@ -148,6 +148,8 @@ def get_conveyor_ops_info(trip_metadata):
         conveyor_ops = trip_metadata.get("conveyor_ops", None)
         if conveyor_ops:
             num_units = trip_metadata.get("num_units", None)
+            if num_units is not None:
+                num_units = int(num_units)
     return num_units
 
 
