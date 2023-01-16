@@ -7,21 +7,13 @@ import os
 from multiprocessing import Process
 from fastapi import HTTPException
 import logging
+import logging.config
 import json
 
-logging.basicConfig(level=logging.INFO)
-
-
-def get_seperate_logger(name):
-    logger = logging.getLogger(name)
-    FORMATTER = logging.Formatter("%(asctime)s %(levelname)s [%(funcName)s] %(message)s")
-    logger.propagate = False
-    log_file = os.path.join(os.getenv("FM_LOG_DIR"), f"{name}.log")
-    logger.setLevel(logging.INFO)
-    f_handler = logging.FileHandler(log_file)
-    f_handler.setFormatter(FORMATTER)
-    logger.addHandler(f_handler)
-    return logger
+# setup logging
+log_conf_path = os.path.join(os.getenv("FM_CONFIG_DIR"), "logging.conf")
+logging.config.fileConfig(log_conf_path)
+logger = logging.getLogger("plugin_rq")
 
 
 def get_redis_conn():
@@ -74,7 +66,8 @@ def start_worker(queue_name):
 
 
 def report_failure(job, connection, fail_type, value, traceback):
-    logging.info(
+    logger = logging.getLogger("plugin_rq")
+    logger.info(
         f"RQ job failed: error: {fail_type}, func: {job.func_name}, args: {job.args}, kwargs: {job.kwargs}"
     )
 
@@ -120,7 +113,7 @@ if __name__ == "__main__":
         from ies.ies_utils import TripsIES
         from plugin_db import init_db
 
-        ies_logger = get_seperate_logger("plugin_ies")
+        ies_logger = logging.getLogger("plugin_ies")
         init_db(str("plugin_ies"), [TripsIES])
 
         # # start a worker for ies plugin
@@ -136,7 +129,7 @@ if __name__ == "__main__":
         from conveyor.conveyor_utils import ConvInfo, ConvTrips, populate_conv_info
         from plugin_db import init_db
 
-        conveyor_logger = get_seperate_logger("plugin_conveyor")
+        conveyor_logger = logging.getLogger("plugin_conveyor")
         init_db(str("plugin_conveyor"), [ConvInfo, ConvTrips])
 
         all_conveyors = populate_conv_info()

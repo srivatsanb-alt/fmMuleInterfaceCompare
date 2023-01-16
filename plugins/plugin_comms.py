@@ -13,7 +13,7 @@ from .plugin_rq import enqueue
 # setup logging
 log_conf_path = os.path.join(os.getenv("FM_CONFIG_DIR"), "logging.conf")
 logging.config.fileConfig(log_conf_path)
-logger = logging.getLogger("PluginUvicorn")
+logger = logging.getLogger("plugin_uvicorn")
 
 
 async def ws_reader(websocket, name, handler_obj, unique_id=None):
@@ -80,15 +80,15 @@ def send_req_to_FM(plugin_name, endpoint, req_type, req_json=None, query=""):
 
     url = get_fm_url(endpoint, query)
 
+    logger = logging.getLogger(plugin_name)
+
     if url is None:
-        logging.getLogger(plugin_name).info(
-            f"cannot fetch fleet_manager url for endpoint {endpoint}"
-        )
+        logger.info(f"cannot fetch fleet_manager url for endpoint {endpoint}")
         raise ValueError(f"cannot fetch fleet_manager url for endpoint {endpoint}")
 
     token = generate_jwt_token(plugin_name)
 
-    logging.getLogger(plugin_name).info(
+    logger.info(
         f"Request to be sent to fleet manager \n plugin_name: {plugin_name} \n url: {url}, method: {req_type} \n body: {req_json}"
     )
 
@@ -102,7 +102,7 @@ def send_req_to_FM(plugin_name, endpoint, req_type, req_json=None, query=""):
     response = req_method(*args, **kwargs)
     response_status_code, response_json = check_response(response)
 
-    logging.getLogger(plugin_name).info(
+    logger.info(
         f"Response from fleet_manager \n Response status code: {response_status_code}, Response: {response_json}"
     )
 
