@@ -58,7 +58,7 @@ def has_sherpa_passed_conveyor(trip_id, conveyor_name, plugin_name):
             if next_idx_aug is None:
                 return False
             route = trip_details["route"]
-            if route.index(conveyor_name) <= next_idx_aug:
+            if next_idx_aug > route.index(conveyor_name):
                 return True
     return False
 

@@ -173,6 +173,12 @@ def get_num_units_converyor(conveyor_name):
     event.set()
     t.join()
 
-    num_units = min(math.ceil(response_json["num_totes"] / response_json["num_trips"]), 2)
+    num_totes = response_json["num_totes"]
+    num_trips = response_json["num_trips"]
+
+    if num_trips == 0:
+        raise ValueError("num trips cannot be zero. There is an ongoing trip")
+
+    num_units = min(math.ceil(num_totes / num_trips), 2)
 
     return num_units

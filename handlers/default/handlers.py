@@ -1,3 +1,4 @@
+from sqlalchemy.orm.attributes import flag_modified
 from core.constants import FleetStatus, DisabledReason, MessageType
 from core.logs import get_logger
 from models.base_models import StationProperties
@@ -421,6 +422,8 @@ class Handlers:
             num_units = get_num_units_converyor(station.name)
             # update metadata with num totes
             trip_metadata["num_units"] = num_units
+            flag_modified(ongoing_trip.trip, "trip_metadata")
+
         else:
             num_units = trip_metadata.get("num_units", None)
             if num_units is None:
@@ -893,7 +896,7 @@ class Handlers:
                 if not trip_msg.priority:
                     trip_msg.priority = 1.0
 
-                # self.check_if_booking_is_valid(trip_msg)
+                self.check_if_booking_is_valid(trip_msg)
 
                 trip: Trip = self.session.create_trip(
                     trip_msg.route,
