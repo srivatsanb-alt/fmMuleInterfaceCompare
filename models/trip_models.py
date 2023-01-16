@@ -123,7 +123,8 @@ class Trip(Base, TimestampMixin):
 
         # set all milkrun trip details
         if metadata:
-            if metadata.get("scheduled"):
+            scheduled = metadata.get("scheduled", "False")
+            if eval(scheduled):
                 self.scheduled = True
                 self.start_time = str_to_dt(metadata["scheduled_start_time"])
                 self.end_time = str_to_dt(metadata["scheduled_end_time"])
