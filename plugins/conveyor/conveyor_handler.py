@@ -16,8 +16,7 @@ class CONV_HANDLER:
         )
 
         if conv_info is None:
-            self.logger.info(f"No conveyor named {tote_status.name} in plugin_conveyor db")
-            return
+            raise ValueError(f"No conveyor named {tote_status.name} in plugin_conveyor db")
 
         conv_info.num_totes = tote_status.num_totes
 
@@ -31,17 +30,20 @@ class CONV_HANDLER:
             route = []
             nearest_chute = conv_info.nearest_chute
             route = [conv_info.name, nearest_chute]
-            _, trip_book_response = book_trip(self.session, route, self.plugin_name)
+            book_trip(self.session, route, self.plugin_name)
         else:
             self.logger.info(f"No new trip needs to be booked for {tote_status.name}")
 
     def handle_tote_trip_info(self, msg):
         conveyor_name = msg["name"]
         conv_info: ConvInfo = (
-            self.session.query(ConvInfo)
+            self.session.session.query(ConvInfo)
             .filter(ConvInfo.name == conveyor_name)
             .one_or_none()
         )
+        if conv_info is None:
+            raise ValueError(f"No conveyor named {conveyor_name} in plugin_conveyor db")
+
         tote_trip_info = get_tote_trip_info(
             self.session, conv_info.num_totes, conveyor_name, self.plugin_name
         )
@@ -64,4 +66,7 @@ class CONV_HANDLER:
                 self.logger.info(f"Cannot handle msg, {msg}")
                 return
             msg["name"] = msg["unique_id"]
-            fn_handler(msg)
+
+            response = fn_handler(msg)
+
+            return response

@@ -413,11 +413,18 @@ class Handlers:
         ongoing_trip.add_state(TripState.WAITING_STATION_AUTO_UNHITCH_START)
 
     def add_conveyor_start_to_ongoing_trip(self, ongoing_trip, station):
-        num_units = get_num_units_converyor(station.name)
-
-        # update metadata with num totes
         trip_metadata = ongoing_trip.trip.trip_metadata
-        trip_metadata["num_units"] = num_units
+
+        direction = "send" if StationProperties.CHUTE in station.properties else "receive"
+
+        if direction == "receive":
+            num_units = get_num_units_converyor(station.name)
+            # update metadata with num totes
+            trip_metadata["num_units"] = num_units
+        else:
+            num_units = trip_metadata.get("num_units", None)
+            if num_units is None:
+                raise ValueError("No tote/units information present")
 
         if num_units == 0:
             get_logger().info(
@@ -425,7 +432,6 @@ class Handlers:
             )
             return
 
-        direction = "send" if StationProperties.CHUTE in station.properties else "receive"
         station_type = (
             "chute" if StationProperties.CHUTE in station.properties else "conveyor"
         )
@@ -887,7 +893,7 @@ class Handlers:
                 if not trip_msg.priority:
                     trip_msg.priority = 1.0
 
-                self.check_if_booking_is_valid(trip_msg)
+                # self.check_if_booking_is_valid(trip_msg)
 
                 trip: Trip = self.session.create_trip(
                     trip_msg.route,

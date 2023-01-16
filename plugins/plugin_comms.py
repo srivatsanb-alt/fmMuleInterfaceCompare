@@ -10,13 +10,11 @@ from app.routers.dependencies import generate_jwt_token
 import redis
 from .plugin_rq import enqueue
 
-# setup logging
-log_conf_path = os.path.join(os.getenv("FM_CONFIG_DIR"), "logging.conf")
-logging.config.fileConfig(log_conf_path)
-
 
 async def ws_reader(websocket, name, handler_obj, unique_id=None):
 
+    log_conf_path = os.path.join(os.getenv("FM_CONFIG_DIR"), "logging.conf")
+    logging.config.fileConfig(log_conf_path)
     logger = logging.getLogger(f"plugin_{name}")
 
     if not unique_id:
@@ -46,6 +44,9 @@ async def ws_reader(websocket, name, handler_obj, unique_id=None):
 
 
 async def ws_writer(websocket, name, format="json", unique_id=None):
+
+    log_conf_path = os.path.join(os.getenv("FM_CONFIG_DIR"), "logging.conf")
+    logging.config.fileConfig(log_conf_path)
     logger = logging.getLogger(f"plugin_{name}")
 
     redis_conn = aioredis.Redis.from_url(

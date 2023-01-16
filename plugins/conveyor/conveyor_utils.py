@@ -25,7 +25,7 @@ def book_trip(dbsession, route, plugin_name):
     trip = {
         "route": route,
         "priority": 1,
-        "metadata": {"conveyor_ops": True, "num_units": 0},
+        "metadata": {"conveyor_ops": True, "num_units": "0"},
     }
     req_json = {"trips": [trip]}
     status_code, trip_book_response = send_req_to_FM(
@@ -33,6 +33,7 @@ def book_trip(dbsession, route, plugin_name):
     )
 
     if trip_book_response is None:
+        raise ValueError("Trip booking failed")
         return
 
     for trip_id, trip_details in trip_book_response.items():
@@ -40,7 +41,7 @@ def book_trip(dbsession, route, plugin_name):
             booking_id=trip_details["booking_id"],
             trip_id=trip_id,
             route=route,
-            completed=False,
+            active=True,
         )
         dbsession.session.add(trip)
 
@@ -51,8 +52,11 @@ def has_sherpa_passed_conveyor(trip_id, conveyor_name, plugin_name):
         plugin_name, "trip_status", req_type="post", req_json=req_json
     )
     if trip_status_response:
-        for trip_id, trip_details in trip_status_response.items():
+        for trip_id, trip_status in trip_status_response.items():
+            trip_details = trip_status["trip_details"]
             next_idx_aug = trip_details["next_idx_aug"]
+            if next_idx_aug is None:
+                return False
             route = trip_details["route"]
             if route.index(conveyor_name) <= next_idx_aug:
                 return True
@@ -62,12 +66,12 @@ def has_sherpa_passed_conveyor(trip_id, conveyor_name, plugin_name):
 def get_tote_trip_info(dbsession, num_totes, conveyor_name, plugin_name):
     MAX_TOTE_PER_TRIP = 2
     incomplete_trips = (
-        dbsession.session.query(ConvTrips).filter(ConvTrips.active.is_(False)).all()
+        dbsession.session.query(ConvTrips).filter(ConvTrips.active.is_(True)).all()
     )
     epsilon = 1e-6
     num_trips = 0
     for trip in incomplete_trips:
-        if not has_sherpa_passed_conveyor(trip.trip_id, conveyor_name):
+        if not has_sherpa_passed_conveyor(trip.trip_id, conveyor_name, plugin_name):
             num_trips += 1
         else:
             trip.active = False

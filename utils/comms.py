@@ -154,7 +154,7 @@ def get_num_units_converyor(conveyor_name):
     plugin_ip = "127.0.0.1"
     plugin_ip = plugin_ip + ":" + plugin_port
     endpoint = os.path.join(
-        "http://", plugin_ip, f"/plugin/conveyor/tote_trip_info/{conveyor_name}"
+        "http://", plugin_ip, f"plugin/conveyor/tote_trip_info/{conveyor_name}"
     )
 
     event = threading.Event()
@@ -166,10 +166,13 @@ def get_num_units_converyor(conveyor_name):
 
     response = requests.get(endpoint)
 
+    if response.status_code == 200:
+        response_json = response.json()
+
     # close the cancel_jobs_from_user thread
     event.set()
     t.join()
 
-    num_units = min(math.ceil(response["num_totes"] / response["num_trips"]), 2)
+    num_units = min(math.ceil(response_json["num_totes"] / response_json["num_trips"]), 2)
 
     return num_units

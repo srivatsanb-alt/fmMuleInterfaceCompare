@@ -67,8 +67,8 @@ def start_worker(queue_name):
 
 def report_failure(job, connection, fail_type, value, traceback):
     logger = logging.getLogger("plugin_rq")
-    logger.info(
-        f"RQ job failed: error: {fail_type}, func: {job.func_name}, args: {job.args}, kwargs: {job.kwargs}"
+    logger.error(
+        f"RQ job failed: error: {fail_type}, value: {value} func: {job.func_name}, args: {job.args}, kwargs: {job.kwargs}"
     )
 
 
@@ -89,7 +89,8 @@ def enqueue(queue: Queue, func, *args, **kwargs):
 
 
 def get_job_result(job_id):
-    job = Job.fetch(job_id, connection=get_redis_conn())
+    redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
+    job = Job.fetch(job_id, connection=redis_conn)
     while True:
         status = job.get_status(refresh=True)
         if status == "finished":
