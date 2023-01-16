@@ -13,10 +13,12 @@ from .plugin_rq import enqueue
 # setup logging
 log_conf_path = os.path.join(os.getenv("FM_CONFIG_DIR"), "logging.conf")
 logging.config.fileConfig(log_conf_path)
-logger = logging.getLogger("plugin_uvicorn")
 
 
 async def ws_reader(websocket, name, handler_obj, unique_id=None):
+
+    logger = logging.getLogger(f"plugin_{name}")
+
     if not unique_id:
         plugin_q = Queue(
             f"plugin_{name}", connection=redis.from_url(os.getenv("FM_REDIS_URI"))
@@ -44,6 +46,8 @@ async def ws_reader(websocket, name, handler_obj, unique_id=None):
 
 
 async def ws_writer(websocket, name, format="json", unique_id=None):
+    logger = logging.getLogger(f"plugin_{name}")
+
     redis_conn = aioredis.Redis.from_url(
         os.getenv("FM_REDIS_URI"), max_connections=10, decode_responses=True
     )

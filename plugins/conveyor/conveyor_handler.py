@@ -31,7 +31,7 @@ class CONV_HANDLER:
             route = []
             nearest_chute = conv_info.nearest_chute
             route = [conv_info.name, nearest_chute]
-            _, trip_book_response = book_trip(self.plugin_name, self.session, route)
+            _, trip_book_response = book_trip(self.session, route, self.plugin_name)
         else:
             self.logger.info(f"No new trip needs to be booked for {tote_status.name}")
 

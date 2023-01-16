@@ -89,7 +89,7 @@ def enqueue(queue: Queue, func, *args, **kwargs):
 
 
 def get_job_result(job_id):
-    job = Job.fetch(job_id, connection=redis_conn)
+    job = Job.fetch(job_id, connection=get_redis_conn())
     while True:
         status = job.get_status(refresh=True)
         if status == "finished":
