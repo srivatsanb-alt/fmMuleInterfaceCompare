@@ -218,13 +218,17 @@ class Handlers:
                 for prop in [StationProperties.CONVEYOR, StationProperties.CHUTE]
             ):
                 trip_metadata = trip_msg.metadata
-                num_units = hutils.get_conveyor_ops_info(trip_metadata)
-                if not num_units:
-                    reason = "No information on conveyor_ops and num units, need num units info for booking trip involving conveyor/chute stations"
 
-                if num_units:
-                    if num_units > 2 or num_units < 0:
-                        reason = f"num units for conveyor transaction cannot be greater than 2 or less than 0, num_units_input: {num_units}"
+                # convert string to bool
+                trip_metadata["conveyor_ops"] = True
+
+                num_units = hutils.get_conveyor_ops_info(trip_metadata)
+
+                if num_units is None:
+                    raise ValueError("No tote/units information present")
+
+                if num_units > 2 or num_units < 0:
+                    reason = f"num units for conveyor transaction cannot be greater than 2 or less than 0, num_units_input: {num_units}"
 
         if reason:
             raise ValueError(f"{reason}")
