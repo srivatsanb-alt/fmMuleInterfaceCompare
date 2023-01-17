@@ -223,9 +223,8 @@ class Handlers:
                 if num_units is None:
                     raise ValueError("No tote/units information present")
 
-                if num_units:
-                    if num_units > 2 or num_units < 0:
-                        reason = f"num units for conveyor transaction cannot be greater than 2 or less than 0, num_units_input: {num_units}"
+                if num_units > 2 or num_units < 0:
+                    reason = f"num units for conveyor transaction cannot be greater than 2 or less than 0, num_units_input: {num_units}"
 
         if reason:
             raise ValueError(f"{reason}")
