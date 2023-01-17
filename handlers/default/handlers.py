@@ -556,7 +556,12 @@ class Handlers:
         if conveyor_start_state in ongoing_trip.states:
             num_units = hutils.get_conveyor_ops_info(ongoing_trip.trip.trip_metadata)
             ongoing_trip.add_state(conveyor_end_state)
-            peripheral_msg = f"Resolving {req.error_device} error for {sherpa_name}, move {num_units} tote(s) to the mule and press dispatch button"
+
+            if direction == "send":
+                peripheral_msg = f"Resolving {req.error_device} error for {sherpa_name},transfer all the totes on the mule to the chute and press dispatch button"
+            else:
+                peripheral_msg = f"Resolving {req.error_device} error for {sherpa_name},move {num_units} tote(s) to the mule and press dispatch button"
+
             get_logger().info(peripheral_msg)
             self.session.add_notification(
                 [fleet_name, sherpa_name],
