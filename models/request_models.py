@@ -216,9 +216,10 @@ class FleetConfigUpdate(BaseModel):
     fleet_sherpas: List[FleetSherpa]
     frontendusers: List[FrontendUser]
     optimal_dispatch: OptimalDispatch
-    # fleets: List[Fleets]
-    #
-    # fleets: List[Fleet]
+
+
+class TripMetaData(BaseModel):
+    metadata: Dict[str, str]
 
 
 class TripsReq(ClientReq):

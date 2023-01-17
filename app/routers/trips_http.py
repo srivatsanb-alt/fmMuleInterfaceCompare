@@ -13,6 +13,7 @@ from models.request_models import (
     DeleteOngoingTripReq,
     DeleteBookedTripReq,
     DeleteOptimalDispatchAssignments,
+    TripMetaData,
 )
 from models.trip_models import Trip, TripAnalytics
 from models.db_session import DBSession
@@ -166,6 +167,26 @@ async def trip_analytics(
                 if not trip_analytics:
                     continue
                 response.update({trip_leg_id: tu.get_trip_analytics(trip_analytics)})
+
+    return response
+
+
+@router.post("/{trip_id}/add_trip_metadata")
+async def add_trip_metadata(
+    trip_id: int, new_trip_metadata: TripMetaData, user_name=Depends(get_user_from_header)
+):
+
+    response = {}
+    if not user_name:
+        raise_error("Unknown requester")
+
+    with DBSession() as dbsession:
+        trip: Trip = dbsession.get_trip(trip_id)
+        if trip.trip_metadata is None:
+            trip.trip_metadata = {}
+
+        trip.trip_metadata.update(new_trip_metadata.metadata)
+        flag_modified(trip, "trip_metadata")
 
     return response
 

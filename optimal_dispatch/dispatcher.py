@@ -291,7 +291,11 @@ class OptimalDispatch:
     def run(self, dbsession):
         self.logger = get_logger("optimal_dispatch")
         self.logger.info("will run optimal dispatch logic")
-        self.fleets = dbsession.get_all_fleets()
+
+        self.fleets = []
+
+        for fleet_name in self.fleet_names:
+            self.fleets.append(dbsession.get_fleet(fleet_name))
 
         self.get_last_assignment_time(dbsession)
         _ = self.are_power_factors_valid()
