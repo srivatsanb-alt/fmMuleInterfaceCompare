@@ -219,8 +219,9 @@ class Handlers:
             ):
                 trip_metadata = trip_msg.metadata
                 num_units = hutils.get_conveyor_ops_info(trip_metadata)
-                if not num_units:
-                    reason = "No information on conveyor_ops and num units, need num units info for booking trip involving conveyor/chute stations"
+
+                if num_units is None:
+                    raise ValueError("No tote/units information present")
 
                 if num_units:
                     if num_units > 2 or num_units < 0:
