@@ -218,6 +218,10 @@ class Handlers:
                 for prop in [StationProperties.CONVEYOR, StationProperties.CHUTE]
             ):
                 trip_metadata = trip_msg.metadata
+
+                # convert string to bool
+                trip_metadata["conveyor_ops"] = True
+
                 num_units = hutils.get_conveyor_ops_info(trip_metadata)
 
                 if num_units is None:
