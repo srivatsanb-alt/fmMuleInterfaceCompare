@@ -98,12 +98,12 @@
     ./scripts/push_fm.sh -WD
      ```
 
-6. If server doesn't have internet access, copy built docker images to the server from Ati server(data@192.168.10.21:/atidata/datasets/FM_v2.0_docker_images), run the following commands
+6. If server doesn't have internet access, copy built docker images to the server from Ati server(data@192.168.10.21:/atidata/datasets/FM_v2.1_docker_images), run the following commands
 
     a. Load base images on server/localhost
     ```markdown
     ssh username@ip
-    cd FM_v2.0_docker_images
+    cd FM_v2.1_docker_images
     bash load_docker_images.sh
     exit
     ```
@@ -220,7 +220,7 @@ d. Setup mule nginx container (if not already present)
     mkdir shell_scripts
     ```
 
-- Copy load_mule_nginx.sh file from server(data@192.168.10.21:/atidata/datasets/FM_v2.0_docker_images/load_mule_nginx.sh) to mule (/opt/ati/shell_scripts). (DO NOT copy this script to /opt/ati folder on mule)
+- Copy load_mule_nginx.sh file from server(data@192.168.10.21:/atidata/datasets/FM_v2.1_docker_images/load_mule_nginx.sh) to mule (/opt/ati/shell_scripts). (DO NOT copy this script to /opt/ati folder on mule)
 
 - Run load_mule_nginx.sh
     ```markdown
