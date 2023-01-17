@@ -104,7 +104,7 @@ fi
 
 BRANCH=$(git rev-parse --abbrev-ref HEAD)
 GIT_COMMIT="$(git rev-parse HEAD)"
-GIT_TAG="$(git describe --tags)"
+GIT_TAG="$(git describe --all)"
 IS_DIRTY="$(git diff --quiet || echo 'dirty')"
 FM_IMAGE_INFO="FM image built on $USER@$(hostname) branch $BRANCH $GIT_COMMIT (tags $GIT_TAG) IS_DIRTY $IS_DIRTY $(date)" 
 
