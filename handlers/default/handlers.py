@@ -1060,7 +1060,7 @@ class Handlers:
                 NotificationLevels.alert,
                 NotificationModules.map_file_check,
                 repetitive=True,
-                repetition_freq=120,
+                repetition_freq=10,
             )
             get_logger().warning(reset_fleet_msg)
 
