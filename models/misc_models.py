@@ -1,5 +1,5 @@
 from models.base_models import Base, TimestampMixin
-from sqlalchemy import Column, Integer, String, ARRAY
+from sqlalchemy import Column, Integer, String, ARRAY, Boolean
 
 
 class NotificationModules:
@@ -8,6 +8,7 @@ class NotificationModules:
     visa = "visa"
     obstructed = "obstructed"
     peripheral_devices = "peripheral_devices"
+    map_file_check = "map_file_check"
 
 
 class NotificationLevels:
@@ -31,6 +32,8 @@ class Notifications(TimestampMixin, Base):
     log_level = Column(String, index=True)
     module = Column(String)
     cleared_by = Column(ARRAY(String))
+    repetitive = Column(Boolean)
+    repetition_freq = Column(Integer)
 
 
 class FMVersion(Base):

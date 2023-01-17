@@ -360,13 +360,17 @@ class DBSession:
     def delete_ongoing_trip(self, ongoing_trip):
         self.session.delete(ongoing_trip)
 
-    def add_notification(self, entity_names, log, log_level, module):
+    def add_notification(
+        self, entity_names, log, log_level, module, repetitive=False, repetition_freq=None
+    ):
         new_notification = Notifications(
             entity_names=entity_names,
             log=log,
             log_level=log_level,
             module=module,
             cleared_by=[],
+            repetitive=repetitive,
+            repetition_freq=repetition_freq,
         )
         self.add_to_session(new_notification)
 
