@@ -184,10 +184,14 @@ class Handlers:
             if notification.module == NotificationModules.visa:
                 timeout = 20
 
+            if notification.repetitive:
+                timeout = notification.repetition_freq
+
             if time_since_notification.seconds > timeout:
                 if (
                     notification.log_level != NotificationLevels.info
                     and len(notification.cleared_by) == 0
+                    and not notification.repetitive
                 ):
                     continue
                 self.session.delete_notification(notification.id)
@@ -1045,6 +1049,20 @@ class Handlers:
         map_file_info = [
             MapFileInfo(file_name=mf.filename, hash=mf.file_hash) for mf in map_files
         ]
+
+        reset_fleet = hutils.is_reset_fleet_required(fleet_name, map_files)
+
+        if reset_fleet:
+            reset_fleet_msg = f"Map files of {fleet_name} has been modified, please reset the fleet {fleet_name}"
+            self.session.add_notification(
+                [fleet_name, sherpa_name],
+                reset_fleet_msg,
+                NotificationLevels.alert,
+                NotificationModules.map_file_check,
+                repetitive=True,
+                repetition_freq=120,
+            )
+            get_logger().warning(reset_fleet_msg)
 
         map_file_info = hutils.update_map_file_info_with_certs(
             map_file_info, sherpa.name, sherpa.ip_address, ip_changed=ip_changed
