@@ -52,6 +52,7 @@ def manage_sherpa_ip_change(sherpa, x_real_ip):
             f"{sherpa.name} ip has changed since last connection , last_connection_ip: {sherpa.ip_address}"
         )
         sherpa.ip_address = x_real_ip
+        sherpa.port = None
 
         try:
             os.remove(

@@ -27,7 +27,9 @@ def upgrade_db_schema():
         dbupgrade = DBUpgrade()
 
     # upgrade sequentially
-    for version in AVAILABLE_UPGRADES:
+
+    sorted_upgrades = sorted(AVAILABLE_UPGRADES, key=float)
+    for version in sorted_upgrades:
         with session_maker() as dbsession:
             fm_version = dbsession.query(FMVersion).one_or_none()
             if float(fm_version.version) < float(version):
