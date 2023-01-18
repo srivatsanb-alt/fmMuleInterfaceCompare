@@ -831,7 +831,7 @@ class Handlers:
             raise ValueError(error)
 
         if StationProperties.CONVEYOR in current_station.properties:
-            transfer_tote_msg = f"will send conveyor msg(direction: {req.direction}, num_units: {req.num_units}) to {current_station_name}"
+            transfer_tote_msg = f"will send msg to the conveyor at station: {current_station_name} to transfer {req.num_units} tote(s)"
             get_logger().info(transfer_tote_msg)
 
             if req.num_units == 2:
