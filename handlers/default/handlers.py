@@ -1,4 +1,4 @@
-ongoing_trip.sherpa_namefrom sqlalchemy.orm.attributes import flag_modified
+from sqlalchemy.orm.attributes import flag_modified
 from core.constants import FleetStatus, DisabledReason, MessageType
 from core.logs import get_logger
 from models.base_models import StationProperties
