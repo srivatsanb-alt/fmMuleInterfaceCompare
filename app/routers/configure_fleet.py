@@ -73,6 +73,12 @@ async def diagnostics(
         if not sherpa_status:
             raise_error("Bad detail invalid sherpa name")
 
+        if sherpa_status.trip_id:
+            trip = dbsession.get_trip(sherpa_status.trip_id)
+            raise_error(
+                f"delete the ongoing trip with booking_id: {trip.booking_id} to delete sherpa {sherpa_name}"
+            )
+
         # close ws connection
         close_websocket_for_sherpa(sherpa_name)
 
