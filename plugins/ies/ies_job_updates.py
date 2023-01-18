@@ -121,13 +121,31 @@ def send_job_updates():
                             },
                             "jobStatus": IES_JOB_STATUS_MAPPING[trip_status],
                         }
-                        logging.info(f"DB status: {trip.status}")
-                        logging.info(f"FM Req status: {trip_status}")
+                        logger.debug(f"DB status: {trip.status}")
+                        logger.debug(f"FM Req status: {trip_status}")
 
                         if trip.status != trip_status:
                             logger.info(
                                 f"trip_id: {trip_id}, FM_response_status: {trip_status}, db_status: {trip.status}"
                             )
+                            if trip.status == TripStatus.BOOKED and trip_status == TripStatus.EN_ROUTE:
+                                # Need to mandatorily send succeeded message to IES
+                                assigned_msg_to_ies = {
+                                    "messageType": "JobUpdate",
+                                    "externalReferenceId": trip.externalReferenceId,
+                                    "lastCompletedTask": {
+                                        "ActionName": trip.actions[next_idx_aug - 1]
+                                        if next_idx_aug is not None
+                                        else "",
+                                        "LocationId": trip.locations[next_idx_aug - 1]
+                                        if next_idx_aug is not None
+                                        else "",
+                                    },
+                                    "jobStatus": IES_JOB_STATUS_MAPPING[TripStatus.ASSIGNED],
+                                }
+                                logger.info("Sending SCHEDULED msg to IES.")
+                                send_msg(assigned_msg_to_ies)
+
                             send_msg(msg_to_ies)
                             trip.status = trip_status
                         elif trip.status == TripStatus.EN_ROUTE:
