@@ -55,7 +55,7 @@ async def reset_fleet(
 
 
 @router.get("/delete/sherpa/{sherpa_name}")
-async def diagnostics(
+async def delete_sherpa(
     sherpa_name=Union[str, None],
     username=Depends(get_user_from_header),
 ):

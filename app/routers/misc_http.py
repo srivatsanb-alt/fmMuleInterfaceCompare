@@ -24,11 +24,22 @@ async def site_info(user_name=Depends(get_user_from_header)):
     if not user_name:
         raise_error("Sherpa not yet connected to the fleet manager")
 
+    config = Config.read_config()
+    fleet_names = config["fleet"]["fleet_names"]
+    site = config["fleet"]["site"]
+    location = config["fleet"]["location"]
+    customer = config["fleet"]["customer"]
     timezone = os.environ["PGTZ"]
-    version = os.environ["FM_TAG"]
+    fm_tag = os.environ["FM_TAG"]
 
-    fleet_names = Config.get_all_fleets()
-    response = {"fleet_names": fleet_names, "timezone": timezone, "version": version}
+    response = {
+        "fleet_names": fleet_names,
+        "timezone": timezone,
+        "customer": customer,
+        "site": site,
+        "location": location,
+        "software_version": fm_tag,
+    }
 
     return response
 
