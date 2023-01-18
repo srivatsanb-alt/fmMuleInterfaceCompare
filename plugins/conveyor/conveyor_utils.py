@@ -5,6 +5,9 @@ import logging
 import hashlib
 from .conveyor_models import DBSession, ConvInfo, ConvTrips
 
+
+from models.trip_models import COMPLETED_TRIP_STATUS
+
 logger_name = "plugin_conveyor"
 
 
@@ -55,11 +58,21 @@ def has_sherpa_passed_conveyor(trip_id, conveyor_name, plugin_name):
         for trip_id, trip_status in trip_status_response.items():
             trip_details = trip_status["trip_details"]
             next_idx_aug = trip_details["next_idx_aug"]
+            status = trip_details["status"]
+
+            # trip is cancelled, failed, succeeded
+            if status in COMPLETED_TRIP_STATUS:
+                return True
+
+            # Not an ongoing trip
             if next_idx_aug is None:
                 return False
+
+            # check for trips in progress
             route = trip_details["route"]
             if next_idx_aug > route.index(conveyor_name):
                 return True
+
     return False
 
 
