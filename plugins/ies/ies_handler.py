@@ -84,21 +84,33 @@ class IES_HANDLER:
 
         if response_json is not None:
             msg_to_ies["jobStatus"] = "ACCEPTED"
+            self.send_msg(msg_to_ies)
             for trip_id, trip_details in response_json.items():
                 trip = TripsIES(
                     trip_id=trip_id,
                     booking_id=trip_details["booking_id"],
                     externalReferenceId=job_create.externalReferenceId,
-                    status="None",
+                    status=trip_details["status"],
                     actions=[task.get("ActionName", None) for task in job_create.taskList],
                     locations=[task["LocationId"] for task in job_create.taskList],
                 )
                 session.add(trip)
                 self.logger.debug(f"adding trip entry to db {trip.__dict__}")
+                if trip_details["status"] == TripStatus.BOOKED:
+                    booked_msg_to_ies = {
+                        "messageType": "JobUpdate",
+                        "externalReferenceId": job_create.externalReferenceId,
+                        "lastCompletedTask": {
+                            "ActionName": "",
+                            "LocationId": "",
+                        },
+                        "jobStatus": IES_JOB_STATUS_MAPPING[trip_details["status"]],
+                    }
+                    self.logger.info("Sending JobUpdate msg to IES in JobCreate")
+                    self.send_msg(booked_msg_to_ies)
         else:
             self.logger.info(f"Req to FM failed, response json: {response_json} and response code: {status_code}")
-
-        self.send_msg(msg_to_ies)
+            self.send_msg(msg_to_ies)
 
     def handle_JobCancel(self, msg):
         job_cancel = JobCancel.from_dict(msg)
