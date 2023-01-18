@@ -11,6 +11,7 @@ import toml
 import os
 import json
 import secrets
+from core.config import Config
 from models.request_models import FleetConfigUpdate
 from models.config_models import BasicConfig, FrontendUser, FleetSherpa
 
@@ -26,10 +27,8 @@ async def site_info(user_name=Depends(get_user_from_header)):
     timezone = os.environ["PGTZ"]
     version = os.environ["FM_TAG"]
 
-    with DBSession() as session:
-        all_fleets = session.get_all_fleets()
-        fleet_list = [fleet.name for fleet in all_fleets]
-        response = {"fleet_names": fleet_list, "timezone": timezone, "version": version}
+    fleet_names = Config.get_all_fleets()
+    response = {"fleet_names": fleet_names, "timezone": timezone, "version": version}
 
     return response
 
@@ -43,10 +42,9 @@ async def master_data(
         raise_error("Sherpa not yet connected to the fleet manager")
 
     with DBSession() as session:
-        all_fleets = session.get_all_fleets()
-        fleet_list = [fleet.name for fleet in all_fleets]
+        fleet_names = Config.get_all_fleets()
 
-        if master_data_info.fleet_name not in fleet_list:
+        if master_data_info.fleet_name not in fleet_names:
             raise_error("Unknown fleet")
 
         all_sherpas = session.get_all_sherpas_in_fleet(master_data_info.fleet_name)

@@ -188,12 +188,18 @@ class Handlers:
                 timeout = notification.repetition_freq
 
             if time_since_notification.seconds > timeout:
+
+                # delete any notification which is repetitive and past timeout
+                if notification.repetitive:
+                    self.session.delete_notification(notification.id)
+                    continue
+
                 if (
                     notification.log_level != NotificationLevels.info
                     and len(notification.cleared_by) == 0
-                    and not notification.repetitive
                 ):
                     continue
+
                 self.session.delete_notification(notification.id)
 
     def check_sherpa_status(self):
@@ -1059,8 +1065,6 @@ class Handlers:
                 reset_fleet_msg,
                 NotificationLevels.alert,
                 NotificationModules.map_file_check,
-                repetitive=True,
-                repetition_freq=10,
             )
             get_logger().warning(reset_fleet_msg)
 
