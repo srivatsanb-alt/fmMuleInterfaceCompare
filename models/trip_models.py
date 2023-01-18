@@ -41,13 +41,13 @@ class TripState:
 
 class TripAnalytics(Base, TimestampMixin):
     __tablename__ = "trip_analytics"
-    sherpa_name = Column(String)
-    trip_id = Column(Integer)
+    sherpa_name = Column(String, index=True)
+    trip_id = Column(Integer, index=True)
     trip_leg_id = Column(Integer, primary_key=True, index=True)
-    start_time = Column(DateTime)
-    end_time = Column(DateTime)
-    from_station = Column(String)
-    to_station = Column(String)
+    start_time = Column(DateTime, index=True)
+    end_time = Column(DateTime, index=True)
+    from_station = Column(String, index=True)
+    to_station = Column(String, index=True)
     cte = Column(Float)
     te = Column(Float)
     expected_trip_time = Column(Float)
@@ -65,8 +65,7 @@ class Trip(Base, TimestampMixin):
     booking_id = Column(Integer, index=True)
 
     # sherpa doing the trip
-    sherpa_name = Column(String, ForeignKey("sherpas.name"))
-    sherpa = relationship("Sherpa")
+    sherpa_name = Column(String, index=True)
 
     # relate fleet table
     fleet_name = Column(String, ForeignKey("fleets.name"))

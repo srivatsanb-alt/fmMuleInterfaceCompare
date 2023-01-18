@@ -1,4 +1,4 @@
-from sqlalchemy.orm.attributes import flag_modified
+ongoing_trip.sherpa_namefrom sqlalchemy.orm.attributes import flag_modified
 from core.constants import FleetStatus, DisabledReason, MessageType
 from core.logs import get_logger
 from models.base_models import StationProperties
@@ -130,7 +130,7 @@ class Handlers:
     def continue_leg(self, ongoing_trip: OngoingTrip):
         trip: Trip = ongoing_trip.trip
         sherpa_name: str = trip.sherpa_name
-        sherpa: Sherpa = trip.sherpa
+        sherpa: Sherpa = self.session.get_sherpa(ongoing_trip.sherpa_name)
         sherpa.status.continue_curr_task = False
 
         next_station: Station = self.session.get_station(ongoing_trip.next_station())
@@ -146,7 +146,7 @@ class Handlers:
     def start_leg(self, ongoing_trip: OngoingTrip):
         trip: Trip = ongoing_trip.trip
         sherpa_name: str = trip.sherpa_name
-        sherpa: Sherpa = trip.sherpa
+        sherpa: Sherpa = self.session.get_sherpa(ongoing_trip.sherpa_name)
         fleet: Fleet = sherpa.fleet
 
         if not sherpa_name:
@@ -404,16 +404,16 @@ class Handlers:
             speaker=SpeakerReq(sound=SoundEnum.wait_for_dispatch, play=True),
             indicator=IndicatorReq(pattern=PatternEnum.wait_for_dispatch, activate=True),
         )
-        response = send_msg_to_sherpa(
-            self.session, ongoing_trip.trip.sherpa, sherpa_action_msg
-        )
+        sherpa: Sherpa = self.session.get_sherpa(ongoing_trip.sherpa_name)
+        response = send_msg_to_sherpa(self.session, sherpa, sherpa_action_msg)
         get_logger(ongoing_trip.sherpa_name).info(
             f"sent speaker and indicator request to {ongoing_trip.sherpa_name}: response status {response.status_code}"
         )
 
     def add_auto_hitch_start_to_ongoing_trip(self, ongoing_trip):
         hitch_msg = PeripheralsReq(auto_hitch=HitchReq(hitch=True))
-        response = send_msg_to_sherpa(self.session, ongoing_trip.trip.sherpa, hitch_msg)
+        sherpa: Sherpa = self.session.get_sherpa(ongoing_trip.sherpa_name)
+        response = send_msg_to_sherpa(self.session, sherpa, hitch_msg)
         get_logger(ongoing_trip.sherpa_name).info(
             f"received from {ongoing_trip.sherpa_name}: status {response.status_code}"
         )
@@ -421,13 +421,15 @@ class Handlers:
 
     def add_auto_unhitch_start_to_ongoing_trip(self, ongoing_trip):
         unhitch_msg = PeripheralsReq(auto_hitch=HitchReq(hitch=False))
-        response = send_msg_to_sherpa(self.session, ongoing_trip.trip.sherpa, unhitch_msg)
+        sherpa: Sherpa = self.session.get_sherpa(ongoing_trip.sherpa_name)
+        response = send_msg_to_sherpa(self.session, sherpa, unhitch_msg)
         get_logger(ongoing_trip.sherpa_name).info(
             f"received from {ongoing_trip.sherpa_name}: status {response.status_code}"
         )
         ongoing_trip.add_state(TripState.WAITING_STATION_AUTO_UNHITCH_START)
 
     def add_conveyor_start_to_ongoing_trip(self, ongoing_trip, station):
+        sherpa: Sherpa = self.session.get_sherpa(ongoing_trip.sherpa_name)
         trip_metadata = ongoing_trip.trip.trip_metadata
 
         direction = "send" if StationProperties.CHUTE in station.properties else "receive"
@@ -459,9 +461,7 @@ class Handlers:
         conveyor_send_msg = PeripheralsReq(
             conveyor=ConveyorReq(direction=direction, num_units=num_units)
         )
-        response = send_msg_to_sherpa(
-            self.session, ongoing_trip.trip.sherpa, conveyor_send_msg
-        )
+        response = send_msg_to_sherpa(self.session, sherpa, conveyor_send_msg)
         get_logger(ongoing_trip.sherpa_name).info(
             f"received from {ongoing_trip.sherpa_name}: status {response.status_code}"
         )
@@ -882,6 +882,7 @@ class Handlers:
             ongoing_trip.add_state(TripState.WAITING_STATION_AUTO_UNHITCH_END)
 
     def handle_dispatch_button(self, req: DispatchButtonReq, ongoing_trip: OngoingTrip):
+        sherpa: Sherpa = self.session.get_sherpa(ongoing_trip.trip.sherpa_name)
         sherpa_name = ongoing_trip.sherpa_name
         if not req.value:
             get_logger(sherpa_name).info(
@@ -900,7 +901,8 @@ class Handlers:
             speaker=SpeakerReq(sound=SoundEnum.wait_for_dispatch, play=False),
             indicator=IndicatorReq(pattern=PatternEnum.free, activate=True),
         )
-        response = send_msg_to_sherpa(self.session, ongoing_trip.trip.sherpa, sound_msg)
+
+        response = send_msg_to_sherpa(self.session, sherpa, sound_msg)
         get_logger(sherpa_name).info(
             f"sent speaker request to {sherpa_name}: response status {response.status_code}"
         )
