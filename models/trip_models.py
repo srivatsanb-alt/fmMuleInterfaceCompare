@@ -68,8 +68,7 @@ class Trip(Base, TimestampMixin):
     sherpa_name = Column(String, index=True)
 
     # relate fleet table
-    fleet_name = Column(String, ForeignKey("fleets.name"))
-    fleet = relationship("Fleet")
+    fleet_name = Column(String, index=True)
 
     # when trip was booked
     booking_time = Column(DateTime)
@@ -87,11 +86,11 @@ class Trip(Base, TimestampMixin):
     aug_idxs_booked = Column(ARRAY(Integer))
 
     # BOOKED, ASSIGNED, WAITING_STATION, EN_ROUTE, SUCCEEDED, FAILED
-    status = Column(String)
+    status = Column(String, index=True)
     etas_at_start = Column(ARRAY(Float))
     etas = Column(ARRAY(Float))
 
-    scheduled = Column(Boolean)
+    scheduled = Column(Boolean, index=True)
     time_period = Column(Integer)
 
     # these come from the booking request
