@@ -49,6 +49,13 @@ class OptimalDispatch(JsonMixin):
 
 
 @dataclass
+class Alerts(JsonMixin):
+    slack_webhook_url: Optional[str]
+    time_interval: Optional[float] = 30.0
+    notifications: Optional[bool] = False
+
+
+@dataclass
 class BasicConfig(JsonMixin):
     customer: str
     location: str

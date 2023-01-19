@@ -13,8 +13,8 @@ from utils.rq_utils import Queues
 
 from scripts.periodic_updates import send_periodic_updates
 from scripts.periodic_backup import backup_data
-
 from scripts.periodic_assigner import assign_next_task
+from scripts.alerts import send_slack_alerts
 
 
 def init_fleet_manager(config):
@@ -57,6 +57,9 @@ if __name__ == "__main__":
 
     # start backup data
     Process(target=backup_data).start()
+
+    # start send slack alerts script
+    Process(target=send_slack_alerts).start()
 
     redis_conn.set("is_fleet_manager_up", json.dumps(True))
     logging.info("Ati Fleet Manager started")

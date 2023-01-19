@@ -7,7 +7,13 @@ import pydantic
 from core.constants import MessageType
 from pydantic import BaseModel
 from models.base_models import JsonMixin
-from models.config_models import BasicConfig, FleetSherpa, FrontendUser, OptimalDispatch
+from models.config_models import (
+    BasicConfig,
+    FleetSherpa,
+    FrontendUser,
+    OptimalDispatch,
+    Alerts,
+)
 
 
 class HitchReq(BaseModel):
@@ -216,6 +222,7 @@ class FleetConfigUpdate(BaseModel):
     fleet_sherpas: List[FleetSherpa]
     frontendusers: List[FrontendUser]
     optimal_dispatch: OptimalDispatch
+    alerts: Optional[Alerts]
 
 
 class TripMetaData(BaseModel):
