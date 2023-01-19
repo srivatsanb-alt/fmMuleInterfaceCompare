@@ -101,12 +101,12 @@
     ./scripts/push_fm.sh -WD
      ```
 
-6. If server doesn't have internet access, copy built docker images to the server from Ati server(data@192.168.10.21:/atidata/datasets/FM_v2.1_docker_images), run the following commands
+6. If server doesn't have internet access, copy built docker images to the server from Ati server(data@192.168.10.21:/atidata/datasets/FM_v<fm_version>_docker_images), run the following commands
 
     a. Load base images on server/localhost
     ```markdown
     ssh username@ip
-    cd FM_v2.1_docker_images
+    cd FM_v<fm_version>_docker_images
     bash load_docker_images.sh
     exit
     ```
@@ -157,11 +157,22 @@
   b. Set simulate in static/fleet_config/fleet_config.toml
 
   ```markdown
+  [fleet.simulator]
   simulate=true
+  
+  [fleet]
   http_scheme="http"
+
   ```
 
-  c. Make sure all the station below mentioned tags in grid_map_attributes.json pertaining to all the fleets(<fleet_name>/map/grid_map_attributes.json). Tags like conveyor, auto_hitch, auto_unhitch doesn't work in simulator mode.
+  c. To get trip bookings done automatically add routes(list of station names), trip booking frequency(seconds) to fleet_config.
+  ```markdown
+  [fleet.simulator.routes]
+  route1 = [["Desk", "Conference Room"], [10]]
+  route2 = [["Desk", "Electronics Lab"], [60]]
+  ```
+
+  d. Make sure all the station below mentioned tags in grid_map_attributes.json pertaining to all the fleets(<fleet_name>/map/grid_map_attributes.json). Tags like conveyor, auto_hitch, auto_unhitch doesn't work in simulator mode.
   ```markdown
    "station_tags": [
     "parking",
@@ -169,7 +180,7 @@
    ]
   ```
 
-  d.Follow [Setup FM](#setup-fm), steps 3-5
+  e.Follow [Setup FM](#setup-fm), steps 3-5
 
 
 # Setup sherpas #
@@ -227,7 +238,7 @@ d. Setup mule nginx container (if not already present)
     mkdir shell_scripts
     ```
 
-- Copy load_mule_nginx.sh file from server(data@192.168.10.21:/atidata/datasets/FM_v2.1_docker_images/load_mule_nginx.sh) to mule (/opt/ati/shell_scripts). (DO NOT copy this script to /opt/ati folder on mule)
+- Copy load_mule_nginx.sh file from server(data@192.168.10.21:/atidata/datasets/FM_v<fm_version>_docker_images/load_mule_nginx.sh) to mule (/opt/ati/shell_scripts). (DO NOT copy this script to /opt/ati folder on mule)
 
 - Run load_mule_nginx.sh
     ```markdown
