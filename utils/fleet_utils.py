@@ -3,12 +3,14 @@ import os
 import sys
 import secrets
 import logging
-from core.db import engine
-from core.db import session_maker
 import json
 import glob
 import importlib
 import inspect
+import datetime
+from core.db import engine
+from core.db import session_maker
+from typing import List, Dict
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy import inspect as sql_inspect
 from sqlalchemy.sql import not_
@@ -24,7 +26,6 @@ from models.fleet_models import (
     AvailableSherpas,
     OptimalDispatchState,
 )
-import datetime
 from models.visa_models import ExclusionZone, LinkedGates
 from models.frontend_models import FrontendUser
 from models.base_models import StationProperties
@@ -61,11 +62,13 @@ def get_table_as_dict(model, model_obj):
     return result
 
 
-def gen_api_key(hwid):
+def gen_api_key(hwid: str) -> str:
     return secrets.token_urlsafe(32) + "_" + hwid
 
 
-def add_sherpa(sherpa_name: str, hwid=None, ip_address=None, api_key=None, fleet_name=None):
+def add_sherpa(
+    sherpa_name: str, hwid=None, ip_address=None, api_key=None, fleet_name=None
+) -> str:
     if not hwid:
         raise ValueError("Sherpa hardware id cannot be null")
     if not api_key:
@@ -93,7 +96,7 @@ def add_sherpa(sherpa_name: str, hwid=None, ip_address=None, api_key=None, fleet
     return api_key
 
 
-def add_sherpa_availability(sherpa_name: str, fleet_name: str, available):
+def add_sherpa_availability(sherpa_name: str, fleet_name: str, available: bool) -> None:
     with session_maker() as db:
         try:
             sherpa_availability: AvailableSherpas = (
@@ -109,9 +112,10 @@ def add_sherpa_availability(sherpa_name: str, fleet_name: str, available):
             )
             db.add(sherpa_availability)
             db.commit()
+    return
 
 
-def add_fleet(**kwargs):
+def add_fleet(**kwargs) -> Fleet:
     fleet_name = kwargs.get("name")
     if not fleet_name:
         raise ValueError("fleet name should not be null")
@@ -134,7 +138,7 @@ def add_fleet(**kwargs):
     return fleet
 
 
-def add_sherpa_to_fleet(sherpa: str, fleet: str):
+def add_sherpa_to_fleet(sherpa: str, fleet: str) -> None:
     if not fleet or not sherpa:
         raise ValueError("Fleet and sherpa names cannot be null")
     with session_maker() as db:
@@ -142,9 +146,10 @@ def add_sherpa_to_fleet(sherpa: str, fleet: str):
         db_sherpa: Sherpa = db.query(Sherpa).filter(Sherpa.name == sherpa).one()
         db_sherpa.fleet_id = db_fleet.id
         db.commit()
+    return
 
 
-def add_update_station(dbsession, station_info, fleet_id):
+def add_update_station(dbsession, station_info: Dict, fleet_id: int) -> None:
     properties = []
     for tag in station_info["station_tags"]:
         try:
@@ -171,10 +176,11 @@ def add_update_station(dbsession, station_info, fleet_id):
     else:
         station.pose = station_info["pose"]
         station.properties = properties
+    return
 
 
-def add_update_map_files(dbsession, fleet_name):
-    fleet_path = os.path.join(os.environ["FM_MAP_DIR"], f"{fleet_name}/map")
+def add_update_map_files(dbsession, fleet_name: str) -> None:
+    fleet_path = get_map_path(fleet_name)
     map_files = get_filenames(fleet_path)
     fleet: Fleet = dbsession.query(Fleet).filter(Fleet.name == fleet_name).one()
     map_id = fleet.map_id
@@ -195,9 +201,10 @@ def add_update_map_files(dbsession, fleet_name):
             dbsession.add(map_file)
             dbsession.flush()
             dbsession.refresh(map_file)
+    return
 
 
-def add_map(fleet: str):
+def add_map(fleet: str) -> None:
     with session_maker() as db:
         try:
             map: Map = db.query(Map).filter_by(name=fleet).one()
@@ -214,12 +221,10 @@ def add_map(fleet: str):
             add_update_map_files(db, fleet)
             db.commit()
 
-            grid_map_attributes_path = os.path.join(
-                f"{os.environ['FM_MAP_DIR']}", f"{fleet}", "map", "grid_map_attributes.json"
-            )
-            if not os.path.exists(grid_map_attributes_path):
+            gmaj_path = get_map_file_path(fleet, "grid_map_attributes.json")
+            if not os.path.exists(gmaj_path):
                 return
-            with open(grid_map_attributes_path) as f:
+            with open(gmaj_path) as f:
                 gmas = json.load(f)
                 stations_info = gmas["stations_info"]
                 for _, station_info in stations_info.items():
@@ -231,10 +236,11 @@ def add_map(fleet: str):
 
             add_linked_gates_table(db, fleet)
             db.commit()
+    return
 
 
-def add_exclusion_zones(dbsession, fleet):
-    ez_path = os.path.join(f"{os.environ['FM_MAP_DIR']}", f"{fleet}", "map", "ez.json")
+def add_exclusion_zones(dbsession, fleet: str) -> None:
+    ez_path = get_map_file_path(fleet, "ez.json")
     if not os.path.exists(ez_path):
         return
     with open(ez_path, "r") as f:
@@ -266,10 +272,11 @@ def add_exclusion_zones(dbsession, fleet):
             dbsession.add(ezone_station)
             dbsession.flush()
             dbsession.refresh(ezone_station)
+    return
 
 
-def add_linked_gates_table(dbsession, fleet):
-    ez_path = os.path.join(f"{os.environ['FM_MAP_DIR']}", f"{fleet}", "map", "ez.json")
+def add_linked_gates_table(dbsession, fleet: str) -> None:
+    ez_path = get_map_file_path(fleet, "ez.json")
     if not os.path.exists(ez_path):
         return
     with open(ez_path, "r") as f:
@@ -312,7 +319,7 @@ def add_linked_gates_table(dbsession, fleet):
     return
 
 
-def add_update_frontend_user(user_name: str, hashed_password: str, role: str):
+def add_update_frontend_user(user_name: str, hashed_password: str, role: str) -> None:
     with session_maker() as db:
         try:
             user: FrontendUser = (
@@ -328,9 +335,10 @@ def add_update_frontend_user(user_name: str, hashed_password: str, role: str):
             db.refresh(user)
             print(f"added frontend user successfully {user.__dict__}")
         db.commit()
+    return
 
 
-def create_all_tables():
+def create_all_tables() -> None:
     all_files = glob.glob("models/*.py")
     for file in all_files:
         module = file.split(".")[0]
@@ -342,10 +350,12 @@ def create_all_tables():
             print(f"created tables from {module}")
         except Exception as e:
             print(f"failed to create tables from {module}, {e}")
+    return
 
 
-def create_table(model):
+def create_table(model) -> None:
     model.__table__.metadata(bind=engine)
+    return
 
 
 def get_all_table_names():
@@ -354,16 +364,17 @@ def get_all_table_names():
     return all_table_names
 
 
-def delete_table_contents(Model):
+def delete_table_contents(Model) -> None:
     with session_maker() as db:
         _ = db.query(Model).delete()
         db.commit()
+    None
 
 
 BUF_SIZE = 65536
 
 
-def get_filenames(directory):
+def get_filenames(directory: str) -> List:
     """
     This function will generate the file names in a directory, and ignores any sub-directories
     """
@@ -381,7 +392,7 @@ def get_filenames(directory):
     return file_names
 
 
-def maybe_delete_file(fpath):
+def maybe_delete_file(fpath: str) -> None:
     if os.path.isfile(fpath):  # file exists
         try:
             os.remove(fpath)
@@ -393,8 +404,8 @@ def maybe_delete_file(fpath):
     return
 
 
-def create_map_files_txt(fleet_name):
-    fleet_path = os.path.join(os.environ["FM_MAP_DIR"], f"{fleet_name}/map")
+def create_map_files_txt(fleet_name: str) -> None:
+    fleet_path = get_map_path(fleet_name)
     map_files_path = fleet_path + "/map_files.txt"
     maybe_delete_file(map_files_path)
     flist = get_filenames(fleet_path)
@@ -407,28 +418,17 @@ def create_map_files_txt(fleet_name):
     return
 
 
-def maybe_create_gmaj_file(fleet_name):
-    gmaj_path = os.path.join(
-        os.environ["FM_MAP_DIR"], f"{fleet_name}/map/grid_map_attributes.json"
-    )
-    if os.path.isfile(gmaj_path):
-        print(f"Found the GMAJ file {gmaj_path}!")
-        return
-    else:
-        print(f"Couldn't find the GMAJ file {gmaj_path}, will generate one now!")
-        map_path = gmaj_path = os.path.join(os.environ["FM_MAP_DIR"], f"{fleet_name}/map/")
-        gmac.create_gmaj(map_path, gmaj_path)
-        print(f"Created a new GMAJ file {gmaj_path}!")
+def maybe_create_gmaj_file(fleet_name: str) -> None:
+    gmaj_path = get_map_file_path(fleet_name, "grid_map_attributes.json")
+    wpsj_path = get_map_file_path(fleet_name, "waypoints.json")
+    rpi.maybe_update_gmaj(gmaj_path, wpsj_path, True)
     return
 
 
-def maybe_create_graph_object(fleet_name):
-    graph_object_path = os.path.join(
-        os.environ["FM_MAP_DIR"], f"{fleet_name}/map/graph_object.json"
-    )
-    gmaj_path = os.path.join(
-        os.environ["FM_MAP_DIR"], f"{fleet_name}/map/grid_map_attributes.json"
-    )
+def maybe_create_graph_object(fleet_name: str) -> None:
+    graph_object_path = get_map_file_path(fleet_name, "graph_object.json")
+    gmaj_path = get_map_file_path(fleet_name, "grid_map_attributes.json")
+
     with open(gmaj_path, "r") as f:
         gma = json.load(f)
 
@@ -446,8 +446,8 @@ def maybe_create_graph_object(fleet_name):
     return
 
 
-def update_delete_stations(dbsession, grid_map_attributes_path, fleet_id):
-    with open(grid_map_attributes_path) as f:
+def update_delete_stations(dbsession, gmaj_path: str, fleet_id: int) -> None:
+    with open(gmaj_path) as f:
         gmas = json.load(f)
         stations_info = gmas["stations_info"]
         valid_stations = []
@@ -477,34 +477,32 @@ def update_delete_stations(dbsession, grid_map_attributes_path, fleet_id):
         )
         for st in invalid_stations:
             dbsession.delete(st)
+    return
 
 
-def reset_fleet(dbsession, fleet_name: str):
+def reset_fleet(dbsession, fleet_name: str) -> None:
     fleet_obj: Fleet = dbsession.get_fleet(fleet_name)
     fleet_id = fleet_obj.id
 
-    grid_map_attributes_path = os.path.join(
-        f"{os.environ['FM_MAP_DIR']}", f"{fleet_name}", "map", "grid_map_attributes.json"
-    )
-
-    if not os.path.exists(grid_map_attributes_path):
-        raise ValueError("gmaj not available")
+    gmaj_path = get_map_file_path(fleet_name, "grid_map_attributes.json")
 
     maybe_update_map_files(fleet_name)
     add_update_map_files(dbsession.session, fleet_name)
-    update_delete_stations(dbsession.session, grid_map_attributes_path, fleet_id)
+    update_delete_stations(dbsession.session, gmaj_path, fleet_id)
 
     # remove gate not needed removing gate from ez.json should do
-
     add_exclusion_zones(dbsession.session, fleet_name)
     add_linked_gates_table(dbsession.session, fleet_name)
+    return
 
 
-def maybe_update_map_files(fleet_name):
+def maybe_update_map_files(fleet_name: str) -> None:
+    maybe_create_gmaj_file(fleet_name)
     maybe_create_graph_object(fleet_name)
+    return
 
 
-def compute_sha1_hash(fpath):
+def compute_sha1_hash(fpath: str) -> str:
     sha1 = hashlib.sha1()
     with open(fpath, "rb") as f:
         while True:
@@ -513,3 +511,13 @@ def compute_sha1_hash(fpath):
                 break
             sha1.update(data)
     return sha1.hexdigest()
+
+
+def get_map_file_path(fleet_name: str, file_name: str) -> str:
+    return os.path.join(
+        f"{os.environ['FM_MAP_DIR']}", f"{fleet_name}", "map", f"{file_name}"
+    )
+
+
+def get_map_path(fleet_name: str) -> str:
+    return os.path.join(f"{os.environ['FM_MAP_DIR']}", f"{fleet_name}", "map")
