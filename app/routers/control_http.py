@@ -80,6 +80,38 @@ async def diagnostics(
     return response
 
 
+@router.get("/sherpa/{entity_name}/restart_mule_docker")
+async def restart_mule_docker(
+    entity_name=Union[str, None],
+    user_name=Depends(get_user_from_header),
+):
+
+    response = {}
+
+    if not user_name:
+        raise_error("Unknown requester")
+
+    if not entity_name:
+        raise_error("No entity name")
+
+    with DBSession() as dbsession:
+        sherpa_status = dbsession.get_sherpa_status(entity_name)
+
+        if not sherpa_status.sherpa.ip_address:
+            raise_error("Sherpa not yet connected to the fleet manager")
+
+        base_url, verify = get_sherpa_url(sherpa_status.sherpa)
+        url = f"{base_url}/restart_mule_docker"
+        response = requests.get(url, verify=verify)
+
+        if response.status_code == 200:
+            response = response.json()
+        else:
+            raise_error(f"Bad response from sherpa, {response.status_code}")
+
+    return response
+
+
 @router.get("/sherpa/{entity_name}/update_sherpa_img")
 async def update_sherpa_img(
     entity_name=Union[str, None],
