@@ -6,6 +6,8 @@
 3. [Run FM Simulator](#run-fm-simulator)
 4. [Setup sherpas](#setup-sherpas)
 5. [Setup plugin](#setup-plugin)
+6. [Setup optimal dispatch config](#setup-optimal-dispatch-config)
+7. [Push mule docker image to local docker registry](#push-mule-docker-image-to-local-docker-registry)
 
 # FM Installation #
 
@@ -27,7 +29,8 @@
 2.  Checkout to release/branch, update mule submodule.
     ```markdown
     git checkout <branch>
-    git submodule update --remote --merge
+    git submodule update --remote
+    git submodule update
     ```
 
 3. Setup cert files - You will need python installed in your machine to carry out this step
@@ -120,6 +123,10 @@
 7. [Setup plugins](#setup-plugin) if any.
 
 8. [Setup sherpas](#setup-sherpas).
+
+9. [Setup optimal dispatch config](#setup-optimal-dispatch-config)
+
+10. [Push mule docker image to local docker registry](#push-mule-docker-image-to-local-docker-registry)
 
 # Start or Restart FM #
 
@@ -233,6 +240,12 @@ d. Setup mule nginx container (if not already present)
     docker restart mule
     ```
 
+e. Copy cert files for docker pull
+```markdown 
+sudo mkdir /etc/docker/certs.d/<fm_ip>:443
+sudo cp /opt/ati/config/fm_rev_proxy_cert.pem /etc/docker/certs.d/<fm_ip>:443/domain.crt
+```
+
 
 # Setup Plugin #
 a. [Setup IES](#setup-ies)
@@ -269,4 +282,69 @@ b. Modify static/plugin_conveyor/api_key_conveyor_mapping.json. Map api keys to 
 "B2bKHiYNMk5kCvSKZfOVThr5t8oUQ_8mrot36QVrk9K_CONV2": {"name": "Conveyor2", "nearest_chute": "Meeting Room 2"}
 
 }
+```
+
+# Setup optimal dispatch config #
+
+Optimal dispatch logic tries to allocate the pending trips with the best sherpa available. Choice of best sherpa is made with the paramter $Z$
+
+$\Z=(eta)^a/(priority)^b$
+<br>
+$priority=p1/p2$
+
+```markdown
+where,
+    eta - expected time of arrival for sherpa pose to first station of the trip booked
+    a - eta power factor , 0<a<1,
+    priority - measure of how long a trip has been pending,
+    p1 - Time since booking of currrent trip, 
+    p2 - Minimum of time since booking across all the pending trips,
+    b - priority power factor , 0<b<1,
+```
+
+1. **Maximise number of trips done**: To get maximum number of trips done in a given time frame eta_power_factor can be set to 1, priority_power_factor can be set to 0. This will make the optimal disaptch logic to lean towards trips that can be started faster. The trip booking order will not be followed.
+
+```markdown
+[optimal_dispatch]
+method="hungarian"
+prioritise_waiting_stations=true
+eta_power_factor=1.0
+priority_power_factor=0.0
+```
+
+2. **Fair scheduling**: To configure optimal dispatch logic to take trips in the order they were booked eta_power_factor can be set to 0, priority_power_factor can be set to 1.
+
+```markdown
+[optimal_dispatch]
+method="hungarian"
+prioritise_waiting_stations=true
+eta_power_factor=0.0
+priority_power_factor=1.0
+```
+
+3. **Custom configuration**: There is no ideal combination of eta_power_factor, priority_power_factor. They should be choosen according to the frequecy of trip bookings, route length between the stations to maximise the throughtput.
+
+4. For good takt time, eta power factor should be higher, for fair scheduling priority power factor should be set higher.
+
+
+# Push mule docker image to local docker registry #
+
+1. Copy mule docker image tar file to fm_server and load the image 
+```markdown
+docker load -i <mule_image tar file>
+```
+2. Tag mule image with registry ip, tag
+```markdown
+docker tag mule:<mule_tag> <fm_ip>:443/mule:fm
+```
+
+3. Setup certs for docker push 
+```markdown 
+sudo mkdir /etc/docker/certs.d/<fm_ip>:443
+sudo cp /opt/ati/config/fm_rev_proxy_cert.pem /etc/docker/certs.d/<fm_ip>:443/domain.crt
+```
+
+4. Push mule docker image to FM local registry
+```markdown
+docker push <fm_ip>:443/mule:fm
 ```
