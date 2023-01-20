@@ -8,6 +8,7 @@
 5. [Setup plugin](#setup-plugin)
 6. [Setup optimal dispatch config](#setup-optimal-dispatch-config)
 7. [Push mule docker image to local docker registry](#push-mule-docker-image-to-local-docker-registry)
+8. [Fleet maintenance](#fleet-maintenance)
 
 # FM Installation #
 
@@ -172,7 +173,7 @@
   route2 = [["Desk", "Electronics Lab"], [60]]
   ```
 
-  d. Make sure all the station below mentioned tags in grid_map_attributes.json pertaining to all the fleets(<fleet_name>/map/grid_map_attributes.json). Tags like conveyor, auto_hitch, auto_unhitch doesn't work in simulator mode.
+  d. Make sure all the stations mentioned in gmaj file(<fleet_name>/map/grid_map_attributes.json) has only the below mentioned tags. Tags like conveyor, auto_hitch, auto_unhitch will not work in simulator mode.
   ```markdown
    "station_tags": [
     "parking",
@@ -180,7 +181,7 @@
    ]
   ```
 
-  e.Follow [Setup FM](#setup-fm), steps 3-5
+  e.Follow remaining steps in [Setup FM](#setup-fm)
 
 
 # Setup sherpas #
@@ -194,7 +195,7 @@ b. Add this patch to /opt/ati/config/config.toml in the mule
 api_key = " "
 chassis_number = " "
 data_url = "https://<fm_ip_address>:443/api/static"
-fm_ip = "https://<fm_ip_address>:443"
+http_url = "https://<fm_ip_address>:443"
 ws_url = "wss://<fm_ip_address>:443/ws/api/v1/sherpa/"
 fm_cert_file="/app/config/fm_rev_proxy_cert.pem"
 ```
@@ -359,3 +360,13 @@ sudo cp /opt/ati/config/fm_rev_proxy_cert.pem /etc/docker/certs.d/<fm_ip>:443/do
 ```markdown
 docker push <fm_ip>:443/mule:fm
 ```
+
+# Fleet maintenance # 
+
+## Update map files ## 
+1. Copy all the new map files to <fm_static_directory>/<fleet_name>/map/ folder
+2. In the fleet dashboard, select the fleet which needs to be updated with the new map files and press reset fleet button in the webpage header
+
+## Delete sherpa ##
+1. To delete/deactivate sherpa from fleet use delete sherpa endpoint available in the maintenance page
+2. This can also be used to move sherpa from one fleet to another. Use delete sherpa endpoint to remove the sherpa from the current fleet. Modify fleet config - alter fleet_name in fleet sherpa entry and [restart FM](#start-or-restart-fm) .  
