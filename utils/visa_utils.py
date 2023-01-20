@@ -76,7 +76,7 @@ def can_lock_linked_zones(dbsession, zone_name, zone_type, sherpa_name):
 
     for lz in linked_gates:
         lz_name, lz_type = split_zone_id(lz.zone_id)
-        can_lock = lock_exclusion_zone(lz_name, lz_type, sherpa_name, test=True)
+        can_lock = lock_exclusion_zone(dbsession, lz_name, lz_type, sherpa_name, test=True)
         can_lock_linked_gates.append(can_lock)
 
     return all(can_lock_linked_gates)
@@ -109,7 +109,7 @@ def clear_all_locks(dbsession, sherpa_name):
     sherpa: Sherpa = dbsession.get_sherpa(sherpa_name)
     for ezone in sherpa.exclusion_zones:
         zone_name, zone_type = split_zone_id(ezone.zone_id)
-        unlock_exclusion_zone(zone_name, zone_type, sherpa_name)
+        unlock_exclusion_zone(dbsession, zone_name, zone_type, sherpa_name)
 
 
 def maybe_grant_visa(dbsession, zone_name, visa_type, sherpa_name):
@@ -120,21 +120,31 @@ def maybe_grant_visa(dbsession, zone_name, visa_type, sherpa_name):
 
     if visa_type == VisaType.PARKING:
         if len(linked_zones):
-            linked_zone_flag = can_lock_linked_zones(zone_name, "station", sherpa_name)
-        return lock_exclusion_zone(zone_name, "station", sherpa_name) and linked_zone_flag
+            linked_zone_flag = can_lock_linked_zones(
+                dbsession, zone_name, "station", sherpa_name
+            )
+        return (
+            lock_exclusion_zone(dbsession, zone_name, "station", sherpa_name)
+            and linked_zone_flag
+        )
 
     if visa_type in {VisaType.EXCLUSIVE_PARKING, VisaType.UNPARKING, VisaType.SEZ}:
         if len(linked_zones):
             linked_zone_flag = can_lock_linked_zones(
-                zone_name, "station", sherpa_name
-            ) and can_lock_linked_zones(zone_name, "lane", sherpa_name)
+                dbsession, zone_name, "station", sherpa_name
+            ) and can_lock_linked_zones(dbsession, zone_name, "lane", sherpa_name)
         return (
-            lock_exclusion_zone(zone_name, "station", sherpa_name)
-            and lock_exclusion_zone(zone_name, "lane", sherpa_name)
+            lock_exclusion_zone(dbsession, zone_name, "station", sherpa_name)
+            and lock_exclusion_zone(dbsession, zone_name, "lane", sherpa_name)
             and linked_zone_flag
         )
 
     if visa_type == VisaType.TRANSIT:
         if len(linked_zones):
-            linked_zone_flag = can_lock_linked_zones(zone_name, "lane", sherpa_name)
-        return lock_exclusion_zone(zone_name, "lane", sherpa_name) and linked_zone_flag
+            linked_zone_flag = can_lock_linked_zones(
+                dbsession, zone_name, "lane", sherpa_name
+            )
+        return (
+            lock_exclusion_zone(dbsession, zone_name, "lane", sherpa_name)
+            and linked_zone_flag
+        )
