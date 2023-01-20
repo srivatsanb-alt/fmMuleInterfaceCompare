@@ -57,7 +57,8 @@ class Queues:
 
 def report_failure(job, connection, fail_type, value, traceback):
     logging.getLogger().error(
-        f"RQ job failed: error: {fail_type}, func: {job.func_name}, args: {job.args}, kwargs: {job.kwargs}"
+        f"RQ job failed: error: {fail_type}, value {value}, func: {job.func_name}, args: {job.args}, kwargs: {job.kwargs}",
+        exc_info=(fail_type, value, traceback),
     )
 
 
