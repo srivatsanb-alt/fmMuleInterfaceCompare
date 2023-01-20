@@ -19,6 +19,8 @@ class JsonMixin:
                 new_attribs[k] = v.__class_.from_dict(v)
             else:
                 new_attribs[k] = v
+            if v is None:
+                del new_attribs[k]
         return cls(**new_attribs)
 
     @classmethod

@@ -63,8 +63,8 @@ class BasicConfig(JsonMixin):
     fleet_names: List[str]
     comms: Comms
     simulator: Simulator
-    stations: Optional[Stations]
-    all_server_ips: Optional[List[str]]
+    all_server_ips: List[str]
+    stations: Optional[Stations] = None
     fleet_map_mapping: Optional[Dict[str, str]] = None
     map_names: Optional[List[str]] = None
     mode: Optional[str] = "default"
