@@ -18,20 +18,27 @@
 3. Works only on x86 arch
 
 ## Setup FM ##
-1. Clone fleet manager repository
+1. Clone fleet manager repository and setup git config for submodule 
 
     ```markdown
     git clone https://github.com/AtiMotors/fleet_manager
     cd fleet_manager
     git pull
-    git submodule update --init --recursive
+    git submodule init
+    
+    # open and edit .git/config file, add branch=dev to submodule mule entry
+    [submodule "mule"]
+    url = https://<token>@github.com/AtiMotors/mule.git
+    active = true
+    branch = dev
     ```
+    git submodule update  
 
 2.  Checkout to release/branch, update mule submodule.
     ```markdown
     git checkout <branch>
-    git submodule update --remote
-    git submodule update
+    git submodule update --remote 
+    git submodule update 
     ```
 
 3. Setup cert files - You will need python installed in your machine to carry out this step

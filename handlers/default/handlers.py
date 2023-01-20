@@ -182,7 +182,7 @@ class Handlers:
             timeout = NotificationTimeout.get(notification.log_level, 120)
 
             if notification.module == NotificationModules.visa:
-                timeout = 20
+                timeout = 60
 
             if notification.repetitive:
                 timeout = notification.repetition_freq
@@ -1107,6 +1107,13 @@ class Handlers:
             granted=True, visa=req, access_type=AccessType.RELEASE
         )
         get_logger().info(f"visa released by {sherpa_name}")
+
+        self.session.add_notification(
+            [sherpa_name],
+            f"{sherpa_name} released {visa_type} visa to zone {zone_name}",
+            NotificationLevels.info,
+            NotificationModules.visa,
+        )
 
         return response.to_json()
 
