@@ -80,6 +80,15 @@ class Config:
         return cls.config["fleet"]["comms"]
 
     @classmethod
+    def get_fleet_rq_params(cls):
+        if not cls.config:
+            cls.config = cls.read_config()
+        rq_config = cls.config["fleet"].get("rq")
+        if not rq_config:
+            rq_config = {}
+        return rq_config
+
+    @classmethod
     def get_all_fleets(cls):
         if not cls.config:
             cls.config = cls.read_config()

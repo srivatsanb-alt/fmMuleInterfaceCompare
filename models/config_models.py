@@ -56,6 +56,12 @@ class Alerts(JsonMixin):
 
 
 @dataclass
+class RQ(JsonMixin):
+    default_job_timeout: Optional[int] = 15
+    generic_handler_job_timeout: Optional[int] = 10
+
+
+@dataclass
 class BasicConfig(JsonMixin):
     customer: str
     location: str
@@ -64,6 +70,7 @@ class BasicConfig(JsonMixin):
     comms: Comms
     simulator: Simulator
     all_server_ips: List[str]
+    rq: Optional[RQ] = None
     stations: Optional[Stations] = None
     fleet_map_mapping: Optional[Dict[str, str]] = None
     map_names: Optional[List[str]] = None

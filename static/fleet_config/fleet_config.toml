@@ -6,18 +6,28 @@ notifications=true
 slack_webhook_url="https://hooks.slack.com/services/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"
 time_interval=20
 
-[frontenduser.admin]
-hashed_password="03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4"
-
-[fleet.simulator]
-simulate=false
-book_trips=false
+[fleet.rq]
+default_job_timeout = 15
+generic_handler_job_timeout = 10
 
 [optimal_dispatch]
 method="hungarian"
 prioritise_waiting_stations=true
 eta_power_factor=1.0
 priority_power_factor=0.1
+
+[frontenduser.admin]
+hashed_password="03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4"
+
+[fleet.stations]
+dispatch_timeout=10.0
+
+[fleet.simulator]
+simulate=false
+book_trips=false
+
+[fleet.simulator.routes]
+#route1 = [["Station A", "Station B"], [10]]]
 
 [fleet]
 mode="default"
@@ -36,6 +46,4 @@ hwid="XYZ"
 api_key="ABC"
 fleet_name="sample_fleet"
 
-[fleet.stations]
-dispatch_timeout=10.0
 
