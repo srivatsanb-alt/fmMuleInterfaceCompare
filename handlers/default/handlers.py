@@ -1130,13 +1130,23 @@ class Handlers:
         )
         get_logger().info(f"visa {granted_message} to {sherpa_name}")
 
-        self.session.add_notification(
-            [sherpa_name],
-            f"{sherpa_name} {granted_message} visa for {zone_name}, {visa_type}!",
-            NotificationLevels.info,
-            NotificationModules.visa,
-        )
+        if granted_message == "granted":
+            self.session.add_notification(
+                [sherpa_name],
+                f"{sherpa_name} {granted_message} visa for {zone_name}, {visa_type}!",
+                NotificationLevels.info,
+                NotificationModules.visa,
+            )
 
+        else:
+            self.session.add_notification(
+                [sherpa_name],
+                f"{sherpa_name} {granted_message} visa for {zone_name}, {visa_type}!",
+                NotificationLevels.alert,
+                NotificationModules.visa,
+                repetitive=True,
+                repetition_freq=20,
+            )
         return response.to_json()
 
     def handle_visa_access(self, req: VisaReq, access_type: AccessType, sherpa_name):
