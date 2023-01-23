@@ -259,13 +259,6 @@ d. Setup mule nginx container (if not already present)
     docker restart mule
     ```
 
-e. Copy cert files for docker pull
-```markdown 
-sudo mkdir /etc/docker/certs.d/<fm_ip>:443
-sudo cp /opt/ati/config/fm_rev_proxy_cert.pem /etc/docker/certs.d/<fm_ip>:443/domain.crt
-```
-
-
 # Setup Plugin #
 a. [Setup IES](#setup-ies)
 
@@ -345,25 +338,25 @@ priority_power_factor=1.0
 
 4. For good takt time, eta power factor should be higher, for fair scheduling priority power factor should be set higher.
 
-
+ 
 # Push mule docker image to local docker registry #
 
 1. Copy mule docker image tar file to fm_server and load the image 
 ```markdown
 docker load -i <mule_image tar file>
 ```
-2. Tag mule image with registry ip, tag
+2. Tag mule image with registry ip, tag on fm server
 ```markdown
 docker tag mule:<mule_tag> <fm_ip>:443/mule:fm
 ```
 
-3. Setup certs for docker push 
+3. Setup certs for docker push on fm server
 ```markdown 
 sudo mkdir /etc/docker/certs.d/<fm_ip>:443
-sudo cp /opt/ati/config/fm_rev_proxy_cert.pem /etc/docker/certs.d/<fm_ip>:443/domain.crt
+sudo cp <fm_static_dir>/certs/fm_rev_proxy_cert.pem /etc/docker/certs.d/<fm_ip>:443/domain.crt
 ```
 
-4. Push mule docker image to FM local registry
+4. Push mule docker image to FM local registry 
 ```markdown
 docker push <fm_ip>:443/mule:fm
 ```
