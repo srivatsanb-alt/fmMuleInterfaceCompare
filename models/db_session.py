@@ -270,10 +270,10 @@ class DBSession:
             sherpas.append(val[0])
         return sherpas
 
-    def get_ongoing_trip(self, sherpa: str):
+    def get_ongoing_trip(self, sherpa_name: str):
         return (
             self.session.query(OngoingTrip)
-            .filter(OngoingTrip.sherpa_name == sherpa)
+            .filter(OngoingTrip.sherpa_name == sherpa_name)
             .one_or_none()
         )
 
@@ -330,8 +330,8 @@ class DBSession:
     def get_last_n_trips(self, last_n=10):
         return self.session.query(Trip).order_by(Trip.id.desc()).limit(last_n).all()
 
-    def get_trip_leg(self, sherpa: str):
-        ongoing_trip: OngoingTrip = self.get_ongoing_trip(sherpa)
+    def get_trip_leg(self, sherpa_name: str):
+        ongoing_trip: OngoingTrip = self.get_ongoing_trip(sherpa_name)
         if ongoing_trip:
             return (
                 self.session.query(TripLeg)
