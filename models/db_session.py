@@ -104,13 +104,8 @@ class DBSession:
             .all()
         )
 
-    def clear_all_visa_assignments(self):
-        self.session.query(VisaAssignment).delete()
-
-    def clear_visa_held_by_sherpa(self, sherpa_name: str):
-        self.session.query(VisaAssignment).filter(
-            VisaAssignment.sherpa_name == sherpa_name
-        ).delete()
+    def get_all_visa_assignments(self):
+        return self.session.query(VisaAssignment).all()
 
     def get_all_fleets(self) -> List[Fleet]:
         return self.session.query(Fleet).all()

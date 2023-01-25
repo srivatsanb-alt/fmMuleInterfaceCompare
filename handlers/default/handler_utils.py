@@ -10,7 +10,7 @@ import datetime
 from core.logs import get_logger
 from core.config import Config
 from core.constants import DisabledReason
-from models.db_Session import DBSession
+from models.db_session import DBSession
 from models.fleet_models import SherpaStatus, Sherpa, Station, SherpaEvent
 from models.trip_models import OngoingTrip, Trip, TripLeg
 from utils.util import generate_random_job_id
@@ -152,7 +152,7 @@ def is_sherpa_available_for_new_trip(sherpa_status):
 
 
 # FM HEALTH CHECK #
-def delete_notification(dbsession: DBSession):
+def delete_notifications(dbsession: DBSession):
     all_notifications = dbsession.get_notifications()
 
     for notification in all_notifications:
