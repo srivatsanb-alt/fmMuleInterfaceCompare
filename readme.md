@@ -101,12 +101,12 @@
 
     a. If you want to setup fm on a remote location, run push_fm script to create all the docker images on the server
     ```markdown
-    ./scripts/push_fm.sh -WDi username@ip
+    ./scripts/push_fm.sh -Wi username@ip
      ```
 
     b. If you want to setup fm on your machine, run push_fm script to create all the docker images on your machine
     ```markdown
-    ./scripts/push_fm.sh -WD
+    ./scripts/push_fm.sh -W
      ```
 
 6. If server doesn't have internet access, copy built docker images to the server from Ati server(data@192.168.10.21:/atidata/datasets/FM_v<fm_version>_docker_images), run the following commands
@@ -121,12 +121,12 @@
 
     b. If you want to setup fm on a remote location, run push_fm script from your machine to create all the docker images on the server
     ```markdown
-    ./scripts/push_fm.sh -WbDi username@ip
+    ./scripts/push_fm.sh -Wbi username@ip
      ```
 
     c. If you want to setup fm on your machine, run push_fm script from your machine to create all the docker images on your machine
     ```markdown
-    ./scripts/push_fm.sh -WbD
+    ./scripts/push_fm.sh -Wb
 
 7. [Setup plugins](#setup-plugin) if any.
 
@@ -259,13 +259,6 @@ d. Setup mule nginx container (if not already present)
     docker restart mule
     ```
 
-e. Copy cert files for docker pull
-```markdown 
-sudo mkdir /etc/docker/certs.d/<fm_ip>:443
-sudo cp /opt/ati/config/fm_rev_proxy_cert.pem /etc/docker/certs.d/<fm_ip>:443/domain.crt
-```
-
-
 # Setup Plugin #
 a. [Setup IES](#setup-ies)
 
@@ -345,25 +338,25 @@ priority_power_factor=1.0
 
 4. For good takt time, eta power factor should be higher, for fair scheduling priority power factor should be set higher.
 
-
+ 
 # Push mule docker image to local docker registry #
 
 1. Copy mule docker image tar file to fm_server and load the image 
 ```markdown
 docker load -i <mule_image tar file>
 ```
-2. Tag mule image with registry ip, tag
+2. Tag mule image with registry ip, tag on fm server
 ```markdown
 docker tag mule:<mule_tag> <fm_ip>:443/mule:fm
 ```
 
-3. Setup certs for docker push 
+3. Setup certs for docker push on fm server
 ```markdown 
 sudo mkdir /etc/docker/certs.d/<fm_ip>:443
-sudo cp /opt/ati/config/fm_rev_proxy_cert.pem /etc/docker/certs.d/<fm_ip>:443/domain.crt
+sudo cp <fm_static_dir>/certs/fm_rev_proxy_cert.pem /etc/docker/certs.d/<fm_ip>:443/domain.crt
 ```
 
-4. Push mule docker image to FM local registry
+4. Push mule docker image to FM local registry 
 ```markdown
 docker push <fm_ip>:443/mule:fm
 ```
@@ -376,4 +369,6 @@ docker push <fm_ip>:443/mule:fm
 
 ## Delete sherpa ##
 1. To delete/deactivate sherpa from fleet use delete sherpa endpoint available in the maintenance page
-2. This can also be used to move sherpa from one fleet to another. Use delete sherpa endpoint to remove the sherpa from the current fleet. Modify fleet config - alter fleet_name in fleet sherpa entry and [restart FM](#start-or-restart-fm) .  
+2. This can also be used to move sherpa from one fleet to another. Use delete sherpa endpoint to remove the sherpa from the current fleet. Modify fleet config - alter fleet_name in fleet sherpa entry and [restart FM](#start-or-restart-fm) . 
+
+ 
