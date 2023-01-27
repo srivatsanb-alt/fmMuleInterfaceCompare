@@ -23,7 +23,7 @@ from models.misc_models import NotificationTimeout, NotificationLevels
 # Trip hutils
 def assign_sherpa(dbsession: DBSession, trip: Trip, sherpa: Sherpa):
     ongoing_trip = dbsession.create_ongoing_trip(sherpa.name, trip.id)
-    trip.assign_sherpa(sherpa)
+    trip.assign_sherpa(sherpa.name)
     sherpa_status: SherpaStatus = sherpa.status
     sherpa_status.idle = False
     sherpa_status.trip_id = trip.id
@@ -43,7 +43,7 @@ def start_trip(
     redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
     sherpa_status: SherpaStatus = sherpa.status
     start_pose = sherpa_status.pose
-    fleet_name = ongoing_trip.fleet_name
+    fleet_name = ongoing_trip.trip.fleet_name
 
     etas_at_start = []
     for station in all_stations:
@@ -103,13 +103,16 @@ def start_leg(
 
     trip: Trip = ongoing_trip.trip
 
+    from_station_name = from_station.name if from_station else None
+
     trip_leg: TripLeg = dbsession.create_trip_leg(
-        trip.id, from_station.name, to_station.name
+        trip.id, from_station_name, to_station.name
     )
+
     ongoing_trip.start_leg(trip_leg.id)
     sherpa_name = ongoing_trip.sherpa_name
 
-    if ongoing_trip.curr_station():
+    if from_station:
         update_leg_curr_station(from_station, sherpa_name)
 
     update_leg_next_station(to_station, sherpa_name)
