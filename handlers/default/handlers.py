@@ -548,7 +548,6 @@ class Handlers:
         self,
         all_ongoing_trips: List[tm.OngoingTrip],
         all_sherpas: List[fm.Sherpa],
-        req: rqm.DeleteOngoingTripReq,
     ):
         for ongoing_trip, sherpa in zip(all_ongoing_trips, all_sherpas):
             get_logger().info(
@@ -846,22 +845,14 @@ class Handlers:
                 all_stations.append(station)
 
         if ongoing_trip:
-            trip_leg: tm.TripLeg = ongoing_trip.trip_leg
-            if trip_leg:
-                if trip_leg.from_station:
-                    from_station: fm.Station = self.dbsession.get_station(
-                        trip_leg.from_station
-                    )
-                to_station: fm.Station = self.dbsession.get_station(trip_leg.to_station)
-            else:
-                curr_station = ongoing_trip.curr_station()
-                next_station = ongoing_trip.next_station()
-                from_station = None
-                to_station = None
-                if curr_station:
-                    from_station: fm.Station = self.dbsession.get_station(curr_station)
-                if next_station:
-                    to_station: fm.Station = self.dbsession.get_station(next_station)
+            from_station = None
+            to_station = None
+            curr_station = ongoing_trip.curr_station()
+            next_station = ongoing_trip.next_station()
+            if curr_station:
+                from_station: fm.Station = self.dbsession.get_station(curr_station)
+            if next_station:
+                to_station: fm.Station = self.dbsession.get_station(next_station)
 
         # end transaction
         self.dbsession.session.commit()

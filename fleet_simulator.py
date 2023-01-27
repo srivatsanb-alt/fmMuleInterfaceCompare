@@ -300,6 +300,7 @@ class FleetSimulator:
 
     def act_on_sherpa_events(self):
         simulated_trip_legs = []
+        active_threads = {}
         print("Will act on sherpa events")
         with DBSession() as dbsession:
             while True:
@@ -318,6 +319,10 @@ class FleetSimulator:
                             t.daemon = True
                             t.start()
                             simulated_trip_legs.append(trip_leg.id)
+                            active_threads[sherpa.name] = t
+                        else:
+                            if not active_threads.get(sherpa.name).is_alive():
+                                self.send_sherpa_status(sherpa.name)
                     else:
                         print(f"no trip_leg for {sherpa.name}")
                         self.send_sherpa_status(sherpa.name)
