@@ -908,9 +908,9 @@ class Handlers:
         ):
             raise ValueError(
                 f"Trip information mismatch(trip_id: {req.trip_id}",
-                "trip_leg_id: {req.trip_leg_id})",
-                "ongoing_trip_id: {ongoing_trip.trip_id}",
-                "ongoing_trip_leg_id: {ongoing_trip.trip_leg_id}",
+                f"trip_leg_id: {req.trip_leg_id})",
+                f"ongoing_trip_id: {ongoing_trip.trip_id}",
+                f"ongoing_trip_leg_id: {ongoing_trip.trip_leg_id}",
             )
 
         curr_station: fm.Station = self.dbsession.get_station(ongoing_trip.next_station())
