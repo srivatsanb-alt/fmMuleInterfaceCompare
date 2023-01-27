@@ -110,13 +110,14 @@ class Station(Base):
     button_id = Column(String)
     fleet_id = Column(Integer, ForeignKey("fleets.id"), nullable=False)
     fleet = relationship("Fleet", back_populates="stations")
+    status = relationship("StationStatus", back_populates="station", uselist=False)
 
 
 class StationStatus(TimestampMixin, Base):
     __tablename__ = "stationstatus"
 
     station_name = Column(String, ForeignKey("stations.name"), primary_key=True, index=True)
-    station = relationship("Station")
+    station = relationship("Station", back_populates="status")
 
     disabled = Column(Boolean)
     arriving_sherpas = Column(ARRAY(String))
