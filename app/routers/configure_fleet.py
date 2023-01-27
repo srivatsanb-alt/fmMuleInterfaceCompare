@@ -1,3 +1,5 @@
+import os
+import toml
 from fastapi import APIRouter, Depends
 from typing import Union
 from models.db_session import DBSession
@@ -93,5 +95,21 @@ async def delete_sherpa(
         dbsession.session.query(AvailableSherpas).filter(
             AvailableSherpas.sherpa_name == sherpa_name
         ).delete()
+
+        # remove sherpa from fleet config toml file
+        fleet_config_path = os.path.join(os.getenv("FM_CONFIG_DIR"), "fleet_config.toml")
+        previous_fleet_config_path = os.path.join(
+            os.getenv("FM_CONFIG_DIR"), "previous_fleet_config.toml"
+        )
+
+        config = toml.load(fleet_config_path)
+
+        # store previous_fleet_config
+        with open(previous_fleet_config_path, "w") as f:
+            f.write(toml.dumps(config))
+
+        del config["fleet_sherpas"][sherpa_name]
+        with open(fleet_config_path, "w") as f:
+            f.write(toml.dumps(config))
 
     return response
