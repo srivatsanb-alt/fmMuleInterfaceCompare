@@ -25,6 +25,9 @@ dispatch_timeout=10.0
 [fleet.simulator]
 simulate=false
 book_trips=false
+visa_handling=false
+speedup_factor=1.0
+average_velocity=0.8
 
 [fleet.simulator.routes]
 #route1 = [["Station A", "Station B"], [10]]]
@@ -45,5 +48,3 @@ location=" "
 hwid="XYZ"
 api_key="ABC"
 fleet_name="sample_fleet"
-
-
