@@ -1,14 +1,15 @@
 # FM SETUP INSTRUCTIONS #
 
 # Index #
-1. [Setup FM](#setup-fm)
-2. [Start/Restart FM](#start-or-restart-fm)
-3. [Run FM Simulator](#run-fm-simulator)
-4. [Setup sherpas](#setup-sherpas)
-5. [Setup plugin](#setup-plugin)
-6. [Setup optimal dispatch config](#setup-optimal-dispatch-config)
-7. [Push mule docker image to local docker registry](#push-mule-docker-image-to-local-docker-registry)
-8. [Fleet maintenance](#fleet-maintenance)
+1. [Setup FM with push_fm script](#setup-fm-with-push_fm-script)
+2. [Setup FM by copying built docker images](#setup-fm-by-copying-built-docker-images)
+3. [Start/Restart FM](#start-or-restart-fm)
+4. [Run FM Simulator](#run-fm-simulator)
+5. [Setup sherpas](#setup-sherpas)
+6. [Setup plugin](#setup-plugin)
+7. [Setup optimal dispatch config](#setup-optimal-dispatch-config)
+8. [Push mule docker image to local docker registry](#push-mule-docker-image-to-local-docker-registry)
+9. [Fleet maintenance](#fleet-maintenance)
 
 # FM Installation #
 
@@ -17,7 +18,7 @@
 2. Install docker-compose
 3. Works only on x86 arch
 
-## Setup FM ##
+## Setup FM with push_fm script ##
 1. Clone fleet manager repository and setup git config for submodule 
 
     ```markdown
@@ -136,6 +137,26 @@
 
 10. [Push mule docker image to local docker registry](#push-mule-docker-image-to-local-docker-registry)
 
+
+# Setup FM by copying built docker images #
+
+1. Copy built docker images to the FM server from Ati server(data@192.168.10.21:/atidata/datasets/FM_v<fm_version>_docker_images) 
+
+2. Load docker images 
+```markdown
+cd FM_v<fm_version>_docker_images
+bash load_docker_images.sh
+```
+
+3. Copy "static" directory from fleet_manager repository to the FM server
+    
+4. Create cert files by following [Setup FM with push_fm script](#setup-fm-with-push_fm-script) steps 1-3. 
+
+5. Copy the cert files generated (fm_rev_proxy_cert.pem, fm_rev_proxy_key.pem) to the static/certs/ directory in the FM server
+
+6. Follow steps 7-10 in [Setup FM with push_fm script](#setup-fm-with-push_fm-script)
+
+
 # Start or Restart FM #
 
    1. Modify timezone if required by setting environment variables TZ, PGTZ in services fleet_manager, db enlisted in static/docker-compose.yml.
@@ -160,7 +181,7 @@
 
 
 # Run FM Simulator #
-  a. Follow [Setup FM](#setup-fm) , steps 1-2
+  a. Follow [Setup FM with push_fm script](#setup-fm-with-push_fm-script) , steps 1-2
 
   b. Set simulate in static/fleet_config/fleet_config.toml
 
@@ -188,12 +209,13 @@
    ]
   ```
 
-  e.Follow remaining steps in [Setup FM](#setup-fm)
+  e.Follow remaining steps in [Setup FM with push_fm script](#setup-fm-with-push_fm-script), steps 3-7. 
+  [Setup Sherpa](#setup-sherpas) not required for simulation
 
 
 # Setup sherpas #
 
-a. Copy fm cert file(fm_rev_proxy_cert.pem) generated in [Setup FM](#setup-fm) step 3 to sherpa's /opt/ati/config directory
+a. Copy fm cert file(fm_rev_proxy_cert.pem) generated in [Setup FM with push_fm script](#setup-fm-with-push_fm-script) step 3 to sherpa's /opt/ati/config directory
 
 
 b. Add this patch to /opt/ati/config/config.toml in the mule
