@@ -89,13 +89,12 @@
     fleet_name="sample_fleet_1"
     ```
 
-    4.3. *Create map folders, map_files.txt for all the fleet names present in fleet_config.toml. Make sure grid_map_attributes.json is present*
+    4.3. *Create map folders for all the fleet names present in fleet_config.toml*
 
     ```markdown
     mkdir static/sample_fleet/map/
     copy all the map files to sample_fleet/map/
     cd sample_fleet/map/
-    ls > map_files.txt
     ```  
 
 5. If server has internet, allows you to download open-source packages (Recommended to use step 6 instead of this step)
@@ -197,8 +196,8 @@ bash load_docker_images.sh
   c. To get trip bookings done automatically add routes(list of station names), trip booking frequency(seconds) to fleet_config.
   ```markdown
   [fleet.simulator.routes]
-  route1 = [["Desk", "Conference Room"], [10]]
-  route2 = [["Desk", "Electronics Lab"], [60]]
+  route1 = [["Station A", "Station B"], [10]]
+  route2 = [["Station A", "Station C"], [60]]
   ```
 
   d. Make sure all the stations mentioned in gmaj file(<fleet_name>/map/grid_map_attributes.json) has only the below mentioned tags. Tags like conveyor, auto_hitch, auto_unhitch will not work in simulator mode.
@@ -209,7 +208,19 @@ bash load_docker_images.sh
    ]
   ```
 
-  e.Follow remaining steps in [Setup FM with push_fm script](#setup-fm-with-push_fm-script), steps 3-7. 
+  e. If you want to start sherpas at particular station add this patch to config
+  ```markdown
+  [fleet.simulator.initialize_sherpas_at]
+  sample_sherpa="Station A"
+  ```
+
+  f. If you want to simulate transit visas set visa handling in fleet.simulator config
+  ```markdown
+  [fleet.simulator]
+  visa_handling=true 
+  ```
+
+  g.Follow remaining steps in [Setup FM with push_fm script](#setup-fm-with-push_fm-script), steps 3-7. 
   [Setup Sherpa](#setup-sherpas) not required for simulation
 
 
