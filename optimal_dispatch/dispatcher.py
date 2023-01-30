@@ -243,16 +243,12 @@ class OptimalDispatch:
                 pickup_priority = pickup_q_val["priority"]
                 route = pickup_q_val["route"]
                 exclude_stations = sherpa_q_val["exclude_stations"]
-
                 if any(
                     station in sherpa_q_val["exclude_stations"]
                     for station in pickup_q_val["route"]
                 ):
-                    route = pickup_q_val["route"]
-                    exclude_stations = sherpa_q_val["exclude_stations"]
                     self.logger.info(
-                        f"cannot send {sherpa_q} to {route}, {sherpa_q}",
-                        f"restricted from going to {exclude_stations}",
+                        f"cannot send {sherpa_q} to {route}, {sherpa_q} restricted from going to {exclude_stations}"
                     )
                     total_eta = np.inf
                 else:
