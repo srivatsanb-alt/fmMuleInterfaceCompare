@@ -225,6 +225,7 @@ ssh into mule
 cd /etc/systemd
 sudo chmod ugo+rwx mmts_utils.sh
 sudo chmod ugo+rwx ati_mule_maintenance.sh
+sudo chmod ugo+rwx /opt/ati/uniflash
 sudo systemctl enable ati_mule_maintenance
 sudo systemctl start ati_mule_maintenance
 
