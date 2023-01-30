@@ -133,11 +133,17 @@ def maybe_grant_visa(dbsession, zone_name, visa_type, sherpa_name):
             linked_zone_flag = can_lock_linked_zones(
                 dbsession, zone_name, "station", sherpa_name
             ) and can_lock_linked_zones(dbsession, zone_name, "lane", sherpa_name)
-        return (
-            lock_exclusion_zone(dbsession, zone_name, "station", sherpa_name)
-            and lock_exclusion_zone(dbsession, zone_name, "lane", sherpa_name)
+
+        if (
+            lock_exclusion_zone(dbsession, zone_name, "station", sherpa_name, test=True)
+            and lock_exclusion_zone(dbsession, zone_name, "lane", sherpa_name, test=True)
             and linked_zone_flag
-        )
+        ):
+            return lock_exclusion_zone(
+                dbsession, zone_name, "station", sherpa_name
+            ) and lock_exclusion_zone(dbsession, zone_name, "lane", sherpa_name)
+        else:
+            return False
 
     if visa_type == VisaType.TRANSIT:
         if len(linked_zones):
