@@ -44,7 +44,7 @@ services:
     network_mode: bridge
 
   reverseproxy:
-    image: nginx:1.14.0
+    image: fm_nginx:1.23.3
     container_name: reverseproxy
     hostname: fm_rev_proxy 
     ports:

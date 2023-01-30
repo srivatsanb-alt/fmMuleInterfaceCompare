@@ -116,7 +116,7 @@ if [ $build_base == 1 ] ; then
 {
   echo "Will build base image!"
   docker image build -t fleet_manager_base:dev -f docker_files/Dockerfile.base .
-  docker pull nginx:1.14.0
+  docker pull nginx:1.23.3
   docker pull postgres:14.0
   docker pull registry:2
 }
@@ -127,7 +127,7 @@ else
 fi
 
 echo "will build nginx docker image"
-docker image build -t nginx:1.14.0 -f docker_files/nginx.Dockerfile .
+docker image build -t fm_nginx:1.23.3 -f docker_files/nginx.Dockerfile .
 echo "Successfully built nginx image"
 
 
