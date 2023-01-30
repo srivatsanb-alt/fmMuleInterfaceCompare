@@ -334,17 +334,17 @@ b. Modify static/plugin_conveyor/api_key_conveyor_mapping.json. Map api keys to 
 
 Optimal dispatch logic tries to allocate the pending trips with the best sherpa available. Choice of best sherpa is made with the paramter $Z$
 
-$\Z=(eta)^a/(priority)^b$
+$Z=(eta)^a/(priority)^b$
 <br>
 $priority=p1/p2$
 
 ```markdown
 where,
-    eta - expected time of arrival for sherpa pose to first station of the trip booked
-    a - eta power factor , 0<a<1,
+    eta - expected time of arrival computed for the sherpa to reach the first station of the trip booked,
     priority - measure of how long a trip has been pending,
     p1 - Time since booking of currrent trip, 
     p2 - Minimum of time since booking across all the pending trips,
+    a - eta power factor , 0<a<1,
     b - priority power factor , 0<b<1,
 ```
 
