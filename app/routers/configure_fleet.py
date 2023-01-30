@@ -40,11 +40,9 @@ async def reset_fleet(
             raise_error("Cancel all the ongoing trips before resetting the fleet")
 
         fleet: Fleet = dbsession.get_fleet(fleet_name)
+
         if not fleet:
             raise_error("Bad detail invalid fleet name")
-
-        fleet.status = FleetStatus.STOPPED
-        dbsession.session.commit()
 
         fu.reset_fleet(dbsession, fleet_name)
         all_fleet_sherpas = dbsession.get_all_sherpas_in_fleet(fleet_name)
