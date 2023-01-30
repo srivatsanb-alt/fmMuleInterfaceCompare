@@ -372,6 +372,12 @@ priority_power_factor=1.0
 
 4. For good takt time, eta power factor should be higher, for fair scheduling priority power factor should be set higher.
 
+5. Sherpas can also be restricted from running on certain routes/station by setting up exclude_stations config. The below config will stop "sample_sherpa"(sherpa_name) from getting assigned with the trips with route having any of ["Station A", "Station B"]
+```markdown
+[optimal_dispatch.exclude_stations]
+sample_sherpa=["Station A", "Station B"]
+```
+
  
 # Push mule docker image to local docker registry #
 
