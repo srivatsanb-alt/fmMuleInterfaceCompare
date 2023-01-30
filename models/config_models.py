@@ -33,6 +33,11 @@ class Comms(JsonMixin):
 class Simulator(JsonMixin):
     simulate: bool = False
     book_trips: bool = False
+    visa_handling: bool = False
+    speedup_factor: float = 1.0
+    average_velocity: float = 0.8
+    routes: Optional[Dict] = None
+    initialize_sherpas_at: Optional[Dict] = None
 
 
 @dataclass
@@ -46,6 +51,7 @@ class OptimalDispatch(JsonMixin):
     prioritise_waiting_stations: bool = True
     eta_power_factor: float = 1.0
     priority_power_factor: float = 0.1
+    exclude_stations: Optional[Dict] = None
 
 
 @dataclass

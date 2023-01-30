@@ -11,7 +11,7 @@ from models.request_models import (
     BookingReq,
     TripMsg,
     VisaReq,
-    ResourceReq
+    ResourceReq,
 )
 from utils.router_utils import RouterModule, get_dense_path
 from models.trip_models import OngoingTrip
@@ -32,6 +32,7 @@ LOOKAHEAD = 5.0
 PATH_DENSITY = 1000
 THETA_MAX = np.rad2deg(10)
 
+
 def should_trip_msg_be_sent(sherpa_events):
     reached_flag = False
     move_to_flag = False
@@ -47,60 +48,65 @@ def should_trip_msg_be_sent(sherpa_events):
 
 def handle(handler, msg):
     handler.handle(msg)
-    
+
 
 def find_gate_params(ez, name):
     for zid, zone_details in ez.items():
-        if zone_details['name'] == name:
+        if zone_details["name"] == name:
             return zone_details
-    
+
+
 def read_ez_files(ez_file):
     with open(ez_file, "r") as f:
         ez_dict = json.load(f)
     exc_zones = ez_dict["ez_gates"]
-    #zone_ids = list(ezones.keys())
-    #zones_list = []
-    #for zone in ezones.values():
+    # zone_ids = list(ezones.keys())
+    # zones_list = []
+    # for zone in ezones.values():
     #    zones_list.append(zone)
-    #exc_zones = get_zone_dict(zones_list, zone_ids)
+    # exc_zones = get_zone_dict(zones_list, zone_ids)
     return exc_zones
 
+
 def entry_exit_zone_check(pose, gate_params, enter=True):
-    c_t, s_t = gate_params['opening_direction']    
+    c_t, s_t = gate_params["opening_direction"]
     x, y, _ = pose
     q1 = np.array([x, y])
     p1, p2 = gate_params["line_segment"]
     if enter:
         visa_lookahead = gate_params["apply_dist"]
-        xv, yv = x+visa_lookahead*c_t, y+visa_lookahead*s_t
+        xv, yv = x + visa_lookahead * c_t, y + visa_lookahead * s_t
     else:
-        #release_distance = gate_params['transit_visa_release_dist']
+        # release_distance = gate_params['transit_visa_release_dist']
         release_distance = 4.0
-        xv, yv = x -release_distance*c_t, y-release_distance*s_t
+        xv, yv = x - release_distance * c_t, y - release_distance * s_t
     q2 = np.array([xv, yv])
     return intersection_check(np.array(p1), np.array(p2), q1, q2)
-        
+
 
 def check_visa_release(ez, pose, visas_held):
-    print(f"visa held {visas_held}")	
-    print(f"exclusion zone {ez}")	
+    print(f"visa held {visas_held}")
+    print(f"exclusion zone {ez}")
     gate_params = find_gate_params(ez, visas_held)
     print(f"gate params {gate_params}")
     if not entry_exit_zone_check(pose, gate_params, enter=False):
         return visas_held, gate_params["name"]
     return None
-    
+
+
 def check_visa_needed(ez, pose):
     x, y, theta = pose
     q1 = np.asarray([x, y])
     for zoi, gate_params in ez.items():
         approaching_zone = entry_exit_zone_check(pose, gate_params)
-        if approaching_zone: # Entering visa zone
+        if approaching_zone:  # Entering visa zone
             return zoi, gate_params["name"]
     return None
 
+
 def wedge(a, b):
     return a[0] * b[1] - a[1] * b[0]
+
 
 def intersection_check(p, p2, q, q2):
     u, v, d = p2 - p, q2 - q, p - q
@@ -112,19 +118,21 @@ def intersection_check(p, p2, q, q2):
             return True
     return False
 
+
 def find_next_pose_index(traj, idx, dmax):
     x, y, t = traj
     traj_length = len(x)
-    wmin, wmax = idx, np.minimum(idx + int(LOOKAHEAD*PATH_DENSITY), traj_length)
-    i = wmin+1
+    wmin, wmax = idx, np.minimum(idx + int(LOOKAHEAD * PATH_DENSITY), traj_length)
+    i = wmin + 1
     d = 0.0
     theta = 0.0
     while i < wmax and d < dmax and theta < THETA_MAX:
-        d += np.sqrt((x[i]-x[i-1])**2 + (y[i]-y[i-1])**2)
-        theta +=  np.abs(t[i]-t[i-1])
+        d += np.sqrt((x[i] - x[i - 1]) ** 2 + (y[i] - y[i - 1]) ** 2)
+        theta += np.abs(t[i] - t[i - 1])
         i += 1
     return i - wmin
-    
+
+
 class MuleAPP:
     def __init__(self):
         self.sherpa_apps = []
@@ -174,14 +182,15 @@ class FleetSimulator:
         self.handler_obj = Config.get_handler()
         self.fleet_names = Config.get_all_fleets()
         self.simulator_config = Config.get_simulator_config()
-        self.should_book_trips = self.simulator_config["book_trips"]
+        self.should_book_trips = self.simulator_config.get("book_trips", False)
         self.router_modules = {}
         self.exclusion_zones = {}
         self.visas_held = {}
         self.visa_needed = {}
         self.visa_handling = {}
-        self.sim_speedup_factor = self.simulator_config["speedup_factor"]
-        self.avg_velocity = self.simulator_config["average_velocity"]
+        self.sim_speedup_factor = self.simulator_config.get("speedup_factor", 1)
+        self.avg_velocity = self.simulator_config.get("average_velocity", 0.8)
+        self.initialize_sherpas_at = self.simulator_config.get("initialize_sherpas_at")
         for fleet_name in self.fleet_names:
             map_path = os.path.join(os.environ["FM_MAP_DIR"], f"{fleet_name}/map")
             ez_path = os.path.join(map_path, "ez.json")
@@ -189,7 +198,7 @@ class FleetSimulator:
                 self.exclusion_zones.update({fleet_name: read_ez_files(ez_path)})
                 self.visa_handling[fleet_name] = self.simulator_config["visa_handling"]
             except:
-                self.visa_handling[fleet_name]=false
+                self.visa_handling[fleet_name] = False
             print(f"Exclusion zones... {self.exclusion_zones}")
             self.router_modules.update({fleet_name: RouterModule(map_path)})
 
@@ -204,16 +213,20 @@ class FleetSimulator:
                 print(f"sending verify fleet files req sherpa: {sherpa.name}")
                 self.visas_held[sherpa.name] = []
                 self.visa_needed[sherpa.name] = []
-                
+
                 time.sleep(5)
 
                 for sherpa in sherpas:
                     station_fleet_name = None
+                    station_name = self.initialize_sherpas_at.get(sherpa.name)
+                    st = dbsession.get_station(station_name) if station_name else None
+                    station_fleet_name = st.fleet.name if st else None
+
                     while sherpa.fleet.name != station_fleet_name:
                         i = np.random.randint(0, len(stations))
                         station_fleet_name = stations[i].fleet.name
+                        st = stations[i]
 
-                    st = stations[i]
                     self.send_sherpa_status(sherpa.name, mode="fleet", pose=st.pose)
 
     def book_trip(self, route, freq):
@@ -243,29 +256,29 @@ class FleetSimulator:
         enqueue(generic_q, handle, self.handler_obj, msg, ttl=1)
 
     def get_visa_request(self, sherpa_name, visa_params):
-    	zone_id, zone_name = visa_params
-    	visa_details = {"zone_id": zone_id, "zone_name": zone_name, "visa_type": "transit"}
-    	visa_request_msg = {
-    	    "type": "resource_access",
-    	    "access_type": "request",
-    	    "visa": VisaReq(**visa_details),
-    	    "to_fm": True,
-    	    "timestamp": time.time(),
-    	    "source": sherpa_name,
-    	    }
-    	return ResourceReq(**visa_request_msg)
-    
+        zone_id, zone_name = visa_params
+        visa_details = {"zone_id": zone_id, "zone_name": zone_name, "visa_type": "transit"}
+        visa_request_msg = {
+            "type": "resource_access",
+            "access_type": "request",
+            "visa": VisaReq(**visa_details),
+            "to_fm": True,
+            "timestamp": time.time(),
+            "source": sherpa_name,
+        }
+        return ResourceReq(**visa_request_msg)
+
     def get_visa_release(self, sherpa_name, visa_params):
         zone_id, zone_name = visa_params
-        visa_details={"zone_id": zone_id, "zone_name": zone_name, "visa_type": "transit"}
+        visa_details = {"zone_id": zone_id, "zone_name": zone_name, "visa_type": "transit"}
         visa_release_msg = {
             "type": "resource_access",
             "access_type": "release",
             "visa": VisaReq(**visa_details),
             "to_fm": True,
             "timestamp": time.time(),
-             "source": sherpa_name
-            }
+            "source": sherpa_name,
+        }
         return ResourceReq(**visa_release_msg)
 
     def send_sherpa_status(self, sherpa_name, mode=None, pose=None, battery_status=None):
@@ -314,7 +327,7 @@ class FleetSimulator:
             final_route, _, route_length = rm.get_route(from_pose, to_pose)
             eta_at_start = rm.get_route_length(from_pose, to_pose)
             x_vals, y_vals, t_vals, _ = get_dense_path(final_route)
-            traj = x_vals,y_vals, t_vals
+            traj = x_vals, y_vals, t_vals
             # sleep_time = 1
             steps = 1000
             sleep_time = self.sim_speedup_factor
@@ -335,21 +348,23 @@ class FleetSimulator:
                 stoppage_type = ""
                 local_obstacle = [-999.0, -999.0]
                 curr_pose = [x_vals[i], y_vals[i], t_vals[i]]
-                steps = find_next_pose_index(traj, i, self.avg_velocity*sleep_time)
+                steps = find_next_pose_index(traj, i, self.avg_velocity * sleep_time)
                 if i + steps >= len(x_vals):
-                   break
-                if len(self.visa_needed[sherpa_name])==0 or len(self.visas_held[sherpa_name]) > 0:
+                    break
+                if (
+                    len(self.visa_needed[sherpa_name]) == 0
+                    or len(self.visas_held[sherpa_name]) > 0
+                ):
                     i += steps
                     blocked_for_visa = False
                 else:
                     stoppage_type = "Waiting for visa"
                     blocked_for_visa = True
-                #obst_random = np.random.rand(1)[0]
-                #if obst_random < 0.07:
+                # obst_random = np.random.rand(1)[0]
+                # if obst_random < 0.07:
                 #    stoppage_type = "Stopped due to detected obstacle"
                 #    local_obstacle = [0.1, 1]
-                
-                
+
                 if self.visa_handling[sherpa.fleet.name]:
                     sherpa_visa = session.get_visa_held(sherpa_name)
                     print(f"visa held: {sherpa_visa}")
@@ -359,34 +374,34 @@ class FleetSimulator:
                         print(f"VISA HELD for zone id: {zone_id}")
                         self.visas_held[sherpa_name] = sherpa_visa
                         self.visa_needed[sherpa_name] = []
-                        visa_params=check_visa_release(ez, curr_pose, zone_id)
+                        visa_params = check_visa_release(ez, curr_pose, zone_id)
                         if visa_params is not None:
                             print(f"Visa released: {self.visas_held[sherpa_name]}")
-                            visa_release_msg = self.get_visa_release(sherpa_name,visa_params)
-                            enqueue(
-                                sherpa_visa_q,
-                                handle,
-                                self.handler_obj,
-                                visa_release_msg
+                            visa_release_msg = self.get_visa_release(
+                                sherpa_name, visa_params
                             )
-                            self.visas_held[sherpa_name]=[]
+                            enqueue(
+                                sherpa_visa_q, handle, self.handler_obj, visa_release_msg
+                            )
+                            self.visas_held[sherpa_name] = []
                     else:
-                        visa_params=check_visa_needed(ez, curr_pose)
+                        visa_params = check_visa_needed(ez, curr_pose)
                         print(f"Is Visa needed? {visa_params}")
                         if visa_params is not None:
                             self.visa_needed[sherpa_name] = visa_params[0]
-                            print(f"Visa for zone: {self.visa_needed[sherpa_name]}, needed for {sherpa_name}")
-                            visa_request_msg = self.get_visa_request(sherpa_name,visa_params)
+                            print(
+                                f"Visa for zone: {self.visa_needed[sherpa_name]}, needed for {sherpa_name}"
+                            )
+                            visa_request_msg = self.get_visa_request(
+                                sherpa_name, visa_params
+                            )
                             enqueue(
-                                sherpa_visa_q,
-                                handle,
-                                self.handler_obj,
-                                visa_request_msg
+                                sherpa_visa_q, handle, self.handler_obj, visa_request_msg
                             )
 
                 print(
-                        f"simulating trip_id: {ongoing_trip.trip_id}, steps: {steps}, progress: {i / len(x_vals)}"
-                    )
+                    f"simulating trip_id: {ongoing_trip.trip_id}, steps: {steps}, progress: {i / len(x_vals)}"
+                )
 
                 self.send_sherpa_status(sherpa.name, mode="fleet", pose=curr_pose)
                 eta = ((len(x_vals) - i) / len(x_vals)) * eta_at_start

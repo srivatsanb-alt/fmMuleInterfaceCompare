@@ -32,6 +32,10 @@ average_velocity=0.8
 [fleet.simulator.routes]
 #route1 = [["Station A", "Station B"], [10]]]
 
+
+[fleet.simulator.initialize_sherpas_at]
+#sample_sherpa="Station A"
+
 [fleet]
 mode="default"
 handler_package="handlers.default.handlers"
