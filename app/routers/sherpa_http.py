@@ -4,6 +4,8 @@ from app.routers.dependencies import (
     process_req,
     process_req_with_response,
 )
+from models.db_session import DBSession
+from models.misc_models import NotificationModules, NotificationLevels
 from models.request_models import (
     InitMsg,
     ReachedReq,
@@ -12,6 +14,7 @@ from models.request_models import (
     SherpaPeripheralsReq,
     SherpaReq,
     VerifyFleetFilesResp,
+    SherpaAlertMsg,
 )
 from fastapi import Depends, APIRouter
 from utils.rq_utils import Queues
@@ -59,3 +62,18 @@ async def verify_fleet_files(sherpa: str = Depends(get_sherpa)):
         None, SherpaReq(type="verify_fleet_files", timestamp=time.time()), sherpa
     )
     return VerifyFleetFilesResp.from_json(response)
+
+
+@router.post("/alerts")
+async def sherpa_alerts(alert_msg: SherpaAlertMsg, sherpa: str = Depends(get_sherpa)):
+    with DBSession() as dbsession:
+        sherpa_obj = dbsession.get_sherpa(sherpa)
+        alert = f"Got an alert from {sherpa}, "
+        if alert_msg.trolley_load_cell:
+            alert_msg = alert + alert_msg.trolley_load_cell
+        dbsession.add_notification(
+            [sherpa_obj.name, sherpa_obj.fleet.name],
+            alert_msg,
+            NotificationLevels.action_request,
+            NotificationModules.generic,
+        )

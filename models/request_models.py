@@ -101,6 +101,11 @@ class InitMsg(SherpaReq):
     type = MessageType.INIT
 
 
+class SherpaAlertMsg(SherpaReq):
+    trolley_load_cell: Union[str, None]
+    type = "Alert"
+
+
 class ReachedReq(SherpaReq):
     trip_id: int
     trip_leg_id: int
