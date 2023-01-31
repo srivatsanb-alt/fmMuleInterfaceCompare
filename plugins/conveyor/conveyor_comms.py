@@ -53,11 +53,9 @@ async def tote_trip_info(conveyor_name: str):
 @router.websocket("/plugin/ws/api/v1/conveyor")
 async def conveyor_ws(websocket: WebSocket, conveyor_name=Depends(get_conveyor)):
 
-    # if conveyor_name is None:
-    #     await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
-    #     return
-
-    conveyor_name = "Conveyor"
+    if conveyor_name is None:
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
 
     await websocket.accept()
 
