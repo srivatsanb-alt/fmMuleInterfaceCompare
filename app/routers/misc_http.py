@@ -261,11 +261,9 @@ async def update_fleet_config(
 
     for fleet_name, map_name in fleet_config_update.fleet.fleet_map_mapping.items():
         if fleet_name != map_name:
-            try:
-                fleet_static_dir = os.getenv("FM_MAP_DIR")
-                os.system(f"cd {fleet_static_dir} ; ln -s {map_name} {fleet_name}")
-            except:
-                pass
+            fleet_name_in_quotes=f'"{fleet_name}"'
+            fleet_static_dir = os.getenv("FM_MAP_DIR")
+            ret_value = os.system(f"cd {fleet_static_dir} ; ln -s {map_name} {fleet_name_in_quotes}")
 
     with open(fleet_config_path, "w") as f:
         f.write(toml.dumps(new_config))
