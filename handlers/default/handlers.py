@@ -1058,7 +1058,7 @@ class Handlers:
         reset_fleet = hutils.is_reset_fleet_required(fleet_name, map_files)
 
         if reset_fleet:
-            update_map_msg = f"Map files of fleet: {fleet_name} has been modified, please update the map by pressing the update_map button on webpage header!"
+            update_map_msg = f"Map files of fleet: {fleet_name} has been modified, please update the map by pressing the update_map button on the webpage header!"
             self.session.add_notification(
                 [fleet_name, sherpa_name],
                 update_map_msg,
