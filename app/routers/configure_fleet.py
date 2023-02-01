@@ -28,7 +28,7 @@ async def reset_fleet(
     fleet_name = fleet_name
 
     if not username:
-        raise_error("Unknown requester")
+        raise_error("Unknown requester", 401)
 
     if not fleet_name:
         raise_error("No fleet name")
@@ -62,7 +62,7 @@ async def delete_sherpa(
     response = {}
 
     if not username:
-        raise_error("Unknown requester")
+        raise_error("Unknown requester", 401)
 
     if not sherpa_name:
         raise_error("No sherpa_name")

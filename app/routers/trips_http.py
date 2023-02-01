@@ -37,7 +37,7 @@ async def book(booking_req: BookingReq, user_name=Depends(get_user_from_header))
 @router.delete("/ongoing/{booking_id}")
 async def delete_ongoing_trip(booking_id: int, user_name=Depends(get_user_from_header)):
     if not user_name:
-        raise_error("Unknown requester")
+        raise_error("Unknown requester", 401)
 
     with DBSession() as dbsession:
         trips = dbsession.get_trip_with_booking_id(booking_id)
@@ -57,7 +57,7 @@ async def delete_pending_trip(booking_id: int, user_name=Depends(get_user_from_h
 
     response = {}
     if not user_name:
-        raise_error("Unknown requester")
+        raise_error("Unknown requester", 401)
 
     with DBSession() as dbsession:
         trips = dbsession.get_trip_with_booking_id(booking_id)
@@ -79,7 +79,7 @@ async def clear_optimal_dispatch_assignments(
     response = {}
 
     if not user_name:
-        raise_error("Unknown requester")
+        raise_error("Unknown requester", 401)
 
     if not entity_name:
         raise_error("No entity name")
@@ -102,7 +102,7 @@ async def trip_status(
     response = {}
 
     if not user_name:
-        raise_error("Unknown requester")
+        raise_error("Unknown requester", 401)
 
     with DBSession() as dbsession:
         if trip_status_req.booked_from and trip_status_req.booked_till:
@@ -128,7 +128,7 @@ async def trip_status(
 @router.get("/ongoing_trip_status")
 async def ongoing_trip_status(user_name=Depends(get_user_from_header)):
     if not user_name:
-        raise_error("Unknown requester")
+        raise_error("Unknown requester", 401)
 
     response = {}
     with DBSession() as dbsession:
@@ -146,7 +146,7 @@ async def trip_analytics(
 
     response = {}
     if not user_name:
-        raise_error("Unknown requester")
+        raise_error("Unknown requester", 401)
 
     with DBSession() as dbsession:
         if trip_analytics_req.booked_from and trip_analytics_req.booked_till:
@@ -178,7 +178,7 @@ async def add_trip_metadata(
 
     response = {}
     if not user_name:
-        raise_error("Unknown requester")
+        raise_error("Unknown requester", 401)
 
     with DBSession() as dbsession:
         trip: Trip = dbsession.get_trip(trip_id)
@@ -198,7 +198,7 @@ async def add_trip_description(
 
     response = {}
     if not user_name:
-        raise_error("Unknown requester")
+        raise_error("Unknown requester", 401)
 
     with DBSession() as dbsession:
         trip: Trip = dbsession.get_trip(trip_id)

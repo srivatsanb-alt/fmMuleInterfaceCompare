@@ -37,7 +37,7 @@ router = APIRouter(
 async def clear_all_visa_assignments(user_name=Depends(get_user_from_header)):
 
     if not user_name:
-        raise_error("Unknown requester")
+        raise_error("Unknown requester", 401)
 
     delete_visas_req = DeleteVisaAssignments()
     response = process_req_with_response(None, delete_visas_req, user_name)
@@ -54,7 +54,7 @@ async def diagnostics(
     response = {}
 
     if not user_name:
-        raise_error("Unknown requester")
+        raise_error("Unknown requester", 401)
 
     if not entity_name:
         raise_error("No entity name")
@@ -89,7 +89,7 @@ async def restart_mule_docker(
     response = {}
 
     if not user_name:
-        raise_error("Unknown requester")
+        raise_error("Unknown requester", 401)
 
     if not entity_name:
         raise_error("No entity name")
@@ -121,7 +121,7 @@ async def update_sherpa_img(
     response = {}
 
     if not user_name:
-        raise_error("Unknown requester")
+        raise_error("Unknown requester", 401)
 
     if not entity_name:
         raise_error("No entity name")
@@ -148,7 +148,7 @@ async def start_stop(
     response = {}
 
     if not user_name:
-        raise_error("Unknown requester")
+        raise_error("Unknown requester", 401)
 
     if not entity_name:
         raise_error(detail="No entity name")
@@ -175,7 +175,7 @@ async def emergency_stop(
     response = {}
 
     if not user_name:
-        raise_error("Unknown requester")
+        raise_error("Unknown requester", 401)
 
     if not entity_name:
         raise_error("No entity name")
@@ -220,7 +220,7 @@ async def sherpa_emergency_stop(
     response = {}
 
     if not user_name:
-        raise_error("Unknown requester")
+        raise_error("Unknown requester", 401)
 
     if not entity_name:
         raise_error("No entity name")
@@ -264,7 +264,7 @@ async def switch_mode(
     response = {}
 
     if not user_name:
-        raise_error("Unknown requester")
+        raise_error("Unknown requester", 401)
 
     if not entity_name:
         raise_error("No entity name")
@@ -297,7 +297,7 @@ async def reset_pose(
     response = {}
 
     if not user_name:
-        raise_error("Unknown requester")
+        raise_error("Unknown requester", 401)
 
     if not entity_name:
         raise_error("No entity name")

@@ -106,7 +106,7 @@ async def sherpa_summary(
 ):
     response = {}
     if not user_name:
-        raise_error("Unknown requester")
+        raise_error("Unknown requester", 401)
 
     with DBSession() as session:
         recent_events = session.get_sherpa_events(sherpa_name)
@@ -131,7 +131,7 @@ async def get_route_wps(
     user_name=Depends(get_user_from_header),
 ):
     if not user_name:
-        raise_error("Unknown requester")
+        raise_error("Unknown requester", 401)
 
     with DBSession() as session:
         stations_poses = []
@@ -148,7 +148,7 @@ async def get_fleet_config(
     user_name=Depends(get_user_from_header),
 ):
     if not user_name:
-        raise_error("Unknown requester")
+        raise_error("Unknown requester", 401)
 
     fleet_config_path = os.path.join(os.getenv("FM_CONFIG_DIR"), "fleet_config.toml")
     fleet_config = toml.load(fleet_config_path)
@@ -222,7 +222,7 @@ async def update_fleet_config(
     fleet_config_update: FleetConfigUpdate, user_name=Depends(get_user_from_header)
 ):
     if not user_name:
-        raise_error("Unknown requester")
+        raise_error("Unknown requester", 401)
 
     fleet_config_path = os.path.join(os.getenv("FM_CONFIG_DIR"), "fleet_config.toml")
     previous_fleet_config_path = os.path.join(

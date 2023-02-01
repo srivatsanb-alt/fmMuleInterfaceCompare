@@ -54,8 +54,8 @@ def remove_job_from_queued_jobs(job_id, source):
     redis_conn.close()
 
 
-def raise_error(detail):
-    raise HTTPException(status_code=403, detail=detail)
+def raise_error(detail, code=400):
+    raise HTTPException(status_code=code, detail=detail)
 
 
 def get_sherpa(x_api_key: str = Header(None)):
