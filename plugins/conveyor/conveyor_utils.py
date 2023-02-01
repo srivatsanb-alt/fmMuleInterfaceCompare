@@ -110,9 +110,10 @@ def populate_conv_info():
             )
 
             if status_code != 200:
-
-                conv_info = dbsession.session.query(ConvInfo).filter(
-                    ConvInfo.name == conveyor_name
+                conv_info = (
+                    dbsession.session.query(ConvInfo)
+                    .filter(ConvInfo.name == conveyor_name)
+                    .one_or_none()
                 )
                 if conv_info:
                     dbsession.session.delete(conv_info)

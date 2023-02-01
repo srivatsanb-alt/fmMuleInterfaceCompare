@@ -13,7 +13,9 @@ from core.db import session_maker
 from typing import List, Dict
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy import inspect as sql_inspect
+from sqlalchemy import or_
 from sqlalchemy.sql import not_
+from sqlalchemy.orm.attributes import flag_modified
 from utils.util import dt_to_str
 from models.fleet_models import (
     Fleet,
@@ -239,6 +241,37 @@ def add_map(fleet: str) -> None:
     return
 
 
+def delete_linked_gates(dbsession, ezone):
+    all_links = (
+        dbsession.session.query(LinkedGates)
+        .filter(
+            or_(
+                LinkedGates.prev_zone_id == ezone.zone_id,
+                LinkedGates.next_zone_id == ezone.zone_id,
+            )
+        )
+        .all()
+    )
+    for link in all_links:
+        print(f"deleted link between {link.prev_zone_id} and {link.next_zone_id}")
+        dbsession.session.delete(link)
+
+
+def delete_exclusion_zones(dbsession, fleet_name: str) -> None:
+    all_exclusion_zones: List[ExclusionZone] = dbsession.session.query(ExclusionZone).all()
+
+    for exclusion_zone in all_exclusion_zones:
+        if fleet_name in exclusion_zone.fleets:
+            exclusion_zone.fleets.remove(fleet_name)
+            if len(exclusion_zone.fleets) == 0:
+                delete_linked_gates(dbsession, exclusion_zone)
+                dbsession.session.delete(exclusion_zone)
+                dbsession.session.flush()
+                print(f"deleted ezone {exclusion_zone.zone_id}")
+
+            flag_modified(exclusion_zone, "fleets")
+
+
 def add_exclusion_zones(dbsession, fleet: str) -> None:
     ez_path = get_map_file_path(fleet, "ez.json")
     if not os.path.exists(ez_path):
@@ -255,9 +288,13 @@ def add_exclusion_zones(dbsession, fleet: str) -> None:
                 dbsession.query(ExclusionZone).filter_by(zone_id=lane_zone_id).one()
             )
             print(f"EZ gate {lane_zone_id} exists!")
+            if fleet not in ezone_lane.fleets:
+                print(f"added {fleet} to ezone.fleets for {lane_zone_id}")
+                ezone_lane.fleets.append(fleet)
+
         except Exception as E:
             print(f"{E} Adding new EZ gate {lane_zone_id}")
-            ezone_lane = ExclusionZone(zone_id=lane_zone_id)
+            ezone_lane = ExclusionZone(zone_id=lane_zone_id, fleets=[fleet])
             dbsession.add(ezone_lane)
             dbsession.flush()
             dbsession.refresh(ezone_lane)
@@ -266,9 +303,14 @@ def add_exclusion_zones(dbsession, fleet: str) -> None:
                 dbsession.query(ExclusionZone).filter_by(zone_id=station_zone_id).one()
             )
             print(f"EZ gate {station_zone_id} exists!")
+            if fleet not in ezone_station.fleets:
+                print(f"added {fleet} to ezone.fleets for {station_zone_id}")
+                ezone_lane.fleets.append(fleet)
         except Exception as E:
             print(f"{E} Adding new EZ gate {station_zone_id}")
-            ezone_station = ExclusionZone(zone_id=station_zone_id, exclusivity=exclusivity)
+            ezone_station = ExclusionZone(
+                zone_id=station_zone_id, exclusivity=exclusivity, fleets=[fleet]
+            )
             dbsession.add(ezone_station)
             dbsession.flush()
             dbsession.refresh(ezone_station)
@@ -480,7 +522,7 @@ def update_delete_stations(dbsession, gmaj_path: str, fleet_id: int) -> None:
     return
 
 
-def reset_fleet(dbsession, fleet_name: str) -> None:
+def update_map(dbsession, fleet_name: str) -> None:
     fleet_obj: Fleet = dbsession.get_fleet(fleet_name)
     fleet_id = fleet_obj.id
 
@@ -489,6 +531,8 @@ def reset_fleet(dbsession, fleet_name: str) -> None:
     maybe_update_map_files(fleet_name)
     add_update_map_files(dbsession.session, fleet_name)
     update_delete_stations(dbsession.session, gmaj_path, fleet_id)
+
+    delete_exclusion_zones(dbsession, fleet_name)
 
     # remove gate not needed removing gate from ez.json should do
     add_exclusion_zones(dbsession.session, fleet_name)

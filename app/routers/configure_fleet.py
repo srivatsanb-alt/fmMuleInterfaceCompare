@@ -84,7 +84,6 @@ def delete_map(dbsession, map_id):
 
     dbsession.session.query(MapFile).filter(MapFile.map_id == map_id).delete()
     dbsession.session.query(Map).filter(Map.id == map_id).delete()
-
     logger.info(f"Successfully deleted map with map_id: {map_id}")
 
 
@@ -120,7 +119,7 @@ async def update_map(
         if not fleet:
             raise_error("Bad detail invalid fleet name")
 
-        fu.reset_fleet(dbsession, fleet_name)
+        fu.update_map(dbsession, fleet_name)
         all_fleet_sherpas = dbsession.get_all_sherpas_in_fleet(fleet_name)
 
         # close ws connection to make sure new map files are downloaded by sherpa on reconnect
@@ -158,7 +157,6 @@ async def delete_fleet(
 
         # close ws connection to make sure new map files are downloaded by sherpa on reconnect
         for sherpa in all_fleet_sherpas:
-            print
             delete_sherpa(dbsession, sherpa.name)
 
         all_fleet_stations = dbsession.get_all_stations_in_fleet(fleet_name)
@@ -169,6 +167,8 @@ async def delete_fleet(
         dbsession.session.delete(fleet)
 
         delete_map(dbsession, map_id)
+        fu.delete_exclusion_zones(dbsession, fleet_name)
+
     return response
 
 
