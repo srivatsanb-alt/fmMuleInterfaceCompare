@@ -19,8 +19,8 @@ router = APIRouter(
 )
 
 
-@router.get("/reset/fleet/{fleet_name}")
-async def reset_fleet(
+@router.get("/update_map/{fleet_name}")
+async def update_map(
     fleet_name=Union[str, None],
     username=Depends(get_user_from_header),
 ):
