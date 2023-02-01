@@ -109,7 +109,14 @@ def populate_conv_info():
                 query=conveyor_name,
             )
 
-            if response_json is not None:
+            if status_code != 200:
+
+                conv_info = dbsession.session.query(ConvInfo).filter(
+                    ConvInfo.name == conveyor_name
+                )
+                if conv_info:
+                    dbsession.session.delete(conv_info)
+            else:
                 all_conveyors.append(conveyor_name)
                 station_info = response_json
                 logging.getLogger(logger_name).info(
