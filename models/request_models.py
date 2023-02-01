@@ -103,7 +103,7 @@ class InitMsg(SherpaReq):
 
 class SherpaAlertMsg(SherpaReq):
     trolley_load_cell: Union[str, None]
-    type = "Alert"
+    type = MessageType.SHERPA_ALERTS
 
 
 class ReachedReq(SherpaReq):
