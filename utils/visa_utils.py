@@ -46,6 +46,7 @@ def lock_exclusion_zone(
             f"{sherpa.name} denied lock for {zone_id}, exclusive access held by {ezone.sherpas[0]}, test={test}"
         )
         return False
+
     elif not exclusive:
         # can't lock exclusively since there are other sherpas in ezone.
         get_logger(sherpa.name).info(
@@ -123,10 +124,9 @@ def maybe_grant_visa(dbsession, zone_name, visa_type, sherpa_name):
             linked_zone_flag = can_lock_linked_zones(
                 dbsession, zone_name, "station", sherpa_name
             )
-        return (
+
+        if linked_zone_flag:
             lock_exclusion_zone(dbsession, zone_name, "station", sherpa_name)
-            and linked_zone_flag
-        )
 
     if visa_type in {VisaType.EXCLUSIVE_PARKING, VisaType.UNPARKING, VisaType.SEZ}:
         if len(linked_zones):
@@ -150,7 +150,6 @@ def maybe_grant_visa(dbsession, zone_name, visa_type, sherpa_name):
             linked_zone_flag = can_lock_linked_zones(
                 dbsession, zone_name, "lane", sherpa_name
             )
-        return (
+
+        if linked_zone_flag:
             lock_exclusion_zone(dbsession, zone_name, "lane", sherpa_name)
-            and linked_zone_flag
-        )
