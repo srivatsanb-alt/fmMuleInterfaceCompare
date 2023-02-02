@@ -1,7 +1,7 @@
 import time
-import logging, logging.config
+import logging
+import logging.config
 import os
-
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -57,4 +57,4 @@ app.include_router(misc_http.router)
 app.include_router(control_http.router)
 app.include_router(station_http.router)
 app.include_router(notifications.router)
-app.include_router(configure_fleet.router)
+# app.include_router(configure_fleet.router)
