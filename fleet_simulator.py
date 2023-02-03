@@ -180,7 +180,8 @@ class MuleAPP:
 class FleetSimulator:
     def __init__(self):
         self.handler_obj = Config.get_handler()
-        self.fleet_names = Config.get_all_fleets()
+        with DBSession() as dbsession:
+            self.fleet_names = dbsession.get_all_fleet_names()
         self.simulator_config = Config.get_simulator_config()
         self.should_book_trips = self.simulator_config.get("book_trips", False)
         self.router_modules = {}

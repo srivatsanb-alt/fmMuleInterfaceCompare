@@ -89,18 +89,6 @@ class Config:
         return rq_config
 
     @classmethod
-    def get_all_fleets(cls):
-        if not cls.config:
-            cls.config = cls.read_config()
-        return cls.config["fleet"]["fleet_names"]
-
-    @classmethod
-    def get_all_sherpas(cls):
-        if not cls.config:
-            cls.config = cls.read_config()
-        return cls.config["fleet_sherpas"]
-
-    @classmethod
     def get_simulator_config(cls):
         if not cls.config:
             cls.config = cls.read_config()

@@ -23,7 +23,7 @@ class OptimalDispatch:
         self.config = optimal_dispatch_config
         self.assignment_method = self.config["method"]
         self.assign = getattr(self, self.assignment_method)
-        self.fleet_names = Config.get_all_fleets()
+        self.fleet_names = []
         self.fleets: List[Fleet] = []
         self.router_utils = {}
         self.ptrip_first_station = []
@@ -313,6 +313,7 @@ class OptimalDispatch:
         self.logger.info(f"{text}:\n{cost_matrix_df.to_markdown()}\n")
 
     def run(self, dbsession):
+        self.fleet_names = dbsession.get_all_fleet_names()
         self.logger = get_logger("optimal_dispatch")
         self.logger.info("will run optimal dispatch logic")
 

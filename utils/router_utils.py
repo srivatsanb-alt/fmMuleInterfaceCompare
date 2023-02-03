@@ -28,8 +28,8 @@ class RouterModule:
 
 
 class AllRouterModules:
-    def __init__(self):
-        self.fleet_names = Config.get_all_fleets()
+    def __init__(self, fleet_names):
+        self.fleet_names = fleet_names
         self.router_modules = {}
         for fleet_name in self.fleet_names:
             map_path = os.path.join(os.environ["FM_MAP_DIR"], f"{fleet_name}/map/")

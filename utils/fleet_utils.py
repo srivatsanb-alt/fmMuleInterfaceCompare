@@ -183,7 +183,6 @@ class FleetUtils:
     def add_fleet(
         cls, dbsession: DBSession, name: str, site: str, location: str, customer: str
     ):
-        maybe_update_map_files(fleet_name=name)
         fleet: fm.Fleet = (
             dbsession.session.query(fm.Fleet).filter(fm.Fleet.name == name).one_or_none()
         )
@@ -221,6 +220,7 @@ class FleetUtils:
 
     @classmethod
     def add_map(cls, dbsession: DBSession, fleet_name: str):
+        maybe_update_map_files(fleet_name=fleet_name)
         map = (
             dbsession.session.query(fm.Map).filter(fm.Map.name == fleet_name).one_or_none()
         )
@@ -270,7 +270,14 @@ class FleetUtils:
             dbsession.session.delete(invalid_file)
 
     @classmethod
+    def delete_map(cls, dbsession: DBSession, map_id: int):
+        dbsession.session.query(fm.MapFile).filter(fm.MapFile.map_id == map_id).delete()
+        dbsession.session.query(fm.Map).filter(fm.Map.id == map_id).delete()
+        logger.info(f"Successfully deleted map, all map_files with map_id: {map_id}")
+
+    @classmethod
     def update_stations_in_map(cls, dbsession: DBSession, fleet_name: str, fleet_id: int):
+        maybe_update_map_files(fleet_name=fleet_name)
         gmaj_path = get_map_file_path(fleet_name, "grid_map_attributes.json")
         if not os.path.exists(gmaj_path):
             raise ValueError(f"GMAJ doesn't exists for {fleet_name}")
@@ -328,34 +335,41 @@ class FleetUtils:
             dbsession.add_to_session(station_status)
 
     @classmethod
+    def delete_station_status(cls, dbsession: DBSession, station_name: str):
+        station_status = dbsession.get_station_status(station_name)
+        dbsession.session.delete(station_status)
+        logger.info(
+            f"deleted station status entry for station: {station_status.station_name}"
+        )
+
+    @classmethod
+    def delete_station(cls, dbsession: DBSession, station_name: str):
+        station = dbsession.get_station(station_name)
+        dbsession.session.delete(station)
+        logger.info(f"deleted station: {station_name}")
+
+    @classmethod
     def delete_invalid_stations(
         cls, dbsession: DBSession, fleet_id: int, valid_stations: List[str]
     ):
-        invalid_stations_status = (
-            dbsession.session.query(fm.StationStatus)
-            .join(fm.StationStatus.station)
-            .filter(fm.Station.fleet_id == fleet_id)
-            .filter(not_(fm.StationStatus.station_name.in_(valid_stations)))
-            .all()
-        )
-        for st_status in invalid_stations_status:
-            logger.info(
-                f"deleting station status entry for station: {st_status.station_name}"
-            )
-            dbsession.session.delete(st_status)
-
-        invalid_stations = (
+        invalid_station = (
             dbsession.session.query(fm.Station)
             .filter(fm.Station.fleet_id == fleet_id)
             .filter(not_(fm.Station.name.in_(valid_stations)))
             .all()
         )
-        for st in invalid_stations:
-            logger.info(f"deleting station {st_status.station_name}")
-            dbsession.session.delete(st)
+        for st in invalid_station:
+            cls.delete_station_status(dbsession, st.name)
+            cls.delete_station(dbsession, st.name)
 
-    # @classmethod
-    # def delete_fleet(cls, dbsession: DBSession, fleet_name):
+    @classmethod
+    def delete_fleet(cls, dbsession: DBSession, fleet_name: str):
+        all_station: List[fm.Station] = dbsession.get_all_stations_in_fleet(fleet_name)
+        for station in all_station:
+            cls.delete_station_status(dbsession, station.name)
+            cls.delete_station(dbsession, station.name)
+
+        ExclusionZoneUtils.delete_exclusion_zones(dbsession, fleet_name)
 
 
 class SherpaUtils:
@@ -463,3 +477,130 @@ class SherpaUtils:
         dbsession.session.delete(available_sherpa)
 
         logger.info(f"deleted sherpa availability entry for sherpa: {sherpa_name}")
+
+
+class ExclusionZoneUtils:
+    @classmethod
+    def add_exclusion_zones(cls, dbsession: DBSession, fleet_name: str):
+        ez_path = get_map_file_path(fleet_name, "ez.json")
+        if not os.path.exists(ez_path):
+            return
+        with open(ez_path, "r") as f:
+            ez_gates = json.load(f)
+
+        for gate in ez_gates["ez_gates"].values():
+            gate_name = gate["name"]
+            zone_ids_to_add = [f"{gate_name}_lane", f"{gate_name}_station"]
+            # exclusivity = gate["exclusive_parking"]
+            for zone_id in zone_ids_to_add:
+                ezone: vm.ExclusionZone = (
+                    dbsession.session.query(vm.ExclusionZone)
+                    .filter_by(zone_id=zone_id)
+                    .one_or_none()
+                )
+                if ezone:
+                    logger.info(f"ExclusionZone {zone_id} already present")
+                    logger.info(f"ExclusionZone serving fleets {ezone.fleets}")
+                    if fleet_name not in ezone.fleets:
+                        logger.info(f"added {fleet_name} to ezone.fleets for {zone_id}")
+                        ezone.fleets.append(fleet_name)
+                        logger.info(f"ExclusionZone serving fleets {ezone.fleets}")
+                else:
+                    ezone: vm.ExclusionZone = vm.ExclusionZone(
+                        zone_id=zone_id, fleets=[fleet_name]
+                    )
+                    dbsession.add_to_session(ezone)
+                    logger.info(f"Added exclusionZone {zone_id}")
+                    logger.info(f"ExclusionZone serving fleets {ezone.fleets}")
+
+    @classmethod
+    def add_linked_gates(cls, dbsession: DBSession, fleet_name: str):
+        ez_path = get_map_file_path(fleet_name, "ez.json")
+        if not os.path.exists(ez_path):
+            return
+        with open(ez_path, "r") as f:
+            ez_gates = json.load(f)
+
+        gates_dict = ez_gates["ez_gates"]
+        for gate in gates_dict.values():
+            gate_name = gate["name"]
+            if not gate["linked_gate"]:
+                logger.info(f"Gate {gate_name} has no linked gates")
+                continue
+
+            linked_gates = gate["linked_gates_ids"]
+            logger.info(f"Gate {gate_name} has linked gates: {linked_gates}")
+            prev_zone = gate_name
+            for linked_gate in linked_gates:
+                next_zone = gates_dict[str(linked_gate)]["name"]
+                cls.create_links_between_zones(dbsession, prev_zone, next_zone)
+
+    @classmethod
+    def create_links_between_zones(cls, dbsession: DBSession, prev_zone, next_zone):
+        zone_types = ["_lane", "_station"]
+        for zone_type in zone_types:
+            prev_zone_id = prev_zone + zone_type
+            next_zone_st = next_zone + "_station"
+            next_zone_lane = next_zone + "_lane"
+            lane_link = (
+                dbsession.session.query(vm.LinkedGates)
+                .filter(vm.LinkedGates.prev_zone_id == prev_zone_id)
+                .filter(vm.LinkedGates.next_zone_id == next_zone_lane)
+                .one_or_none()
+            )
+            st_link = (
+                dbsession.session.query(vm.LinkedGates)
+                .filter(vm.LinkedGates.prev_zone_id == prev_zone_id)
+                .filter(vm.LinkedGates.next_zone_id == next_zone_st)
+                .one_or_none()
+            )
+
+            if lane_link:
+                logger.info(
+                    f"Link between {prev_zone_id} and {next_zone_lane} already exsists"
+                )
+            else:
+                lane_link = vm.LinkedGates(
+                    prev_zone_id=prev_zone_id, next_zone_id=next_zone_lane
+                )
+                dbsession.add_to_session(lane_link)
+                logger.info(f"Created a link between {prev_zone_id} and {next_zone_lane}")
+
+            if st_link:
+                logger.info(
+                    f"Link between {prev_zone_id} and {next_zone_st} already exsists"
+                )
+            else:
+                st_link = vm.LinkedGates(
+                    prev_zone_id=prev_zone_id, next_zone_id=next_zone_st
+                )
+                dbsession.add_to_session(st_link)
+                logger.info(f"Created a link between {prev_zone_id} and {next_zone_st}")
+
+    @classmethod
+    def delete_exclusion_zones(cls, dbsession: DBSession, fleet_name: str):
+        all_ezones: List[vm.ExclusionZone] = dbsession.session.query(vm.ExclusionZone).all()
+        for ezone in all_ezones:
+            if fleet_name in ezone.fleets:
+                ezone.fleets.remove(fleet_name)
+                if len(ezone.fleets) == 0:
+                    cls.delete_links(dbsession, ezone)
+                    dbsession.session.delete(ezone)
+                    logger.info(f"deleted ezone {ezone.zone_id}")
+                flag_modified(ezone, "fleets")
+
+    @classmethod
+    def delete_links(cls, dbsession: DBSession, ezone: vm.ExclusionZone):
+        all_links = (
+            dbsession.session.query(vm.LinkedGates)
+            .filter(
+                or_(
+                    vm.LinkedGates.prev_zone_id == ezone.zone_id,
+                    vm.LinkedGates.next_zone_id == ezone.zone_id,
+                )
+            )
+            .all()
+        )
+        for link in all_links:
+            logger.info(f"deleted link between {link.prev_zone_id} and {link.next_zone_id}")
+            dbsession.session.delete(link)
