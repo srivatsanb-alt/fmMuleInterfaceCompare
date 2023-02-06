@@ -127,6 +127,8 @@ def maybe_grant_visa(dbsession, zone_name, visa_type, sherpa_name):
 
         if linked_zone_flag:
             lock_exclusion_zone(dbsession, zone_name, "station", sherpa_name)
+        else:
+            return False
 
     if visa_type in {VisaType.EXCLUSIVE_PARKING, VisaType.UNPARKING, VisaType.SEZ}:
         if len(linked_zones):
@@ -153,3 +155,5 @@ def maybe_grant_visa(dbsession, zone_name, visa_type, sherpa_name):
 
         if linked_zone_flag:
             lock_exclusion_zone(dbsession, zone_name, "lane", sherpa_name)
+        else:
+            return False
