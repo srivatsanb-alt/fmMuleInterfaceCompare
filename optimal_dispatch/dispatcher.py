@@ -1,6 +1,5 @@
 import numpy as np
 from core.logs import get_logger
-from core.config import Config
 from models.fleet_models import Fleet, AvailableSherpas, OptimalDispatchState
 from models.trip_models import Trip, PendingTrip, TripStatus
 from typing import List
