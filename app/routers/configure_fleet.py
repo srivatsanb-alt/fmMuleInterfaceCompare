@@ -212,23 +212,23 @@ def all_user_info(user_name=Depends(get_user_from_header)):
     return response
 
 
-@router.get("/delete_user/{name}")
-def delete_user(name: str, user_name=Depends(get_user_from_header)):
-
-    if not user_name:
-        raise_error("Unknown requester", 401)
-
-    response = {}
-    with DBSession() as dbsession:
-        frontenduser = (
-            dbsession.session.query(FrontendUser)
-            .filter(FrontendUser.name == name)
-            .one_or_none()
-        )
-
-        if not frontenduser:
-            raise ValueError("User not found")
-
-        dbsession.session.delete(frontenduser)
-
-    return response
+# @router.get("/delete_user/{name}")
+# def delete_user(name: str, user_name=Depends(get_user_from_header)):
+#
+#     if not user_name:
+#         raise_error("Unknown requester", 401)
+#
+#     response = {}
+#     with DBSession() as dbsession:
+#         frontenduser = (
+#             dbsession.session.query(FrontendUser)
+#             .filter(FrontendUser.name == name)
+#             .one_or_none()
+#         )
+#
+#         if not frontenduser:
+#             raise ValueError("User not found")
+#
+#         dbsession.session.delete(frontenduser)
+#
+#     return response
