@@ -177,6 +177,10 @@ class FrontendUserUtils:
         else:
             raise ValueError(f"FrontendUser {user_name} not found")
 
+    @classmethod
+    def delete_all_frontend_users(cls, dbsession: DBSession):
+        _ = dbsession.session.query(FrontendUser).delete()
+
 
 class FleetUtils:
     @classmethod
