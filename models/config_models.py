@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional, Dict
+from typing import Optional, Dict, List
 from models.base_models import JsonMixin
 
 
@@ -50,6 +50,7 @@ class RQ(JsonMixin):
 class BasicConfig(JsonMixin):
     comms: Comms
     simulator: Simulator
+    all_server_ips: List[str]
     rq: Optional[RQ] = None
     stations: Optional[Stations] = None
     mode: Optional[str] = "default"

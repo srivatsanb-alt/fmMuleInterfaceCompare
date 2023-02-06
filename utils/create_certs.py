@@ -109,11 +109,14 @@ def gen_ssl_cert(hostname: str, ip_addresses: list, key=None):
     return cert_pem, key_pem
 
 
-def generate_cert_for_fm(all_server_ips, save_path):
-    nginx_hostname = "fm_rev_proxy"
+def generate_cert_for_fm(fleet_config_path, fleet_static_path):
+    config = toml.load(fleet_config_path)
+    FLEET_CONFIG = config["fleet"]
+    all_server_ips = FLEET_CONFIG["all_server_ips"]
+    nginx_hostname = FLEET_CONFIG.get("nginx_hostname", "fm_rev_proxy")
     print(f"Will create cert with name: {nginx_hostname}, ips: {all_server_ips}")
     cert_pem, key_pem = gen_ssl_cert(nginx_hostname, all_server_ips)
-    save_certs(cert_pem, key_pem, "fm_rev_proxy", os.path.join(save_path, "certs"))
+    save_certs(cert_pem, key_pem, "fm_rev_proxy", os.path.join(fleet_static_path, "certs"))
 
 
 def generate_certs_for_sherpa(sherpa_hostname, sherpa_ip_address, save_path):

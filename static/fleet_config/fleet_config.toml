@@ -32,6 +32,7 @@ handler_package="handlers.default.handlers"
 handler_class="Handlers"
 sherpa_port="5000"
 http_scheme="https"
+all_server_ips=["127.0.0.1"]
 
 [fleet.simulator.routes]
 #route1 = [["Station A", "Station B"], [10]]]
