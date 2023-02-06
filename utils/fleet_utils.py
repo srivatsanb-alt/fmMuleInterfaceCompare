@@ -409,8 +409,12 @@ class SherpaUtils:
             .one_or_none()
         )
 
+        if hwid is None:
+            raise ValueError("Cannot add a sherpa without hwid")
+
         if api_key is None:
-            gen_api_key(hwid)
+            api_key = gen_api_key(hwid)
+            logger.info(f"generated api_key {api_key} for {sherpa_name} with {hwid}")
 
         hashed_api_key = hashlib.sha256(api_key.encode("utf-8")).hexdigest()
         if sherpa:

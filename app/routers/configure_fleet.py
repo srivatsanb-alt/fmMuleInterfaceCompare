@@ -41,8 +41,8 @@ def get_all_sherpa_info(user_name=Depends(get_user_from_header)):
                     {
                         sherpa.name: {
                             "hwid": sherpa.hwid,
-                            "api_key": sherpa.api_key,
-                            "fleet_name": sherpa.fleet_name,
+                            "api_key": sherpa.hashed_api_key,
+                            "fleet_name": sherpa.fleet.name,
                         }
                     }
                 )
@@ -73,7 +73,7 @@ def add_edit_sherpa(
     return {}
 
 
-@router.post("/delete_sherpa/{sherpa_name}")
+@router.get("/delete_sherpa/{sherpa_name}")
 def delete_sherpa(
     sherpa_name: str,
     user_name=Depends(get_user_from_header),
@@ -83,9 +83,8 @@ def delete_sherpa(
 
     with DBSession() as dbsession:
         sherpa_status: fm.SherpaStatus = dbsession.get_sherpa_status(sherpa_name)
-
         if not sherpa_status:
-            raise ValueError(f"Sherpa {sherpa_name} not found")
+            raise_error(f"Sherpa {sherpa_name} not found")
 
         if sherpa_status.trip_id:
             trip = dbsession.get_trip(sherpa_status.trip_id)
@@ -98,6 +97,7 @@ def delete_sherpa(
                 f"disable {sherpa_status.sherpa_name} for trips to delete the sherpa"
             )
 
+        close_websocket_for_sherpa(sherpa_name)
         fu.SherpaUtils.delete_sherpa(dbsession, sherpa_name)
 
     return {}
