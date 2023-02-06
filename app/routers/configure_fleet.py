@@ -113,7 +113,17 @@ def get_all_fleet_info(user_name=Depends(get_user_from_header)):
     with DBSession() as dbsession:
         all_fleets = dbsession.get_all_fleets()
         for fleet in all_fleets:
-            response.update({fleet.name: {"name": fleet.name, "map_name": fleet.name}})
+            response.update(
+                {
+                    fleet.name: {
+                        "name": fleet.name,
+                        "map_name": fleet.name,
+                        "customer": fleet.customer,
+                        "site": fleet.site,
+                        "location": fleet.location,
+                    }
+                }
+            )
 
     return response
 
