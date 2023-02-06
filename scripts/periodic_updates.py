@@ -1,4 +1,6 @@
 from utils.comms import send_status_update, send_notification
+from utils.util import get_table_as_dict
+
 import utils.fleet_utils as fu
 import utils.trip_utils as tu
 import logging
@@ -21,14 +23,14 @@ def get_fleet_status_msg(session, fleet):
             if sherpa_status.sherpa.fleet.name == fleet.name:
                 sherpa_status_update.update(
                     {
-                        sherpa_status.sherpa_name: fu.get_table_as_dict(
+                        sherpa_status.sherpa_name: get_table_as_dict(
                             SherpaStatus, sherpa_status
                         )
                     }
                 )
 
                 sherpa_status_update[sherpa_status.sherpa_name].update(
-                    fu.get_table_as_dict(Sherpa, sherpa_status.sherpa)
+                    get_table_as_dict(Sherpa, sherpa_status.sherpa)
                 )
 
     if all_station_status:
@@ -36,19 +38,19 @@ def get_fleet_status_msg(session, fleet):
             if station_status.station.fleet.name == fleet.name:
                 station_status_update.update(
                     {
-                        station_status.station_name: fu.get_table_as_dict(
+                        station_status.station_name: get_table_as_dict(
                             StationStatus, station_status
                         )
                     }
                 )
 
                 station_status_update[station_status.station_name].update(
-                    fu.get_table_as_dict(Station, station_status.station)
+                    get_table_as_dict(Station, station_status.station)
                 )
 
     msg.update({"sherpa_status": sherpa_status_update})
     msg.update({"station_status": station_status_update})
-    msg.update({"fleet_status": fu.get_table_as_dict(Fleet, fleet)})
+    msg.update({"fleet_status": get_table_as_dict(Fleet, fleet)})
     msg.update({"fleet_name": fleet.name})
     msg.update({"type": "fleet_status"})
     msg.update({"timestamp": time.time()})
@@ -89,7 +91,7 @@ def get_notifications(session):
     notification_msg["type"] = "notifications"
     for notification in all_notifications:
         notification_msg.update(
-            {notification.id: fu.get_table_as_dict(Notifications, notification)}
+            {notification.id: get_table_as_dict(Notifications, notification)}
         )
 
     return notification_msg

@@ -62,6 +62,9 @@ def add_edit_sherpa(
 
     with DBSession() as dbsession:
         fleet = dbsession.get_fleet(add_edit_sherpa.fleet_name)
+        if not fleet:
+            raise_error("Unkown fleet")
+
         fu.SherpaUtils.add_edit_sherpa(
             dbsession,
             sherpa_name,
@@ -69,6 +72,14 @@ def add_edit_sherpa(
             api_key=add_edit_sherpa.api_key,
             fleet_id=fleet.id,
         )
+
+        # action_request = f"New sherpa {fleet.name} has been added, please restart FM software using docker-compose commands"
+        # dbsession.add_notification(
+        #     [fleet.name],
+        #     action_request,
+        #     mm.NotificationLevels.action_request,
+        #     mm.NotificationModules.generic,
+        # )
 
     return {}
 
