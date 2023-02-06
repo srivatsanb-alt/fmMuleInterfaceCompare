@@ -314,6 +314,10 @@ class FleetUtils:
         )
 
         if station:
+            if station.fleet_id != fleet_id:
+                raise ValueError(
+                    "Station names cannot be repeated, two fleets cannot have same station names"
+                )
             station.pose = station_info["pose"]
             station.properties = properties
             logger.info(
@@ -378,7 +382,7 @@ class FleetUtils:
         map_ip = fleet.map_id
 
         # delete optimal dispatch state
-        dbsession.query(fm.OptimalDispatchState).filter(
+        dbsession.session.query(fm.OptimalDispatchState).filter(
             fm.OptimalDispatchState.fleet_name == fleet_name
         ).delete()
         logger.info(f"deleted OptimalDispatchState for fleet {fleet_name}")

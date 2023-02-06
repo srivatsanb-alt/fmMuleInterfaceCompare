@@ -6,6 +6,7 @@ from models.frontend_models import FrontendUser
 from models.db_session import DBSession
 from utils import fleet_utils as fu
 import models.fleet_models as fm
+import models.misc_models as mm
 from app.routers.dependencies import (
     get_user_from_header,
     raise_error,
@@ -127,6 +128,9 @@ def add_fleet(
         raise_error("Unknown requester", 401)
 
     with DBSession() as dbsession:
+        all_fleets = dbsession.get_all_fleet_names()
+
+        new_fleet = False if fleet_name in all_fleets else True
         fu.FleetUtils.add_map(dbsession, fleet_name)
         fu.FleetUtils.add_fleet(
             dbsession,
@@ -140,6 +144,15 @@ def add_fleet(
         fu.FleetUtils.update_stations_in_map(dbsession, fleet.name, fleet.id)
         fu.ExclusionZoneUtils.add_exclusion_zones(dbsession, fleet.name)
         fu.ExclusionZoneUtils.add_linked_gates(dbsession, fleet.name)
+
+        if new_fleet:
+            action_request = f"New fleet {fleet.name} has been added, please restart FM software using docker-compose commands"
+            dbsession.add_notification(
+                [fleet.name],
+                action_request,
+                mm.NotificationLevels.action_request,
+                mm.NotificationModules.generic,
+            )
 
     return {}
 
