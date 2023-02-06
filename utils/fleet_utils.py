@@ -368,12 +368,24 @@ class FleetUtils:
 
     @classmethod
     def delete_fleet(cls, dbsession: DBSession, fleet_name: str):
+        fleet: fm.Fleet = dbsession.get_fleet(fleet_name)
         all_station: List[fm.Station] = dbsession.get_all_stations_in_fleet(fleet_name)
         for station in all_station:
             cls.delete_station_status(dbsession, station.name)
             cls.delete_station(dbsession, station.name)
 
         ExclusionZoneUtils.delete_exclusion_zones(dbsession, fleet_name)
+        map_ip = fleet.map_id
+
+        # delete optimal dispatch state
+        dbsession.query(fm.OptimalDispatchState).filter(
+            fm.OptimalDispatchState.fleet_name == fleet_name
+        ).delete()
+        logger.info(f"deleted OptimalDispatchState for fleet {fleet_name}")
+
+        dbsession.session.delete(fleet)
+        logger.info(f"deleted fleet {fleet_name}")
+        cls.delete_map(dbsession, map_ip)
 
 
 class SherpaUtils:

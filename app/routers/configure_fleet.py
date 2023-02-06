@@ -89,8 +89,14 @@ def delete_sherpa(
         if sherpa_status.trip_id:
             trip = dbsession.get_trip(sherpa_status.trip_id)
             raise_error(
-                f"delete the ongoing trip with booking_id: {trip.booking_id}, to induct {sherpa_name} out of fleet"
+                f"delete the ongoing trip with booking_id: {trip.booking_id} and disable {sherpa_status.sherpa_name} for trips to delete the sherpa"
             )
+
+        if sherpa_status.inducted:
+            raise_error(
+                f"disable {sherpa_status.sherpa_name} for trips to delete the sherpa"
+            )
+
         fu.SherpaUtils.delete_sherpa(dbsession, sherpa_name)
 
     return {}
@@ -160,6 +166,16 @@ def delete_fleet(
         # close ws connection to make sure new map files are downloaded by sherpa on reconnect
         for sherpa in all_fleet_sherpas:
             close_websocket_for_sherpa(sherpa.name)
+            if sherpa.status.trip_id:
+                trip = dbsession.get_trip(sherpa.status.trip_id)
+                raise_error(
+                    f"delete the ongoing trip with booking_id: {trip.booking_id} and disable {sherpa.name} for trips to delete the sherpa and fleet"
+                )
+            if sherpa.status.inducted:
+                raise_error(
+                    f"disable {sherpa.name} for trips to delete the sherpa and fleet"
+                )
+
             fu.SherpaUtils.delete_sherpa(dbsession, sherpa.name)
 
         fu.FleetUtils.delete_fleet(dbsession, fleet_name)
