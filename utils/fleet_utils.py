@@ -529,6 +529,7 @@ class ExclusionZoneUtils:
                         logger.info(f"added {fleet_name} to ezone.fleets for {zone_id}")
                         ezone.fleets.append(fleet_name)
                         logger.info(f"ExclusionZone serving fleets {ezone.fleets}")
+                        flag_modified(ezone, "fleets")
                 else:
                     ezone: vm.ExclusionZone = vm.ExclusionZone(
                         zone_id=zone_id, fleets=[fleet_name]
