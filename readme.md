@@ -63,38 +63,16 @@
 
    3.4 *Copy the cert file(static/certs/fm_rev_proxy_cert.pem) to all the sherpas(/opt/ati/config/fm_rev_proxy_cert.pem)*
 
-4. Update static directory with map_files, sherpa_details  
+4. Update static directory with map_files
 
-    4.1 *Add fleet names, customer details, server_ip to the static/fleet_config/fleet_config.toml*
-
-    ```markdown
-    server_ip="xyz"
-    fleet_names=["sample_fleet", "sample_fleet_1"]
-    customer="xyz"
-    site="xyz"
-    location="xyz"
-    ```  
-
-    4.2. *Add sherpa details of all the sherpas to the fleet_config following the sample given below- make sure sherpa names match hostname in the mule*
+    4.1. *Create map folders for each of the fleets*
 
     ```markdown
-    [fleet_sherpas.<sherpa_name>]
-    hwid="abc"
-    api_key="qZhoteD9zOHn_wBoYW04vgeaiLSBIoWP_jaVy5TQLp0_T30-789PAI"
-    fleet_name="sample_fleet"
+    mkdir static/fleet_1/map/
+    copy all the map files of fleet_1 to static/fleet_1/map/
 
-    [fleet_sherpas.<sherpa_name>]
-    hwid="xyz"
-    api_key="ffZhoteD9zOHn_wBoYW04vgeaiLSBIoWP_jaVy5TQLp0_T30-789PAI"
-    fleet_name="sample_fleet_1"
-    ```
-
-    4.3. *Create map folders for all the fleet names present in fleet_config.toml*
-
-    ```markdown
-    mkdir static/sample_fleet/map/
-    copy all the map files to sample_fleet/map/
-    cd sample_fleet/map/
+    mkdir static/fleet_2/map/
+    copy all the map files of fleet_2 to static/fleet_2/map/
     ```  
 
 5. If server has internet, allows you to download open-source packages (Recommended to use step 6 instead of this step)
