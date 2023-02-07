@@ -61,6 +61,8 @@ def add_edit_sherpa(
         raise_error("Unknown requester", 401)
 
     with DBSession() as dbsession:
+        all_sherpa_names = dbsession.get_all_sherpa_names()
+
         fleet = dbsession.get_fleet(add_edit_sherpa.fleet_name)
         if not fleet:
             raise_error("Unkown fleet")
@@ -73,13 +75,14 @@ def add_edit_sherpa(
             fleet_id=fleet.id,
         )
 
-        # action_request = f"New sherpa {fleet.name} has been added, please restart FM software using docker-compose commands"
-        # dbsession.add_notification(
-        #     [fleet.name],
-        #     action_request,
-        #     mm.NotificationLevels.action_request,
-        #     mm.NotificationModules.generic,
-        # )
+        if sherpa_name not in all_sherpa_names:
+            action_request = f"New sherpa {sherpa_name} has been added to {fleet.name}, please restart FM software using docker-compose commands to start using the sherpa"
+            dbsession.add_notification(
+                [fleet.name],
+                action_request,
+                mm.NotificationLevels.action_request,
+                mm.NotificationModules.generic,
+            )
 
     return {}
 
@@ -167,7 +170,7 @@ def add_fleet(
         fu.ExclusionZoneUtils.add_linked_gates(dbsession, fleet.name)
 
         if new_fleet:
-            action_request = f"New fleet {fleet.name} has been added, please restart FM software using docker-compose commands"
+            action_request = f"New fleet {fleet.name} has been added, please restart FM software using docker-compose commands to start using the fleet"
             dbsession.add_notification(
                 [fleet.name],
                 action_request,

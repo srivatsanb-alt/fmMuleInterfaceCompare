@@ -129,6 +129,13 @@ class DBSession:
     def get_sherpa(self, name: str) -> Sherpa:
         return self.session.query(Sherpa).filter(Sherpa.name == name).one_or_none()
 
+    def get_all_sherpa_names(self) -> List[str]:
+        all_sherpas = self.session.query(Sherpa).all()
+        sherpa_names = []
+        for sherpa in all_sherpas:
+            sherpa_names.append(sherpa.name)
+        return sherpa_names
+
     def get_all_sherpas(self) -> List[Sherpa]:
         return self.session.query(Sherpa).all()
 
