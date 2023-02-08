@@ -2,6 +2,7 @@ import logging
 from .conveyor_utils import book_trip, get_tote_trip_info
 from .conveyor_models import ConvInfo, DBSession, ToteStatus
 
+#handlers for the conveyor
 
 class CONV_HANDLER:
     def init_handler(self):

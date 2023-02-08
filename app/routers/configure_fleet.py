@@ -20,11 +20,14 @@ from app.routers.dependencies import (
     raise_error,
 )
 
+#manages the overall configuration of fleet by- deleting sherpa, fleet, map, station; update map.
+
 # setup logging
 log_conf_path = os.path.join(os.getenv("FM_CONFIG_DIR"), "logging.conf")
 logging.config.fileConfig(log_conf_path)
 logger = logging.getLogger("uvicorn")
 
+#deletes sherpa
 
 def delete_sherpa(dbsession, sherpa_name):
 
@@ -61,6 +64,7 @@ def delete_sherpa(dbsession, sherpa_name):
 
     logger.info(f"Successfully deleted {sherpa_name} from DB")
 
+#deletes station from FM.
 
 def delete_station(dbsession, station_name):
 
@@ -77,6 +81,7 @@ def delete_station(dbsession, station_name):
 
     logger.info(f"Successfully deleted station {station_name} from DB")
 
+#deletes map from FM.
 
 def delete_map(dbsession, map_id):
 
@@ -93,6 +98,7 @@ router = APIRouter(
     responses={404: {"description": "Not found"}},
 )
 
+#updates map on FM.
 
 @router.get("/update_map/{fleet_name}")
 async def update_map(
@@ -128,6 +134,7 @@ async def update_map(
 
     return response
 
+#deletes fleet from FM.
 
 @router.get("/delete/fleet/{fleet_name}")
 async def delete_fleet(

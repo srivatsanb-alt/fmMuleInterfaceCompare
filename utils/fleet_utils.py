@@ -38,6 +38,9 @@ import mule.ati.tools.gmaj_creator as gmac
 import mule.ati.control.bridge.router_planner_interface as rpi
 import mule.ati.control.dynamic_router.graph_builder_utils as gbu
 
+#utils are collection of functions and classes which have common patterns.
+#this module contains frequently used functions by fleet.
+
 
 def get_table_as_dict(model, model_obj):
     all_valid_types = ["str", "dict", "list", "int", "float", "bool"]

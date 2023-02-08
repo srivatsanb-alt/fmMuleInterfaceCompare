@@ -3,6 +3,8 @@ import os
 from typing import Dict
 import toml
 
+#config class has all the methods to get the configuration details 
+#of FM such as fleet_mode, port, all sherpas, all fleets,etc. 
 
 def flatten_config(config: Dict, prefix: str = None):
     flat: Dict = {}

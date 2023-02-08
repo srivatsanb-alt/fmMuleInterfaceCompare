@@ -4,6 +4,7 @@ import redis
 from rq import Queue
 from core.config import Config
 
+#utils for redis rq
 
 class Queues:
 

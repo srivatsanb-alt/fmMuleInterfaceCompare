@@ -3,6 +3,7 @@ from models.db_session import DBSession
 from utils import util
 from utils.fleet_utils import get_table_as_dict
 
+#utils for trips
 
 def get_trip_status(trip: Trip):
     trip_status = {}

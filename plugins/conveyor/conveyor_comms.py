@@ -3,6 +3,7 @@ import hashlib
 from fastapi import APIRouter, WebSocket, Depends, Header, status
 from rq import Queue
 
+#communication of the conveyor with the fleet manager.
 
 from plugins.plugin_comms import ws_reader, ws_writer
 from plugins.plugin_rq import enqueue, get_redis_conn, get_job_result
