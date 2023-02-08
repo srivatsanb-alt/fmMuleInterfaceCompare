@@ -9,8 +9,6 @@ from pydantic import BaseModel
 from models.base_models import JsonMixin
 from models.config_models import (
     BasicConfig,
-    FleetSherpa,
-    FrontendUser,
     OptimalDispatch,
     Alerts,
 )
@@ -222,10 +220,21 @@ class UserLogin(ClientReq):
     password: str
 
 
+class AddEditSherpaReq(ClientReq):
+    api_key: str
+    hwid: str
+    fleet_name: str
+
+
+class AddFleetReq(ClientReq):
+    site: str
+    location: str
+    customer: str
+    map_name: str
+
+
 class FleetConfigUpdate(BaseModel):
     fleet: BasicConfig
-    fleet_sherpas: List[FleetSherpa]
-    frontendusers: List[FrontendUser]
     optimal_dispatch: OptimalDispatch
     alerts: Optional[Alerts]
 

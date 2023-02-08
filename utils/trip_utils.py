@@ -1,7 +1,7 @@
 from models.trip_models import Trip, OngoingTrip, TripAnalytics
 from models.db_session import DBSession
 from utils import util
-from utils.fleet_utils import get_table_as_dict
+from utils.util import get_table_as_dict
 
 #utils for trips
 

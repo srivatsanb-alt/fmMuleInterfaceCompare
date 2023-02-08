@@ -38,7 +38,7 @@ class MapFile(TimestampMixin, Base):
 class Fleet(Base):
     __tablename__ = "fleets"
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, unique=True, index=True)
+    name = Column(String, unique=True, index=True, nullable=False)
     customer = Column(String)
     site = Column(String)
     location = Column(String)

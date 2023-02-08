@@ -115,12 +115,26 @@ class DBSession:
     def get_all_fleets(self) -> List[Fleet]:
         return self.session.query(Fleet).all()
 
+    def get_all_fleet_names(self) -> List[str]:
+        all_fleets = self.session.query(Fleet).all()
+        fleet_names = []
+        for fleet in all_fleets:
+            fleet_names.append(fleet.name)
+        return fleet_names
+
     def get_map_files(self, fleet_name: str) -> List[MapFile]:
         fleet: Fleet = self.session.query(Fleet).filter(Fleet.name == fleet_name).one()
         return self.session.query(MapFile).filter(MapFile.map_id == fleet.map_id).all()
 
     def get_sherpa(self, name: str) -> Sherpa:
         return self.session.query(Sherpa).filter(Sherpa.name == name).one_or_none()
+
+    def get_all_sherpa_names(self) -> List[str]:
+        all_sherpas = self.session.query(Sherpa).all()
+        sherpa_names = []
+        for sherpa in all_sherpas:
+            sherpa_names.append(sherpa.name)
+        return sherpa_names
 
     def get_all_sherpas(self) -> List[Sherpa]:
         return self.session.query(Sherpa).all()

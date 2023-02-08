@@ -1,7 +1,7 @@
 import time
-import logging, logging.config
+import logging
+import logging.config
 import os
-
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware

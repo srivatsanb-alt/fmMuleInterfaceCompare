@@ -16,9 +16,6 @@ prioritise_waiting_stations=true
 eta_power_factor=1.0
 priority_power_factor=0.1
 
-[frontenduser.admin]
-hashed_password="03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4"
-
 [fleet.stations]
 dispatch_timeout=10.0
 
@@ -29,13 +26,6 @@ visa_handling=false
 speedup_factor=1.0
 average_velocity=0.8
 
-[fleet.simulator.routes]
-#route1 = [["Station A", "Station B"], [10]]]
-
-
-[fleet.simulator.initialize_sherpas_at]
-#sample_sherpa="Station A"
-
 [fleet]
 mode="default"
 handler_package="handlers.default.handlers"
@@ -43,12 +33,10 @@ handler_class="Handlers"
 sherpa_port="5000"
 http_scheme="https"
 all_server_ips=["127.0.0.1"]
-fleet_names=["sample_fleet"]
-customer=" "
-site=" "
-location=" "
 
-[fleet_sherpas.sample_sherpa]
-hwid="XYZ"
-api_key="ABC"
-fleet_name="sample_fleet"
+[fleet.simulator.routes]
+#route1 = [["Station A", "Station B"], [10]]]
+
+[fleet.simulator.initialize_sherpas_at]
+#sample_sherpa="Station A"
+

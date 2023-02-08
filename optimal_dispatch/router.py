@@ -6,8 +6,9 @@ import logging
 import sys
 import numpy as np
 
-logging.getLogger().level == logging.ERROR
+from models.db_session import DBSession
 
+logging.getLogger().level == logging.ERROR
 sys.path.append("/app")
 from core.logs import get_seperate_logger
 from utils.util import are_poses_close
@@ -15,7 +16,11 @@ from utils.router_utils import AllRouterModules
 
 
 def start_router_module():
-    all_router_modules = AllRouterModules()
+
+    with DBSession() as dbsession:
+        fleet_names = dbsession.get_all_fleet_names()
+
+    all_router_modules = AllRouterModules(fleet_names)
     redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
 
     logger = get_seperate_logger("control_module_router")

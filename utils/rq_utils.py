@@ -2,6 +2,7 @@ import logging
 import os
 import redis
 from rq import Queue
+import json
 from core.config import Config
 
 #utils for redis rq
@@ -13,10 +14,11 @@ class Queues:
     )
 
     queues_dict = {}
-    all_sherpas = Config.get_all_sherpas()
-    all_fleets = Config.get_all_fleets()
+    all_sherpas = redis_conn.get("all_sherpas")
+    if all_sherpas:
+        all_sherpas = json.loads(all_sherpas)
 
-    for sherpa in all_sherpas.keys():
+    for sherpa in all_sherpas:
         queues_dict.update(
             {
                 f"{sherpa}_update_handler": Queue(
@@ -25,7 +27,7 @@ class Queues:
             }
         )
 
-    for sherpa in all_sherpas.keys():
+    for sherpa in all_sherpas:
         queues_dict.update(
             {
                 f"{sherpa}_trip_update_handler": Queue(

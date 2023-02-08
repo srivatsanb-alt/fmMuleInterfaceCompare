@@ -117,12 +117,6 @@ def generate_cert_for_fm(fleet_config_path, fleet_static_path):
     print(f"Will create cert with name: {nginx_hostname}, ips: {all_server_ips}")
     cert_pem, key_pem = gen_ssl_cert(nginx_hostname, all_server_ips)
     save_certs(cert_pem, key_pem, "fm_rev_proxy", os.path.join(fleet_static_path, "certs"))
-    save_certs(
-        cert_pem,
-        key_pem,
-        "fm_rev_proxy",
-        os.path.join(fleet_static_path, "../dashboard/static/"),
-    )
 
 
 def generate_certs_for_sherpa(sherpa_hostname, sherpa_ip_address, save_path):
