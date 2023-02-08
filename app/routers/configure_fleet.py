@@ -14,78 +14,11 @@ from app.routers.dependencies import (
 from utils.comms import close_websocket_for_sherpa
 
 
-#manages the overall configuration of fleet by- deleting sherpa, fleet, map, station; update map.
-
+# manages the overall configuration of fleet by- deleting sherpa, fleet, map, station; update map.
 # setup logging
 log_conf_path = os.path.join(os.getenv("FM_CONFIG_DIR"), "logging.conf")
 logging.config.fileConfig(log_conf_path)
 logger = logging.getLogger("configure_fleet")
-logger = logging.getLogger("uvicorn")
-
-#deletes sherpa
-
-def delete_sherpa(dbsession, sherpa_name):
-
-    logger.info(f"Will try deleting the sherpa {sherpa_name}")
-    # close ws connection
-
-    close_websocket_for_sherpa(sherpa_name)
-
-    # delete sherpa status
-    sherpa_status: SherpaStatus = dbsession.get_sherpa_status(sherpa_name)
-
-    if not sherpa_status:
-        raise_error("Bad detail invalid sherpa name")
-
-    if sherpa_status.inducted:
-        raise_error("Cannot delete sherpa that is enabled for trips")
-
-    if sherpa_status.trip_id:
-        trip = dbsession.get_trip(sherpa_status.trip_id)
-        raise_error(
-            f"delete the ongoing trip with booking_id: {trip.booking_id} to delete sherpa {sherpa_name}"
-        )
-
-    dbsession.session.delete(sherpa_status)
-
-    # delete sherpa
-    sherpa: Sherpa = dbsession.get_sherpa(sherpa_name)
-    dbsession.session.delete(sherpa)
-
-    # delete sherpa entry in AvailableSherpas
-    dbsession.session.query(AvailableSherpas).filter(
-        AvailableSherpas.sherpa_name == sherpa_name
-    ).delete()
-
-    logger.info(f"Successfully deleted {sherpa_name} from DB")
-
-#deletes station from FM.
-
-def delete_station(dbsession, station_name):
-
-    logger.info(f"Will try deleting the station {station_name}")
-
-    # delete sherpa status
-    station_status: StationStatus = dbsession.get_station_status(station_name)
-
-    dbsession.session.delete(station_status)
-
-    # delete sherpa
-    station: Station = dbsession.get_station(station_name)
-    dbsession.session.delete(station)
-
-    logger.info(f"Successfully deleted station {station_name} from DB")
-
-#deletes map from FM.
-
-def delete_map(dbsession, map_id):
-
-    logger.info(f"Will try deleting map files with map_id: {map_id}")
-
-    dbsession.session.query(MapFile).filter(MapFile.map_id == map_id).delete()
-    dbsession.session.query(Map).filter(Map.id == map_id).delete()
-    logger.info(f"Successfully deleted map with map_id: {map_id}")
-
 
 router = APIRouter(
     prefix="/api/v1/configure_fleet",
@@ -286,7 +219,9 @@ def delete_fleet(
 
     return {}
 
-#deletes fleet from FM.
+
+# deletes fleet from FM.
+
 
 @router.get("/update_map/{fleet_name}")
 def update_map(
