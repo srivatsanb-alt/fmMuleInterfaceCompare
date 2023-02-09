@@ -15,7 +15,7 @@ import numpy as np
 
 AVAILABLE = "available"
 
-
+#assigns a sherpa for a trip.
 def assign_sherpa(trip: Trip, sherpa: str, session: DBSession):
     ongoing_trip = session.create_ongoing_trip(sherpa, trip.id)
     trip.assign_sherpa(sherpa)
@@ -25,6 +25,7 @@ def assign_sherpa(trip: Trip, sherpa: str, session: DBSession):
     get_logger(sherpa).info(f"assigned trip id {trip.id} to {sherpa}")
     return ongoing_trip
 
+#starts a trip
 
 def start_trip(ongoing_trip: OngoingTrip, session: DBSession):
 
@@ -71,6 +72,7 @@ def start_trip(ongoing_trip: OngoingTrip, session: DBSession):
     get_logger(ongoing_trip.sherpa_name).info(f"trip {ongoing_trip.trip_id} started")
 
 
+#ends a trip
 def end_trip(ongoing_trip: OngoingTrip, success: bool, session: DBSession):
     ongoing_trip.trip.end(success)
     session.delete_ongoing_trip(ongoing_trip)
@@ -80,6 +82,7 @@ def end_trip(ongoing_trip: OngoingTrip, success: bool, session: DBSession):
     sherpa_status.trip_leg_id = None
 
 
+#starts a leg trip. Leg is a direct trip between 2 adjacent stations. 
 def start_leg(ongoing_trip: OngoingTrip, session: DBSession) -> TripLeg:
     trip: Trip = ongoing_trip.trip
     trip_leg: TripLeg = session.create_trip_leg(
@@ -115,7 +118,7 @@ def update_leg_next_station(next_station_name: str, sherpa: str, session: DBSess
         return
     next_station_status.arriving_sherpas.append(sherpa)
 
-
+#checks the status of sherpa(initialized, inducted) and checks if the sherpa is available for a trip
 def is_sherpa_available_for_new_trip(sherpa_status):
     reason = None
     if not reason and not sherpa_status.inducted:
@@ -128,7 +131,7 @@ def is_sherpa_available_for_new_trip(sherpa_status):
         reason = AVAILABLE
     return reason == AVAILABLE, reason
 
-
+#returns all the available sherpas for a trip.
 def get_sherpa_availability(all_sherpa_status: List[SherpaStatus]):
     availability = {}
 
@@ -152,7 +155,7 @@ def get_conveyor_ops_info(trip_metadata):
                 num_units = int(num_units)
     return num_units
 
-
+#among all the available sherpas find which would be most suitable for the trip
 def find_best_sherpa():
     all_sherpa_status: List[SherpaStatus] = session.get_all_sherpa_status()
     availability: Dict[str, str] = get_sherpa_availability(all_sherpa_status)

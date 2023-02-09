@@ -45,6 +45,9 @@ router = APIRouter()
 
 expire_after_ms = timedelta(milliseconds=500)
 
+#performs status updates at regular intervals, read, write, 
+#websocket messages and manages websocket connection between sherpas and FM.
+
 
 def manage_sherpa_ip_change(sherpa, x_real_ip):
     if sherpa.ip_address != x_real_ip:

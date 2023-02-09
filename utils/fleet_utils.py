@@ -34,6 +34,9 @@ import mule.ati.tools.gmaj_creator as gmac
 import mule.ati.control.bridge.router_planner_interface as rpi
 import mule.ati.control.dynamic_router.graph_builder_utils as gbu
 
+#utils are collection of functions and classes which have common patterns.
+#this module contains frequently used functions by fleet.
+
 
 def gen_api_key(hwid: str) -> str:
     return secrets.token_urlsafe(32) + "_" + hwid

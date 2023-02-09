@@ -14,11 +14,11 @@ from app.routers.dependencies import (
 from utils.comms import close_websocket_for_sherpa
 
 
+# manages the overall configuration of fleet by- deleting sherpa, fleet, map, station; update map.
 # setup logging
 log_conf_path = os.path.join(os.getenv("FM_CONFIG_DIR"), "logging.conf")
 logging.config.fileConfig(log_conf_path)
 logger = logging.getLogger("configure_fleet")
-
 
 router = APIRouter(
     prefix="/api/v1/configure_fleet",
@@ -218,6 +218,9 @@ def delete_fleet(
         fu.FleetUtils.delete_fleet(dbsession, fleet_name)
 
     return {}
+
+
+# deletes fleet from FM.
 
 
 @router.get("/update_map/{fleet_name}")

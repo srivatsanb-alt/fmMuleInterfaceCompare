@@ -20,6 +20,10 @@ from .routers import (
     configure_fleet,
 )
 
+#for easy maintainance and usability of the app, we use routers 
+#each functionality can be separately implemented on router rather than modifying the 
+#entire app.
+
 # setup logging
 log_conf_path = os.path.join(os.getenv("FM_CONFIG_DIR"), "logging.conf")
 logging.config.fileConfig(log_conf_path)

@@ -32,6 +32,7 @@ async def site_info(user_name=Depends(get_user_from_header)):
 
     return response
 
+#returns info about all the sherpas, stations and their corresponding status(initialized, inducted, disabled, idle, etc.).
 
 @router.post("/master_data/fleet")
 async def master_data(
@@ -88,6 +89,7 @@ async def master_data(
 
     return response
 
+#returns sherpa, the fleet it belongs to and its status.
 
 @router.get("/sherpa_summary/{sherpa_name}/{viewable}")
 async def sherpa_summary(
@@ -113,6 +115,7 @@ async def sherpa_summary(
 
     return response
 
+#gets the route(sequence of stations) for a trip
 
 @router.post("/trips/get_route_wps")
 async def get_route_wps(
@@ -130,3 +133,4 @@ async def get_route_wps(
             stations_poses.append(station.pose)
 
     return {}
+

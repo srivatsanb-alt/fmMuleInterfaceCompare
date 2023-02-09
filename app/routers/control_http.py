@@ -32,6 +32,9 @@ router = APIRouter(
     responses={404: {"description": "Not found"}},
 )
 
+#clears visa assignments- traffic zones which cannot be accessed by more than one sherpa at a time.
+# Only one sherpa is assigned a visa to that zone, and after the completion of it's trip
+# the visa is revoked.
 
 @router.get("/fleet/clear_all_visa_assignments")
 async def clear_all_visa_assignments(user_name=Depends(get_user_from_header)):
@@ -44,7 +47,7 @@ async def clear_all_visa_assignments(user_name=Depends(get_user_from_header)):
 
     return response
 
-
+#returns the sherpa status(name, assigned, initialized, idle, disabled, inducted, etc.)
 @router.get("/sherpa/{entity_name}/diagnostics")
 async def diagnostics(
     entity_name=Union[str, None],
@@ -79,6 +82,7 @@ async def diagnostics(
 
     return response
 
+#restarts the mule docker container.
 
 @router.get("/sherpa/{entity_name}/restart_mule_docker")
 async def restart_mule_docker(
@@ -111,6 +115,7 @@ async def restart_mule_docker(
 
     return response
 
+#updates sherpa docker image 
 
 @router.get("/sherpa/{entity_name}/update_sherpa_img")
 async def update_sherpa_img(
@@ -137,6 +142,7 @@ async def update_sherpa_img(
 
     return response
 
+#starts or stops the fleet
 
 @router.post("/fleet/{entity_name}/start_stop")
 async def start_stop(
@@ -164,6 +170,7 @@ async def start_stop(
 
     return response
 
+#to emergency stop the fleet
 
 @router.post("/fleet/{entity_name}/emergency_stop")
 async def emergency_stop(
@@ -209,6 +216,7 @@ async def emergency_stop(
 
     return response
 
+# to emergency stop the sherpa
 
 @router.post("/sherpa/{entity_name}/emergency_stop")
 async def sherpa_emergency_stop(
@@ -253,6 +261,7 @@ async def sherpa_emergency_stop(
 
     return response
 
+#switches mode of the sherpa - (various modes - manual, fleet, remote, simulation etc)
 
 @router.post("/sherpa/{entity_name}/switch_mode")
 async def switch_mode(
@@ -286,6 +295,7 @@ async def switch_mode(
 
     return response
 
+#resets the position of sherpa to the station specified by the user
 
 @router.post("/sherpa/{entity_name}/recovery")
 async def reset_pose(
@@ -327,6 +337,8 @@ async def reset_pose(
 
     return response
 
+#inducts sherpa into the fleet
+#trips not assigned otherwise
 
 @router.post("/sherpa/{sherpa_name}/induct")
 async def induct_sherpa(

@@ -13,6 +13,9 @@ import redis
 import time
 import json
 
+#as per the bookings of trips, and their priorities, optimal dispatch will assign trips to the sherpas
+#while ensuring the bookings and trips are valid(eg.start time of the trip should be greater than 
+# or equal to the current time)
 
 class OptimalDispatch:
     def __init__(self, optimal_dispatch_config: dict):

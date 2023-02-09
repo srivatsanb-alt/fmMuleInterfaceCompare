@@ -6,6 +6,8 @@ MIN_VALUE = 1e-3
 MAX_VALUE = 1e7
 ALLOWED = 1e16
 
+#this uses an algorithm similar to the solution of taxi-dispatch problem to assign sherpas  
+#trips. This will find which sherpa assignment would be most suitable for a job while ensuring minimum cost
 
 def make_it_square(cost_matrix):
 

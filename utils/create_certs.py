@@ -79,7 +79,10 @@ def gen_ssl_cert(hostname: str, ip_addresses: list, key=None):
             alt_names.append(x509.DNSName(addr))
             # ... whereas golang's crypto/tls is stricter, and needs IPAddresses
             # note: older versions of cryptography do not understand ip_address objects
-            alt_names.append(x509.IPAddress(ipaddress.ip_address(addr)))
+            try:
+                alt_names.append(x509.IPAddress(ipaddress.ip_address(addr)))
+            except:
+                pass
 
     san = x509.SubjectAlternativeName(alt_names)
 

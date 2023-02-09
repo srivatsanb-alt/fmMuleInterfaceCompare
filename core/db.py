@@ -8,6 +8,7 @@ import redis
 
 from core.settings import settings
 
+#creates a session of the FM with the database.
 
 aioredis = aioredis.from_url(
     os.getenv("FM_REDIS_URI"), encoding="utf-8", decode_responses=True
