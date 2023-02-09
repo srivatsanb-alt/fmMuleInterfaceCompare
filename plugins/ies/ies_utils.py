@@ -24,6 +24,22 @@ IES_JOB_STATUS_MAPPING = {
 
 
 @dataclass
+class AGVMsg(JsonMixin):
+    messageType: str
+    externalReferenceId: str
+    vehicleId: str
+    vehicleTypeID: str
+
+    def to_dict(self):
+        return {
+            "messageType": self.messageType,
+            "externalReferenceId": self.externalReferenceId,
+            "vehicleId": self.vehicleId,
+            "vehicleTypeID": self.vehicleTypeID,
+        }
+
+
+@dataclass
 class MsgToIES(JsonMixin):
     messageType: str
     externalReferenceId: str
