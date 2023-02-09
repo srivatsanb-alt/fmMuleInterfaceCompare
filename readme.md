@@ -14,8 +14,8 @@
 # FM Installation #
 
 ## FM installation prerequisites ##
-1. Install docker
-2. Install docker-compose
+1. Install docker(https://docs.docker.com/engine/install/)
+2. Install docker-compose(https://www.digitalocean.com/community/tutorials/how-to-install-and-use-docker-compose-on-ubuntu-20-04)
 3. Works only on x86 arch
 
 ## Setup FM with push_fm script ##
@@ -154,7 +154,9 @@ bash load_docker_images.sh
    password: 1234
    ```
 
-   3. Induct all the sherpas that you want to use   
+   4. Add fleets, sherpas using Configure fleet page on the dashboard
+
+   5. Induct all the sherpas that you want to use   
       a. Press enable for trips button from sherpa card   
       b. Only those sherpas that has been enabled for trips will get assigned with a trip   
 

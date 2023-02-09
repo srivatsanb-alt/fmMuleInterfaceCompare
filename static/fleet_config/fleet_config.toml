@@ -40,3 +40,5 @@ all_server_ips=["127.0.0.1"]
 [fleet.simulator.initialize_sherpas_at]
 #sample_sherpa="Station A"
 
+[optimal_dispatch.exclude_stations]
+#sample_sherpa=["Station A", "Station B"]
