@@ -237,7 +237,7 @@ def update_map(
 
         all_ongoing_trips_fleet = dbsession.get_all_ongoing_trips_fleet(fleet_name)
         if len(all_ongoing_trips_fleet):
-            raise_error("Cancel all the ongoing trips before deleting the fleet")
+            raise_error("Cancel all the ongoing trips before updating the map")
 
         fu.FleetUtils.add_map(dbsession, fleet_name)
         fu.FleetUtils.update_stations_in_map(dbsession, fleet_name, fleet.id)
