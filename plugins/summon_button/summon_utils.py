@@ -3,8 +3,7 @@ import json
 from plugins.plugin_comms import send_req_to_FM
 import logging
 import hashlib
-from .summon_models import DBSession, SummonInfo, SummonAction
-from models.trip_models import COMPLETED_TRIP_STATUS
+from .summon_models import DBSession, SummonInfo,SummonActions
 
 logger_name = "plugin_summon_button"
 
@@ -12,7 +11,6 @@ logger_name = "plugin_summon_button"
 def book_trip(dbsession, summon_info, route=[], plugin_name="plugin_summon_button"):
     endpoint = "trip_book"
 
-    # always booking with 0 totes, num totes will be decided at the time of dispatch
     trip = {
         "route": route,
         "priority": 1,
@@ -24,13 +22,29 @@ def book_trip(dbsession, summon_info, route=[], plugin_name="plugin_summon_butto
 
     if trip_book_response is None:
         raise ValueError("Trip booking failed")
-        return
 
     for trip_id, trip_details in trip_book_response.items():
-        trip = SummonAction(summon_id=summon_info.id, action=summon_info.press)
+        trip = SummonActions(summon_id=summon_info.id, action=summon_info.press)
         dbsession.session.add(trip)
         summon_info.booking_id = trip_details["booking_id"]
         summon_info.trip_id = trip_id
+
+# def cancel_trip(dbsession, summon_info, trip_id, plugin_name="plugin_summon_button"):
+#     req_json = {"trip_ids": [summon_info.trip_id]}
+#     status_code, trip_status_response = send_req_to_FM(
+#         plugin_name, "trip_status", req_type="post", req_json=req_json
+#     )
+#     if trip_status_response is None:
+#         raise ValueError("Trip not canceled ")
+#     for trip_id, trip_status in trip_status_response.items():
+#             trip_details = trip_status["trip_details"]
+#             status = trip_details["status"]
+#             trip = SummonActions(summon_id=summon_info.id, action=summon_info.press)
+#             dbsession.session.add(trip)
+#             summon_info.booking_id = trip_details["booking_id"]
+#             summon_info.trip_id = trip_id
+
+                
 
 
 def populate_summon_info():

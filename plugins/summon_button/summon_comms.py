@@ -9,9 +9,9 @@ router = APIRouter()
 
 
 def get_summon(x_api_key: str = Header(None)):
-    summon_name = None
+    summon_info = None
     if x_api_key is None:
-        return None
+        return False
 
     hashed_api_key = hashlib.sha256(x_api_key.encode("utf-8")).hexdigest()
     with DBSession() as dbsession:
@@ -21,10 +21,7 @@ def get_summon(x_api_key: str = Header(None)):
             .one_or_none()
         )
 
-        if summon_info is not None:
-            summon_name = summon_info.name
-
-    return summon_name
+    return True
 
 
 @router.get("/plugin/ws/api/v1/plugin_summon_button")
@@ -32,12 +29,11 @@ async def check_connection():
     return {"uvicorn": "I Am Alive"}
 
 
-@router.websocket("/plugin/ws/api/v1/summon_button")
-async def conveyor_ws(websocket: WebSocket, summon_name=Depends(get_summon)):
-
-    if summon_name is None:
-        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
-        return
+@router.websocket("/plugin/ws/api/v1/summon")
+async def summon_button_ws(websocket: WebSocket):
+    # if summon_info:
+    #     await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+    #     return
 
     await websocket.accept()
 
@@ -45,7 +41,7 @@ async def conveyor_ws(websocket: WebSocket, summon_name=Depends(get_summon)):
     rw = [
         asyncio.create_task(ws_reader(websocket, "summon_button", summon_handler)),
         asyncio.create_task(
-            ws_writer(websocket, "summon_button", unique_id=summon_name, format="text"),
+            ws_writer(websocket, "summon_button", format="text"),
         ),
     ]
     try:
