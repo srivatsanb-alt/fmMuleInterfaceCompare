@@ -118,8 +118,6 @@ if [ $build_base == 1 ] ; then
   docker image build -t fleet_manager_base:dev -f docker_files/Dockerfile.base .
   docker pull nginx:1.23.3
   echo "will build nginx docker image"
-  docker image build -t fm_nginx:1.23.3 -f docker_files/nginx.Dockerfile .
-  echo "Successfully built nginx image" 
   docker pull postgres:14.0
   docker pull registry:2
 }
@@ -128,6 +126,10 @@ else
   echo "Skipping base image build step!"
 }
 fi
+
+docker image build -t fm_nginx:1.23.3 -f docker_files/nginx.Dockerfile .
+echo "Successfully built nginx image" 
+
 
 MULE_IMAGE_ID=$(docker images --format {{.ID}} localhost:$DOCKER_REGISTRY_PORT/mule)
 echo "MULE_IMAGE_ID $MULE_IMAGE_ID"
