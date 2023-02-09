@@ -35,22 +35,22 @@ def get_all_plugins():
     return get_plugin_config()["all_plugins"]
 
 
-class Plugin_Queues:
-    queues_dict = {}
-    all_plugins = get_all_plugins()
-
-    for plugin_name in all_plugins:
-        queues_dict.update(
-            {
-                f"plugin_{plugin_name}": Queue(
-                    f"plugin_{plugin_name}", connection=get_redis_conn()
-                )
-            }
-        )
-
-    @classmethod
-    def get_queue(cls, qname):
-        return getattr(cls, qname)
+# class Plugin_Queues:
+#     queues_dict = {}
+#     all_plugins = get_all_plugins()
+#
+#     for plugin_name in all_plugins:
+#         queues_dict.update(
+#             {
+#                 f"plugin_{plugin_name}": Queue(
+#                     f"plugin_{plugin_name}", connection=get_redis_conn()
+#                 )
+#             }
+#         )
+#
+#     @classmethod
+#     def get_queue(cls, qname):
+#         return getattr(cls, qname)
 
 
 def start_worker(queue_name):
@@ -153,10 +153,11 @@ if __name__ == "__main__":
             populate_summon_info,
         )
         from plugin_db import init_db
-    
+
         summon_logger = logging.getLogger("plugin_summon_button")
         init_db(str("plugin_summon_button"), [SummonInfo, SummonActions])
         populate_summon_info()
+        create_dummy_queue = Queue("plugin_summon_button", connection=redis_conn)
         Process(target=start_worker, args=("plugin_summon_button",)).start()
         summon_logger.info("started a worker for plugin_summon_button")
 
