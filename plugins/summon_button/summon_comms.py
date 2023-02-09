@@ -9,14 +9,14 @@ router = APIRouter()
 
 
 def get_summon(x_api_key: str = Header(None)):
-#     with DBSession() as dbsession:
-#         summon_info: SummonInfo = (
-#                 dbsession.session.query(SummonInfo)
-#                 .filter(SummonInfo.hashed_api_key == "2e9bc6c94a4cbdfe2a31d2df79103a5eb3702eaf5d7018d47a774e9540a8ec29")
-#                 .one_or_none()
-#             )
+    #     with DBSession() as dbsession:
+    #         summon_info: SummonInfo = (
+    #                 dbsession.session.query(SummonInfo)
+    #                 .filter(SummonInfo.hashed_api_key == "38904cded54aebda0db5c4bb1295f26a9e859cc4befebbe323ad63c009aca434")
+    #                 .one_or_none()
+    #             )
 
-#     return summon_info
+    #     return summon_info
 
     if x_api_key is None:
         return None
@@ -37,7 +37,7 @@ async def check_connection():
 
 
 @router.websocket("/plugin/ws/api/v1/summon")
-async def summon_button_ws(websocket: WebSocket,summon_info = Depends(get_summon)):
+async def summon_button_ws(websocket: WebSocket, summon_info=Depends(get_summon)):
     if not summon_info:
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
