@@ -1,13 +1,40 @@
 import sys
+import os
 from sqlalchemy import Integer, String, Column, ARRAY
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
-import os
 from dataclasses import dataclass
+from utils.util import str_to_dt, str_to_dt_UTC, dt_to_str
+from plugins.plugin_comms import send_req_to_FM
+from models.trip_models import TripStatus
 
 sys.path.append("/app")
 from models.base_models import Base, TimestampMixin
 from models.base_models import JsonMixin
+
+IES_JOB_STATUS_MAPPING = {
+    TripStatus.BOOKED: "ACCEPTED",
+    TripStatus.ASSIGNED: "SCHEDULED",
+    TripStatus.EN_ROUTE: "IN_PROGRESS",
+    TripStatus.WAITING_STATION: "IN_PROGRESS",
+    TripStatus.SUCCEEDED: "COMPLETED",
+    TripStatus.FAILED: "FAILED",
+    TripStatus.CANCELLED: "CANCELLED",
+}
+
+
+@dataclass
+class MsgToIES(JsonMixin):
+    messageType: str
+    externalReferenceId: str
+    jobStatus: str
+
+    def to_dict(self):
+        return {
+            "messageType": self.messageType,
+            "externalReferenceId": self.externalReferenceId,
+            "jobStatus": self.jobStatus,
+        }
 
 
 @dataclass
@@ -31,6 +58,10 @@ class JobQuery(JsonMixin):
     messageType: str
     since: str
     until: str
+
+
+def run_query(db_table, field, query):
+    return session.query(db_table).filter(field == query).one_or_none()
 
 
 # IES DB models
@@ -62,3 +93,4 @@ class IESMessages:
 engine = create_engine(os.path.join(os.getenv("FM_DATABASE_URI"), "plugin_ies"))
 session_maker = sessionmaker(autocommit=False, autoflush=True, bind=engine)
 session = session_maker()
+
