@@ -176,7 +176,7 @@ class IES_HANDLER:
         route_stations = [
             None
             if task["LocationId"] not in self.locationID_station_mapping.keys()
-            else self.locationID_station_mapping[task["LocationId"]["ati_station"]]
+            else self.locationID_station_mapping[task["LocationId"]]["ati_name"]
             for task in tasklist
         ]
         return route_stations
@@ -261,6 +261,7 @@ def process_job_create_response(response_json, job_create, logger, msg_handler):
             msg_to_ies.update({"lastCompletedTask": {"ActionName": "", "LocationId": ""}})
             logger.info("Sending JobUpdate {booked_msg_to_ies} to IES in JobCreate")
             msg_handler(msg_to_ies)
+    return
 
 
 def query_trip_id(trip_id):
