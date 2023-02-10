@@ -1,5 +1,10 @@
 import sys
 import os
+import time
+import redis
+import logging
+import json
+from typing import Dict
 from sqlalchemy import Integer, String, Column, ARRAY
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
@@ -7,10 +12,12 @@ from dataclasses import dataclass
 from utils.util import str_to_dt, str_to_dt_UTC, dt_to_str
 from plugins.plugin_comms import send_req_to_FM
 from models.trip_models import TripStatus
+from utils.util import get_table_as_dict
 
 sys.path.append("/app")
 from models.base_models import Base, TimestampMixin
 from models.base_models import JsonMixin
+from models.fleet_models import Sherpa, SherpaStatus, StationStatus, Fleet, Station
 
 IES_JOB_STATUS_MAPPING = {
     TripStatus.BOOKED: "ACCEPTED",
@@ -76,10 +83,6 @@ class JobQuery(JsonMixin):
     until: str
 
 
-def run_query(db_table, field, query):
-    return session.query(db_table).filter(field == query).one_or_none()
-
-
 # IES DB models
 class TripsIES(Base, TimestampMixin):
     __tablename__ = "trips_ies"
@@ -110,3 +113,62 @@ engine = create_engine(os.path.join(os.getenv("FM_DATABASE_URI"), "plugin_ies"))
 session_maker = sessionmaker(autocommit=False, autoflush=True, bind=engine)
 session = session_maker()
 
+
+def run_query(db_table, field, query):
+    return session.query(db_table).filter(field == query).one_or_none()
+
+
+def read_dict_var_from_redis_db(db: redis.Redis, entry: str) -> Dict:
+    """Reads a list variable from redis db, returns default value if variable not exists or corrupted!"""
+    db_value = db.get(entry)
+    logging.getLogger("plugin_ies").info(f"got redis db_value {db_value} for {entry}!")
+    if (db_value is None) or (not db_value) or (db_value == b"null") or (db_value == b"[]"):
+        return {}
+    return json.loads(db_value)
+
+
+def get_fleet_status_msg(session, fleet):
+    msg = {}
+    all_station_status = session.get_all_station_status()
+    all_sherpa_status = session.get_all_sherpa_status()
+
+    sherpa_status_update = {}
+    station_status_update = {}
+
+    if all_sherpa_status:
+        for sherpa_status in all_sherpa_status:
+            if sherpa_status.sherpa.fleet.name == fleet.name:
+                sherpa_status_update.update(
+                    {
+                        sherpa_status.sherpa_name: get_table_as_dict(
+                            SherpaStatus, sherpa_status
+                        )
+                    }
+                )
+
+                sherpa_status_update[sherpa_status.sherpa_name].update(
+                    get_table_as_dict(Sherpa, sherpa_status.sherpa)
+                )
+
+    if all_station_status:
+        for station_status in all_station_status:
+            if station_status.station.fleet.name == fleet.name:
+                station_status_update.update(
+                    {
+                        station_status.station_name: get_table_as_dict(
+                            StationStatus, station_status
+                        )
+                    }
+                )
+
+                station_status_update[station_status.station_name].update(
+                    get_table_as_dict(Station, station_status.station)
+                )
+
+    msg.update({"sherpa_status": sherpa_status_update})
+    msg.update({"station_status": station_status_update})
+    msg.update({"fleet_status": get_table_as_dict(Fleet, fleet)})
+    msg.update({"fleet_name": fleet.name})
+    msg.update({"type": "fleet_status"})
+    msg.update({"timestamp": time.time()})
+    return msg

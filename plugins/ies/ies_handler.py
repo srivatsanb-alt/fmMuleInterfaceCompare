@@ -16,6 +16,7 @@ from .ies_utils import (
     JobQuery,
     MsgToIES,
     IES_JOB_STATUS_MAPPING,
+    read_dict_var_from_redis_db,
 )
 from utils.util import str_to_dt, str_to_dt_UTC, dt_to_str
 from models.trip_models import TripStatus
@@ -24,6 +25,7 @@ from models.base_models import JsonMixin
 
 class IES_HANDLER:
     def init_handler(self):
+        self.redis_db = redis.from_url(os.getenv("FM_REDIS_URI"))
         locationID_station_mapper = os.path.join(
             os.getenv("FM_MAP_DIR"), "plugin_ies", "locationID_station_mapping.json"
         )
@@ -78,9 +80,7 @@ class IES_HANDLER:
         if None in route_stations:
             ind = route_stations.index(None)
             self.send_msg(rejected_msg)
-            self.logger.info(
-                f"Can't find station {job_create.taskList[ind]}!"
-            )
+            self.logger.info(f"Can't find station {job_create.taskList[ind]}!")
             return
         status_code, response_json = self._get_job_create_response(
             job_create, route_stations
@@ -95,9 +95,13 @@ class IES_HANDLER:
                 "JobCreate", msg["externalReferenceId"], "ACCEPTED"
             ).to_dict()
             self.send_msg(accepted_msg)
-            process_job_create_response(
-                response_json, job_create, self.logger, self.send_msg
-            )
+            self._process_job_create_response(response_json, job_create)
+        return
+
+    def _add_to_pending_jobs_db(self, job_create):
+        jobs_list = read_dict_var_from_redis_db(self.redis_db, "pending_jobs")
+        jobs_list.update({job_create.externalReferenceId: job_create})
+        self.redis_db.set("pending_jobs", json.dumps(jobs_list))
         return
 
     def handle_JobCancel(self, msg):
@@ -149,12 +153,20 @@ class IES_HANDLER:
                     f"successfully deleted trip externalReferenceId: {ext_ref_id}"
                 )
                 self.send_msg(msg_to_ies)
+                self._remove_from_pending_jobs_db(ext_ref_id)
         except:
             self.logger.info(f"unable to delete trip externalReferenceId: {ext_ref_id}")
             msg_to_ies.update(
                 {"errorMessage": "Delete request rejected by fleet manager app"}
             )
             self.send_msg(msg_to_ies)
+        return
+
+    def _remove_from_pending_jobs_db(self, ext_ref_id):
+        jobs_list = read_dict_var_from_redis_db(self.redis_db, "pending_jobs")
+        if ext_ref_id in jobs_list.keys():
+            jobs_list.pop(ext_ref_id)
+        self.redis_db.set("pending_jobs", json.dumps(jobs_list))
         return
 
     def handle_JobQuery(self, msg):
@@ -239,29 +251,33 @@ class IES_HANDLER:
         )
         return msg_to_ies
 
-
-def process_job_create_response(response_json, job_create, logger, msg_handler):
-    for trip_id, trip_details in response_json.items():
-        trip = TripsIES(
-            trip_id=trip_id,
-            booking_id=trip_details["booking_id"],
-            externalReferenceId=job_create.externalReferenceId,
-            status=trip_details["status"],
-            actions=[task.get("ActionName", None) for task in job_create.taskList],
-            locations=[task["LocationId"] for task in job_create.taskList],
-        )
-        session.add(trip)
-        logger.debug(f"adding trip entry to db {trip.__dict__}")
-        if trip_details["status"] == TripStatus.BOOKED:
-            msg_to_ies = MsgToIES(
-                "JobUpdate",
-                job_create.externalReferenceId,
-                IES_JOB_STATUS_MAPPING[trip_details["status"]],
-            ).to_dict()
-            msg_to_ies.update({"lastCompletedTask": {"ActionName": "", "LocationId": ""}})
-            logger.info("Sending JobUpdate {booked_msg_to_ies} to IES in JobCreate")
-            msg_handler(msg_to_ies)
-    return
+    def _process_job_create_response(self, response_json, job_create):
+        for trip_id, trip_details in response_json.items():
+            trip = TripsIES(
+                trip_id=trip_id,
+                booking_id=trip_details["booking_id"],
+                externalReferenceId=job_create.externalReferenceId,
+                status=trip_details["status"],
+                actions=[task.get("ActionName", None) for task in job_create.taskList],
+                locations=[task["LocationId"] for task in job_create.taskList],
+            )
+            session.add(trip)
+            self.logger.debug(f"adding trip entry to db {trip.__dict__}")
+            if trip_details["status"] == TripStatus.BOOKED:
+                msg_to_ies = MsgToIES(
+                    "JobUpdate",
+                    job_create.externalReferenceId,
+                    IES_JOB_STATUS_MAPPING[trip_details["status"]],
+                ).to_dict()
+                msg_to_ies.update(
+                    {"lastCompletedTask": {"ActionName": "", "LocationId": ""}}
+                )
+                self.logger.info(
+                    "Sending JobUpdate {booked_msg_to_ies} to IES in JobCreate"
+                )
+                self.send_msg(msg_to_ies)
+                self._add_to_pending_jobs_db(job_create)
+        return
 
 
 def query_trip_id(trip_id):
