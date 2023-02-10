@@ -7,7 +7,6 @@ import pytz
 
 sys.path.append("/app")
 from plugins.plugin_comms import send_req_to_FM
-import ies_utils as iu
 
 from .ies_utils import (
     TripsIES,
@@ -68,7 +67,7 @@ class IES_HANDLER:
             "JobCreate", msg["externalReferenceId"], "REJECTED"
         ).to_dict()
 
-        trip_ies = query_trip_id(job_create)
+        trip_ies = query_ref_id(job_create.externalReferenceId)
         if trip_ies is not None:
             self.send_msg(rejected_msg)
             self.logger.info(
@@ -80,7 +79,7 @@ class IES_HANDLER:
             ind = route_stations.index(None)
             self.send_msg(rejected_msg)
             self.logger.info(
-                f"Can't find station {job_create.taskList[ind]['LocationId']['ati_station']}!"
+                f"Can't find station {job_create.taskList[ind]}!"
             )
             return
         response_json, status_code = self._get_job_create_response(
