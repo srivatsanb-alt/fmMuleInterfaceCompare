@@ -100,7 +100,12 @@ class IES_HANDLER:
 
     def _add_to_pending_jobs_db(self, job_create):
         jobs_list = read_dict_var_from_redis_db(self.redis_db, "pending_jobs")
-        new_job = {job_create.externalReferenceId: {"taskList": job_create.taskList, "priority": job_create.priority}}
+        new_job = {
+            job_create.externalReferenceId: {
+                "taskList": job_create.taskList,
+                "priority": job_create.priority,
+            }
+        }
         jobs_list.update(new_job)
         self.redis_db.set("pending_jobs", json.dumps(jobs_list))
         return
@@ -281,7 +286,7 @@ class IES_HANDLER:
         return
 
 
-def queryGtrip_id(trip_id):
+def query_trip_id(trip_id):
     return session.query(TripsIES).filter(TripsIES.trip_id == trip_id).one_or_none()
 
 
