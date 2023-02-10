@@ -82,7 +82,7 @@ class IES_HANDLER:
                 f"Can't find station {job_create.taskList[ind]}!"
             )
             return
-        response_json, status_code = self._get_job_create_response(
+        status_code, response_json = self._get_job_create_response(
             job_create, route_stations
         )
         if response_json is None:
@@ -158,7 +158,7 @@ class IES_HANDLER:
         return
 
     def handle_JobQuery(self, msg):
-        trips_update_response = self._process_job_query_msg(self, msg, self.plugin_name)
+        trips_update_response = self._process_job_query_msg(msg)
         # send update for all trips
         if trips_update_response is not None:
             for trip_id, trip_details in trips_update_response.items():
