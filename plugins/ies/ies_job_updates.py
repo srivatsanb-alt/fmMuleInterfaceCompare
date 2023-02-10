@@ -2,11 +2,20 @@ import os
 import logging
 import redis
 import time
+import ast
 from dataclasses import dataclass
 
-from .ies_utils import session_maker, TripsIES, IES_JOB_STATUS_MAPPING, AGVMsg, MsgToIES
+from .ies_utils import (
+    session_maker,
+    TripsIES,
+    IES_JOB_STATUS_MAPPING,
+    AGVMsg,
+    MsgToIES,
+    get_fleet_status_msg,
+)
 from plugins.plugin_comms import send_req_to_FM
 from models.trip_models import TripStatus
+from models.db_session import DBSession
 
 logger = logging.getLogger("plugin_ies")
 
@@ -46,8 +55,17 @@ def send_agv_update_and_fault(sherpa_name, externalReferenceId):
 
 
 # read status from periodic messages, for those trips in DB, send periodic msgs to IES.
-def send_job_updates():
+async def send_job_updates():
+    psub = redis.pubsub()
+    await psub.subscribe("channel:status_updates")
+    db_handler = DBSession()
     while True:
+        message = await psub.get_message(ignore_subscribe_messages=True, timeout=5)
+        if message:
+            data = ast.literal_eval(message["data"])
+        logger.info(data)
+        fleets_status = get_fleets_status_info()
+        logger.info(fleets_status)
         with session_maker() as db_session:
             all_active_trips = _get_active_trips(db_session)
             for trip in all_active_trips:
@@ -57,7 +75,7 @@ def send_job_updates():
                         trip_details["sherpa_name"], trip.externalReferenceId
                     )
                     trip_status = trip_details["trip_details"]["status"]
-                    next_idx_aug, msg_to_ies = _process_trip_details(trip, trip_details)
+                    _, msg_to_ies = _process_trip_details(trip, trip_details)
 
                     if trip.status != trip_status:  # WHAT IS THIS CHECK
                         logger.info(
@@ -75,14 +93,13 @@ def send_job_updates():
                             )
                             logger.info("Sending SCHEDULED msg to IES.")
                             send_msg(assigned_msg_to_ies)
-
-                        send_msg(msg_to_ies)  # IS THIS NECESSARY?
                         trip.status = trip_status
+                        send_msg(msg_to_ies)
                     elif trip.status == TripStatus.EN_ROUTE:
                         logger.info(
                             f"Trip status: {trip.status}, sending continuous updates!"
                         )
-                        send_msg(msg_to_ies)  # CAN THIS MOVE OUTSIDE THE LOOP?
+                        send_msg(msg_to_ies)  # periodic message
 
             db_session.commit()
             db_session.close()
@@ -164,3 +181,12 @@ def _get_sherpa_status(sherpa_summary, externalReferenceId):
         if sherpa_summary["sherpa_status"]["batteryLevel"] == -1
         else sherpa_summary["sherpa_status"]["batteryLevel"],
     }
+
+
+def get_fleets_status_info():
+    fleets_status = {}
+    with DBSession() as db_session:
+        fleet_names = db_session.get_all_fleet_names()
+    for fleet in fleet_names:
+        fleets_status[fleet] = get_fleet_status_msg(db_session, fleet)
+    return fleets_status
