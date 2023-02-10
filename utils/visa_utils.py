@@ -119,12 +119,14 @@ def clear_all_locks(dbsession, sherpa_name):
 
 
 def maybe_grant_visa(dbsession, zone_name, visa_type, sherpa_name):
-    ezone = dbsession.get_exclusion_zone(zone_name, "lane")
-    linked_zones = get_linked_gates(ezone) if ezone else []
 
     linked_zone_flag = True
 
     if visa_type == VisaType.PARKING:
+        ezone_st = dbsession.get_exclusion_zone(zone_name, "station")
+        linked_zones_st = get_linked_gates(ezone_st) if ezone_st else []
+        linked_zones = linked_zones_st
+
         if len(linked_zones):
             linked_zone_flag = can_lock_linked_zones(
                 dbsession, zone_name, "station", sherpa_name
@@ -136,6 +138,16 @@ def maybe_grant_visa(dbsession, zone_name, visa_type, sherpa_name):
             return False
 
     if visa_type in {VisaType.EXCLUSIVE_PARKING, VisaType.UNPARKING, VisaType.SEZ}:
+        ezone_st = dbsession.get_exclusion_zone(zone_name, "station")
+        linked_zones_st = get_linked_gates(ezone_st) if ezone_st else []
+        linked_zones = linked_zones_st
+
+        ezone_lane = dbsession.get_exclusion_zone(zone_name, "lane")
+        linked_zones_lane = get_linked_gates(ezone_lane) if ezone_lane else []
+
+        for lz_lane in linked_zones_lane:
+            linked_zones.append(lz_lane)
+
         if len(linked_zones):
             linked_zone_flag = can_lock_linked_zones(
                 dbsession, zone_name, "station", sherpa_name
@@ -153,6 +165,10 @@ def maybe_grant_visa(dbsession, zone_name, visa_type, sherpa_name):
             return False
 
     if visa_type == VisaType.TRANSIT:
+        ezone_lane = dbsession.get_exclusion_zone(zone_name, "lane")
+        linked_zones_lane = get_linked_gates(ezone_lane) if ezone_lane else []
+        linked_zones = linked_zones_lane
+
         if len(linked_zones):
             linked_zone_flag = can_lock_linked_zones(
                 dbsession, zone_name, "lane", sherpa_name
