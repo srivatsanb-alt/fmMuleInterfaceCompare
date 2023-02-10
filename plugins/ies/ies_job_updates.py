@@ -114,7 +114,7 @@ def _get_last_completed_task(trip_actions, trip_locations, next_idx_aug):
 
 
 def _get_msg_to_ies(ref_id, trip_status, last_task):
-    msg_to_ies = MsgToIES("JobUpdate", ref_id, trip_status)
+    msg_to_ies = MsgToIES("JobUpdate", ref_id, trip_status).to_dict()
     msg_to_ies.update({"lastCompletedTask": last_task})
     return msg_to_ies
 
