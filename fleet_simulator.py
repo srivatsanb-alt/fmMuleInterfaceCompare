@@ -220,9 +220,11 @@ class FleetSimulator:
                 for sherpa in sherpas:
                     station_fleet_name = None
                     station_name = self.initialize_sherpas_at.get(sherpa.name)
-                    st = dbsession.get_station(station_name) if station_name else None
+                    try:
+                        st = dbsession.get_station(station_name)
+                    except:
+                        st = None
                     station_fleet_name = st.fleet.name if st else None
-
                     while sherpa.fleet.name != station_fleet_name:
                         i = np.random.randint(0, len(stations))
                         station_fleet_name = stations[i].fleet.name
