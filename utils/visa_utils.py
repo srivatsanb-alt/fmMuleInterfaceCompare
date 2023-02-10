@@ -4,10 +4,11 @@ from models.fleet_models import Sherpa
 from models.request_models import VisaType
 from models.visa_models import ExclusionZone
 
-#utils for visa assignments.
-#exclusion zones can be accessed by only one vehicle at a time.
-#this module contains utils to grant access to those zones, lock exclusion zones, unlock, clear all locks,
-#grant visa access, revoke visa access, etc.
+# utils for visa assignments.
+# exclusion zones can be accessed by only one vehicle at a time.
+# this module contains utils to grant access to those zones, lock exclusion zones, unlock, clear all locks,
+# grant visa access, revoke visa access, etc.
+
 
 def lock_exclusion_zone(
     dbsession, zone_name, zone_type, sherpa_name, exclusive=True, test=False
@@ -130,7 +131,7 @@ def maybe_grant_visa(dbsession, zone_name, visa_type, sherpa_name):
             )
 
         if linked_zone_flag:
-            lock_exclusion_zone(dbsession, zone_name, "station", sherpa_name)
+            return lock_exclusion_zone(dbsession, zone_name, "station", sherpa_name)
         else:
             return False
 
@@ -158,6 +159,6 @@ def maybe_grant_visa(dbsession, zone_name, visa_type, sherpa_name):
             )
 
         if linked_zone_flag:
-            lock_exclusion_zone(dbsession, zone_name, "lane", sherpa_name)
+            return lock_exclusion_zone(dbsession, zone_name, "lane", sherpa_name)
         else:
             return False
