@@ -114,6 +114,8 @@
 
 10. [Push mule docker image to local docker registry](#push-mule-docker-image-to-local-docker-registry)
 
+11. To start using fleet_manager, follow [Start or Restart FM](#start-or-restart-fm)
+
 
 # Setup FM by copying built docker images #
 
@@ -129,18 +131,20 @@ bash load_docker_images.sh
     
 4. Copy docker-compose.yml from <fm_repository>/misc/ to the static folder.
 
-5. Create cert files if not already present by following [Setup FM with push_fm script](#setup-fm-with-push_fm-script) steps 1-3. 
+5. Create cert files if not already present by following [Setup FM with push_fm script](#setup-fm-with-push_fm-script) steps 1-3.
 
 6. Copy the cert files generated (fm_rev_proxy_cert.pem, fm_rev_proxy_key.pem) to the static/certs/ directory in the FM server
 
 7. Follow steps 7-10 in [Setup FM with push_fm script](#setup-fm-with-push_fm-script)
+
+8. To start using fleet_manager, follow [Start or Restart FM](#start-or-restart-fm)
 
 
 # Start or Restart FM #
 
    1. Modify timezone if required by setting environment variables TZ, PGTZ in services fleet_manager, db enlisted in static/docker-compose.yml.
 
-   2. Restart FM
+   2. Start/Restart FM
    ```markdown
    cd static
    docker-compose -p fm down
@@ -154,11 +158,15 @@ bash load_docker_images.sh
    password: 1234
    ```
 
-   4. Add fleets, sherpas using Configure fleet page on the dashboard
+   4. Addition/Deletion of fleets, sherpas should be done through Configure page on the dashboard. Adding it to fleet_config.toml will have no effect. Fleets names have to be same as map_names. Copy the map files to the static directory on FM server by following [Setup FM with push_fm script](#setup-fm-with-push_fm-script) step 4 before trying to add it through dashboard.
 
-   5. Induct all the sherpas that you want to use   
+   5. Please restart FM using docker-compose commands step 2, after adding sherpas/fleets.  
+
+   6. Induct all the sherpas that you want to use   
       a. Press enable for trips button from sherpa card   
-      b. Only those sherpas that has been enabled for trips will get assigned with a trip   
+      b. Only those sherpas that has been enabled for trips will get assigned with a trip 
+    
+   7. To update map, do fleet_maintenance, Follow [Fleet maintenance](#fleet-maintenance) 
 
 
 # Run FM Simulator #
@@ -387,10 +395,8 @@ docker push <fm_ip>:443/mule:fm
 
 ## Update map files ## 
 1. Copy all the new map files to <fm_static_directory>/<fleet_name>/map/ folder
-2. In the fleet dashboard, select the fleet which needs to be updated with the new map files and press reset fleet button in the webpage header
+2. Select the fleet which needs the map update from webpage header in the dashboard and press update_map button on the webpage header(present along with start/stop fleet , emergency_stop fleet etc.)
+3. Restart of FM is not required - for map updates
 
-## Delete sherpa ##
-1. To delete/deactivate sherpa from fleet use delete sherpa endpoint available in the maintenance page
-2. This can also be used to move sherpa from one fleet to another. Use delete sherpa endpoint to remove the sherpa from the current fleet. Modify fleet config - alter fleet_name in fleet sherpa entry and [restart FM](#start-or-restart-fm) . 
 
  
