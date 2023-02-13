@@ -166,7 +166,7 @@ bash load_docker_images.sh
       a. Press enable for trips button from sherpa card   
       b. Only those sherpas that has been enabled for trips will get assigned with a trip 
     
-   7. To update map, do fleet_maintenance, Follow [Fleet maintenance](#fleet-maintenance) 
+   7. Follow [Fleet maintenance](#fleet-maintenance) if needs be 
 
 
 # Run FM Simulator #
@@ -395,8 +395,30 @@ docker push <fm_ip>:443/mule:fm
 
 ## Update map files ## 
 1. Copy all the new map files to <fm_static_directory>/<fleet_name>/map/ folder
-2. Select the fleet which needs the map update from webpage header in the dashboard and press update_map button on the webpage header(present along with start/stop fleet , emergency_stop fleet etc.)
+2. Select the fleet which needs the map update from the webpage header in the dashboard and press update_map button on the webpage header(present along with start/stop fleet , emergency_stop fleet etc.)
 3. Restart of FM is not required - for map updates
+
+
+## Generate api keys for sherpas/conveyor/summon_button/any hardware ##
+1.  Run utils/api_key_gen.py in utils directory in fleet_manager - You will fleet_manager repository access, python installed in your machine to run this. Python dependecies required: secrets, click 
+```markdown
+cd <path_to_fleet_manager_repository>/utils
+python3 api_key_gen.py --hw_id <unique_hwid>
+```
+
+## Add/Remove frontendusers ##
+1. Run utils/gen_hashed_password.py in utils directory in fleet_manager - You will fleet_manager repository access, python installed in your machine to run this. Python dependecies required: hashlib, click
+```markdown
+python3 utils/gen_hashed_password.py --password <password>
+```
+
+2. The generated hasshed password can be added to <fm_static_directory>/fleet_config/frontend_users.toml
+```markdown
+[frontenduser.<new_user>]
+hashed_password=<hashed password>
+```
+
+3. Remove unwanted entries from <fm_static_directory>/fleet_config/frontend_users.toml if any.
 
 
  
