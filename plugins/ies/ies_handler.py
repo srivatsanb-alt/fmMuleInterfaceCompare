@@ -80,20 +80,20 @@ class IES_HANDLER:
             self.send_msg(rejected_msg)
             self.logger.info(f"Can't find station {job_create.taskList[ind]}!")
             return
-        status_code, response_json = self._get_job_create_response(
-            job_create, route_stations
-        )
-        if response_json is None:
-            self.logger.info(
-                f"req to FM failed, response json: {response_json} response code: {status_code}"
-            )
-            self.send_msg(rejected_msg)
-        else:
-            accepted_msg = MsgToIES(
-                "JobCreate", msg["externalReferenceId"], "ACCEPTED"
-            ).to_dict()
-            self.send_msg(accepted_msg)
-            self._process_job_create_response(response_json, job_create)
+        # status_code, response_json = self._get_job_create_response(
+        #     job_create, route_stations
+        # )
+        # if response_json is None:
+            # self.logger.info(
+            #     f"req to FM failed, response json: {response_json} response code: {status_code}"
+            # )
+            # self.send_msg(rejected_msg)
+        # else:
+        accepted_msg = MsgToIES(
+            "JobCreate", msg["externalReferenceId"], "ACCEPTED"
+        ).to_dict()
+        self.send_msg(accepted_msg)
+        self._process_job_create_response(job_create)
         return
 
     def _add_to_pending_jobs_db(self, job_create):
@@ -105,7 +105,9 @@ class IES_HANDLER:
             }
         }
         jobs_list.update(new_job)
+        self.logger.info(f"updated job list: {jobs_list}")
         self.redis_db.set("pending_jobs", json.dumps(jobs_list))
+        jobs_list = read_dict_var_from_redis_db(self.redis_db, "pending_jobs")
         return
 
     def handle_JobCancel(self, msg):
@@ -182,10 +184,11 @@ class IES_HANDLER:
         return
 
     def _get_ati_stations(self, tasklist):
+        self.logger.info(f"tasklist: {tasklist}")
         route_stations = [
             None
             if task["LocationId"] not in self.locationID_station_mapping.keys()
-            else get_ati_station_name([task["LocationId"]])
+            else get_ati_station_name(task["LocationId"])
             for task in tasklist
         ]
         return route_stations
@@ -248,32 +251,35 @@ class IES_HANDLER:
         )
         return msg_to_ies
 
-    def _process_job_create_response(self, response_json, job_create):
-        for trip_id, trip_details in response_json.items():
+    def _process_job_create_response(self, job_create):
+        # for trip_id, trip_details in response_json.items():
+        for task in job_create.taskList:
             trip = TripsIES(
-                trip_id=trip_id,
-                booking_id=trip_details["booking_id"],
+                # trip_id=trip_id,
+                # booking_id=job_create.externalReferenceId],
                 externalReferenceId=job_create.externalReferenceId,
-                status=trip_details["status"],
+                # status=trip_details["status"],
+                status="pending trip",
                 actions=[task.get("ActionName", None) for task in job_create.taskList],
                 locations=[task["LocationId"] for task in job_create.taskList],
             )
             session.add(trip)
             self.logger.debug(f"adding trip entry to db {trip.__dict__}")
-            if trip_details["status"] == TripStatus.BOOKED:
-                msg_to_ies = MsgToIES(
-                    "JobUpdate",
-                    job_create.externalReferenceId,
-                    IES_JOB_STATUS_MAPPING[trip_details["status"]],
-                ).to_dict()
-                msg_to_ies.update(
-                    {"lastCompletedTask": {"ActionName": "", "LocationId": ""}}
-                )
-                self.logger.info(
-                    "Sending JobUpdate {booked_msg_to_ies} to IES in JobCreate"
-                )
-                self.send_msg(msg_to_ies)
-                self._add_to_pending_jobs_db(job_create)
+            # if trip_details["status"] == TripStatus.BOOKED:
+            msg_to_ies = MsgToIES(
+                "JobUpdate",
+                job_create.externalReferenceId,
+                "",
+            ).to_dict()
+            msg_to_ies.update(
+                {"lastCompletedTask": {"ActionName": "", "LocationId": ""}}
+            )
+            self.logger.info(
+                "Sending JobUpdate {booked_msg_to_ies} to IES in JobCreate"
+            )
+            self.send_msg(msg_to_ies)
+            self.logger.info(f"adding job to db {job_create}")
+            self._add_to_pending_jobs_db(job_create)
         return
 
 

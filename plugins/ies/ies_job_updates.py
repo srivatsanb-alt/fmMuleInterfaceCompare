@@ -70,13 +70,12 @@ async def send_job_updates():
     await psub.subscribe("channel:status_updates")
     while True:
         fleet_status = await psub.get_message(ignore_subscribe_messages=True, timeout=5)
-        logger.info(f"psub message {fleet_status}")
         if fleet_status:
-            logger.info(fleet_status["data"])
-            maybe_combine_and_book_trips(fleet_status["data"])
+            fleet_status_data = ast.literal_eval(fleet_status["data"])
+            # logger.info(f"fleet_status_data: {fleet_status_data}")
+            maybe_combine_and_book_trips(fleet_status_data)
         with session_maker() as db_session:
             all_active_trips = _get_active_trips(db_session)
-            logger.info(f"all_active_trips {all_active_trips}")
             for trip in all_active_trips:
                 status_code, trip_status_response = _get_trip_status_response(trip)
                 for trip_id, trip_details in trip_status_response.items():
@@ -117,29 +116,51 @@ async def send_job_updates():
 
 
 def maybe_combine_and_book_trips(fleet_data):
-    for sherpa_status in fleet_data:
-        if sherpa_status["idle"] is not None:
-            combine_and_book_trip()
-            break
+    logger.info(f"fleet_data: {fleet_data}")
+    if "sherpa_status" in fleet_data.keys():
+        for sherpa in fleet_data["sherpa_status"]:
+            sherpa_status = fleet_data["sherpa_status"][sherpa]["idle"]
+            logger.info(f"Sherpa status: {sherpa_status}, sherpa: {sherpa}")
+            if sherpa_status is True:
+                combine_and_book_trip()
+                break
+    # except Exception as e:
+    #     logger.info(f"No sherpa status! {e}")
     return
 
 
 def combine_and_book_trip():
-    pending_trips = read_dict_var_from_redis_db()
-    dest_stations_data = [
-        get_ati_station_details(task["LocationId"])
-        for task in list(pending_trips.values())[:36]  # MAKE IT A CONFIG
-    ]
-    booked_trips_ids = list(pending_trips.keys())[:36]  # MAKE IT A CONFIG
-    sorted_inds = sorted([k[1] for k in dest_stations_data])
-    sorted_dest_stations = [dest_stations_data[k][0] for k in sorted_inds]
-    req_json = {"trips": [{"route": sorted_dest_stations, "priority": 1}]}
+    pending_trips = read_dict_var_from_redis_db(redis_db, "pending_jobs")
+    logger.info(f"pending_trips: {pending_trips}")
+    dest_stations_data = []
+    try:
+        logger.info(f"pending_trip ids: {list(pending_trips.keys())[:36]}")
+    except Exception as e:
+        logger.info(f"error: {e}")
+    for ref_id in list(pending_trips.keys()):  # MAKE IT A CONFIG
+        dest_stations_data.append([
+            get_ati_station_details(task["LocationId"])
+            for task in pending_trips[ref_id]["taskList"]])
+    logger.info(f"before flatten: {dest_stations_data}")
+    dest_stations_data = _flatten_list(dest_stations_data)
+    stations_ranks = [item[1] for item in dest_stations_data]
+    stations_names = [item[0] for item in dest_stations_data]
+    logger.info(f"after flatten: {dest_stations_data}")
+    booked_trips_ids = list(pending_trips.keys())
+    logger.info(f"booked_trip_ids: {booked_trips_ids}")
+    sorted_ranks = sorted(stations_ranks)
+    sorted_inds = [stations_ranks.index(k) for k in sorted_ranks]
+    logger.info(f"sorted_inds: {sorted_inds}")
+    sorted_stations_names = [stations_names[k] for k in sorted_inds]
+    logger.info(f"sorted_stations_names: {sorted_stations_names}")
+    req_json = {"trips": [{"route": sorted_stations_names, "priority": 1}]}
+    logger.info(f"sending booking req to fm: {req_json}")
     status_code, trip_booking_response = send_req_to_FM(
         "ies", "trip_book", req_type="post", req_json=req_json
     )
     if trip_booking_response is not None:
         for trip_id in booked_trips_ids:
-            remove_from_pending_jobs_db(trip_id)
+            remove_from_pending_jobs_db(redis_db, trip_id)
     else:
         for trip_id in booked_trips_ids:
             msg_to_ies = _get_msg_to_ies(trip_id, "CANCELLED", None)
@@ -233,3 +254,6 @@ def get_fleets_status_info():
     for fleet in fleets:
         fleets_status[fleet] = get_fleet_status_msg(db_session, fleet)
     return fleets_status
+
+def _flatten_list(ip_list):
+    return [item for sublist in ip_list for item in sublist]

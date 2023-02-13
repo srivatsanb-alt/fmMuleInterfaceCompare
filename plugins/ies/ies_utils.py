@@ -19,6 +19,8 @@ from models.base_models import Base, TimestampMixin
 from models.base_models import JsonMixin
 from models.fleet_models import Sherpa, SherpaStatus, StationStatus, Fleet, Station
 
+logger = logging.getLogger("plugin_ies")
+
 IES_JOB_STATUS_MAPPING = {
     TripStatus.BOOKED: "ACCEPTED",
     TripStatus.ASSIGNED: "SCHEDULED",
@@ -155,7 +157,7 @@ def run_query(db_table, field, query):
 def read_dict_var_from_redis_db(db: redis.Redis, entry: str) -> Dict:
     """Reads a list variable from redis db, returns default value if variable not exists or corrupted!"""
     db_value = db.get(entry)
-    logging.getLogger("plugin_ies").info(f"got redis db_value {db_value} for {entry}!")
+    logger.info(f"got redis db_value {db_value} for {entry}!")
     if (db_value is None) or (not db_value) or (db_value == b"null") or (db_value == b"[]"):
         return {}
     return json.loads(db_value)
@@ -170,7 +172,10 @@ def get_fleet_status_msg(session, fleet):
     station_status_update = {}
 
     if all_sherpa_status:
+        logger.info(f"All sherpa status: {all_sherpa_status}")
         for sherpa_status in all_sherpa_status:
+            logger.info(f"sherpa status: {sherpa_status}")
+            logger.info(f"fleet: {fleet.name}")
             if sherpa_status.sherpa.fleet.name == fleet.name:
                 sherpa_status_update.update(
                     {
