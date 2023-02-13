@@ -1,7 +1,9 @@
 import os
 import logging
 import redis
+import aioredis
 import time
+import json
 import ast
 from dataclasses import dataclass
 
@@ -61,7 +63,10 @@ def send_agv_update_and_fault(sherpa_name, externalReferenceId):
 # read status from periodic messages, for those trips in DB, send periodic msgs to IES.
 async def send_job_updates():
     logger.info("running send_job_updates")
-    psub = redis_db.pubsub()
+    redis_conn = aioredis.Redis.from_url(
+        os.getenv("FM_REDIS_URI"), max_connections=10, decode_responses=True
+    )
+    psub = redis_conn.pubsub()
     await psub.subscribe("channel:status_updates")
     while True:
         fleet_status = await psub.get_message(ignore_subscribe_messages=True, timeout=5)
