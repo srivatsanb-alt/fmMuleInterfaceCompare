@@ -43,4 +43,5 @@ start
 run_simulator
 
 #to keep the docker alive - run a never ending process
-tail -f /dev/null
+cd /app
+poetry run python scripts/restart.py 2>&1
