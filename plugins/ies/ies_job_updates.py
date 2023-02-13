@@ -56,18 +56,19 @@ def send_agv_update_and_fault(sherpa_name, externalReferenceId):
 
 # read status from periodic messages, for those trips in DB, send periodic msgs to IES.
 async def send_job_updates():
-    psub = redis.pubsub()
+    logger.info("running send_job_updates")
+    redis_db = redis.from_url(os.getenv("FM_REDIS_URI"), decode_responses=True)
+    psub = redis_db.pubsub()
     await psub.subscribe("channel:status_updates")
-    db_handler = DBSession()
     while True:
         message = await psub.get_message(ignore_subscribe_messages=True, timeout=5)
+        logger.info(f"psub message {message}")
         if message:
             data = ast.literal_eval(message["data"])
-        logger.info(data)
-        fleets_status = get_fleets_status_info()
-        logger.info(fleets_status)
+            logger.info(data)
         with session_maker() as db_session:
             all_active_trips = _get_active_trips(db_session)
+            logger.info(f"all_active_trips {all_active_trips}")
             for trip in all_active_trips:
                 status_code, trip_status_response = _get_trip_status_response(trip)
                 for trip_id, trip_details in trip_status_response.items():
@@ -186,7 +187,7 @@ def _get_sherpa_status(sherpa_summary, externalReferenceId):
 def get_fleets_status_info():
     fleets_status = {}
     with DBSession() as db_session:
-        fleet_names = db_session.get_all_fleet_names()
-    for fleet in fleet_names:
+        fleets = db_session.get_all_fleets()
+    for fleet in fleets:
         fleets_status[fleet] = get_fleet_status_msg(db_session, fleet)
     return fleets_status

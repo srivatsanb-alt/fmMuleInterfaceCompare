@@ -1,9 +1,10 @@
-from rq import Queue, Worker, Connection
-from rq.job import Job
 import redis
 import time
 import toml
 import os
+import asyncio
+from rq import Queue, Worker, Connection
+from rq.job import Job
 from multiprocessing import Process
 from fastapi import HTTPException
 import logging
@@ -82,11 +83,7 @@ def enqueue(queue: Queue, func, *args, **kwargs):
     kwargs.setdefault("failure_ttl", 0)
     kwargs.setdefault("on_failure", report_failure)
     kwargs.setdefault("on_success", report_success)
-    return queue.enqueue(
-        func,
-        *args,
-        **kwargs,
-    )
+    return queue.enqueue(func, *args, **kwargs)
 
 
 def get_job_result(job_id):
@@ -124,7 +121,10 @@ if __name__ == "__main__":
 
         from ies.ies_job_updates import send_job_updates
 
-        Process(target=send_job_updates, args=[]).start()
+        def ies_updates_handler():
+            return asyncio.get_event_loop().run_until_complete(send_job_updates())
+
+        Process(target=ies_updates_handler, args=[]).start()
         ies_logger.info("Sending periodic job updates")
 
     if "conveyor" in all_plugins:
