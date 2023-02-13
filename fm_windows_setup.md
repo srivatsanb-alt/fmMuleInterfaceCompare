@@ -15,9 +15,9 @@ bash load_docker_images.sh
 
 5. Generate certs file by following step 1-3 of "Setup FM with push_fm script" from readme.pdf
 
-6. Copy static folder from FM repo to the windows server
+6. Copy static folder from FM repo or FM_v<fm_version>_docker_images folder to the windows server
 
-7. Copy misc/docker-compose_windows.yml as docker-compose.yml to the static folder on the windows server
+7. Copy misc/docker-compose_windows.yml from FM repo or FM_v<fm_version>_docker_images folder as docker-compose.yml to the static folder on the windows server
 
 8. Copy misc/nginx_windows.conf as nginx.conf, static/certs/fm_rev_proxy_cert.pem, static/certs/fm_rev_proxy_cert.pem to <nginx_installation_path>/conf/ on the windows server
 

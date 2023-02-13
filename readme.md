@@ -129,7 +129,7 @@ bash load_docker_images.sh
 
 3. Backup the current static directory if already present. Copy "static" directory from fleet_manager repository/FM_v<fm_version>_docker_images folder to the FM server, update it with the info from backup.
     
-4. Copy docker-compose.yml from <fm_repository>/misc/ to the static folder.
+4. Copy docker-compose.yml from <fm_repository>/misc/ or FM_v<fm_version>_docker_images folder to the static folder.
 
 5. Create cert files if not already present by following [Setup FM with push_fm script](#setup-fm-with-push_fm-script) steps 1-3.
 
