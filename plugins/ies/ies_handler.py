@@ -252,34 +252,20 @@ class IES_HANDLER:
         return msg_to_ies
 
     def _process_job_create_response(self, job_create):
-        # for trip_id, trip_details in response_json.items():
-        for task in job_create.taskList:
-            trip = TripsIES(
-                # trip_id=trip_id,
-                # booking_id=job_create.externalReferenceId],
-                externalReferenceId=job_create.externalReferenceId,
-                # status=trip_details["status"],
-                status="pending trip",
-                actions=[task.get("ActionName", None) for task in job_create.taskList],
-                locations=[task["LocationId"] for task in job_create.taskList],
-            )
-            session.add(trip)
-            self.logger.debug(f"adding trip entry to db {trip.__dict__}")
-            # if trip_details["status"] == TripStatus.BOOKED:
-            msg_to_ies = MsgToIES(
-                "JobUpdate",
-                job_create.externalReferenceId,
-                "",
-            ).to_dict()
-            msg_to_ies.update(
-                {"lastCompletedTask": {"ActionName": "", "LocationId": ""}}
-            )
-            self.logger.info(
-                "Sending JobUpdate {booked_msg_to_ies} to IES in JobCreate"
-            )
-            self.send_msg(msg_to_ies)
-            self.logger.info(f"adding job to db {job_create}")
-            self._add_to_pending_jobs_db(job_create)
+        msg_to_ies = MsgToIES(
+            "JobUpdate",
+            job_create.externalReferenceId,
+            "",
+        ).to_dict()
+        msg_to_ies.update(
+            {"lastCompletedTask": {"ActionName": "", "LocationId": ""}}
+        )
+        self.logger.info(
+            "Sending JobUpdate {booked_msg_to_ies} to IES in JobCreate"
+        )
+        self.send_msg(msg_to_ies)
+        self.logger.info(f"adding job to db {job_create}")
+        self._add_to_pending_jobs_db(job_create)
         return
 
 
