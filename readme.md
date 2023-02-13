@@ -127,7 +127,7 @@ cd FM_v<fm_version>_docker_images
 bash load_docker_images.sh
 ```
 
-3. Backup the current static directory if already present. Copy "static" directory from fleet_manager repository to the FM server, update it with the info from backup
+3. Backup the current static directory if already present. Copy "static" directory from fleet_manager repository/FM_v<fm_version>_docker_images folder to the FM server, update it with the info from backup.
     
 4. Copy docker-compose.yml from <fm_repository>/misc/ to the static folder.
 
@@ -397,6 +397,10 @@ docker push <fm_ip>:443/mule:fm
 1. Copy all the new map files to <fm_static_directory>/<fleet_name>/map/ folder
 2. Select the fleet which needs the map update from the webpage header in the dashboard and press update_map button on the webpage header(present along with start/stop fleet , emergency_stop fleet etc.)
 3. Restart of FM is not required - for map updates
+
+
+## Swap sherpas between fleets ##
+1. Delete the current sherpa entry and then again add it to a different fleet. Sherpa's can't be swapped directly. FM restart would be required post addition of sherpa to the new fleet.
 
 
 ## Generate api keys for sherpas/conveyor/summon_button/any hardware ##
