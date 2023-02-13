@@ -17,6 +17,9 @@ from .ies_utils import (
     MsgToIES,
     IES_JOB_STATUS_MAPPING,
     read_dict_var_from_redis_db,
+    get_locationID_station_mapping,
+    get_ati_station_name,
+    remove_from_pending_jobs_db,
 )
 from utils.util import str_to_dt, str_to_dt_UTC, dt_to_str
 from models.trip_models import TripStatus
@@ -26,12 +29,7 @@ from models.base_models import JsonMixin
 class IES_HANDLER:
     def init_handler(self):
         self.redis_db = redis.from_url(os.getenv("FM_REDIS_URI"))
-        locationID_station_mapper = os.path.join(
-            os.getenv("FM_MAP_DIR"), "plugin_ies", "locationID_station_mapping.json"
-        )
-        with open(locationID_station_mapper, "r") as f:
-            self.locationID_station_mapping = json.load(f)
-
+        self.locationID_station_mapping = get_locationID_station_mapping()
         self.plugin_name = "plugin_ies"
 
     def close_db(self):
@@ -159,20 +157,13 @@ class IES_HANDLER:
                     f"successfully deleted trip externalReferenceId: {ext_ref_id}"
                 )
                 self.send_msg(msg_to_ies)
-                self._remove_from_pending_jobs_db(ext_ref_id)
+                remove_from_pending_jobs_db(self.redis_db, ext_ref_id)
         except:
             self.logger.info(f"unable to delete trip externalReferenceId: {ext_ref_id}")
             msg_to_ies.update(
                 {"errorMessage": "Delete request rejected by fleet manager app"}
             )
             self.send_msg(msg_to_ies)
-        return
-
-    def _remove_from_pending_jobs_db(self, ext_ref_id):
-        jobs_list = read_dict_var_from_redis_db(self.redis_db, "pending_jobs")
-        if ext_ref_id in jobs_list.keys():
-            jobs_list.pop(ext_ref_id)
-        self.redis_db.set("pending_jobs", json.dumps(jobs_list))
         return
 
     def handle_JobQuery(self, msg):
@@ -194,7 +185,7 @@ class IES_HANDLER:
         route_stations = [
             None
             if task["LocationId"] not in self.locationID_station_mapping.keys()
-            else self.locationID_station_mapping[task["LocationId"]]["ati_name"]
+            else get_ati_station_name([task["LocationId"]])
             for task in tasklist
         ]
         return route_stations

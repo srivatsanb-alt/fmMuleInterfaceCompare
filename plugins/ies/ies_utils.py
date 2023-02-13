@@ -29,6 +29,40 @@ IES_JOB_STATUS_MAPPING = {
     TripStatus.CANCELLED: "CANCELLED",
 }
 
+locationID_station_mapper_path = os.path.join(
+    os.getenv("FM_MAP_DIR"), "plugin_ies", "locationID_station_mapping.json"
+)
+with open(locationID_station_mapper_path, "r") as f:
+    locationID_station_mapping = json.load(f)
+
+
+def get_locationID_station_mapping():
+    return locationID_station_mapping
+
+
+def get_ati_station_name(bosch_station_name):
+    return locationID_station_mapping[bosch_station_name]["ati_name"]
+
+
+def get_ati_pos_index(bosch_station_name):
+    return int(locationID_station_mapping[bosch_station_name]["pos_index"])
+
+
+def get_ati_station_details(bosch_station_name):
+    details = (
+        locationID_station_mapping[bosch_station_name]["ati_name"],
+        locationID_station_mapping[bosch_station_name]["pos_index"],
+    )
+    return details
+
+
+def remove_from_pending_jobs_db(redis_db, ext_ref_id):
+    jobs_list = read_dict_var_from_redis_db(redis_db, "pending_jobs")
+    if ext_ref_id in jobs_list.keys():
+        jobs_list.pop(ext_ref_id)
+    redis_db.set("pending_jobs", json.dumps(jobs_list))
+    return
+
 
 @dataclass
 class AGVMsg(JsonMixin):
