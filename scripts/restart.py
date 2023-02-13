@@ -14,9 +14,10 @@ def main():
             if restart is None:
                 continue
             restart = json.loads(restart)
+
             if restart:
                 logging.getLogger().info("Will restart fleet manager software")
-                raise "Will restart fleet manager software"
+                raise Exception("Will restart fleet manager software")
 
 
 if __name__ == "__main__":
