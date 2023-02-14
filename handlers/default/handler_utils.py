@@ -197,9 +197,7 @@ def check_sherpa_status(dbsession: DBSession):
             stale_sherpa_status.disabled_reason = DisabledReason.STALE_HEARTBEAT
 
         get_logger("status_updates").warning(
-            f"stale heartbeat from sherpa {stale_sherpa_status.sherpa_name},\
-            last_update_at: {stale_sherpa_status.updated_at}, \
-             mule_heartbeat_interval: {MULE_HEARTBEAT_INTERVAL}"
+            f"stale heartbeat from sherpa {stale_sherpa_status.sherpa_name} last_update_at: {stale_sherpa_status.updated_at} mule_heartbeat_interval: {MULE_HEARTBEAT_INTERVAL}"
         )
 
 

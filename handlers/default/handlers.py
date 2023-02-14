@@ -470,13 +470,7 @@ class Handlers:
         if not peripheral_info.hitch:
             if tm.TripState.WAITING_STATION_AUTO_UNHITCH_START in ongoing_trip.states:
                 ongoing_trip.add_state(tm.TripState.WAITING_STATION_AUTO_UNHITCH_END)
-
-                peripheral_msg = (
-                    f"Resolving {req.error_device} error for",
-                    f"{sherpa_name}, will wait for dispatch button",
-                    "press to continue",
-                )
-
+                peripheral_msg = f"Resolving {req.error_device} error for {sherpa_name}, will wait for dispatch button press to continue"
                 get_logger().warning(peripheral_msg)
                 self.add_dispatch_start_to_ongoing_trip(ongoing_trip)
                 self.dbsession.add_notification(
@@ -519,17 +513,9 @@ class Handlers:
             ongoing_trip.add_state(conveyor_end_state)
 
             if direction == "send":
-                peripheral_msg = (
-                    f"Resolving {req.error_device} error for",
-                    f"{sherpa_name},transfer all the totes on the",
-                    "mule to the chute and press dispatch button",
-                )
+                peripheral_msg = f"Resolving {req.error_device} error for {sherpa_name},transfer all the totes on the mule to the chute and press dispatch button"
             else:
-                peripheral_msg = (
-                    f"Resolving {req.error_device} error for",
-                    f"{sherpa_name},move {num_units} tote(s) to the",
-                    f"mule and press dispatch button",
-                )
+                peripheral_msg = f"Resolving {req.error_device} error for {sherpa_name},move {num_units} tote(s) to the mule and press dispatch button"
 
             get_logger().info(peripheral_msg)
             self.dbsession.add_notification(
@@ -551,20 +537,17 @@ class Handlers:
     ):
         for ongoing_trip, sherpa in zip(all_ongoing_trips, all_sherpas):
             get_logger().info(
-                "Deleting ongoing trip",
-                f"trip_id: {ongoing_trip.trip.id}",
-                f"booking_id: {req.booking_id}",
+                f"Will try to deleting ongoing trip trip_id: {ongoing_trip.trip.id} booking_id: {ongoing_trip.trip.booking_id}"
             )
             self.end_trip(ongoing_trip, sherpa, False)
             ongoing_trip.trip.cancel()
             terminate_trip_msg = rqm.TerminateTripReq(
                 trip_id=ongoing_trip.trip_id, trip_leg_id=ongoing_trip.trip_leg_id
             )
+
             _ = utils_comms.send_msg_to_sherpa(self.dbsession, sherpa, terminate_trip_msg)
             get_logger().info(
-                "Deleted ongoing trip successfully",
-                f"trip_id: {ongoing_trip.trip.id}",
-                f"booking_id: {ongoing_trip.trip.booking_id}",
+                f"Deleted ongoing trip successfully trip_id: {ongoing_trip.trip.id} booking_id: {ongoing_trip.trip.booking_id}"
             )
         return {}
 
@@ -670,8 +653,7 @@ class Handlers:
             self.dbsession.delete_pending_trip(pending_trip)
             trip.status = tm.TripStatus.CANCELLED
             get_logger().info(
-                f"Successfully deleted booked trip",
-                f"trip_id: {trip.id}, booking_id: {trip.booking_id}",
+                f"Successfully deleted booked trip trip_id: {trip.id}, booking_id: {trip.booking_id}"
             )
 
     def handle_delete_ongoing_trip(self, req: rqm.DeleteOngoingTripReq):
@@ -747,23 +729,19 @@ class Handlers:
 
         if not ongoing_trip:
             get_logger().info(
-                f"Trip status sent by {sherpa.name} is invalid/delayed",
-                f"no ongoing trip data found trip_id: {req.trip_id}",
+                f"Trip status sent by {sherpa.name} is invalid/delayed no ongoing trip data found trip_id: {req.trip_id}"
             )
             return
 
         if req.trip_leg_id != ongoing_trip.trip_leg_id:
             get_logger().info(
-                f"Trip status sent by {sherpa.name} is invalid",
-                f"sherpa_trip_leg_id: {req.trip_leg_id}",
-                f"FM_trip_leg_id: {ongoing_trip.trip_leg_id}",
+                f"Trip status sent by {sherpa.name} is invalid sherpa_trip_leg_id: {req.trip_leg_id} FM_trip_leg_id: {ongoing_trip.trip_leg_id}"
             )
             return
 
         if not ongoing_trip.next_station():
             get_logger().info(
-                f"Trip status sent by {sherpa.name} is delayed",
-                f"all trip legs completed trip_id: {req.trip_id}",
+                f"Trip status sent by {sherpa.name} is delayed all trip legs completed trip_id: {req.trip_id}"
             )
             return
 
@@ -898,18 +876,14 @@ class Handlers:
             or ongoing_trip.trip_id != req.trip_id
         ):
             raise ValueError(
-                f"Trip information mismatch(trip_id: {req.trip_id}",
-                f"trip_leg_id: {req.trip_leg_id})",
-                f"ongoing_trip_id: {ongoing_trip.trip_id}",
-                f"ongoing_trip_leg_id: {ongoing_trip.trip_leg_id}",
+                f"Trip information mismatch(trip_id: {req.trip_id} trip_leg_id: {req.trip_leg_id}) ongoing_trip_id: {ongoing_trip.trip_id} ongoing_trip_leg_id: {ongoing_trip.trip_leg_id}"
             )
 
         curr_station: fm.Station = self.dbsession.get_station(ongoing_trip.next_station())
 
         if not utils_util.are_poses_close(curr_station.pose, req.destination_pose):
             raise ValueError(
-                f"{sherpa.name} sent to {curr_station.pose} but",
-                f"reached {req.destination_pose}",
+                f"{sherpa.name} was sent to {curr_station.pose} but reached {req.destination_pose}"
             )
 
         trip_analytics: tm.TripAnalytics = self.dbsession.get_trip_analytics(
@@ -930,8 +904,7 @@ class Handlers:
 
         if sherpa.status.pose is None:
             raise ValueError(
-                f"{sherpa.name} cannot be inducted for doing trips",
-                "sherpa pose information is not available with fleet manager",
+                f"{sherpa.name} cannot be inducted for doing trips sherpa pose information is not available with fleet manager",
             )
 
         sherpa_availability = self.dbsession.get_sherpa_availability(sherpa.name)
@@ -1105,10 +1078,7 @@ class Handlers:
         )
 
         if conveyor_start_state not in ongoing_trip.states:
-            error = (
-                f"{sherpa.name} sent a invalid conveyor ack message",
-                f"{ongoing_trip.states} doesn't match ack msg",
-            )
+            error = f"{sherpa.name} sent a invalid conveyor ack message {ongoing_trip.states} doesn't match ack msg"
             raise ValueError(error)
 
         if StationProperties.CONVEYOR in curr_station.properties:
