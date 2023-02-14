@@ -11,7 +11,7 @@ from app.routers.dependencies import get_user_from_query
 # setup logging
 log_conf_path = os.path.join(os.getenv("FM_CONFIG_DIR"), "logging.conf")
 logging.config.fileConfig(log_conf_path)
-logger = logging.getLogger("uvicorn")
+logger = logging.getLogger("Uvicorn")
 
 router = APIRouter()
 

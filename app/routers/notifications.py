@@ -9,13 +9,13 @@ from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, status
 from sqlalchemy.orm.attributes import flag_modified
 from models.db_session import DBSession
 
-#module regarding the http and websocket notifications(read, write, delete)
+# module regarding the http and websocket notifications(read, write, delete)
 
 
 # setup logging
 log_conf_path = os.path.join(os.getenv("FM_CONFIG_DIR"), "logging.conf")
 logging.config.fileConfig(log_conf_path)
-logger = logging.getLogger("uvicorn")
+logger = logging.getLogger("Uvicorn")
 
 router = APIRouter()
 

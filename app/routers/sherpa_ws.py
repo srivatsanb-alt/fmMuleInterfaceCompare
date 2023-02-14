@@ -34,7 +34,7 @@ MSG_TS_INVALID = "msg_timestamp_invalid"
 # setup logging
 log_conf_path = os.path.join(os.getenv("FM_CONFIG_DIR"), "logging.conf")
 logging.config.fileConfig(log_conf_path)
-logger = logging.getLogger("uvicorn")
+logger = logging.getLogger("Uvicorn")
 
 
 redis = Redis.from_url(os.getenv("FM_REDIS_URI"))
@@ -45,8 +45,8 @@ router = APIRouter()
 
 expire_after_ms = timedelta(milliseconds=500)
 
-#performs status updates at regular intervals, read, write, 
-#websocket messages and manages websocket connection between sherpas and FM.
+# performs status updates at regular intervals, read, write,
+# websocket messages and manages websocket connection between sherpas and FM.
 
 
 def manage_sherpa_ip_change(sherpa, x_real_ip):
