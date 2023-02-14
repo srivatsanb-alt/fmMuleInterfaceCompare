@@ -313,7 +313,6 @@ class FleetSimulator:
             sherpa: Sherpa = session.get_sherpa(sherpa_name)
             from_station = ongoing_trip.trip_leg.from_station
             to_station = ongoing_trip.trip_leg.to_station
-            ez = self.exclusion_zones[sherpa.fleet.name]
             if from_station:
                 from_pose = session.get_station(from_station).pose
             else:
@@ -369,6 +368,7 @@ class FleetSimulator:
                 #    local_obstacle = [0.1, 1]
 
                 if self.visa_handling[sherpa.fleet.name]:
+                    ez = self.exclusion_zones[sherpa.fleet.name]
                     sherpa_visa = session.get_visa_held(sherpa_name)
                     print(f"visa held: {sherpa_visa}")
                     if len(sherpa_visa) > 0:
