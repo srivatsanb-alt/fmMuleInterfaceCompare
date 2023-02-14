@@ -2,14 +2,13 @@ import logging
 import hashlib
 from .summon_models import SummonInfo, DBSession
 from .summon_utils import SummonInfo, DBSession
-from .summon_utils import book_trip
+from .summon_utils import book_trip ,cancel_trip
 import redis
 import os
 
 class ButtonPress:
     ENABLE_DISABLE = "enable_disable"
     BOOK_TRIP = "book_trip"
-    CANCEL_TRIP = "cancel_trip"
 
 
 class SUMMON_HANDLER:
@@ -34,19 +33,23 @@ class SUMMON_HANDLER:
 
         if summon_info.press == ButtonPress.BOOK_TRIP:
             if summon_info.booking_id is None:
-                book_trip(
+                response = book_trip(
                     self.session,
                     summon_info,
                     route=summon_info.route,
                     plugin_name="plugin_summon_button",
                 )
-            # else:
-            #     cancel_trip(
-            #         self.session,
-            #         summon_info,
-            #         trip_id=summon_info.trip_id,
-            #         plugin_name="plugin_summon_button",
-            #     )
+                self.logger.info(f"sending response as :{response}")
+            else:
+                response = cancel_trip(
+                    self.session,
+                    summon_info,
+                    plugin_name="plugin_summon_button",
+                )
+                self.logger.info(f"sending response as :{response}")
+        
+        return response
+
 
 
     def handle(self, msg):

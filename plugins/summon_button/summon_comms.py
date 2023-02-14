@@ -4,20 +4,11 @@ from fastapi import APIRouter, WebSocket, Depends, Header, status
 from plugins.plugin_comms import ws_reader, ws_writer
 from .summon_models import SummonInfo, DBSession
 from .summon_handler import SUMMON_HANDLER
-
+import logging
 router = APIRouter()
 
 
 def get_summon(x_api_key: str = Header(None)):
-    #     with DBSession() as dbsession:
-    #         summon_info: SummonInfo = (
-    #                 dbsession.session.query(SummonInfo)
-    #                 .filter(SummonInfo.hashed_api_key == "38904cded54aebda0db5c4bb1295f26a9e859cc4befebbe323ad63c009aca434")
-    #                 .one_or_none()
-    #             )
-
-    #     return summon_info
-
     if x_api_key is None:
         return None
 
@@ -36,12 +27,11 @@ async def check_connection():
     return {"uvicorn": "I Am Alive"}
 
 
-@router.websocket("/plugin/ws/api/v1/summon")
-async def summon_button_ws(websocket: WebSocket, summon_info=Depends(get_summon)):
+@router.websocket("/plugin/ws/api/v1/summon_button")
+async def summon_button_ws(websocket: WebSocket,summon_info = Depends(get_summon)):
     if not summon_info:
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
-
     await websocket.accept()
 
     summon_handler = SUMMON_HANDLER()

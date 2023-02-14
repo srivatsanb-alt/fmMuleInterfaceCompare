@@ -29,21 +29,16 @@ def book_trip(dbsession, summon_info, route=[], plugin_name="plugin_summon_butto
         summon_info.booking_id = trip_details["booking_id"]
         summon_info.trip_id = trip_id
 
-# def cancel_trip(dbsession, summon_info, trip_id, plugin_name="plugin_summon_button"):
-#     req_json = {"trip_ids": [summon_info.trip_id]}
-#     status_code, trip_status_response = send_req_to_FM(
-#         plugin_name, "trip_status", req_type="post", req_json=req_json
-#     )
-#     if trip_status_response is None:
-#         raise ValueError("Trip not canceled ")
-#     for trip_id, trip_status in trip_status_response.items():
-#             trip_details = trip_status["trip_details"]
-#             status = trip_details["status"]
-#             trip = SummonActions(summon_id=summon_info.id, action=summon_info.press)
-#             dbsession.session.add(trip)
-#             summon_info.booking_id = trip_details["booking_id"]
-#             summon_info.trip_id = trip_id
+    return {"LED_COLOR":"GREEN"}
 
+def cancel_trip(dbsession, summon_info, plugin_name="plugin_summon_button"):
+    endpoint = "delete_booked_trip"
+    send_req_to_FM(
+        plugin_name, endpoint, req_type="delete", query=summon_info.booking_id,
+    )
+    summon_info.booking_id = None
+    summon_info.trip_id = None
+    return {"LED_COLOR":"WHITE"}
                 
 
 
