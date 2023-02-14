@@ -1,14 +1,8 @@
-from typing import List
 from models.db_session import DBSession
 from core.logs import get_logger
 import models.fleet_models as fm
 import models.request_models as rqm
 import models.visa_models as vm
-
-# utils for visa assignments.
-# exclusion zones can be accessed by only one vehicle at a time.
-# this module contains utils to grant access to those zones, lock exclusion zones, unlock, clear all locks,
-# grant visa access, revoke visa access, etc.
 
 
 def get_reqd_zone_types(visa_type):
@@ -133,7 +127,7 @@ def can_grant_visa(
             dbsession, ezone, sherpa, ezone.zone_id, zone_name, zone_type, exclusive
         )
         if not granted:
-            return granted, reason
+            return granted, reason, []
 
         reqd_ezones.append(ezone)
 
@@ -151,13 +145,13 @@ def can_grant_visa(
                 exclusive,
             )
             if not granted:
-                return granted, reason
+                return granted, reason, []
 
     reason = "all visas reqd are available"
-    return True, reason
+    return True, reason, reqd_ezones
 
 
-def get_visas_to_release(dbsession: DBSession, sherpa: fm.Sherpa, req: rqm, Visa):
+def get_visas_to_release(dbsession: DBSession, sherpa: fm.Sherpa, req: rqm):
 
     visa_type = req.visa_type
     zone_name = req.zone_name
