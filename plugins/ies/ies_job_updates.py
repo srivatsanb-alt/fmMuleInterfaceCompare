@@ -17,7 +17,8 @@ from .ies_utils import (
     read_dict_var_from_redis_db,
     get_ati_station_details,
     remove_from_pending_jobs_db,
-    session
+    session,
+    get_end_station
 )
 from plugins.plugin_comms import send_req_to_FM
 from models.trip_models import TripStatus
@@ -132,10 +133,10 @@ def combine_and_book_trip():
     logger.info(f"pending_trips: {pending_trips}")
     dest_stations_data = []
     try:
-        logger.info(f"pending_trip ids: {list(pending_trips.keys())[:36]}")
+        logger.info(f"pending_trip ids: {list(pending_trips.keys())[:36]}")  # MAKE IT A CONFIG
     except Exception as e:
         logger.info(f"error: {e}")
-    for ref_id in list(pending_trips.keys()):  # MAKE IT A CONFIG
+    for ref_id in list(pending_trips.keys()):
         dest_stations_data.append([
             get_ati_station_details(task["LocationId"])
             for task in pending_trips[ref_id]["taskList"]])
@@ -150,35 +151,40 @@ def combine_and_book_trip():
     sorted_inds = [stations_ranks.index(k) for k in sorted_ranks]
     logger.info(f"sorted_inds: {sorted_inds}")
     sorted_stations_names = [stations_names[k] for k in sorted_inds]
+    sorted_stations_names = _remove_duplicates(sorted_stations_names)
     logger.info(f"sorted_stations_names: {sorted_stations_names}")
-    req_json = {"trips": [{"route": sorted_stations_names, "priority": 1}]}
-    logger.info(f"sending booking req to fm: {req_json}")
-    status_code, trip_booking_response = send_req_to_FM(
-        "ies", "trip_book", req_type="post", req_json=req_json
-    )
-    with session_maker() as db_session:
-        if trip_booking_response is not None:
-            logger.info(f"trip_booking_response:{trip_booking_response}")
-            for trip_id in booked_trips_ids:
-                remove_from_pending_jobs_db(redis_db, trip_id)
-                for trip_id, trip_details in trip_booking_response.items():
-                    trip = TripsIES(
-                        trip_id=trip_id,
-                        booking_id=trip_details["booking_id"],
-                        externalReferenceId="None",
-                        status=trip_details["status"],
-                        # actions=[task.get("ActionName", None) for task in job_create.taskList],
-                        locations=[trip_booking_response["route"]],
-                    )
-                    db_session.add(trip)
-        else:
-            for trip_id in booked_trips_ids:
-                msg_to_ies = _get_msg_to_ies(trip_id, "CANCELLED", None)
-                msg_to_ies.update({"errorMessage": f"unable to combine trips for {trip_id}"})
-                logger.info(f"req to FM failed, response code: {status_code}")
-                send_msg_to_ies(msg_to_ies)
-        db_session.commit()
-        db_session.close()
+    if sorted_stations_names:
+        end_station = get_end_station("ECFA")
+        logger.info(f"end station after combining: {end_station}")
+        sorted_stations_names.append(end_station)
+        logger.info(f"sorted stations: {sorted_stations_names}")
+        req_json = {"trips": [{"route": sorted_stations_names, "priority": 1}]}
+        logger.info(f"sending booking req to fm: {req_json}")
+        status_code, trip_booking_response = send_req_to_FM(
+            "ies", "trip_book", req_type="post", req_json=req_json
+        )
+    if trip_booking_response is not None:
+        logger.info(f"trip_booking_response:{trip_booking_response}")
+        for trip_id in booked_trips_ids:
+            remove_from_pending_jobs_db(redis_db, trip_id)
+        for trip_id, trip_details in trip_booking_response.items():
+            trip = TripsIES(
+                trip_id=trip_id,
+                booking_id=trip_details["booking_id"],
+                externalReferenceId=booked_trips_ids[0],
+                status=trip_details["status"],
+                actions="",
+                locations=sorted_stations_names,
+            )
+            logger.info("adding combined trip to DB")
+            session.add(trip)
+            session.commit()
+    else:
+        for trip_id in booked_trips_ids:
+            msg_to_ies = _get_msg_to_ies(trip_id, "CANCELLED", None)
+            msg_to_ies.update({"errorMessage": f"unable to combine trips for {trip_id}"})
+            logger.info(f"req to FM failed, response code: {status_code}")
+            send_msg_to_ies(msg_to_ies)
         return
 
 
@@ -200,8 +206,10 @@ def _process_trip_details(trip, trip_details):
 
 
 def _get_last_completed_task(trip_actions, trip_locations, next_idx_aug):
+    logger.info(f"next_idx_aug: {next_idx_aug}")
     return {
-        "ActionName": trip_actions[next_idx_aug - 1] if next_idx_aug is not None else "",
+        # "ActionName": trip_actions[next_idx_aug - 1] if next_idx_aug is not None else "",
+        "ActionName": "",
         "LocationId": trip_locations[next_idx_aug - 1] if next_idx_aug is not None else "",
     }
 
@@ -267,5 +275,14 @@ def get_fleets_status_info():
         fleets_status[fleet] = get_fleet_status_msg(db_session, fleet)
     return fleets_status
 
+
 def _flatten_list(ip_list):
     return [item for sublist in ip_list for item in sublist]
+
+
+def _remove_duplicates(list):
+    return [val for idx, val in enumerate(list) if idx == 0 or val != list[idx-1]]
+
+
+def _add_end_station(route, end_station):
+    return route.append(end_station)

@@ -58,6 +58,13 @@ def get_ati_station_details(bosch_station_name):
     return details
 
 
+def get_end_station(line_name):
+    if line_name.lower() == "ecfa":
+        key = "ECFA_end_station"
+    end_station = locationID_station_mapping["metadata"][key]
+    return end_station
+
+
 def remove_from_pending_jobs_db(redis_db, ext_ref_id):
     jobs_list = read_dict_var_from_redis_db(redis_db, "pending_jobs")
     if ext_ref_id in jobs_list.keys():
