@@ -1178,7 +1178,7 @@ class Handlers:
                 utils_visa.lock_exclusion_zone(ezone, sherpa)
 
         granted_message = "granted" if granted else "not granted"
-        visa_log = f"{sherpa.name} {granted_message} {req.visa_type} type visa to zone {req.zone_name}"
+        visa_log = f"{sherpa.name} {granted_message} {req.visa_type} type visa to zone {req.zone_name}, reason: {reason}"
         get_logger().info(visa_log)
         get_logger().info(f"visa {granted_message} to {sherpa.name}")
 
