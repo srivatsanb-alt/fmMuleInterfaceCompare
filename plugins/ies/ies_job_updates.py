@@ -163,28 +163,28 @@ def combine_and_book_trip():
         status_code, trip_booking_response = send_req_to_FM(
             "ies", "trip_book", req_type="post", req_json=req_json
         )
-    if trip_booking_response is not None:
-        logger.info(f"trip_booking_response:{trip_booking_response}")
-        for trip_id in booked_trips_ids:
-            remove_from_pending_jobs_db(redis_db, trip_id)
-        for trip_id, trip_details in trip_booking_response.items():
-            trip = TripsIES(
-                trip_id=trip_id,
-                booking_id=trip_details["booking_id"],
-                externalReferenceId=booked_trips_ids[0],
-                status=trip_details["status"],
-                actions="",
-                locations=sorted_stations_names,
-            )
-            logger.info("adding combined trip to DB")
-            session.add(trip)
-            session.commit()
-    else:
-        for trip_id in booked_trips_ids:
-            msg_to_ies = _get_msg_to_ies(trip_id, "CANCELLED", None)
-            msg_to_ies.update({"errorMessage": f"unable to combine trips for {trip_id}"})
-            logger.info(f"req to FM failed, response code: {status_code}")
-            send_msg_to_ies(msg_to_ies)
+        if trip_booking_response is not None:
+            logger.info(f"trip_booking_response:{trip_booking_response}")
+            for trip_id, trip_details in trip_booking_response.items():
+                trip = TripsIES(
+                    trip_id=trip_id,
+                    booking_id=trip_details["booking_id"],
+                    externalReferenceId=booked_trips_ids[0],
+                    status=trip_details["status"],
+                    actions="",
+                    locations=sorted_stations_names,
+                )
+                logger.info("adding combined trip to DB")
+                session.add(trip)
+                session.commit()
+            for trip_id in booked_trips_ids:
+                remove_from_pending_jobs_db(redis_db, trip_id)
+        else:
+            for trip_id in booked_trips_ids:
+                msg_to_ies = _get_msg_to_ies(trip_id, "CANCELLED", None)
+                msg_to_ies.update({"errorMessage": f"unable to combine trips for {trip_id}"})
+                logger.info(f"req to FM failed, response code: {status_code}")
+                send_msg_to_ies(msg_to_ies)
         return
 
 
