@@ -1,0 +1,52 @@
+version: "3.0"
+services:
+  fleet_manager:
+    image: fleet_manager:dev
+    container_name: fleet_manager
+    restart: always
+    build: .
+    ports:
+      - '8001:8001'
+      - '8002:8002'
+    environment:
+      PGHOST: db
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: ati_fleet
+      PGTZ: Asia/Kolkata
+      TZ: Asia/Kolkata
+      FM_DATABASE_URI: postgresql://postgres:postgres@db 
+    volumes:
+      - .:/app/static
+    expose:
+      - 8001
+      - 8002
+    links:
+      - db
+    depends_on:
+      - db
+    network_mode: bridge
+
+  db:
+    image: postgres:14.0
+    container_name: fleet_db
+    restart: always
+    environment:
+      - TZ=Asia/Kolkata
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=ati_fleet
+    expose:
+      - 5432
+    volumes:
+      - ./psql/psql_backup:/var/lib/postgresql/data:rw
+    network_mode: bridge 
+  
+  registry:
+    restart: always
+    image: registry:2
+    container_name: fm_docker_registry
+    expose:
+      - 5000
+    network_mode: bridge

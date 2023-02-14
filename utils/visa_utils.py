@@ -5,6 +5,11 @@ import models.fleet_models as fm
 import models.request_models as rqm
 import models.visa_models as vm
 
+# utils for visa assignments.
+# exclusion zones can be accessed by only one vehicle at a time.
+# this module contains utils to grant access to those zones, lock exclusion zones, unlock, clear all locks,
+# grant visa access, revoke visa access, etc.
+
 
 def get_reqd_zone_types(visa_type):
     reqd_zone_types = []
@@ -22,7 +27,30 @@ def get_reqd_zone_types(visa_type):
         reqd_zone_types.append(vm.ZoneType.STATION)
         reqd_zone_types.append(vm.ZoneType.LANE)
 
+<<<<<<< HEAD
     return reqd_zone_types
+=======
+    if ezone.exclusivity:
+        # ezone already locked exclusively by another sherpa.
+        get_logger(sherpa.name).info(
+            f"{sherpa.name} denied lock for {zone_id}, exclusive access held by {ezone.sherpas[0]}, test={test}"
+        )
+        return False
+
+    elif not exclusive:
+        # can't lock exclusively since there are other sherpas in ezone.
+        get_logger(sherpa.name).info(
+            f"{sherpa.name} granted lock for {zone_id},exclusive={exclusive}, test={test}"
+        )
+        if not test and sherpa not in ezone.sherpas:
+            ezone.sherpas.append(sherpa)
+        return True
+    else:
+        get_logger(sherpa.name).info(
+            f"{sherpa.name} denied exclusive lock for {zone_id}, test={test}"
+        )
+        return False
+>>>>>>> fm_dev
 
 
 def get_linked_gates(ezone: vm.ExclusionZone):
@@ -152,10 +180,15 @@ def can_grant_visa(
             if not granted:
                 return granted, reason
 
+<<<<<<< HEAD
     reason = "all visas reqd are available"
     return True, reason
+=======
+def maybe_grant_visa(dbsession, zone_name, visa_type, sherpa_name):
+>>>>>>> fm_dev
 
 
+<<<<<<< HEAD
 def get_visas_to_release(dbsession: DBSession, sherpa: fm.Sherpa, req: rqm, Visa):
 
     visa_type = req.visa_type
@@ -169,3 +202,61 @@ def get_visas_to_release(dbsession: DBSession, sherpa: fm.Sherpa, req: rqm, Visa
         visas_to_release.append(ezone)
 
     return visas_to_release
+=======
+    if visa_type == VisaType.PARKING:
+        ezone_st = dbsession.get_exclusion_zone(zone_name, "station")
+        linked_zones_st = get_linked_gates(ezone_st) if ezone_st else []
+        linked_zones = linked_zones_st
+
+        if len(linked_zones):
+            linked_zone_flag = can_lock_linked_zones(
+                dbsession, zone_name, "station", sherpa_name
+            )
+
+        if linked_zone_flag:
+            return lock_exclusion_zone(dbsession, zone_name, "station", sherpa_name)
+        else:
+            return False
+
+    if visa_type in {VisaType.EXCLUSIVE_PARKING, VisaType.UNPARKING, VisaType.SEZ}:
+        ezone_st = dbsession.get_exclusion_zone(zone_name, "station")
+        linked_zones_st = get_linked_gates(ezone_st) if ezone_st else []
+        linked_zones = linked_zones_st
+
+        ezone_lane = dbsession.get_exclusion_zone(zone_name, "lane")
+        linked_zones_lane = get_linked_gates(ezone_lane) if ezone_lane else []
+
+        for lz_lane in linked_zones_lane:
+            linked_zones.append(lz_lane)
+
+        if len(linked_zones):
+            linked_zone_flag = can_lock_linked_zones(
+                dbsession, zone_name, "station", sherpa_name
+            ) and can_lock_linked_zones(dbsession, zone_name, "lane", sherpa_name)
+
+        if (
+            lock_exclusion_zone(dbsession, zone_name, "station", sherpa_name, test=True)
+            and lock_exclusion_zone(dbsession, zone_name, "lane", sherpa_name, test=True)
+            and linked_zone_flag
+        ):
+            return lock_exclusion_zone(
+                dbsession, zone_name, "station", sherpa_name
+            ) and lock_exclusion_zone(dbsession, zone_name, "lane", sherpa_name)
+        else:
+            return False
+
+    if visa_type == VisaType.TRANSIT:
+        ezone_lane = dbsession.get_exclusion_zone(zone_name, "lane")
+        linked_zones_lane = get_linked_gates(ezone_lane) if ezone_lane else []
+        linked_zones = linked_zones_lane
+
+        if len(linked_zones):
+            linked_zone_flag = can_lock_linked_zones(
+                dbsession, zone_name, "lane", sherpa_name
+            )
+
+        if linked_zone_flag:
+            return lock_exclusion_zone(dbsession, zone_name, "lane", sherpa_name)
+        else:
+            return False
+>>>>>>> fm_dev

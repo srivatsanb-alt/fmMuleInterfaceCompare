@@ -1,6 +1,5 @@
 import numpy as np
 from core.logs import get_logger
-from core.config import Config
 from models.fleet_models import Fleet, AvailableSherpas, OptimalDispatchState
 from models.trip_models import Trip, PendingTrip, TripStatus
 from typing import List
@@ -14,6 +13,9 @@ import redis
 import time
 import json
 
+#as per the bookings of trips, and their priorities, optimal dispatch will assign trips to the sherpas
+#while ensuring the bookings and trips are valid(eg.start time of the trip should be greater than 
+# or equal to the current time)
 
 class OptimalDispatch:
     def __init__(self, optimal_dispatch_config: dict):
@@ -23,10 +25,14 @@ class OptimalDispatch:
         self.config = optimal_dispatch_config
         self.assignment_method = self.config["method"]
         self.assign = getattr(self, self.assignment_method)
-        self.fleet_names = Config.get_all_fleets()
+        self.fleet_names = []
         self.fleets: List[Fleet] = []
         self.router_utils = {}
         self.ptrip_first_station = []
+
+    def get_exclude_stations_for_sherpa(self, sherpa_name):
+        exclude_station_dict = self.config.get("exclude_stations", {})
+        return exclude_station_dict.get(sherpa_name, [])
 
     def get_last_assignment_time(self, dbsession):
         self.last_assignment_time = {}
@@ -157,6 +163,9 @@ class OptimalDispatch:
                     available_sherpa.name: {
                         "pose": pose,
                         "remaining_eta": remaining_eta,
+                        "exclude_stations": self.get_exclude_stations_for_sherpa(
+                            available_sherpa.name
+                        ),
                     }
                 }
             )
@@ -211,10 +220,11 @@ class OptimalDispatch:
                     pending_trip.trip_id: {
                         "pose": pose,
                         "priority": updated_priority,
+                        "route": pending_trip.trip.augmented_route,
                     },
                 }
             )
-            self.ptrip_first_station.append(pending_trip.trip.route[0])
+            self.ptrip_first_station.append(pending_trip.trip.augmented_route[0])
             count += 1
 
     def assemble_cost_matrix(self, fleet_name):
@@ -233,29 +243,45 @@ class OptimalDispatch:
                 pose_1 = sherpa_q_val["pose"]
                 pose_2 = pickup_q_val["pose"]
                 pickup_priority = pickup_q_val["priority"]
-                job_id = generate_random_job_id()
-                control_router_job = [pose_1, pose_2, fleet_name, job_id]
-                redis_conn.set(
-                    f"control_router_job_{job_id}", json.dumps(control_router_job)
-                )
-                while not redis_conn.get(f"result_{job_id}"):
-                    time.sleep(0.005)
+                route = pickup_q_val["route"]
+                exclude_stations = sherpa_q_val["exclude_stations"]
+                if any(
+                    station in sherpa_q_val["exclude_stations"]
+                    for station in pickup_q_val["route"]
+                ):
+                    self.logger.info(
+                        f"cannot send {sherpa_q} to {route}, {sherpa_q} restricted from going to {exclude_stations}"
+                    )
+                    total_eta = np.inf
+                else:
+                    job_id = generate_random_job_id()
+                    control_router_job = [pose_1, pose_2, fleet_name, job_id]
+                    redis_conn.set(
+                        f"control_router_job_{job_id}", json.dumps(control_router_job)
+                    )
+                    while not redis_conn.get(f"result_{job_id}"):
+                        time.sleep(0.005)
 
-                route_length = json.loads(redis_conn.get(f"result_{job_id}"))
-                redis_conn.delete(f"result_{job_id}")
-
-                total_eta = route_length + sherpa_q_val["remaining_eta"]
+                    route_length = json.loads(redis_conn.get(f"result_{job_id}"))
+                    redis_conn.delete(f"result_{job_id}")
+                    total_eta = route_length + sherpa_q_val["remaining_eta"]
 
                 # to handle w1 == 0  and eta == np.inf case
                 weighted_total_eta = (
-                    (total_eta**w1) if (total_eta == np.inf) else total_eta
+                    (total_eta**w1) if (total_eta != np.inf) else total_eta
+                )
+
+                weighted_pickup_priority = (
+                    (pickup_priority**w2)
+                    if (pickup_priority != np.inf)
+                    else pickup_priority
                 )
 
                 cost_matrix[i, j] = total_eta
                 priority_matrix[i, j] = pickup_priority
 
                 priority_normalised_cost_matrix[i, j] = (
-                    weighted_total_eta / pickup_priority**w2
+                    weighted_total_eta / weighted_pickup_priority
                 )
 
                 j += 1
@@ -289,6 +315,7 @@ class OptimalDispatch:
         self.logger.info(f"{text}:\n{cost_matrix_df.to_markdown()}\n")
 
     def run(self, dbsession):
+        self.fleet_names = dbsession.get_all_fleet_names()
         self.logger = get_logger("optimal_dispatch")
         self.logger.info("will run optimal dispatch logic")
 

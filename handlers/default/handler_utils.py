@@ -33,6 +33,9 @@ def assign_sherpa(dbsession: DBSession, trip: Trip, sherpa: Sherpa):
     return ongoing_trip
 
 
+# starts a trip
+
+
 def start_trip(
     dbsession: DBSession,
     ongoing_trip: OngoingTrip,
@@ -140,6 +143,7 @@ def update_leg_next_station(next_station: Station, sherpa_name: str):
     next_station_status.arriving_sherpas.append(sherpa_name)
 
 
+# checks the status of sherpa(initialized, inducted) and checks if the sherpa is available for a trip
 def is_sherpa_available_for_new_trip(sherpa_status):
     AVAILABLE = "available"
     reason = None

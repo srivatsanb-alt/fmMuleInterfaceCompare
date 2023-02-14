@@ -8,6 +8,7 @@ import time
 import logging
 from utils.rq_utils import Queues, enqueue
 
+#adds scheduled trips to the job queue.
 
 def enqueue_scheduled_trips(db_session: DBSession, schdeuled_job_id):
     pending_trips = db_session.session.query(PendingTrip).all()
@@ -29,6 +30,7 @@ def enqueue_scheduled_trips(db_session: DBSession, schdeuled_job_id):
 
     return schdeuled_job_id
 
+#assigns next task to the sherpa.
 
 def assign_next_task():
     while True:

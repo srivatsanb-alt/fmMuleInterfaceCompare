@@ -16,6 +16,7 @@ from models.fleet_models import Sherpa, Station
 from models.request_models import FMReq, MoveReq
 from models.trip_models import OngoingTrip
 
+#utility for communication between sherpa and fleet manager
 
 def get_sherpa_url(
     sherpa: Sherpa,

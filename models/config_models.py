@@ -1,27 +1,6 @@
 from dataclasses import dataclass
-from typing import List, Optional, Union, Dict
+from typing import Optional, Dict, List
 from models.base_models import JsonMixin
-
-
-@dataclass
-class FleetSherpa(JsonMixin):
-    name: str
-    api_key: Union[str, None]
-    hwid: str
-    fleet_name: str
-
-
-@dataclass
-class Fleets(JsonMixin):
-    name: str
-    map_name: Optional[str]
-
-
-@dataclass
-class FrontendUser(JsonMixin):
-    name: str
-    role: str
-    hashed_password: str
 
 
 @dataclass
@@ -33,6 +12,11 @@ class Comms(JsonMixin):
 class Simulator(JsonMixin):
     simulate: bool = False
     book_trips: bool = False
+    visa_handling: bool = False
+    speedup_factor: float = 1.0
+    average_velocity: float = 0.8
+    routes: Optional[Dict] = None
+    initialize_sherpas_at: Optional[Dict] = None
 
 
 @dataclass
@@ -46,6 +30,7 @@ class OptimalDispatch(JsonMixin):
     prioritise_waiting_stations: bool = True
     eta_power_factor: float = 1.0
     priority_power_factor: float = 0.1
+    exclude_stations: Optional[Dict] = None
 
 
 @dataclass
@@ -63,17 +48,11 @@ class RQ(JsonMixin):
 
 @dataclass
 class BasicConfig(JsonMixin):
-    customer: str
-    location: str
-    site: str
-    fleet_names: List[str]
     comms: Comms
     simulator: Simulator
     all_server_ips: List[str]
     rq: Optional[RQ] = None
     stations: Optional[Stations] = None
-    fleet_map_mapping: Optional[Dict[str, str]] = None
-    map_names: Optional[List[str]] = None
     mode: Optional[str] = "default"
     sherpa_port: Optional[str] = "5000"
     http_scheme: str = "https"

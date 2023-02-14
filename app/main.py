@@ -1,7 +1,7 @@
 import time
-import logging, logging.config
+import logging
+import logging.config
 import os
-
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -19,6 +19,10 @@ from .routers import (
     notifications,
     configure_fleet,
 )
+
+#for easy maintainance and usability of the app, we use routers 
+#each functionality can be separately implemented on router rather than modifying the 
+#entire app.
 
 # setup logging
 log_conf_path = os.path.join(os.getenv("FM_CONFIG_DIR"), "logging.conf")

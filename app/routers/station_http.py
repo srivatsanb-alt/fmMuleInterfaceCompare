@@ -15,13 +15,13 @@ router = APIRouter(
     responses={404: {"description": "Not found"}},
 )
 
-
+#FM gets station info
 @router.get("/{entity_name}/info")
 async def get_station_info(entity_name: str, user_name=Depends(get_user_from_header)):
     response = {}
 
     if not user_name:
-        raise_error("Unknown requester")
+        raise_error("Unknown requester", 401)
 
     if not entity_name:
         raise_error("No entity name")

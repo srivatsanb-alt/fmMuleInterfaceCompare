@@ -27,6 +27,8 @@ router = APIRouter(
     responses={404: {"description": "Not found"}},
 )
 
+#to book, delete ongoing and pending trips, clear optimal dispatch assignments, 
+#posts trip status on the FM and also does trip analysis.
 
 @router.post("/book")
 async def book(booking_req: BookingReq, user_name=Depends(get_user_from_header)):
@@ -37,7 +39,7 @@ async def book(booking_req: BookingReq, user_name=Depends(get_user_from_header))
 @router.delete("/ongoing/{booking_id}")
 async def delete_ongoing_trip(booking_id: int, user_name=Depends(get_user_from_header)):
     if not user_name:
-        raise_error("Unknown requester")
+        raise_error("Unknown requester", 401)
 
     with DBSession() as dbsession:
         trips = dbsession.get_trip_with_booking_id(booking_id)
@@ -57,7 +59,7 @@ async def delete_pending_trip(booking_id: int, user_name=Depends(get_user_from_h
 
     response = {}
     if not user_name:
-        raise_error("Unknown requester")
+        raise_error("Unknown requester", 401)
 
     with DBSession() as dbsession:
         trips = dbsession.get_trip_with_booking_id(booking_id)
@@ -70,6 +72,8 @@ async def delete_pending_trip(booking_id: int, user_name=Depends(get_user_from_h
 
     return response
 
+#based on the trip bookings, optimal dispatch assigns the tasks to various sherpas optimally. 
+#deletes all the assignments done to the sherpas.
 
 @router.get("/booking/{entity_name}/clear_optimal_dispatch_assignments")
 async def clear_optimal_dispatch_assignments(
@@ -79,7 +83,7 @@ async def clear_optimal_dispatch_assignments(
     response = {}
 
     if not user_name:
-        raise_error("Unknown requester")
+        raise_error("Unknown requester", 401)
 
     if not entity_name:
         raise_error("No entity name")
@@ -94,6 +98,7 @@ async def clear_optimal_dispatch_assignments(
 
     return response
 
+#returns trip status, i.e. the time slot of the trip booking and the trip status with timestamp.
 
 @router.post("/status")
 async def trip_status(
@@ -102,7 +107,7 @@ async def trip_status(
     response = {}
 
     if not user_name:
-        raise_error("Unknown requester")
+        raise_error("Unknown requester", 401)
 
     with DBSession() as dbsession:
         if trip_status_req.booked_from and trip_status_req.booked_till:
@@ -124,11 +129,12 @@ async def trip_status(
 
     return response
 
+#returns ongoing trip status.
 
 @router.get("/ongoing_trip_status")
 async def ongoing_trip_status(user_name=Depends(get_user_from_header)):
     if not user_name:
-        raise_error("Unknown requester")
+        raise_error("Unknown requester", 401)
 
     response = {}
     with DBSession() as dbsession:
@@ -138,6 +144,8 @@ async def ongoing_trip_status(user_name=Depends(get_user_from_header)):
 
     return response
 
+#returns the complete analysis of the trip as in when it started, when it ended, when was it supposed to end
+#performs analysis for every trip leg and also for the overall trip.
 
 @router.post("/analytics")
 async def trip_analytics(
@@ -146,7 +154,7 @@ async def trip_analytics(
 
     response = {}
     if not user_name:
-        raise_error("Unknown requester")
+        raise_error("Unknown requester", 401)
 
     with DBSession() as dbsession:
         if trip_analytics_req.booked_from and trip_analytics_req.booked_till:
@@ -178,7 +186,7 @@ async def add_trip_metadata(
 
     response = {}
     if not user_name:
-        raise_error("Unknown requester")
+        raise_error("Unknown requester", 401)
 
     with DBSession() as dbsession:
         trip: Trip = dbsession.get_trip(trip_id)
@@ -198,7 +206,7 @@ async def add_trip_description(
 
     response = {}
     if not user_name:
-        raise_error("Unknown requester")
+        raise_error("Unknown requester", 401)
 
     with DBSession() as dbsession:
         trip: Trip = dbsession.get_trip(trip_id)

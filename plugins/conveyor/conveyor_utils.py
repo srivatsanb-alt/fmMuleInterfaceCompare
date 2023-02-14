@@ -84,10 +84,16 @@ def get_tote_trip_info(dbsession, num_totes, conveyor_name, plugin_name):
     epsilon = 1e-6
     num_trips = 0
     for trip in incomplete_trips:
+
+        # check has_sherpa_passed_conveyor only for the conveyor involved
+        if conveyor_name not in trip.route:
+            continue
+
         if not has_sherpa_passed_conveyor(trip.trip_id, conveyor_name, plugin_name):
             num_trips += 1
         else:
             trip.active = False
+
     book_trip = (num_totes / (num_trips + epsilon)) > MAX_TOTE_PER_TRIP
     return {"num_trips": num_trips, "num_totes": num_totes, "book_trip": book_trip}
 
@@ -109,7 +115,15 @@ def populate_conv_info():
                 query=conveyor_name,
             )
 
-            if response_json is not None:
+            if status_code != 200:
+                conv_info = (
+                    dbsession.session.query(ConvInfo)
+                    .filter(ConvInfo.name == conveyor_name)
+                    .one_or_none()
+                )
+                if conv_info:
+                    dbsession.session.delete(conv_info)
+            else:
                 all_conveyors.append(conveyor_name)
                 station_info = response_json
                 logging.getLogger(logger_name).info(

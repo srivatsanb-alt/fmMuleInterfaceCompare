@@ -1,9 +1,4 @@
-from sqlalchemy import (
-    Boolean,
-    Column,
-    ForeignKey,
-    String,
-)
+from sqlalchemy import Boolean, Column, ForeignKey, String, ARRAY
 from sqlalchemy.orm import relationship
 
 from models.base_models import Base, TimestampMixin
@@ -33,9 +28,8 @@ class ExclusionZone(Base, TimestampMixin):
         primaryjoin="ExclusionZone.zone_id==LinkedGates.prev_zone_id",
         secondaryjoin="ExclusionZone.zone_id==LinkedGates.next_zone_id",
     )
-    # Whether this zone is currently locked exclusively by a sherpa. In that case, sherpas can
-    # have length at most one.
     exclusivity = Column(Boolean)
+    fleets = Column(ARRAY(String))
 
 
 class VisaAssignment(Base, TimestampMixin):

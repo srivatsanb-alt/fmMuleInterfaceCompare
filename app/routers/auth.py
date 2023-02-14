@@ -13,6 +13,7 @@ router = APIRouter(
     responses={404: {"description": "Not found"}},
 )
 
+#performs user authentication
 
 @router.post("/login")
 async def login(user_login: UserLogin):
@@ -22,7 +23,7 @@ async def login(user_login: UserLogin):
     with DBSession() as dbsession:
         user = dbsession.get_frontend_user(user_login.name, hashed_password)
         if user is None:
-            raise_error("Unknown requester")
+            raise_error("Unknown requester", 401)
 
         response = {
             "access_token": generate_jwt_token(user_login.name),

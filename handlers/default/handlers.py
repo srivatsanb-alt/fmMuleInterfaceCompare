@@ -1154,17 +1154,14 @@ class Handlers:
         reset_fleet = hutils.is_reset_fleet_required(fleet_name, map_files)
 
         if reset_fleet:
-            reset_fleet_msg = (
-                f"Map files of {fleet_name} has been modified",
-                f"please reset the fleet {fleet_name}",
-            )
-            self.dbsession.add_notification(
+            update_map_msg = f"Map files of fleet: {fleet_name} has been modified, please update the map by pressing the update_map button on the webpage header!"
+            self.session.add_notification(
                 [fleet_name, sherpa.name],
-                reset_fleet_msg,
+                update_map_msg,
                 mm.NotificationLevels.alert,
                 mm.NotificationModules.map_file_check,
             )
-            get_logger().warning(reset_fleet_msg)
+            get_logger().warning(update_map_msg)
 
         map_file_info = hutils.update_map_file_info_with_certs(
             map_file_info, sherpa.name, sherpa.ip_address, ip_changed=ip_changed

@@ -4,6 +4,8 @@ from app.routers.dependencies import (
     process_req,
     process_req_with_response,
 )
+from models.db_session import DBSession
+from models.misc_models import NotificationModules, NotificationLevels
 from models.request_models import (
     InitMsg,
     ReachedReq,
@@ -12,9 +14,12 @@ from models.request_models import (
     SherpaPeripheralsReq,
     SherpaReq,
     VerifyFleetFilesResp,
+    SherpaAlertMsg,
 )
 from fastapi import Depends, APIRouter
 from utils.rq_utils import Queues
+
+#manages all the http requests for Sherpa
 
 router = APIRouter(
     prefix="/api/v1/sherpa",
@@ -23,17 +28,18 @@ router = APIRouter(
     responses={404: {"description": "Not found"}},
 )
 
-
+#checks connection of sherpa with fleet manager
 @router.get("/check_connection")
 async def check_connection():
     return {"uvicorn": "I am alive"}
 
-
+#initiates sherpa
 @router.post("/init")
 async def init_sherpa(init_msg: InitMsg, sherpa: str = Depends(get_sherpa)):
     process_req(None, init_msg, sherpa)
 
 
+#checks if sherpa has reached to its destination and completed its trip
 @router.post("/trip/reached")
 async def reached(reached_msg: ReachedReq, sherpa: str = Depends(get_sherpa)):
     process_req(None, reached_msg, sherpa)
@@ -59,3 +65,20 @@ async def verify_fleet_files(sherpa: str = Depends(get_sherpa)):
         None, SherpaReq(type="verify_fleet_files", timestamp=time.time()), sherpa
     )
     return VerifyFleetFilesResp.from_json(response)
+
+
+#alerts the FM with messages from Sherpa
+
+@router.post("/alerts")
+async def sherpa_alerts(alert_msg: SherpaAlertMsg, sherpa: str = Depends(get_sherpa)):
+    with DBSession() as dbsession:
+        sherpa_obj = dbsession.get_sherpa(sherpa)
+        alert = f"Got an alert from {sherpa}, "
+        if alert_msg.trolley_load_cell:
+            alert_msg = alert + alert_msg.trolley_load_cell
+        dbsession.add_notification(
+            [sherpa_obj.name, sherpa_obj.fleet.name],
+            alert_msg,
+            NotificationLevels.action_request,
+            NotificationModules.generic,
+        )

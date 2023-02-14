@@ -38,7 +38,7 @@ class MapFile(TimestampMixin, Base):
 class Fleet(Base):
     __tablename__ = "fleets"
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, unique=True, index=True)
+    name = Column(String, unique=True, index=True, nullable=False)
     customer = Column(String)
     site = Column(String)
     location = Column(String)
@@ -118,7 +118,6 @@ class StationStatus(TimestampMixin, Base):
 
     station_name = Column(String, ForeignKey("stations.name"), primary_key=True, index=True)
     station = relationship("Station", back_populates="status")
-
     disabled = Column(Boolean)
     arriving_sherpas = Column(ARRAY(String))
     sherpa_at_station = Column(String)
