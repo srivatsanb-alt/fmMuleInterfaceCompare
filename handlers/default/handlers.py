@@ -631,10 +631,11 @@ class Handlers:
         return response
 
     def handle_delete_booked_trip(self, req: rqm.DeleteBookedTripReq):
+        response = {}
 
         # query db
         trips: List[tm.Trip] = self.dbsession.get_trip_with_booking_id(req.booking_id)
-        all_to_be_cancelled_trips = List[tm.Trip] = []
+        all_to_be_cancelled_trips: List[tm.Trip] = []
         all_pending_trips: List[tm.PendingTrip] = []
 
         for trip in trips:
@@ -655,6 +656,8 @@ class Handlers:
             get_logger().info(
                 f"Successfully deleted booked trip trip_id: {trip.id}, booking_id: {trip.booking_id}"
             )
+
+        return response
 
     def handle_delete_ongoing_trip(self, req: rqm.DeleteOngoingTripReq):
 
@@ -1082,12 +1085,7 @@ class Handlers:
             raise ValueError(error)
 
         if StationProperties.CONVEYOR in curr_station.properties:
-            transfer_tote_msg = (
-                f"will send msg to the conveyor at"
-                f"station: {curr_station.name} to transfer "
-                f"{req.num_units} tote(s)"
-            )
-
+            transfer_tote_msg = f"will send msg to the conveyor at station: {curr_station.name} to transfer {req.num_units} tote(s)"
             get_logger().info(transfer_tote_msg)
 
             if req.num_units == 2:
