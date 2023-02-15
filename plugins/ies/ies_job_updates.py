@@ -17,6 +17,7 @@ from .ies_utils import (
     read_dict_var_from_redis_db,
     get_ati_station_details,
     remove_from_pending_jobs_db,
+    add_to_ongoing_trips_db,
     session,
     get_end_station
 )
@@ -41,6 +42,12 @@ class AGV_ACTIVITY:
 def send_msg_to_ies(msg):
     pub = redis.from_url(os.getenv("FM_REDIS_URI"), decode_responses=True)
     pub.publish("channel:plugin_ies", str(msg))
+
+
+def send_status_msg_to_ies(ext_ref_id, status):
+    completed_msg = _get_msg_to_ies(ext_ref_id, status, "")
+    send_msg_to_ies(completed_msg)
+    return
 
 
 def send_agv_update_and_fault(sherpa_name, externalReferenceId):
@@ -87,18 +94,19 @@ def send_job_updates():
                     send_agv_update_and_fault(
                         trip_details["sherpa_name"], trip.externalReferenceId
                     )
-                    trip_status = trip_details["trip_details"]["status"]
+                    trip_status_from_FM = trip_details["trip_details"]["status"]
                     _, msg_to_ies = _process_trip_details(trip, trip_details)
 
-                    if trip.status != trip_status:  # WHAT IS THIS CHECK
+                    # check if trip status given by FM is the same as that on the IES DB (trip.status)
+                    if trip_status_from_FM != trip.status:
                         logger.info(
-                            f"trip_id: {trip_id}, FM_response_status: {trip_status}, db_status: {trip.status}"
+                            f"trip_id: {trip_id}, FM_response_status: {trip_status_from_FM}, db_status: {trip.status}"
                         )
                         if (
                             trip.status == TripStatus.BOOKED
-                            and trip_status == TripStatus.EN_ROUTE
+                            and trip_status_from_FM == TripStatus.EN_ROUTE
                         ):
-                            # Need to mandatorily send succeeded message to IES
+                            # Need to mandatorily send scheduled message to IES
                             assigned_msg_to_ies = _get_msg_to_ies(
                                 trip.externalReferenceId,
                                 IES_JOB_STATUS_MAPPING[TripStatus.ASSIGNED],
@@ -106,8 +114,28 @@ def send_job_updates():
                             )
                             logger.info("Sending SCHEDULED msg to IES.")
                             send_msg_to_ies(assigned_msg_to_ies)
-                        trip.status = trip_status
+                        # updating IES DB with the latest state as given by FM
+                        trip.status = trip_status_from_FM
                         send_msg_to_ies(msg_to_ies)
+                        if trip_status_from_FM in [TripStatus.SUCCEEDED, TripStatus.FAILED, TripStatus.CANCELLED]:
+                            ongoing_trips_data = read_dict_var_from_redis_db(redis_db, "ongoing_trips")
+                            if ongoing_trips_data:
+                                booked_ext_ref_ids = ongoing_trips_data[trip_id]["ref_ids"]
+                                logger.info("sending status msgs to combined trips")
+                                for ext_ref_id in booked_ext_ref_ids:
+                                    if trip_status_from_FM == TripStatus.SUCCEEDED:
+                                        send_status_msg_to_ies(ext_ref_id, "SCHEDULED")
+                                        send_status_msg_to_ies(ext_ref_id, "IN_PROGRESS")
+                                        send_status_msg_to_ies(ext_ref_id, "COMPLETED")
+                                    elif trip_status_from_FM == TripStatus.FAILED:
+                                        send_status_msg_to_ies(ext_ref_id, "FAILED")
+                                    else:
+                                        send_status_msg_to_ies(ext_ref_id, "CANCELLED")
+                                redis_db.delete("ongoing_jobs")
+                                logger.info("deleted ongoing trips from redis")
+                            else:
+                                raise ValueError("no ongoing trip data in redis")
+
                     elif trip.status == TripStatus.EN_ROUTE:
                         logger.info(
                             f"Trip status: {trip.status}, sending continuous updates!"
@@ -116,12 +144,11 @@ def send_job_updates():
 
             db_session.commit()
             db_session.close()
-
         time.sleep(30)
 
 
 def maybe_combine_and_book_trips(fleet_data):
-    logger.info(f"fleet_data: {fleet_data}")
+    # logger.info(f"fleet_data: {fleet_data}")
     if "sherpa_status" in fleet_data.keys():
         for sherpa in fleet_data["sherpa_status"]:
             sherpa_status = fleet_data["sherpa_status"][sherpa]["idle"]
@@ -140,17 +167,18 @@ def combine_and_book_trip():
         logger.info(f"pending_trip ids: {list(pending_trips.keys())[:36]}")  # MAKE IT A CONFIG
     except Exception as e:
         logger.info(f"error: {e}")
-    for ref_id in list(pending_trips.keys()):
+    for ref_id in list(pending_trips.keys())[:36]:
         dest_stations_data.append([
             get_ati_station_details(task["LocationId"])
             for task in pending_trips[ref_id]["taskList"]])
+    raw_dest_stations_data = dest_stations_data
     logger.info(f"before flatten: {dest_stations_data}")
     dest_stations_data = _flatten_list(dest_stations_data)
     stations_ranks = [item[1] for item in dest_stations_data]
     stations_names = [item[0] for item in dest_stations_data]
     logger.info(f"after flatten: {dest_stations_data}")
-    booked_trips_ids = list(pending_trips.keys())
-    logger.info(f"booked_trip_ids: {booked_trips_ids}")
+    booked_ext_ref_ids = list(pending_trips.keys())
+    logger.info(f"booked_ext_ref_ids: {booked_ext_ref_ids}")
     sorted_ranks = sorted(stations_ranks)
     sorted_inds = [stations_ranks.index(k) for k in sorted_ranks]
     logger.info(f"sorted_inds: {sorted_inds}")
@@ -173,7 +201,7 @@ def combine_and_book_trip():
                 trip = TripsIES(
                     trip_id=trip_id,
                     booking_id=trip_details["booking_id"],
-                    externalReferenceId=booked_trips_ids[0],
+                    externalReferenceId=booked_ext_ref_ids[0],
                     status=trip_details["status"],
                     actions="",
                     locations=sorted_stations_names,
@@ -181,31 +209,40 @@ def combine_and_book_trip():
                 logger.info("adding combined trip to DB")
                 session.add(trip)
                 session.commit()
-            for trip_id in booked_trips_ids:
-                remove_from_pending_jobs_db(redis_db, trip_id)
+            
+            #add ongoing trips to redis
+            destination_stations = [task[1][0] for task in raw_dest_stations_data]
+            logger.info(f"destination_stations: {destination_stations}")
+            add_to_ongoing_trips_db(redis_db, trip_id, booked_ext_ref_ids, destination_stations)
+            logger.info("added ongoing trip info to redis")
+
+            for ext_ref_id in booked_ext_ref_ids:
+                remove_from_pending_jobs_db(redis_db, ext_ref_id)
         else:
-            for trip_id in booked_trips_ids:
-                msg_to_ies = _get_msg_to_ies(trip_id, "CANCELLED", None)
-                msg_to_ies.update({"errorMessage": f"unable to combine trips for {trip_id}"})
+            for ext_ref_id in booked_ext_ref_ids:
+                msg_to_ies = _get_msg_to_ies(ext_ref_id, "CANCELLED", None)
+                msg_to_ies.update({"errorMessage": f"unable to combine trips for {ext_ref_id}"})
                 logger.info(f"req to FM failed, response code: {status_code}")
                 send_msg_to_ies(msg_to_ies)
+                logger.info("deleting redis pending jobs because combined trip FM req. failed")
+                redis_db.delete("pending jobs")
         return
 
 
 def _process_trip_details(trip, trip_details):
-    trip_status = trip_details["trip_details"]["status"]
+    trip_status_from_FM = trip_details["trip_details"]["status"]
     next_idx_aug = trip_details["trip_details"]["next_idx_aug"]
     if next_idx_aug == 0:
         next_idx_aug = None
-    if trip_status == TripStatus.SUCCEEDED:
+    if trip_status_from_FM == TripStatus.SUCCEEDED:
         next_idx_aug = 0
     lastCompletedTask = _get_last_completed_task(trip.actions, trip.locations, next_idx_aug)
     msg_to_ies = MsgToIES(
-        "JobUpdate", trip.externalReferenceId, IES_JOB_STATUS_MAPPING[trip_status]
+        "JobUpdate", trip.externalReferenceId, IES_JOB_STATUS_MAPPING[trip_status_from_FM]
     ).to_dict()
     msg_to_ies.update({"lastCompletedTask": lastCompletedTask})
     logger.debug(f"DB status: {trip.status}")
-    logger.debug(f"FM Req status: {trip_status}")
+    logger.debug(f"FM Req status: {trip_status_from_FM}")
     return next_idx_aug, msg_to_ies
 
 
@@ -286,7 +323,3 @@ def _flatten_list(ip_list):
 
 def _remove_duplicates(list):
     return [val for idx, val in enumerate(list) if idx == 0 or val != list[idx-1]]
-
-
-def _add_end_station(route, end_station):
-    return route.append(end_station)

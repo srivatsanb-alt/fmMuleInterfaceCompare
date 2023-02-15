@@ -73,6 +73,13 @@ def remove_from_pending_jobs_db(redis_db, ext_ref_id):
     return
 
 
+def add_to_ongoing_trips_db(redis_db, trip_id, current_ext_ref_ids, destination_stations):
+    ongoing_trips = read_dict_var_from_redis_db(redis_db, "ongoing_trips")
+    ongoing_trips.update({trip_id: {"ref_ids": current_ext_ref_ids, "destination_stations": destination_stations}})
+    redis_db.set("ongoing_trips", json.dumps(ongoing_trips))
+    return
+
+
 @dataclass
 class AGVMsg(JsonMixin):
     messageType: str
