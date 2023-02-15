@@ -80,15 +80,7 @@ class IES_HANDLER:
             self.send_msg(rejected_msg)
             self.logger.info(f"Can't find station {job_create.taskList[ind]}!")
             return
-        # status_code, response_json = self._get_job_create_response(
-        #     job_create, route_stations
-        # )
-        # if response_json is None:
-            # self.logger.info(
-            #     f"req to FM failed, response json: {response_json} response code: {status_code}"
-            # )
-            # self.send_msg(rejected_msg)
-        # else:
+
         accepted_msg = MsgToIES(
             "JobCreate", msg["externalReferenceId"], "ACCEPTED"
         ).to_dict()
