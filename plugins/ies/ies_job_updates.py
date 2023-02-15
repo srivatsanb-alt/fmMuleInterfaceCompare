@@ -62,9 +62,7 @@ def send_agv_update_and_fault(sherpa_name, externalReferenceId):
     return
 
 
-# read status from periodic messages, for those trips in DB, send periodic msgs to IES.
-async def send_job_updates():
-    logger.info("running send_job_updates")
+async def check_status_and_combine_trips():
     redis_conn = aioredis.Redis.from_url(
         os.getenv("FM_REDIS_URI"), max_connections=10, decode_responses=True
     )
@@ -75,6 +73,12 @@ async def send_job_updates():
         if fleet_status:
             fleet_status_data = ast.literal_eval(fleet_status["data"])
             maybe_combine_and_book_trips(fleet_status_data)
+
+
+# read status from periodic messages, for those trips in DB, send periodic msgs to IES.
+def send_job_updates():
+    logger.info("running send_job_updates")
+    while True:
         with session_maker() as db_session:
             all_active_trips = _get_active_trips(db_session)
             for trip in all_active_trips:
