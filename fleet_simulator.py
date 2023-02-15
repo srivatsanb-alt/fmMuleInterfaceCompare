@@ -15,6 +15,7 @@ from models.request_models import (
 )
 from utils.router_utils import RouterModule, get_dense_path
 from models.trip_models import OngoingTrip
+import models.trip_models as tm
 from typing import List
 import sys
 import json
@@ -25,7 +26,7 @@ import redis
 import numpy as np
 from models.db_session import DBSession
 from models.fleet_models import Sherpa, Station
-from models.request_models import ReachedReq
+from models.request_models import ReachedReq, DispatchButtonReq, SherpaPeripheralsReq
 import threading
 
 LOOKAHEAD = 5.0
@@ -202,7 +203,9 @@ class FleetSimulator:
                 self.visa_handling[fleet_name] = self.simulator_config["visa_handling"]
             except:
                 self.visa_handling[fleet_name] = False
-            print(f"Visa handling {self.visa_handling} Exclusion zones... {self.exclusion_zones}")
+            print(
+                f"Visa handling {self.visa_handling} Exclusion zones... {self.exclusion_zones}"
+            )
             self.router_modules.update({fleet_name: RouterModule(map_path)})
 
     def initialize_sherpas(self):
@@ -228,7 +231,9 @@ class FleetSimulator:
                     except:
                         st = None
                     station_fleet_name = st.fleet.name if st else None
-                    print(f"sherpa fleet {sherpa.fleet.name} station_fleet_name {station_fleet_name}")
+                    print(
+                        f"sherpa fleet {sherpa.fleet.name} station_fleet_name {station_fleet_name}"
+                    )
                     while sherpa.fleet.name != station_fleet_name:
                         i = np.random.randint(0, len(stations))
                         station_fleet_name = stations[i].fleet.name
@@ -395,7 +400,7 @@ class FleetSimulator:
                     else:
                         visa_params = check_visa_needed(ez, curr_pose)
                         print(f"Is Visa needed? {visa_params}")
-                        if visa_params is not None: 
+                        if visa_params is not None:
                             self.visa_needed[sherpa_name] = visa_params[0]
                         if len(self.visa_needed[sherpa_name]) > 0:
                             print(
@@ -488,6 +493,20 @@ class FleetSimulator:
             print(f"will send a reached msg for {sherpa_name}, {reached_req}")
             enqueue(queue, handle, self.handler_obj, reached_req, ttl=1)
 
+    def simulate_peripherals(self, ongoing_trip):
+        if ongoing_trip:
+            states, sherpa_name = ongoing_trip.states, ongoing_trip.sherpa_name
+            peripheral_response = SherpaPeripheralsReq(timestamp=time.time())
+            peripheral_response.source = sherpa_name
+            if tm.TripState.WAITING_STATION_DISPATCH_START in states:
+                print(
+                    f"Sherpa {sherpa_name} - trip_id {ongoing_trip.trip_id}, leg {ongoing_trip.trip_leg_id} is waiting for dispacth"
+                )
+                peripheral_response.dispatch_button = DispatchButtonReq(value=True)
+            queue = Queues.queues_dict["generic_handler"]
+            print(f"peripheral response msg {peripheral_response}")
+            enqueue(queue, handle, self.handler_obj, peripheral_response, ttl=1)
+
     def act_on_sherpa_events(self):
         simulated_trip_legs = []
         active_threads = {}
@@ -498,6 +517,8 @@ class FleetSimulator:
                 for sherpa in sherpas:
                     dbsession.session.refresh(sherpa)
                     trip_leg = dbsession.get_trip_leg(sherpa.name)
+                    ongoing_trip: OngoingTrip = dbsession.get_ongoing_trip(sherpa.name)
+                    # self.simulate_peripherals(ongoing_trip)
                     if trip_leg:
                         if trip_leg.id not in simulated_trip_legs:
                             print(
