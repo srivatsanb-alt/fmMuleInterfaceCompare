@@ -498,7 +498,10 @@ class FleetSimulator:
             states, sherpa_name = ongoing_trip.states, ongoing_trip.sherpa_name
             peripheral_response = SherpaPeripheralsReq(timestamp=time.time())
             peripheral_response.source = sherpa_name
-            if tm.TripState.WAITING_STATION_DISPATCH_START in states:
+            if (
+                tm.TripState.WAITING_STATION_DISPATCH_START in states
+                and tm.TripState.WAITING_STATION_DISPATCH_END not in states
+            ):
                 print(
                     f"Sherpa {sherpa_name} - trip_id {ongoing_trip.trip_id}, leg {ongoing_trip.trip_leg_id} is waiting for dispacth"
                 )
