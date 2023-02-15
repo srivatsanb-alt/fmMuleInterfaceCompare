@@ -160,5 +160,9 @@ if __name__ == "__main__":
         create_dummy_queue = Queue("plugin_summon_button", connection=redis_conn)
         Process(target=start_worker, args=("plugin_summon_button",)).start()
         summon_logger.info("started a worker for plugin_summon_button")
+        from summon_button.summon_utils import send_job_updates_summon
+
+        Process(target=send_job_updates_summon,args=[]).start()
+        summon_logger.info("Sending periodic job updates")
 
     redis_conn.set("plugins_workers_db_init", json.dumps(True))
