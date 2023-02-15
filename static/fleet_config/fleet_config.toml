@@ -25,6 +25,7 @@ book_trips=false
 visa_handling=false
 speedup_factor=1.0
 average_velocity=0.8
+pause_at_station=10.0
 
 [fleet]
 mode="default"
