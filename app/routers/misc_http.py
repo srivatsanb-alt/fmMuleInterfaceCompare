@@ -1,13 +1,14 @@
+import os
+from fastapi import APIRouter, Depends
+
+from utils.util import get_table_as_dict
+import models.request_models as rqm
+import models.fleet_models as fm
+from models.db_session import DBSession
 from app.routers.dependencies import (
     get_user_from_header,
     raise_error,
 )
-from models.request_models import MasterDataInfo, RoutePreview
-from models.fleet_models import SherpaEvent, Sherpa, SherpaStatus
-from fastapi import APIRouter, Depends
-from utils.util import get_table_as_dict
-from models.db_session import DBSession
-import os
 
 router = APIRouter(responses={404: {"description": "Not found"}}, prefix="/api/v1")
 
@@ -32,11 +33,13 @@ async def site_info(user_name=Depends(get_user_from_header)):
 
     return response
 
-#returns info about all the sherpas, stations and their corresponding status(initialized, inducted, disabled, idle, etc.).
+
+# returns info about all the sherpas, stations and their corresponding status(initialized, inducted, disabled, idle, etc.).
+
 
 @router.post("/master_data/fleet")
 async def master_data(
-    master_data_info: MasterDataInfo, user_name=Depends(get_user_from_header)
+    master_data_info: rqm.MasterDataInfo, user_name=Depends(get_user_from_header)
 ):
 
     if not user_name:
@@ -89,7 +92,9 @@ async def master_data(
 
     return response
 
-#returns sherpa, the fleet it belongs to and its status.
+
+# returns sherpa, the fleet it belongs to and its status.
+
 
 @router.get("/sherpa_summary/{sherpa_name}/{viewable}")
 async def sherpa_summary(
@@ -103,23 +108,27 @@ async def sherpa_summary(
         recent_events = session.get_sherpa_events(sherpa_name)
         result = []
         for recent_event in recent_events:
-            temp = get_table_as_dict(SherpaEvent, recent_event)
+            temp = get_table_as_dict(fm.SherpaEvent, recent_event)
             result.append(temp)
 
         response.update({"recent_events": {"events": result}})
-        sherpa: Sherpa = session.get_sherpa(sherpa_name)
-        response.update({"sherpa": get_table_as_dict(Sherpa, sherpa)})
+        sherpa: fm.Sherpa = session.get_sherpa(sherpa_name)
+        response.update({"sherpa": get_table_as_dict(fm.Sherpa, sherpa)})
         response.update({"fleet_name": sherpa.fleet.name})
-        sherpa_status: SherpaStatus = session.get_sherpa_status(sherpa_name)
-        response.update({"sherpa_status": get_table_as_dict(SherpaStatus, sherpa_status)})
+        sherpa_status: fm.SherpaStatus = session.get_sherpa_status(sherpa_name)
+        response.update(
+            {"sherpa_status": get_table_as_dict(fm.SherpaStatus, sherpa_status)}
+        )
 
     return response
 
-#gets the route(sequence of stations) for a trip
+
+# gets the route(sequence of stations) for a trip
+
 
 @router.post("/trips/get_route_wps")
 async def get_route_wps(
-    route_preview_req: RoutePreview,
+    route_preview_req: rqm.RoutePreview,
     user_name=Depends(get_user_from_header),
 ):
     if not user_name:
@@ -133,4 +142,3 @@ async def get_route_wps(
             stations_poses.append(station.pose)
 
     return {}
-

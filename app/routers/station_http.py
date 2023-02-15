@@ -1,11 +1,12 @@
+from fastapi import APIRouter, Depends
+
+import models.fleet_models as fm
+from models.base_models import StationProperties
+from models.db_session import DBSession
 from app.routers.dependencies import (
     get_user_from_header,
     raise_error,
 )
-from models.fleet_models import StationStatus
-from models.base_models import StationProperties
-from fastapi import APIRouter, Depends
-from models.db_session import DBSession
 
 
 router = APIRouter(
@@ -15,7 +16,8 @@ router = APIRouter(
     responses={404: {"description": "Not found"}},
 )
 
-#FM gets station info
+
+# FM gets station info
 @router.get("/{entity_name}/info")
 async def get_station_info(entity_name: str, user_name=Depends(get_user_from_header)):
     response = {}
@@ -27,7 +29,7 @@ async def get_station_info(entity_name: str, user_name=Depends(get_user_from_hea
         raise_error("No entity name")
 
     with DBSession() as dbsession:
-        station_status: StationStatus = dbsession.get_station_status(entity_name)
+        station_status: fm.StationStatus = dbsession.get_station_status(entity_name)
         if not station_status:
             raise_error("Bad station name")
 

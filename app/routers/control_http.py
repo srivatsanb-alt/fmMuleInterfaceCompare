@@ -3,28 +3,16 @@ import redis
 import os
 import json
 from typing import Union
+from core.constants import FleetStatus, DisabledReason
+from utils.comms import get_sherpa_url
+from fastapi import APIRouter, Depends
+from models.db_session import DBSession
+import models.request_models as rqm
+import models.fleet_models as fm
 from app.routers.dependencies import (
     get_user_from_header,
     process_req_with_response,
     raise_error,
-)
-from core.constants import FleetStatus, DisabledReason
-from models.fleet_models import Fleet, SherpaStatus
-from utils.comms import get_sherpa_url
-from fastapi import APIRouter, Depends
-from models.db_session import DBSession
-from models.request_models import (
-    PauseResumeReq,
-    SwitchModeReq,
-    DiagnosticsReq,
-    ResetPoseReq,
-    PauseResumeCtrlReq,
-    SwitchModeCtrlReq,
-    ResetPoseCtrlReq,
-    StartStopCtrlReq,
-    SherpaInductReq,
-    DeleteVisaAssignments,
-    SherpaImgUpdateCtrlReq,
 )
 
 
@@ -45,7 +33,7 @@ async def clear_all_visa_assignments(user_name=Depends(get_user_from_header)):
     if not user_name:
         raise_error("Unknown requester", 401)
 
-    delete_visas_req = DeleteVisaAssignments()
+    delete_visas_req = rqm.DeleteVisaAssignments()
     response = process_req_with_response(None, delete_visas_req, user_name)
 
     return response
@@ -74,7 +62,7 @@ async def diagnostics(
         if not sherpa_status.sherpa.ip_address:
             raise_error("Sherpa not yet connected to the fleet manager")
 
-        diagnostics_req = DiagnosticsReq(sherpa_name=entity_name)
+        diagnostics_req = rqm.DiagnosticsReq(sherpa_name=entity_name)
         base_url, verify = get_sherpa_url(sherpa_status.sherpa)
         url = f"{base_url}/{diagnostics_req.endpoint}"
         response = requests.get(url, verify=verify)
@@ -145,18 +133,16 @@ async def update_sherpa_img(
         if not sherpa_status.sherpa.ip_address:
             raise_error("Sherpa not yet connected to the fleet manager")
 
-        update_image_req = SherpaImgUpdateCtrlReq(sherpa_name=entity_name)
+        update_image_req = rqm.SherpaImgUpdateCtrlReq(sherpa_name=entity_name)
         _ = process_req_with_response(None, update_image_req, user_name)
 
     return response
 
 
 # starts or stops the fleet
-
-
 @router.post("/fleet/{entity_name}/start_stop")
 async def start_stop(
-    start_stop_ctrl_req: StartStopCtrlReq,
+    start_stop_ctrl_req: rqm.StartStopCtrlReq,
     entity_name=Union[str, None],
     user_name=Depends(get_user_from_header),
 ):
@@ -170,7 +156,7 @@ async def start_stop(
         raise_error(detail="No entity name")
 
     with DBSession() as dbsession:
-        fleet: Fleet = dbsession.get_fleet(entity_name)
+        fleet: fm.Fleet = dbsession.get_fleet(entity_name)
         if not fleet:
             raise_error("Fleet not found")
 
@@ -182,11 +168,9 @@ async def start_stop(
 
 
 # to emergency stop the fleet
-
-
 @router.post("/fleet/{entity_name}/emergency_stop")
 async def emergency_stop(
-    pause_resume_ctrl_req: PauseResumeCtrlReq,
+    pause_resume_ctrl_req: rqm.PauseResumeCtrlReq,
     entity_name=Union[str, None],
     user_name=Depends(get_user_from_header),
 ):
@@ -200,7 +184,7 @@ async def emergency_stop(
         raise_error("No entity name")
 
     with DBSession() as dbsession:
-        fleet: Fleet = dbsession.get_fleet(entity_name)
+        fleet: fm.Fleet = dbsession.get_fleet(entity_name)
         if not fleet:
             raise_error("Fleet not found")
 
@@ -217,7 +201,7 @@ async def emergency_stop(
             else:
                 sherpa_status.disabled_reason = None
 
-            pause_resume_req = PauseResumeReq(
+            pause_resume_req = rqm.PauseResumeReq(
                 pause=pause_resume_ctrl_req.pause, sherpa_name=sherpa_status.sherpa_name
             )
 
@@ -234,7 +218,7 @@ async def emergency_stop(
 
 @router.post("/sherpa/{entity_name}/emergency_stop")
 async def sherpa_emergency_stop(
-    pause_resume_ctrl_req: PauseResumeCtrlReq,
+    pause_resume_ctrl_req: rqm.PauseResumeCtrlReq,
     entity_name: str,
     user_name=Depends(get_user_from_header),
 ):
@@ -248,7 +232,7 @@ async def sherpa_emergency_stop(
         raise_error("No entity name")
 
     with DBSession() as dbsession:
-        sherpa_status: SherpaStatus = dbsession.get_sherpa_status(entity_name)
+        sherpa_status: fm.SherpaStatus = dbsession.get_sherpa_status(entity_name)
         if not sherpa_status:
             raise_error("Bad sherpa name")
 
@@ -267,7 +251,7 @@ async def sherpa_emergency_stop(
         else:
             sherpa_status.disabled_reason = None
 
-        pause_resume_req = PauseResumeReq(
+        pause_resume_req = rqm.PauseResumeReq(
             pause=pause_resume_ctrl_req.pause, sherpa_name=entity_name
         )
 
@@ -281,7 +265,7 @@ async def sherpa_emergency_stop(
 
 @router.post("/sherpa/{entity_name}/switch_mode")
 async def switch_mode(
-    switch_mode_ctrl_req: SwitchModeCtrlReq,
+    switch_mode_ctrl_req: rqm.SwitchModeCtrlReq,
     entity_name=Union[str, None],
     user_name=Depends(get_user_from_header),
 ):
@@ -303,7 +287,7 @@ async def switch_mode(
         if not sherpa_status.sherpa.ip_address:
             raise_error("Sherpa not yet connected to the fleet manager")
 
-        switch_mode_req = SwitchModeReq(
+        switch_mode_req = rqm.SwitchModeReq(
             mode=switch_mode_ctrl_req.mode, sherpa_name=entity_name
         )
 
@@ -317,7 +301,7 @@ async def switch_mode(
 
 @router.post("/sherpa/{entity_name}/recovery")
 async def reset_pose(
-    reset_pose_ctrl_req: ResetPoseCtrlReq,
+    reset_pose_ctrl_req: rqm.ResetPoseCtrlReq,
     entity_name=Union[str, None],
     user_name=Depends(get_user_from_header),
 ):
@@ -346,7 +330,7 @@ async def reset_pose(
         if not station:
             raise_error("Bad fleet staion detail")
 
-        reset_pose_req = ResetPoseReq(
+        reset_pose_req = rqm.ResetPoseReq(
             pose=station.pose,
             sherpa_name=entity_name,
         )
@@ -363,7 +347,7 @@ async def reset_pose(
 @router.post("/sherpa/{sherpa_name}/induct")
 async def induct_sherpa(
     sherpa_name: str,
-    sherpa_induct_req: SherpaInductReq,
+    sherpa_induct_req: rqm.SherpaInductReq,
     user_name=Depends(get_user_from_header),
 ):
     respone = {}

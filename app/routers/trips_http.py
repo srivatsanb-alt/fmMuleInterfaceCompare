@@ -7,14 +7,7 @@ from app.routers.dependencies import (
     process_req_with_response,
     raise_error,
 )
-from models.request_models import (
-    BookingReq,
-    TripStatusReq,
-    DeleteOngoingTripReq,
-    DeleteBookedTripReq,
-    DeleteOptimalDispatchAssignments,
-    TripMetaData,
-)
+import models.request_models as rqm
 from models.trip_models import Trip, TripAnalytics
 from models.db_session import DBSession
 from utils.util import str_to_dt
@@ -27,11 +20,12 @@ router = APIRouter(
     responses={404: {"description": "Not found"}},
 )
 
-#to book, delete ongoing and pending trips, clear optimal dispatch assignments, 
-#posts trip status on the FM and also does trip analysis.
+# to book, delete ongoing and pending trips, clear optimal dispatch assignments,
+# posts trip status on the FM and also does trip analysis.
+
 
 @router.post("/book")
-async def book(booking_req: BookingReq, user_name=Depends(get_user_from_header)):
+async def book(booking_req: rqm.BookingReq, user_name=Depends(get_user_from_header)):
     response = process_req_with_response(None, booking_req, user_name)
     return response
 
@@ -46,7 +40,7 @@ async def delete_ongoing_trip(booking_id: int, user_name=Depends(get_user_from_h
         if not trips:
             raise_error("no trip with the given booking_id")
 
-    delete_ongoing_trip_req: DeleteOngoingTripReq = DeleteOngoingTripReq(
+    delete_ongoing_trip_req: rqm.DeleteOngoingTripReq = rqm.DeleteOngoingTripReq(
         booking_id=booking_id
     )
     response = process_req_with_response(None, delete_ongoing_trip_req, user_name)
@@ -67,13 +61,17 @@ async def delete_pending_trip(booking_id: int, user_name=Depends(get_user_from_h
         if not trips:
             raise_error("no trip with the given booking_id")
 
-    delete_booked_trip_req: DeleteBookedTripReq = DeleteBookedTripReq(booking_id=booking_id)
+    delete_booked_trip_req: rqm.DeleteBookedTripReq = rqm.DeleteBookedTripReq(
+        booking_id=booking_id
+    )
     response = process_req_with_response(None, delete_booked_trip_req, user_name)
 
     return response
 
-#based on the trip bookings, optimal dispatch assigns the tasks to various sherpas optimally. 
-#deletes all the assignments done to the sherpas.
+
+# based on the trip bookings, optimal dispatch assigns the tasks to various sherpas optimally.
+# deletes all the assignments done to the sherpas.
+
 
 @router.get("/booking/{entity_name}/clear_optimal_dispatch_assignments")
 async def clear_optimal_dispatch_assignments(
@@ -88,7 +86,7 @@ async def clear_optimal_dispatch_assignments(
     if not entity_name:
         raise_error("No entity name")
 
-    delete_optimal_dispatch_assignments_req = DeleteOptimalDispatchAssignments(
+    delete_optimal_dispatch_assignments_req = rqm.DeleteOptimalDispatchAssignments(
         fleet_name=entity_name
     )
 
@@ -98,11 +96,13 @@ async def clear_optimal_dispatch_assignments(
 
     return response
 
-#returns trip status, i.e. the time slot of the trip booking and the trip status with timestamp.
+
+# returns trip status, i.e. the time slot of the trip booking and the trip status with timestamp.
+
 
 @router.post("/status")
 async def trip_status(
-    trip_status_req: TripStatusReq, user_name=Depends(get_user_from_header)
+    trip_status_req: rqm.TripStatusReq, user_name=Depends(get_user_from_header)
 ):
     response = {}
 
@@ -129,7 +129,9 @@ async def trip_status(
 
     return response
 
-#returns ongoing trip status.
+
+# returns ongoing trip status.
+
 
 @router.get("/ongoing_trip_status")
 async def ongoing_trip_status(user_name=Depends(get_user_from_header)):
@@ -144,12 +146,14 @@ async def ongoing_trip_status(user_name=Depends(get_user_from_header)):
 
     return response
 
-#returns the complete analysis of the trip as in when it started, when it ended, when was it supposed to end
-#performs analysis for every trip leg and also for the overall trip.
+
+# returns the complete analysis of the trip as in when it started, when it ended, when was it supposed to end
+# performs analysis for every trip leg and also for the overall trip.
+
 
 @router.post("/analytics")
 async def trip_analytics(
-    trip_analytics_req: TripStatusReq, user_name=Depends(get_user_from_header)
+    trip_analytics_req: rqm.TripStatusReq, user_name=Depends(get_user_from_header)
 ):
 
     response = {}
@@ -181,7 +185,9 @@ async def trip_analytics(
 
 @router.post("/{trip_id}/add_trip_metadata")
 async def add_trip_metadata(
-    trip_id: int, new_trip_metadata: TripMetaData, user_name=Depends(get_user_from_header)
+    trip_id: int,
+    new_trip_metadata: rqm.TripMetaData,
+    user_name=Depends(get_user_from_header),
 ):
 
     response = {}

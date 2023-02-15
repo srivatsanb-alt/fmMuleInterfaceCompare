@@ -1,12 +1,13 @@
 import os
 import logging
 from fastapi import APIRouter, Depends
-from models.request_models import AddEditSherpaReq, AddFleetReq
-from models.frontend_models import FrontendUser
-from models.db_session import DBSession
+
 from utils import fleet_utils as fu
+from models.db_session import DBSession
+from models.frontend_models import FrontendUser
 import models.fleet_models as fm
 import models.misc_models as mm
+import models.request_models as rqm
 from app.routers.dependencies import (
     get_user_from_header,
     raise_error,
@@ -52,7 +53,7 @@ def get_all_sherpa_info(user_name=Depends(get_user_from_header)):
 
 @router.post("/add_edit_sherpa/{sherpa_name}")
 def add_edit_sherpa(
-    add_edit_sherpa: AddEditSherpaReq,
+    add_edit_sherpa: rqm.AddEditSherpaReq,
     sherpa_name: str,
     user_name=Depends(get_user_from_header),
 ):
@@ -144,7 +145,7 @@ def get_all_fleet_info(user_name=Depends(get_user_from_header)):
 
 @router.post("/add_edit_fleet/{fleet_name}")
 def add_fleet(
-    add_fleet_req: AddFleetReq,
+    add_fleet_req: rqm.AddFleetReq,
     fleet_name: str,
     user_name=Depends(get_user_from_header),
 ):
