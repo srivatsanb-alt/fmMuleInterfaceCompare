@@ -189,7 +189,9 @@ class FleetSimulator:
         self.visas_held = {}
         self.visa_needed = {}
         self.visa_handling = {}
-        self.sim_speedup_factor = self.simulator_config.get("speedup_factor", 1)
+        print(f"simulator config {self.simulator_config}")
+        self.pause_at_station = self.simulator_config.get("pause_at_station", 10.0)
+        self.sim_speedup_factor = self.simulator_config.get("speedup_factor", 1.0)
         self.avg_velocity = self.simulator_config.get("average_velocity", 0.8)
         self.initialize_sherpas_at = self.simulator_config.get("initialize_sherpas_at")
         for fleet_name in self.fleet_names:
@@ -200,7 +202,7 @@ class FleetSimulator:
                 self.visa_handling[fleet_name] = self.simulator_config["visa_handling"]
             except:
                 self.visa_handling[fleet_name] = False
-            print(f"Exclusion zones... {self.exclusion_zones}")
+            print(f"Visa handling {self.visa_handling} Exclusion zones... {self.exclusion_zones}")
             self.router_modules.update({fleet_name: RouterModule(map_path)})
 
     def initialize_sherpas(self):
@@ -220,16 +222,18 @@ class FleetSimulator:
                 for sherpa in sherpas:
                     station_fleet_name = None
                     station_name = self.initialize_sherpas_at.get(sherpa.name)
+                    print(f"Initializing sherpa {sherpa.name} station_name {station_name}")
                     try:
                         st = dbsession.get_station(station_name)
                     except:
                         st = None
                     station_fleet_name = st.fleet.name if st else None
+                    print(f"sherpa fleet {sherpa.fleet.name} station_fleet_name {station_fleet_name}")
                     while sherpa.fleet.name != station_fleet_name:
                         i = np.random.randint(0, len(stations))
                         station_fleet_name = stations[i].fleet.name
                         st = stations[i]
-
+                        print("Randomizing the start station")
                     self.send_sherpa_status(sherpa.name, mode="fleet", pose=st.pose)
 
     def book_trip(self, route, freq):
@@ -334,7 +338,7 @@ class FleetSimulator:
             steps = 1000
             sleep_time = self.sim_speedup_factor
             print(
-                f"{sherpa.name}, trip_leg_id: {ongoing_trip.trip_leg_id} sleep time {sleep_time}"
+                f"{sherpa.name}, trip_leg_id: {ongoing_trip.trip_leg_id} Pause_at_station: {self.pause_at_station}"
             )
             i = 0
             blocked_for_visa = False
@@ -360,6 +364,7 @@ class FleetSimulator:
                     i += steps
                     blocked_for_visa = False
                 else:
+                    print(f"Sherpa {sherpa_name} is waiting for a visa")
                     stoppage_type = "Waiting for visa"
                     blocked_for_visa = True
                 # obst_random = np.random.rand(1)[0]
@@ -390,8 +395,9 @@ class FleetSimulator:
                     else:
                         visa_params = check_visa_needed(ez, curr_pose)
                         print(f"Is Visa needed? {visa_params}")
-                        if visa_params is not None:
+                        if visa_params is not None: 
                             self.visa_needed[sherpa_name] = visa_params[0]
+                        if len(self.visa_needed[sherpa_name]) > 0:
                             print(
                                 f"Visa for zone: {self.visa_needed[sherpa_name]}, needed for {sherpa_name}"
                             )
@@ -463,6 +469,7 @@ class FleetSimulator:
             self.send_sherpa_status(sherpa.name, mode="fleet", pose=dest_pose)
             self.send_reached_msg(sherpa_name)
             print(f"ending trip leg {from_station}, {to_station}")
+            time.sleep(self.pause_at_station)
 
     def send_reached_msg(self, sherpa_name):
         queue = Queues.queues_dict["generic_handler"]
