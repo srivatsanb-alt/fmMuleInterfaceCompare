@@ -1123,7 +1123,7 @@ class Handlers:
 
         if reset_fleet:
             update_map_msg = f"Map files of fleet: {fleet_name} has been modified, please update the map by pressing the update_map button on the webpage header!"
-            self.session.add_notification(
+            self.dbsession.add_notification(
                 [fleet_name, sherpa.name],
                 update_map_msg,
                 mm.NotificationLevels.alert,
