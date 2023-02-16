@@ -493,15 +493,15 @@ class FleetSimulator:
             print(f"will send a reached msg for {sherpa_name}, {reached_req}")
             enqueue(queue, handle, self.handler_obj, reached_req, ttl=1)
 
+    def response_is_needed(self, waiting_start, waiting_end, states):
+        return (waiting_start in states and waiting_end not in states)
+
     def simulate_peripherals(self, ongoing_trip):
         if ongoing_trip:
             states, sherpa_name = ongoing_trip.states, ongoing_trip.sherpa_name
             peripheral_response = SherpaPeripheralsReq(timestamp=time.time())
             peripheral_response.source = sherpa_name
-            if (
-                tm.TripState.WAITING_STATION_DISPATCH_START in states
-                and tm.TripState.WAITING_STATION_DISPATCH_END not in states
-            ):
+            if self.response_is_needed(tm.TripState.WAITING_STATION_DISPATCH_START, tm.TripState.WAITING_STATION_DISPATCH_END, states):
                 print(
                     f"Sherpa {sherpa_name} - trip_id {ongoing_trip.trip_id}, leg {ongoing_trip.trip_leg_id} is waiting for dispacth"
                 )
