@@ -15,7 +15,7 @@ from models.request_models import (
 )
 from utils.router_utils import RouterModule, get_dense_path
 from models.trip_models import OngoingTrip
-import models.trip_models as tm
+from models.trip_models import TripState as ts
 from typing import List
 import sys
 import json
@@ -26,7 +26,7 @@ import redis
 import numpy as np
 from models.db_session import DBSession
 from models.fleet_models import Sherpa, Station
-from models.request_models import ReachedReq, DispatchButtonReq, SherpaPeripheralsReq
+from models.request_models import ReachedReq, DispatchButtonReq, SherpaPeripheralsReq, HitchReq, ConveyorReq, DirectionEnum
 import threading
 
 LOOKAHEAD = 5.0
@@ -494,21 +494,34 @@ class FleetSimulator:
             enqueue(queue, handle, self.handler_obj, reached_req, ttl=1)
 
     def response_is_needed(self, waiting_start, waiting_end, states):
-        return (waiting_start in states and waiting_end not in states)
+        if waiting_start in states and waiting_end not in states:
+            self.reponse_flag = True
+            return True
+        return False
 
     def simulate_peripherals(self, ongoing_trip):
+        self.reponse_flag = False
         if ongoing_trip:
             states, sherpa_name = ongoing_trip.states, ongoing_trip.sherpa_name
             peripheral_response = SherpaPeripheralsReq(timestamp=time.time())
             peripheral_response.source = sherpa_name
-            if self.response_is_needed(tm.TripState.WAITING_STATION_DISPATCH_START, tm.TripState.WAITING_STATION_DISPATCH_END, states):
-                print(
-                    f"Sherpa {sherpa_name} - trip_id {ongoing_trip.trip_id}, leg {ongoing_trip.trip_leg_id} is waiting for dispacth"
-                )
+            # check is trip state requires a peripherals response from sherpa
+            if self.response_is_needed(ts.WAITING_STATION_DISPATCH_START, ts.WAITING_STATION_DISPATCH_END, states):
                 peripheral_response.dispatch_button = DispatchButtonReq(value=True)
-            queue = Queues.queues_dict["generic_handler"]
-            print(f"peripheral response msg {peripheral_response}")
-            enqueue(queue, handle, self.handler_obj, peripheral_response, ttl=1)
+            if self.response_is_needed(ts.WAITING_STATION_AUTO_UNHITCH_START, ts.WAITING_STATION_AUTO_UNHITCH_END, states):
+                peripheral_response.auto_hitch = HitchReq(hitch=False)
+            if self.response_is_needed(ts.WAITING_STATION_AUTO_HITCH_START, ts.WAITING_STATION_AUTO_HITCH_END, states):
+                peripheral_response.auto_hitch = HitchReq(hitch=True)
+            if self.response_is_needed(ts.WAITING_STATION_CONV_RECEIVE_START, ts.WAITING_STATION_CONV_RECEIVE_END, states):
+                num_units = ongoing_trip.trip.metadata.get("num_units")
+                peripheral_response.conveyor = ConveyorReq(direction=DirectionEnum.receive, num_units=0)
+            if self.response_is_needed(ts.WAITING_STATION_CONV_SEND_START, ts.WAITING_STATION_CONV_SEND_END, states):
+                num_units = ongoing_trip.trip.metadata.get("num_units")
+                peripheral_response.conveyor = ConveyorReq(direction=DirectionEnum.send, num_units=num_units)
+            if self.reponse_flag:
+                print(f"Sherpa {sherpa_name} - trip_id {ongoing_trip.trip_id}, leg {ongoing_trip.trip_leg_id} sent a peripheral msg {peripheral_response}")
+                queue = Queues.queues_dict["generic_handler"]
+                enqueue(queue, handle, self.handler_obj, peripheral_response, ttl=1)
 
     def act_on_sherpa_events(self):
         simulated_trip_legs = []
