@@ -154,14 +154,15 @@ def send_job_updates():
 
 
 def maybe_combine_and_book_trips(fleet_data):
-    logger.info(f"fleet_data: {fleet_data}")
+    logging.info(f"fleet_data: {fleet_data}")
     if "sherpa_status" in fleet_data.keys():
         for sherpa in fleet_data["sherpa_status"]:
-            sherpa_idle_status = fleet_data["sherpa_status"][sherpa]["idle"]
-            logger.info(f"Sherpa status: {sherpa_idle_status}, sherpa: {sherpa}")
+            is_sherpa_idle = fleet_data["sherpa_status"][sherpa]["idle"]
             is_sherpa_inducted = fleet_data["sherpa_status"][sherpa]["inducted"]
-            logger.info(f"Sherpa status: {is_sherpa_inducted}, sherpa: {sherpa}")
-            if sherpa_idle_status is True and is_sherpa_inducted is True:
+            logger.info(f"is {sherpa} idle and inducted: {is_sherpa_inducted and is_sherpa_idle}")
+            data_created_at = fleet_data["sherpa_status"][sherpa]["created_at"]
+            logger.info(f"data created at: {data_created_at}")
+            if is_sherpa_idle is True and is_sherpa_inducted is True:
                 combine_and_book_trip()
                 break
     return
