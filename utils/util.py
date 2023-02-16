@@ -8,7 +8,7 @@ import os
 
 
 TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
-IES_TIME_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
+IES_TIME_FORMAT = "%Y-%m-%dT%H:%M:%-SZ"
 
 
 def get_mule_config():
