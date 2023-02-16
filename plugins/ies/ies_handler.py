@@ -198,10 +198,10 @@ class IES_HANDLER:
         job_query = JobQuery.from_dict(msg)
         tz = os.getenv("PGTZ")
         # enforcing UTC time zone info here (+0000), need to check Bosch's msg format!
-        trips_from = str_to_dt_UTC(job_query.since + " +0000").astimezone(
+        trips_from = str_to_dt_UTC(job_query.since[:-2] + " +0000").astimezone(
             pytz.timezone(tz)
         )  # conv str to dt
-        trips_till = str_to_dt_UTC(job_query.until + " +0000").astimezone(
+        trips_till = str_to_dt_UTC(job_query.until[:-2] + " +0000").astimezone(
             pytz.timezone(tz)
         )  # UTC time to local time
 
