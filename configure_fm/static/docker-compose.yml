@@ -1,0 +1,8 @@
+version: "3.0"
+services:
+  configure_fm:
+    image: configure_fm:dev
+    container_name: configure_fm
+    restart: always
+    build: .
+    network_mode: host
