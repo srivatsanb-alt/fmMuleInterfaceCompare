@@ -19,7 +19,7 @@ from .ies_utils import (
     remove_from_pending_jobs_db,
     add_to_ongoing_trips_db,
     session,
-    get_end_station
+    get_end_station,
 )
 from plugins.plugin_comms import send_req_to_FM
 from models.trip_models import TripStatus
@@ -117,8 +117,14 @@ def send_job_updates():
                         # updating IES DB with the latest state as given by FM
                         trip.status = trip_status_from_FM
                         send_msg_to_ies(msg_to_ies)
-                        if trip_status_from_FM in [TripStatus.SUCCEEDED, TripStatus.FAILED, TripStatus.CANCELLED]:
-                            ongoing_trips_data = read_dict_var_from_redis_db(redis_db, "ongoing_trips")
+                        if trip_status_from_FM in [
+                            TripStatus.SUCCEEDED,
+                            TripStatus.FAILED,
+                            TripStatus.CANCELLED,
+                        ]:
+                            ongoing_trips_data = read_dict_var_from_redis_db(
+                                redis_db, "ongoing_trips"
+                            )
                             if ongoing_trips_data:
                                 booked_ext_ref_ids = ongoing_trips_data[trip_id]["ref_ids"]
                                 logger.info("sending status msgs to combined trips")
@@ -148,7 +154,7 @@ def send_job_updates():
 
 
 def maybe_combine_and_book_trips(fleet_data):
-    # logger.info(f"fleet_data: {fleet_data}")
+    logger.info(f"fleet_data: {fleet_data}")
     if "sherpa_status" in fleet_data.keys():
         for sherpa in fleet_data["sherpa_status"]:
             sherpa_status = fleet_data["sherpa_status"][sherpa]["idle"]
@@ -164,13 +170,18 @@ def combine_and_book_trip():
     logger.info(f"pending_trips: {pending_trips}")
     dest_stations_data = []
     try:
-        logger.info(f"pending_trip ids: {list(pending_trips.keys())[:36]}")  # MAKE IT A CONFIG
+        logger.info(
+            f"pending_trip ids: {list(pending_trips.keys())[:36]}"
+        )  # MAKE IT A CONFIG
     except Exception as e:
         logger.info(f"error: {e}")
     for ref_id in list(pending_trips.keys())[:36]:
-        dest_stations_data.append([
-            get_ati_station_details(task["LocationId"])
-            for task in pending_trips[ref_id]["taskList"]])
+        dest_stations_data.append(
+            [
+                get_ati_station_details(task["LocationId"])
+                for task in pending_trips[ref_id]["taskList"]
+            ]
+        )
     raw_dest_stations_data = dest_stations_data
     logger.info(f"before flatten: {dest_stations_data}")
     dest_stations_data = _flatten_list(dest_stations_data)
@@ -209,11 +220,13 @@ def combine_and_book_trip():
                 logger.info("adding combined trip to DB")
                 session.add(trip)
                 session.commit()
-            
-            #add ongoing trips to redis
+
+            # add ongoing trips to redis
             destination_stations = [task[1][0] for task in raw_dest_stations_data]
             logger.info(f"destination_stations: {destination_stations}")
-            add_to_ongoing_trips_db(redis_db, trip_id, booked_ext_ref_ids, destination_stations)
+            add_to_ongoing_trips_db(
+                redis_db, trip_id, booked_ext_ref_ids, destination_stations
+            )
             logger.info("added ongoing trip info to redis")
 
             for ext_ref_id in booked_ext_ref_ids:
@@ -221,10 +234,14 @@ def combine_and_book_trip():
         else:
             for ext_ref_id in booked_ext_ref_ids:
                 msg_to_ies = _get_msg_to_ies(ext_ref_id, "CANCELLED", None)
-                msg_to_ies.update({"errorMessage": f"unable to combine trips for {ext_ref_id}"})
+                msg_to_ies.update(
+                    {"errorMessage": f"unable to combine trips for {ext_ref_id}"}
+                )
                 logger.info(f"req to FM failed, response code: {status_code}")
                 send_msg_to_ies(msg_to_ies)
-                logger.info("deleting redis pending jobs because combined trip FM req. failed")
+                logger.info(
+                    "deleting redis pending jobs because combined trip FM req. failed"
+                )
                 redis_db.delete("pending jobs")
         return
 
@@ -322,4 +339,4 @@ def _flatten_list(ip_list):
 
 
 def _remove_duplicates(list):
-    return [val for idx, val in enumerate(list) if idx == 0 or val != list[idx-1]]
+    return [val for idx, val in enumerate(list) if idx == 0 or val != list[idx - 1]]
