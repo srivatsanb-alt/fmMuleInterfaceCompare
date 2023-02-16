@@ -157,9 +157,11 @@ def maybe_combine_and_book_trips(fleet_data):
     logger.info(f"fleet_data: {fleet_data}")
     if "sherpa_status" in fleet_data.keys():
         for sherpa in fleet_data["sherpa_status"]:
-            sherpa_status = fleet_data["sherpa_status"][sherpa]["idle"]
-            logger.info(f"Sherpa status: {sherpa_status}, sherpa: {sherpa}")
-            if sherpa_status is True:
+            sherpa_idle_status = fleet_data["sherpa_status"][sherpa]["idle"]
+            logger.info(f"Sherpa status: {sherpa_idle_status}, sherpa: {sherpa}")
+            is_sherpa_inducted = fleet_data["sherpa_status"][sherpa]["inducted"]
+            logger.info(f"Sherpa status: {is_sherpa_inducted}, sherpa: {sherpa}")
+            if sherpa_idle_status is True and is_sherpa_inducted is True:
                 combine_and_book_trip()
                 break
     return
