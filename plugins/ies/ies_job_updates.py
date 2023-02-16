@@ -140,7 +140,7 @@ def send_job_updates():
                                 redis_db.delete("ongoing_jobs")
                                 logger.info("deleted ongoing trips from redis")
                             else:
-                                raise ValueError("no ongoing trip data in redis")
+                                logger.info("no ongoing trip data in redis")
 
                     elif trip.status == TripStatus.EN_ROUTE:
                         logger.info(
