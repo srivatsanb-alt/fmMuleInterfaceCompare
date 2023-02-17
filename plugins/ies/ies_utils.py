@@ -37,6 +37,12 @@ locationID_station_mapper_path = os.path.join(
 with open(locationID_station_mapper_path, "r") as f:
     locationID_station_mapping = json.load(f)
 
+ies_metadata_path = os.path.join(
+    os.getenv("FM_MAP_DIR"), "plugin_ies", "ies_metadata.json"
+)
+with open(ies_metadata_path, "r") as f:
+    ies_metadata = json.load(f)
+
 
 def get_locationID_station_mapping():
     return locationID_station_mapping
@@ -60,9 +66,15 @@ def get_ati_station_details(bosch_station_name):
 
 def get_end_station(line_name):
     if line_name.lower() == "ecfa":
-        key = "ECFA_end_station"
-    end_station = locationID_station_mapping["metadata"][key]
+        line = "ecfa_line"
+    end_station = ies_metadata[line]["end_station"]
     return end_station
+
+def get_sherpas_on_line(line_name):
+    if line_name.lower() == "ecfa":
+        line = "ecfa_line"
+    sherpas = ies_metadata[line]["sherpas"]
+    return sherpas
 
 
 def remove_from_pending_jobs_db(redis_db, ext_ref_id):

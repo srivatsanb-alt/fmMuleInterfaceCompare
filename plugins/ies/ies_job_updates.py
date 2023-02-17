@@ -20,6 +20,7 @@ from .ies_utils import (
     add_to_ongoing_trips_db,
     session,
     get_end_station,
+    get_sherpas_on_line
 )
 from plugins.plugin_comms import send_req_to_FM
 from models.trip_models import TripStatus
@@ -155,13 +156,16 @@ def send_job_updates():
 
 def maybe_combine_and_book_trips(fleet_data):
     logging.info(f"fleet_data: {fleet_data}")
+    ecfa_sherpas_list = get_sherpas_on_line("ecfa")
     if "sherpa_status" in fleet_data.keys():
-        for sherpa in fleet_data["sherpa_status"]:
+        for sherpa in ecfa_sherpas_list:
             is_sherpa_idle = fleet_data["sherpa_status"][sherpa]["idle"]
             is_sherpa_inducted = fleet_data["sherpa_status"][sherpa]["inducted"]
             logger.info(f"is {sherpa} idle and inducted: {is_sherpa_inducted and is_sherpa_idle}")
             data_created_at = fleet_data["sherpa_status"][sherpa]["created_at"]
-            logger.info(f"data created at: {data_created_at}")
+            data_updated_at = fleet_data["sherpa_status"][sherpa]["updated_at"]
+            
+            logger.info(f"data created at: {data_created_at}; data updated at: {data_updated_at}")
             if is_sherpa_idle is True and is_sherpa_inducted is True:
                 combine_and_book_trip()
                 break
