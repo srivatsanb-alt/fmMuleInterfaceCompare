@@ -19,6 +19,7 @@ from models.trip_models import TripState as ts
 from typing import List
 import sys
 import json
+import random
 import os
 import uvicorn
 from multiprocessing import Process
@@ -27,6 +28,7 @@ import numpy as np
 from models.db_session import DBSession
 from models.fleet_models import Sherpa, Station
 from models.request_models import ReachedReq, DispatchButtonReq, SherpaPeripheralsReq, HitchReq, ConveyorReq, DirectionEnum
+from plugins.conveyor.conveyor_models import ToteStatus
 import threading
 
 LOOKAHEAD = 5.0
@@ -185,6 +187,7 @@ class FleetSimulator:
             self.fleet_names = dbsession.get_all_fleet_names()
         self.simulator_config = Config.get_simulator_config()
         self.should_book_trips = self.simulator_config.get("book_trips", False)
+        self.conveyor_capacity = self.simulator_config.get("conveyor_capacity", 6)
         self.router_modules = {}
         self.exclusion_zones = {}
         self.visas_held = {}
@@ -259,6 +262,32 @@ class FleetSimulator:
                 t = threading.Thread(target=self.book_trip, args=[route, freq])
                 t.daemon = True
                 t.start()
+
+    def populate_conveyor_with_totes(self, conveyor):
+        if time.time() - self.last_conveyor_update > random.randrange(30, 60):
+            num_totes_to_add = random.randrange(0, 2)
+            updated_tote_count = np.min(conveyor.num_totes+num_totes_to_add, self.conveyor_capacity)
+            print(f"Adding {num_totes_to_add} tote/s to conveyor {conveyor.name}")
+            self.last_conveyor_update = time.time()
+            msg = ToteStatus(num_totes=updated_tote_count, compact_time=0, type="tote_status", name=conveyor.name)
+            queue = Queues.queues_dict["generic_handler"]
+            enqueue(queue, handle, self.handler_obj, msg, ttl=1)
+
+    def book_conveyor_trips(self):
+        print(f"populating conveyors and booking pickups. Max capacity on conveyor = {self.conveyor_capacity} totes.")
+        with DBSession() as session:
+            while True:
+                conveyors = session.get_all_conveyors()
+                for conveyor in conveyors:
+                    session.session.refresh(conveyor)
+                    self.populate_conveyor_with_totes(conveyor)
+
+    def simulate_conveyors(self):
+        self.last_conveyor_update = 0
+        print(f"booking trips to conveyors")
+        t = threading.Thread(target=self.book_conveyor_trips)
+        t.daemon = True
+        t.start()
 
     def send_verify_fleet_files_req(self, sherpa_name):
         generic_q = Queues.queues_dict["generic_handler"]
@@ -515,6 +544,7 @@ class FleetSimulator:
             if self.response_is_needed(ts.WAITING_STATION_CONV_RECEIVE_START, ts.WAITING_STATION_CONV_RECEIVE_END, states):
                 num_units = ongoing_trip.trip.metadata.get("num_units")
                 peripheral_response.conveyor = ConveyorReq(direction=DirectionEnum.receive, num_units=0)
+                # TODO: Update tote_status msg for corresponding conveyor after receive
             if self.response_is_needed(ts.WAITING_STATION_CONV_SEND_START, ts.WAITING_STATION_CONV_SEND_END, states):
                 num_units = ongoing_trip.trip.metadata.get("num_units")
                 peripheral_response.conveyor = ConveyorReq(direction=DirectionEnum.send, num_units=num_units)

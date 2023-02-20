@@ -18,6 +18,7 @@ from models.trip_models import OngoingTrip, PendingTrip, Trip, TripLeg, TripAnal
 from models.visa_models import ExclusionZone, VisaAssignment
 from utils.util import check_if_timestamp_has_passed
 import datetime
+from plugins.conveyor.conveyor_models import ConvInfo
 
 
 class DBSession:
@@ -133,6 +134,10 @@ class DBSession:
 
     def get_all_sherpas(self) -> List[Sherpa]:
         return self.session.query(Sherpa).all()
+
+    def get_all_conveyors(self) -> List[ConvInfo]:
+        return self.session.query(ConvInfo).all()
+
 
     def get_all_sherpas_in_fleet(self, fleet_name: str) -> List[Sherpa]:
         return (
