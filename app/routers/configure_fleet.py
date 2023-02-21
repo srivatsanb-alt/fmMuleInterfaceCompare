@@ -76,7 +76,7 @@ def add_edit_sherpa(
         )
 
         if sherpa_name not in all_sherpa_names:
-            action_request = f"New sherpa {sherpa_name} has been added to {fleet.name}, please restart FM software using docker-compose commands to start using the sherpa"
+            action_request = f"New sherpa {sherpa_name} has been added to {fleet.name}, please restart FM software using restart fleet manager button in the maintenance page"
             dbsession.add_notification(
                 [fleet.name],
                 action_request,
@@ -170,7 +170,7 @@ def add_fleet(
         fu.ExclusionZoneUtils.add_linked_gates(dbsession, fleet.name)
 
         if new_fleet:
-            action_request = f"New fleet {fleet.name} has been added, please restart FM software using docker-compose commands to start using the fleet"
+            action_request = f"New fleet {fleet.name} has been added, please restart FM software using restart fleet manager button in the maintenance page"
             dbsession.add_notification(
                 [fleet.name],
                 action_request,
