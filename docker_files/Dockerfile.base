@@ -18,6 +18,9 @@ RUN python3.8 -m pip install poetry
 COPY pyproject.toml poetry.lock /app/
 RUN poetry install
 
+RUN apt-get install libgl1 -y
+
+
 RUN apt-get update &&  apt-get install -y tzdata
 
 ENV TZ=Asia/Kolkata
