@@ -387,7 +387,6 @@ class Handlers:
     def initialize_sherpa(self, sherpa_name):
         sherpa_status: SherpaStatus = self.session.get_sherpa_status(sherpa_name)
         sherpa_status.initialized = True
-        sherpa_status.idle = True
         sherpa_status.continue_curr_task = True
         get_logger(sherpa_name).info(f"{sherpa_name} initialized")
 
