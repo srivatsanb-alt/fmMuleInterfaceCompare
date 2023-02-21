@@ -27,7 +27,14 @@ import redis
 import numpy as np
 from models.db_session import DBSession
 from models.fleet_models import Sherpa, Station
-from models.request_models import ReachedReq, DispatchButtonReq, SherpaPeripheralsReq, HitchReq, ConveyorReq, DirectionEnum
+from models.request_models import (
+    ReachedReq,
+    DispatchButtonReq,
+    SherpaPeripheralsReq,
+    HitchReq,
+    ConveyorReq,
+    DirectionEnum,
+)
 from plugins.conveyor.conveyor_models import ToteStatus
 import threading
 
@@ -266,15 +273,24 @@ class FleetSimulator:
     def populate_conveyor_with_totes(self, conveyor):
         if time.time() - self.last_conveyor_update > random.randrange(30, 60):
             num_totes_to_add = random.randrange(0, 2)
-            updated_tote_count = np.min(conveyor.num_totes+num_totes_to_add, self.conveyor_capacity)
+            updated_tote_count = np.min(
+                conveyor.num_totes + num_totes_to_add, self.conveyor_capacity
+            )
             print(f"Adding {num_totes_to_add} tote/s to conveyor {conveyor.name}")
             self.last_conveyor_update = time.time()
-            msg = ToteStatus(num_totes=updated_tote_count, compact_time=0, type="tote_status", name=conveyor.name)
+            msg = ToteStatus(
+                num_totes=updated_tote_count,
+                compact_time=0,
+                type="tote_status",
+                name=conveyor.name,
+            )
             queue = Queues.queues_dict["generic_handler"]
             enqueue(queue, handle, self.handler_obj, msg, ttl=1)
 
     def book_conveyor_trips(self):
-        print(f"populating conveyors and booking pickups. Max capacity on conveyor = {self.conveyor_capacity} totes.")
+        print(
+            f"populating conveyors and booking pickups. Max capacity on conveyor = {self.conveyor_capacity} totes."
+        )
         with DBSession() as session:
             while True:
                 conveyors = session.get_all_conveyors()
@@ -535,21 +551,43 @@ class FleetSimulator:
             peripheral_response = SherpaPeripheralsReq(timestamp=time.time())
             peripheral_response.source = sherpa_name
             # check is trip state requires a peripherals response from sherpa
-            if self.response_is_needed(ts.WAITING_STATION_DISPATCH_START, ts.WAITING_STATION_DISPATCH_END, states):
+            if self.response_is_needed(
+                ts.WAITING_STATION_DISPATCH_START, ts.WAITING_STATION_DISPATCH_END, states
+            ):
                 peripheral_response.dispatch_button = DispatchButtonReq(value=True)
-            if self.response_is_needed(ts.WAITING_STATION_AUTO_UNHITCH_START, ts.WAITING_STATION_AUTO_UNHITCH_END, states):
+            if self.response_is_needed(
+                ts.WAITING_STATION_AUTO_UNHITCH_START,
+                ts.WAITING_STATION_AUTO_UNHITCH_END,
+                states,
+            ):
                 peripheral_response.auto_hitch = HitchReq(hitch=False)
-            if self.response_is_needed(ts.WAITING_STATION_AUTO_HITCH_START, ts.WAITING_STATION_AUTO_HITCH_END, states):
+            if self.response_is_needed(
+                ts.WAITING_STATION_AUTO_HITCH_START,
+                ts.WAITING_STATION_AUTO_HITCH_END,
+                states,
+            ):
                 peripheral_response.auto_hitch = HitchReq(hitch=True)
-            if self.response_is_needed(ts.WAITING_STATION_CONV_RECEIVE_START, ts.WAITING_STATION_CONV_RECEIVE_END, states):
+            if self.response_is_needed(
+                ts.WAITING_STATION_CONV_RECEIVE_START,
+                ts.WAITING_STATION_CONV_RECEIVE_END,
+                states,
+            ):
                 num_units = ongoing_trip.trip.metadata.get("num_units")
-                peripheral_response.conveyor = ConveyorReq(direction=DirectionEnum.receive, num_units=0)
+                peripheral_response.conveyor = ConveyorReq(
+                    direction=DirectionEnum.receive, num_units=0
+                )
                 # TODO: Update tote_status msg for corresponding conveyor after receive
-            if self.response_is_needed(ts.WAITING_STATION_CONV_SEND_START, ts.WAITING_STATION_CONV_SEND_END, states):
+            if self.response_is_needed(
+                ts.WAITING_STATION_CONV_SEND_START, ts.WAITING_STATION_CONV_SEND_END, states
+            ):
                 num_units = ongoing_trip.trip.metadata.get("num_units")
-                peripheral_response.conveyor = ConveyorReq(direction=DirectionEnum.send, num_units=num_units)
+                peripheral_response.conveyor = ConveyorReq(
+                    direction=DirectionEnum.send, num_units=num_units
+                )
             if self.reponse_flag:
-                print(f"Sherpa {sherpa_name} - trip_id {ongoing_trip.trip_id}, leg {ongoing_trip.trip_leg_id} sent a peripheral msg {peripheral_response}")
+                print(
+                    f"Sherpa {sherpa_name} - trip_id {ongoing_trip.trip_id}, leg {ongoing_trip.trip_leg_id} sent a peripheral msg {peripheral_response}"
+                )
                 queue = Queues.queues_dict["generic_handler"]
                 enqueue(queue, handle, self.handler_obj, peripheral_response, ttl=1)
 
