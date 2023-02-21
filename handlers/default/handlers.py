@@ -247,9 +247,7 @@ class Handlers:
 
         from_station_name = from_station.name if from_station else None
         started_leg_log = (
-            f"{sherpa.name} started a trip leg of trip",
-            f"(trip_id: {trip.id}) from",
-            f"{from_station_name} to" "{to_station.name}",
+            f"{sherpa.name} started a trip leg of trip (trip_id: {trip.id}) from {from_station_name} to {to_station.name}",
         )
 
         get_logger(sherpa.name).info(started_leg_log)
@@ -286,9 +284,7 @@ class Handlers:
             time_delta = datetime.datetime.now() - ongoing_trip.trip_leg.start_time
             trip_analytics.actual_trip_time = time_delta.seconds
             trip_analytics_log = (
-                f"{sherpa_name} finished leg of trip {trip.id}",
-                "trip_analytics:",
-                f"{utils_util.get_table_as_dict(tm.TripAnalytics, trip_analytics)}",
+                f"{sherpa_name} finished leg of trip {trip.id} trip_analytics: {utils_util.get_table_as_dict(tm.TripAnalytics, trip_analytics)}",
             )
             get_logger(sherpa_name).info(trip_analytics_log)
 
