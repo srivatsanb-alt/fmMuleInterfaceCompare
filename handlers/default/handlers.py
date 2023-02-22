@@ -246,9 +246,7 @@ class Handlers:
         hutils.start_leg(self.dbsession, ongoing_trip, from_station, to_station)
 
         from_station_name = from_station.name if from_station else None
-        started_leg_log = (
-            f"{sherpa.name} started a trip leg of trip (trip_id: {trip.id}) from {from_station_name} to {to_station.name}",
-        )
+        started_leg_log = f"{sherpa.name} started a trip leg of trip (trip_id: {trip.id}) from {from_station_name} to {to_station.name}"
 
         get_logger(sherpa.name).info(started_leg_log)
 
@@ -283,9 +281,7 @@ class Handlers:
             trip_analytics.end_time = datetime.datetime.now()
             time_delta = datetime.datetime.now() - ongoing_trip.trip_leg.start_time
             trip_analytics.actual_trip_time = time_delta.seconds
-            trip_analytics_log = (
-                f"{sherpa_name} finished leg of trip {trip.id} trip_analytics: {utils_util.get_table_as_dict(tm.TripAnalytics, trip_analytics)}",
-            )
+            trip_analytics_log = f"{sherpa_name} finished leg of trip {trip.id} trip_analytics: {utils_util.get_table_as_dict(tm.TripAnalytics, trip_analytics)}"
             get_logger(sherpa_name).info(trip_analytics_log)
 
         self.do_post_actions(ongoing_trip, sherpa, curr_station)
@@ -307,8 +303,7 @@ class Handlers:
         sherpa.status.continue_curr_task = False
 
         get_logger(sherpa.name).info(
-            f"{sherpa.name} continuing leg of trip {trip.id} from",
-            f"{ongoing_trip.curr_station()} to {ongoing_trip.next_station()}",
+            f"{sherpa.name} continuing leg of trip {trip.id} from {ongoing_trip.curr_station()} to {ongoing_trip.next_station()}"
         )
         _: Response = utils_comms.send_move_msg(
             self.dbsession, sherpa, ongoing_trip, to_station
