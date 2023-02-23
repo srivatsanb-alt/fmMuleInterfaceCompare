@@ -5,7 +5,7 @@ import logging
 import hashlib
 from .summon_models import DBSession, SummonInfo,SummonActions
 import time
-from models.trip_models import COMPLETED_TRIP_STATUS
+from models.trip_models import COMPLETED_TRIP_STATUS,YET_TO_START_TRIP_STATUS
 import redis
 
 logger_name = "plugin_summon_button"
@@ -35,7 +35,6 @@ def book_trip(dbsession, summon_info, route=[], plugin_name="plugin_summon_butto
         summon_info.booking_id = trip_details["booking_id"]
         summon_info.trip_id = trip_id
 
-    return {"Led":"GREEN"}
 
 def cancel_trip(dbsession, summon_info, plugin_name="plugin_summon_button"):
     endpoint = "delete_booked_trip"
@@ -44,7 +43,6 @@ def cancel_trip(dbsession, summon_info, plugin_name="plugin_summon_button"):
     )
     summon_info.booking_id = None
     summon_info.trip_id = None
-    return {"Led":"WHITE"}
                 
 
 def send_job_updates_summon():
@@ -64,8 +62,12 @@ def send_job_updates_summon():
                     for trip_id, trip_details in trip_status_response.items():
                         trip_status = trip_details["trip_details"]["status"]
                         logger.info(f"trip_id: {trip_id}, FM_response_status: {trip_status}")
-                        if trip_status not in COMPLETED_TRIP_STATUS:
-                            color = "green" 
+
+                        if trip_status in COMPLETED_TRIP_STATUS:
+                            color = "white" 
+                        else:
+                            color = "green"
+                        
 
                 msg = {"Led": color}
                 logger.info(f"sending job updates msg : {msg}")

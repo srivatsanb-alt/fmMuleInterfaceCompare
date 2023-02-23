@@ -21,22 +21,24 @@ def get_summon(x_api_key: str = Header(None)):
         )
     return summon_info
 
-
+def get_api_key(x_api_key: str = Header(None)):
+    return x_api_key 
+    
 @router.get("/plugin/ws/api/v1/plugin_summon_button")
 async def check_connection():
     return {"uvicorn": "I Am Alive"}
 
 
 @router.websocket("/plugin/ws/api/v1/summon_button")
-async def summon_button_ws(websocket: WebSocket,summon_info = Depends(get_summon)):
+async def summon_button_ws(websocket: WebSocket,summon_info = Depends(get_summon), api_key=Depends(get_api_key)):
     if not summon_info:
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
     await websocket.accept()
-
+    
     summon_handler = SUMMON_HANDLER()
     rw = [
-        asyncio.create_task(ws_reader(websocket, "summon_button", summon_handler)),
+        asyncio.create_task(ws_reader(websocket, "summon_button", summon_handler, api_key=api_key)),
         asyncio.create_task(
             ws_writer(websocket, "summon_button", format="text"),
         ),
