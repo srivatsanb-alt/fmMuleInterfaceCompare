@@ -187,7 +187,7 @@ async def writer(websocket, sherpa):
     await psub.subscribe(f"channel:{sherpa}")
 
     while True:
-        message = await psub.get_message(ignore_subscribe_messages=True, timeout=5)
+        message = await psub.get_message(ignore_subscribe_messages=True, timeout=0.5)
         if message:
             data = ast.literal_eval(message["data"])
 

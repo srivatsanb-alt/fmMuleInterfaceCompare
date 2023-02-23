@@ -75,13 +75,6 @@ def send_status_update(msg):
 
 
 def send_ws_msg_to_sherpa(msg, sherpa):
-    args = [msg, sherpa]
-    kwargs = {}
-    q = Queues.queues_dict.get(f"to_{sherpa.name}")
-    enqueue(q, publish_sherpa_message, *args, **kwargs)
-
-
-def publish_sherpa_message(msg, sherpa):
     pub = redis.from_url(os.getenv("FM_REDIS_URI"), decode_responses=True)
     pub.publish(f"channel:{sherpa.name}", str(msg))
 
