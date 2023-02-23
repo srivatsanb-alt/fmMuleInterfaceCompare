@@ -2,16 +2,14 @@ import os
 import time
 from typing import Dict
 import redis
-import aioredis
-from rq import Queue
-import logging
-import asyncio
 import math
 import requests
 import threading
 import json
 from rq.job import Job
 import utils.util as utils_util
+
+from utils.rq_utils import enqueue, Queues
 from core.logs import get_logger
 from models.fleet_models import SherpaEvent
 from models.fleet_models import Sherpa, Station
@@ -77,22 +75,15 @@ def send_status_update(msg):
 
 
 def send_ws_msg_to_sherpa(msg, sherpa):
-    def publish_sherpa_message():
-        pub = aioredis.Redis.from_url(os.getenv("FM_REDIS_URI"), decode_responses=True)
-        pub.publish(f"channel:{sherpa.name}", str(msg))
-
-    def report_failure(job, connection, fail_type, value, traceback):
-        logging.getLogger().error(
-            f"RQ job failed: error: {fail_type}, value {value}, func: {job.func_name}, args: {job.args}, kwargs: {job.kwargs}",
-            exc_info=(fail_type, value, traceback),
-        )
-
-    args = []
+    args = [msg, sherpa]
     kwargs = {}
-    kwargs.setdefault("on_failure", report_failure)
-    Queue(
-        f"to_{sherpa.name}", connection=redis.from_url(os.getenv("FM_REDIS_URI"))
-    ).enqueue(publish_sherpa_message, *args, **kwargs)
+    q = Queues.queues_dict.get(f"to_{sherpa.name}")
+    enqueue(q, publish_sherpa_message, *args, **kwargs)
+
+
+def publish_sherpa_message(msg, sherpa):
+    pub = redis.from_url(os.getenv("FM_REDIS_URI"), decode_responses=True)
+    pub.publish(f"channel:{sherpa.name}", str(msg))
 
 
 def send_notification(msg):
