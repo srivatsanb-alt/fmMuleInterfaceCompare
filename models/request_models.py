@@ -101,6 +101,10 @@ class InitMsg(SherpaReq):
 
 class SherpaAlertMsg(SherpaReq):
     trolley_load_cell: Union[str, None]
+    low_battery_alarm: Union[str, None]
+    obstructed: Union[str, None]
+    emergency_button: Union[str, None]
+    user_pause: Union[str, None]
     type = MessageType.SHERPA_ALERTS
 
 
