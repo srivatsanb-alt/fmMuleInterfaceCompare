@@ -1,4 +1,7 @@
 import time
+import redis
+import json
+import os
 from models.db_session import DBSession
 import models.misc_models as mm
 import models.request_models as rqm
@@ -11,7 +14,6 @@ from app.routers.dependencies import (
 )
 
 # manages all the http requests for Sherpa
-
 router = APIRouter(
     prefix="/api/v1/sherpa",
     tags=["sherpa"],
@@ -60,9 +62,16 @@ async def verify_fleet_files(sherpa: str = Depends(get_sherpa)):
     return rqm.VerifyFleetFilesResp.from_json(response)
 
 
+@router.post("/req_ack/{req_id}")
+async def ws_ack(req: rqm.WSResp, req_id: str):
+    redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
+    redis_conn.set(f"success_{req_id}", json.dumps(req.success))
+    if req.success:
+        redis_conn.set(f"response_{req_id}", json.dumps(req.response))
+    return {}
+
+
 # alerts the FM with messages from Sherpa
-
-
 @router.post("/alerts")
 async def sherpa_alerts(alert_msg: rqm.SherpaAlertMsg, sherpa: str = Depends(get_sherpa)):
     with DBSession() as dbsession:

@@ -87,6 +87,11 @@ class SherpaReq(BaseModel):
     timestamp: float
 
 
+class WSResp(BaseModel):
+    success: bool
+    response: Optional[dict] = {}
+
+
 class InitExtraInfo(BaseModel):
     display_name: str
     ip_address: str

@@ -5,7 +5,8 @@ from rq import Queue
 import json
 from core.config import Config
 
-#utils for redis rq
+# utils for redis rq
+
 
 class Queues:
 
@@ -35,6 +36,9 @@ class Queues:
                 )
             }
         )
+
+    for sherpa in all_sherpas:
+        queues_dict.update({f"to_{sherpa}": Queue(f"to_{sherpa}", connection=redis_conn)})
 
     queues_dict.update(
         {"resource_handler": Queue("resource_handler", connection=redis_conn)}
