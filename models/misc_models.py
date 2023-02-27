@@ -14,13 +14,14 @@ class NotificationModules:
 class NotificationLevels:
     info = "info"
     alert = "alert"
+    stale_alert_or_action = "stale_alert_or_action"
     action_request = "action_request"
 
 
 NotificationTimeout = {
     NotificationLevels.info: 120,
-    NotificationLevels.action_request: 300,
-    NotificationLevels.alert: 300,
+    NotificationLevels.action_request: 150,
+    NotificationLevels.alert: 150,
 }
 
 
