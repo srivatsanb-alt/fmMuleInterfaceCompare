@@ -4,6 +4,8 @@ import logging
 import logging.config
 import math
 import os
+import datetime
+
 from datetime import timedelta
 import aioredis
 from sqlalchemy.orm.attributes import flag_modified
@@ -103,6 +105,7 @@ async def sherpa_status(
     sherpa_name=Depends(get_sherpa),
     x_real_ip=Depends(get_real_ip_from_header),
 ):
+    sherpa_name = "FK-S16"
     if not sherpa_name:
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
@@ -161,7 +164,6 @@ async def reader(websocket, sherpa):
         sherpa_trip_q = Queues.queues_dict[f"{sherpa}_trip_update_handler"]
 
         if msg_type == MessageType.TRIP_STATUS:
-            # logger.info(f"got a trip status {msg}")
             msg["source"] = sherpa
             trip_status_msg = rqm.TripStatusMsg.from_dict(msg)
             trip_status_msg.trip_info = rqm.TripInfo.from_dict(msg["trip_info"])
@@ -177,6 +179,8 @@ async def reader(websocket, sherpa):
             enqueue(sherpa_update_q, handle, handler_obj, status_msg, ttl=1)
         else:
             logging.error(f"Unsupported message type {msg_type}")
+
+        await asyncio.sleep(0.01)
 
 
 async def writer(websocket, sherpa):
@@ -196,6 +200,8 @@ async def writer(websocket, sherpa):
                 await websocket.close()
 
             await websocket.send_json(data)
+
+        await asyncio.sleep(0.01)
 
 
 def handle(handler, msg):

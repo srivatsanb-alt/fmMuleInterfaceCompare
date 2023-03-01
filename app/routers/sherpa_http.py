@@ -50,13 +50,13 @@ async def peripherals(
 @router.post("/access/resource", response_model=rqm.ResourceResp)
 async def resource_access(resource_req: rqm.ResourceReq, sherpa: str = Depends(get_sherpa)):
     queue = Queues.queues_dict["resource_handler"]
-    response = process_req_with_response(queue, resource_req, sherpa)
+    response = await process_req_with_response(queue, resource_req, sherpa)
     return rqm.ResourceResp.from_json(response)
 
 
 @router.get("/verify_fleet_files", response_model=rqm.VerifyFleetFilesResp)
 async def verify_fleet_files(sherpa: str = Depends(get_sherpa)):
-    response = process_req_with_response(
+    response = await process_req_with_response(
         None, rqm.SherpaReq(type="verify_fleet_files", timestamp=time.time()), sherpa
     )
     return rqm.VerifyFleetFilesResp.from_json(response)

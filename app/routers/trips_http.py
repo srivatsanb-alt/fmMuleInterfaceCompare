@@ -26,7 +26,7 @@ router = APIRouter(
 
 @router.post("/book")
 async def book(booking_req: rqm.BookingReq, user_name=Depends(get_user_from_header)):
-    response = process_req_with_response(None, booking_req, user_name)
+    response = await process_req_with_response(None, booking_req, user_name)
     return response
 
 
@@ -43,7 +43,7 @@ async def delete_ongoing_trip(booking_id: int, user_name=Depends(get_user_from_h
     delete_ongoing_trip_req: rqm.DeleteOngoingTripReq = rqm.DeleteOngoingTripReq(
         booking_id=booking_id
     )
-    response = process_req_with_response(None, delete_ongoing_trip_req, user_name)
+    response = await process_req_with_response(None, delete_ongoing_trip_req, user_name)
 
     return response
 
@@ -64,7 +64,7 @@ async def delete_pending_trip(booking_id: int, user_name=Depends(get_user_from_h
     delete_booked_trip_req: rqm.DeleteBookedTripReq = rqm.DeleteBookedTripReq(
         booking_id=booking_id
     )
-    response = process_req_with_response(None, delete_booked_trip_req, user_name)
+    response = await process_req_with_response(None, delete_booked_trip_req, user_name)
 
     return response
 
@@ -90,7 +90,7 @@ async def clear_optimal_dispatch_assignments(
         fleet_name=entity_name
     )
 
-    response = process_req_with_response(
+    response = await process_req_with_response(
         None, delete_optimal_dispatch_assignments_req, user_name
     )
 

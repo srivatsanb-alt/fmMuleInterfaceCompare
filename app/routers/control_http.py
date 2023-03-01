@@ -11,6 +11,7 @@ import models.fleet_models as fm
 from app.routers.dependencies import (
     get_user_from_header,
     process_req_with_response,
+    process_req,
     raise_error,
 )
 
@@ -33,7 +34,7 @@ async def clear_all_visa_assignments(user_name=Depends(get_user_from_header)):
         raise_error("Unknown requester", 401)
 
     delete_visas_req = rqm.DeleteVisaAssignments()
-    response = process_req_with_response(None, delete_visas_req, user_name)
+    response = await process_req_with_response(None, delete_visas_req, user_name)
 
     return response
 
@@ -133,7 +134,7 @@ async def update_sherpa_img(
             raise_error("Sherpa not yet connected to the fleet manager")
 
         update_image_req = rqm.SherpaImgUpdateCtrlReq(sherpa_name=entity_name)
-        _ = process_req_with_response(None, update_image_req, user_name)
+        _ = await process_req_with_response(None, update_image_req, user_name)
 
     return response
 
@@ -205,7 +206,7 @@ async def emergency_stop(
             )
 
             try:
-                _ = process_req_with_response(None, pause_resume_req, user_name)
+                _ = await process_req_with_response(None, pause_resume_req, user_name)
             except Exception as e:
                 unconnected_sherpas.append([sherpa_status.sherpa_name, e])
 
@@ -254,7 +255,7 @@ async def sherpa_emergency_stop(
             pause=pause_resume_ctrl_req.pause, sherpa_name=entity_name
         )
 
-    _ = process_req_with_response(None, pause_resume_req, user_name)
+    _ = await process_req_with_response(None, pause_resume_req, user_name)
 
     return response
 
@@ -290,7 +291,7 @@ async def switch_mode(
             mode=switch_mode_ctrl_req.mode, sherpa_name=entity_name
         )
 
-    _ = process_req_with_response(None, switch_mode_req, user_name)
+    _ = await process_req_with_response(None, switch_mode_req, user_name)
 
     return response
 
@@ -334,7 +335,7 @@ async def reset_pose(
             sherpa_name=entity_name,
         )
 
-    _ = process_req_with_response(None, reset_pose_req, user_name)
+    _ = await process_req_with_response(None, reset_pose_req, user_name)
 
     return response
 
@@ -367,7 +368,7 @@ async def induct_sherpa(
                 f"delete the ongoing trip with booking_id: {trip.booking_id}, to induct {sherpa_name} out of fleet"
             )
 
-    _ = process_req_with_response(None, sherpa_induct_req, user_name)
+    _ = await process_req_with_response(None, sherpa_induct_req, user_name)
 
     return respone
 
