@@ -81,6 +81,14 @@ async def sherpa_alerts(alert_msg: rqm.SherpaAlertMsg, sherpa: str = Depends(get
         alert = f"Got an alert from {sherpa}, "
         if alert_msg.trolley_load_cell:
             alert_msg = alert + alert_msg.trolley_load_cell
+        if alert_msg.low_battery_alarm:
+            alert_msg = alert + alert_msg.low_battery_alarm
+        if alert_msg.obstructed:
+            alert_msg = alert + alert_msg.obstructed
+        if alert_msg.emergency_button:
+            alert_msg = alert + alert_msg.emergency_button
+        if alert_msg.user_pause:
+            alert_msg = alert + alert_msg.user_pause
         dbsession.add_notification(
             [sherpa_obj.name, sherpa_obj.fleet.name],
             alert_msg,
