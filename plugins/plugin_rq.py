@@ -3,6 +3,7 @@ from rq.job import Job
 import redis
 import time
 import toml
+import asyncio
 import os
 from multiprocessing import Process
 from fastapi import HTTPException
@@ -89,7 +90,7 @@ def enqueue(queue: Queue, func, *args, **kwargs):
     )
 
 
-def get_job_result(job_id):
+async def get_job_result(job_id):
     redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
     job = Job.fetch(job_id, connection=redis_conn)
     while True:
@@ -100,7 +101,7 @@ def get_job_result(job_id):
         if status == "failed":
             job.cancel()
             raise HTTPException(status_code=500, detail="Unable to process the request")
-        time.sleep(0.01)
+        await asyncio.sleep(0.01)
 
     return response
 
