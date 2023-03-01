@@ -699,10 +699,7 @@ class Handlers:
         elif not status.initialized:
             # sherpa switched to fleet mode
             init_req: rqm.InitReq = rqm.InitReq()
-            response: Response = utils_comms.send_req_to_sherpa(
-                self.dbsession, sherpa, init_req
-            )
-            _: rqm.InitResp = rqm.InitResp.from_dict(response.json())
+            response = utils_comms.send_req_to_sherpa(self.dbsession, sherpa, init_req)
             self.initialize_sherpa(sherpa)
 
         _, _ = self.should_assign_next_task(sherpa, ongoing_trip, pending_trip)

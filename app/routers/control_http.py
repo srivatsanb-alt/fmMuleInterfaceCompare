@@ -62,10 +62,6 @@ async def diagnostics(
         if not sherpa_status.sherpa.ip_address:
             raise_error("Sherpa not yet connected to the fleet manager")
 
-        # diagnostics_req = rqm.DiagnosticsReq(sherpa_name=entity_name)
-        # base_url, verify = get_sherpa_url(sherpa_status.sherpa)
-        # url = f"{base_url}/{diagnostics_req.endpoint}"
-        # response = requests.get(url, verify=verify)
         response = None
         if response.status_code == 200:
             response = response.json()

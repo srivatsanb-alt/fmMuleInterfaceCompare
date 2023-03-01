@@ -6,10 +6,10 @@ import math
 import requests
 import threading
 import json
+from enum import Enum
 from rq.job import Job
 import utils.util as utils_util
-
-from utils.rq_utils import enqueue, Queues
+from pydantic import BaseModel
 from core.logs import get_logger
 from models.fleet_models import SherpaEvent
 from models.fleet_models import Sherpa, Station
@@ -17,11 +17,31 @@ from models.request_models import FMReq, MoveReq
 from models.trip_models import OngoingTrip
 
 
+def convert_to_dict(msg):
+    if isinstance(msg, BaseModel):
+        body = msg.dict()
+    elif isinstance(msg, dict):
+        body = msg
+    else:
+        raise Exception("Cannot convert to dict")
+
+    for key, val in body.items():
+        if isinstance(val, BaseModel):
+            body[key] = convert_to_dict(val)
+        if isinstance(val, Enum):
+            body[key] = str(val.value)
+        if isinstance(val, dict):
+            body[key] = convert_to_dict(val)
+
+    return body
+
+
 # utility for communication between sherpa and fleet manager
 def send_req_to_sherpa(dbsession, sherpa: Sherpa, msg: FMReq) -> Dict:
     redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
 
-    body = msg.dict()
+    body = convert_to_dict(msg)
+
     body["timestamp"] = time.time()
     body.pop("source")
 
