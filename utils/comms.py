@@ -32,8 +32,7 @@ def send_req_to_sherpa(dbsession, sherpa: Sherpa, msg: FMReq) -> Dict:
     req_id = utils_util.generate_random_job_id()
     body["req_id"] = req_id
 
-    get_logger().info(f"Sending req to {sherpa.name}")
-    get_logger(sherpa.name).info(f"req to {sherpa.name}: {body}")
+    get_logger().info(f"Sending req: {body} to {sherpa.name}")
 
     sherpa_event: SherpaEvent = SherpaEvent(
         sherpa_name=sherpa.name,
@@ -48,10 +47,11 @@ def send_req_to_sherpa(dbsession, sherpa: Sherpa, msg: FMReq) -> Dict:
     while redis_conn.get(f"success_{req_id}") is None:
         time.sleep(0.005)
 
-    success = json.loads(f"success_{req_id}")
+    success = json.loads(redis_conn.get(f"success_{req_id}"))
     if success:
         response = json.loads(redis_conn.get(f"response_{req_id}"))
         redis_conn.delete(f"success_{req_id}")
+        get_logger().info(f"Response from sherpa {response}")
         return response
     else:
         raise Exception(f"req id {req_id} failed, req sent: {body}")
