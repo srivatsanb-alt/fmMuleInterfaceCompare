@@ -35,23 +35,6 @@ def get_all_plugins():
     return get_plugin_config()["all_plugins"]
 
 
-# class Plugin_Queues:
-#     queues_dict = {}
-#     all_plugins = get_all_plugins()
-#
-#     for plugin_name in all_plugins:
-#         queues_dict.update(
-#             {
-#                 f"plugin_{plugin_name}": Queue(
-#                     f"plugin_{plugin_name}", connection=get_redis_conn()
-#                 )
-#             }
-#         )
-#
-#     @classmethod
-#     def get_queue(cls, qname):
-#         return getattr(cls, qname)
-
 
 def start_worker(queue_name):
     with Connection():

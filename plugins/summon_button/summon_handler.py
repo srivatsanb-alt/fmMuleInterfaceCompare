@@ -2,7 +2,7 @@ import logging
 import hashlib
 from .summon_models import SummonInfo, DBSession
 from .summon_utils import SummonInfo, DBSession
-from .summon_utils import book_trip ,cancel_trip
+from .summon_utils import book_trip ,cancel_trip,send_job_updates_summon
 import redis
 import os
 
@@ -21,8 +21,6 @@ class SUMMON_HANDLER:
 
     def handle_button_pressed(self, msg: dict):
         hashed_api_key = hashlib.sha256(msg["api_key"].encode("utf-8")).hexdigest()
-
-        self.logger.info("Handling summon button:")
         summon_info: SummonInfo = (
             self.session.session.query(SummonInfo)
             .filter(SummonInfo.hashed_api_key == hashed_api_key)
@@ -33,22 +31,23 @@ class SUMMON_HANDLER:
 
         if summon_info.press == ButtonPress.BOOK_TRIP:
             if summon_info.booking_id is None:
-                response = book_trip(
+                book_trip(
                     self.session,
                     summon_info,
                     route=summon_info.route,
                     plugin_name="plugin_summon_button",
                 )
-                self.logger.info(f"sending response as :{response}")
+                self.logger.info(f"button pressed - booking trip")
+                self.send_msg({"Led":"green"})
             else:
-                response = cancel_trip(
+                cancel_trip(
                     self.session,
                     summon_info,
                     plugin_name="plugin_summon_button",
                 )
-                self.logger.info(f"sending response as :{response}")
-        
-        return response
+                self.logger.info(f"button pressed - cancelling trip {summon_info.booking_id}")
+                self.send_msg({"Led":"white"})
+
 
 
 

@@ -5,7 +5,7 @@ import logging
 import hashlib
 from .summon_models import DBSession, SummonInfo,SummonActions
 import time
-from models.trip_models import COMPLETED_TRIP_STATUS,YET_TO_START_TRIP_STATUS
+from models.trip_models import COMPLETED_TRIP_STATUS
 import redis
 
 logger_name = "plugin_summon_button"
@@ -35,7 +35,6 @@ def book_trip(dbsession, summon_info, route=[], plugin_name="plugin_summon_butto
         summon_info.booking_id = trip_details["booking_id"]
         summon_info.trip_id = trip_id
 
-
 def cancel_trip(dbsession, summon_info, plugin_name="plugin_summon_button"):
     endpoint = "delete_booked_trip"
     send_req_to_FM(
@@ -43,16 +42,17 @@ def cancel_trip(dbsession, summon_info, plugin_name="plugin_summon_button"):
     )
     summon_info.booking_id = None
     summon_info.trip_id = None
-                
-
-def send_job_updates_summon():
+  
+def send_job_updates_summon(color = "white"):
     logger = logging.getLogger("plugin_summon_button")
     logger.info("sending job updates using send_job_updates_summon")
     while True:
         with DBSession() as dbsession:
             all_summon_buttons = dbsession.session.query(SummonInfo).all()
+
+            
             for summon_button in all_summon_buttons:
-                color = "white"
+                logger.info(f" 1 :  summon button : {summon_button}")
                 if summon_button.trip_id:
                     trip_ids = [summon_button.trip_id]
                     req_json = {"trip_ids": trip_ids}
@@ -62,17 +62,13 @@ def send_job_updates_summon():
                     for trip_id, trip_details in trip_status_response.items():
                         trip_status = trip_details["trip_details"]["status"]
                         logger.info(f"trip_id: {trip_id}, FM_response_status: {trip_status}")
+                        if trip_status not in COMPLETED_TRIP_STATUS:
+                            color = "green" 
+                    msg = {"Led": color}
+                    logger.info(f" 2 : trip status {trip_status}, led color {color}")
+                    send_msg(msg)
 
-                        if trip_status in COMPLETED_TRIP_STATUS:
-                            color = "white" 
-                        else:
-                            color = "green"
-                        
-
-                msg = {"Led": color}
-                logger.info(f"sending job updates msg : {msg}")
-                send_msg(msg)
-        time.sleep(1)
+        time.sleep(30)
 
 def populate_summon_info():
     with DBSession() as dbsession:
@@ -95,6 +91,7 @@ def populate_summon_info():
                 summon_info.press = summon_details["press"]
                 # summon_info.station = summon_details["station"]
             else:
+
                 summon_info = SummonInfo(
                     hashed_api_key=hashed_api_key,
                     press=summon_details["press"],
