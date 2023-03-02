@@ -93,14 +93,13 @@ def populate_summon_info():
             if summon_info:
                 summon_info.route = summon_details["route"]
                 summon_info.press = summon_details["press"]
-                summon_info.station = summon_details["station"]
+                # summon_info.station = summon_details["station"]
             else:
-
                 summon_info = SummonInfo(
                     hashed_api_key=hashed_api_key,
                     press=summon_details["press"],
                     route=summon_details["route"],
-                    station=summon_details["station"],
+                    station=None,
                     trip_id=None,
                     booking_id=None,
                 )
