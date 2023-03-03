@@ -1,16 +1,24 @@
+import json
+import os
+import time
+from fastapi import APIRouter, Depends
+import aioredis
+
+from utils.util import get_table_as_dict
+import models.request_models as rqm
+import models.fleet_models as fm
+from models.db_session import DBSession
 from app.routers.dependencies import (
     get_user_from_header,
     raise_error,
 )
-from models.request_models import MasterDataInfo, RoutePreview
-from models.fleet_models import SherpaEvent, Sherpa, SherpaStatus
-from fastapi import APIRouter, Depends
-from utils.util import get_table_as_dict
-from models.db_session import DBSession
-import os
+from utils.util import generate_random_job_id
 
 router = APIRouter(responses={404: {"description": "Not found"}}, prefix="/api/v1")
 
+redis_conn = aioredis.Redis.from_url(
+        os.getenv("FM_REDIS_URI"), max_connections=10, decode_responses=True
+    )
 
 @router.get("/site_info")
 async def site_info(user_name=Depends(get_user_from_header)):
@@ -32,11 +40,13 @@ async def site_info(user_name=Depends(get_user_from_header)):
 
     return response
 
-#returns info about all the sherpas, stations and their corresponding status(initialized, inducted, disabled, idle, etc.).
+
+# returns info about all the sherpas, stations and their corresponding status(initialized, inducted, disabled, idle, etc.).
+
 
 @router.post("/master_data/fleet")
 async def master_data(
-    master_data_info: MasterDataInfo, user_name=Depends(get_user_from_header)
+    master_data_info: rqm.MasterDataInfo, user_name=Depends(get_user_from_header)
 ):
 
     if not user_name:
@@ -89,7 +99,9 @@ async def master_data(
 
     return response
 
-#returns sherpa, the fleet it belongs to and its status.
+
+# returns sherpa, the fleet it belongs to and its status.
+
 
 @router.get("/sherpa_summary/{sherpa_name}/{viewable}")
 async def sherpa_summary(
@@ -103,34 +115,49 @@ async def sherpa_summary(
         recent_events = session.get_sherpa_events(sherpa_name)
         result = []
         for recent_event in recent_events:
-            temp = get_table_as_dict(SherpaEvent, recent_event)
+            temp = get_table_as_dict(fm.SherpaEvent, recent_event)
             result.append(temp)
 
         response.update({"recent_events": {"events": result}})
-        sherpa: Sherpa = session.get_sherpa(sherpa_name)
-        response.update({"sherpa": get_table_as_dict(Sherpa, sherpa)})
+        sherpa: fm.Sherpa = session.get_sherpa(sherpa_name)
+        response.update({"sherpa": get_table_as_dict(fm.Sherpa, sherpa)})
         response.update({"fleet_name": sherpa.fleet.name})
-        sherpa_status: SherpaStatus = session.get_sherpa_status(sherpa_name)
-        response.update({"sherpa_status": get_table_as_dict(SherpaStatus, sherpa_status)})
+        sherpa_status: fm.SherpaStatus = session.get_sherpa_status(sherpa_name)
+        response.update(
+            {"sherpa_status": get_table_as_dict(fm.SherpaStatus, sherpa_status)}
+        )
 
     return response
 
-#gets the route(sequence of stations) for a trip
+
+# gets the route(sequence of stations) for a trip
+
 
 @router.post("/trips/get_route_wps")
 async def get_route_wps(
-    route_preview_req: RoutePreview,
+    route_preview_req: rqm.RoutePreview,
     user_name=Depends(get_user_from_header),
 ):
     if not user_name:
         raise_error("Unknown requester", 401)
 
+    response = {}
+    
     with DBSession() as session:
         stations_poses = []
         fleet_name = route_preview_req.fleet_name
         for station_name in route_preview_req.route:
             station = session.get_station(station_name)
             stations_poses.append(station.pose)
+        job_id = generate_random_job_id()
+        control_router_wps_job = [stations_poses, fleet_name, job_id]
+        await redis_conn.set(f"control_router_wps_job_{job_id}", json.dumps(control_router_wps_job))
 
-    return {}
+        while not await redis_conn.get(f"result_wps_job_{job_id}"):
+            time.sleep(0.005)
+        
+        wps_list = json.loads(await redis_conn.get(f"result_wps_job_{job_id}"))
+        response.update({"wps_list": wps_list})
+        await redis_conn.delete(f"result_wps_job_{job_id}")
 
+    return response

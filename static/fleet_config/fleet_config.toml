@@ -25,6 +25,8 @@ book_trips=false
 visa_handling=false
 speedup_factor=1.0
 average_velocity=0.8
+pause_at_station=10.0
+conveyor_capacity = 6 # max tote capacity on conveyor
 
 [fleet]
 mode="default"
@@ -40,3 +42,5 @@ all_server_ips=["127.0.0.1"]
 [fleet.simulator.initialize_sherpas_at]
 #sample_sherpa="Station A"
 
+[optimal_dispatch.exclude_stations]
+#sample_sherpa=["Station A", "Station B"]

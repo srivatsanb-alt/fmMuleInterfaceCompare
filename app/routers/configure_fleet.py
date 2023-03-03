@@ -1,12 +1,13 @@
 import os
 import logging
 from fastapi import APIRouter, Depends
-from models.request_models import AddEditSherpaReq, AddFleetReq
-from models.frontend_models import FrontendUser
-from models.db_session import DBSession
+
 from utils import fleet_utils as fu
+from models.db_session import DBSession
+from models.frontend_models import FrontendUser
 import models.fleet_models as fm
 import models.misc_models as mm
+import models.request_models as rqm
 from app.routers.dependencies import (
     get_user_from_header,
     raise_error,
@@ -52,7 +53,7 @@ def get_all_sherpa_info(user_name=Depends(get_user_from_header)):
 
 @router.post("/add_edit_sherpa/{sherpa_name}")
 def add_edit_sherpa(
-    add_edit_sherpa: AddEditSherpaReq,
+    add_edit_sherpa: rqm.AddEditSherpaReq,
     sherpa_name: str,
     user_name=Depends(get_user_from_header),
 ):
@@ -76,7 +77,7 @@ def add_edit_sherpa(
         )
 
         if sherpa_name not in all_sherpa_names:
-            action_request = f"New sherpa {sherpa_name} has been added to {fleet.name}, please restart FM software using docker-compose commands to start using the sherpa"
+            action_request = f"New sherpa {sherpa_name} has been added to {fleet.name}, please restart FM software using restart fleet manager button in the maintenance page"
             dbsession.add_notification(
                 [fleet.name],
                 action_request,
@@ -144,7 +145,7 @@ def get_all_fleet_info(user_name=Depends(get_user_from_header)):
 
 @router.post("/add_edit_fleet/{fleet_name}")
 def add_fleet(
-    add_fleet_req: AddFleetReq,
+    add_fleet_req: rqm.AddFleetReq,
     fleet_name: str,
     user_name=Depends(get_user_from_header),
 ):
@@ -170,7 +171,7 @@ def add_fleet(
         fu.ExclusionZoneUtils.add_linked_gates(dbsession, fleet.name)
 
         if new_fleet:
-            action_request = f"New fleet {fleet.name} has been added, please restart FM software using docker-compose commands to start using the fleet"
+            action_request = f"New fleet {fleet.name} has been added, please restart FM software using restart fleet manager button in the maintenance page"
             dbsession.add_notification(
                 [fleet.name],
                 action_request,
@@ -237,7 +238,7 @@ def update_map(
 
         all_ongoing_trips_fleet = dbsession.get_all_ongoing_trips_fleet(fleet_name)
         if len(all_ongoing_trips_fleet):
-            raise_error("Cancel all the ongoing trips before deleting the fleet")
+            raise_error("Cancel all the ongoing trips before updating the map")
 
         fu.FleetUtils.add_map(dbsession, fleet_name)
         fu.FleetUtils.update_stations_in_map(dbsession, fleet_name, fleet.id)

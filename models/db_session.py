@@ -18,6 +18,7 @@ from models.trip_models import OngoingTrip, PendingTrip, Trip, TripLeg, TripAnal
 from models.visa_models import ExclusionZone, VisaAssignment
 from utils.util import check_if_timestamp_has_passed
 import datetime
+from plugins.conveyor.conveyor_models import ConvInfo, ConvTrips
 
 
 class DBSession:
@@ -104,13 +105,8 @@ class DBSession:
             .all()
         )
 
-    def clear_all_visa_assignments(self):
-        self.session.query(VisaAssignment).delete()
-
-    def clear_visa_held_by_sherpa(self, sherpa_name: str):
-        self.session.query(VisaAssignment).filter(
-            VisaAssignment.sherpa_name == sherpa_name
-        ).delete()
+    def get_all_visa_assignments(self):
+        return self.session.query(VisaAssignment).all()
 
     def get_all_fleets(self) -> List[Fleet]:
         return self.session.query(Fleet).all()
@@ -138,6 +134,15 @@ class DBSession:
 
     def get_all_sherpas(self) -> List[Sherpa]:
         return self.session.query(Sherpa).all()
+
+    def get_all_conveyors(self) -> List[ConvInfo]:
+        return self.session.query(ConvInfo).all()
+
+    def get_all_conveyor_trips(self) -> List[ConvInfo]:
+        return self.session.query(ConvTrips).all()
+
+    def get_conveyor(self, name: str) -> ConvInfo:
+        return self.session.query(ConvInfo).filter(ConvInfo.name == name).one_or_none()
 
     def get_all_sherpas_in_fleet(self, fleet_name: str) -> List[Sherpa]:
         return (
@@ -284,10 +289,10 @@ class DBSession:
             sherpas.append(val[0])
         return sherpas
 
-    def get_ongoing_trip(self, sherpa: str):
+    def get_ongoing_trip(self, sherpa_name: str):
         return (
             self.session.query(OngoingTrip)
-            .filter(OngoingTrip.sherpa_name == sherpa)
+            .filter(OngoingTrip.sherpa_name == sherpa_name)
             .one_or_none()
         )
 
@@ -344,8 +349,8 @@ class DBSession:
     def get_last_n_trips(self, last_n=10):
         return self.session.query(Trip).order_by(Trip.id.desc()).limit(last_n).all()
 
-    def get_trip_leg(self, sherpa: str):
-        ongoing_trip: OngoingTrip = self.get_ongoing_trip(sherpa)
+    def get_trip_leg(self, sherpa_name: str):
+        ongoing_trip: OngoingTrip = self.get_ongoing_trip(sherpa_name)
         if ongoing_trip:
             return (
                 self.session.query(TripLeg)

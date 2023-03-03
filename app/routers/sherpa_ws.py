@@ -6,24 +6,19 @@ import math
 import os
 from datetime import timedelta
 import aioredis
+from sqlalchemy.orm.attributes import flag_modified
+from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, status
+from redis import Redis
+
+from core.config import Config
+from core.constants import MessageType
+from models.db_session import DBSession
+import models.request_models as rqm
+from utils.rq_utils import Queues, enqueue
 from app.routers.dependencies import (
     get_sherpa,
     get_real_ip_from_header,
 )
-from models.db_session import DBSession
-from core.config import Config
-from core.constants import MessageType
-from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, status
-from models.request_models import (
-    SherpaStatusMsg,
-    TripStatusMsg,
-    TripInfo,
-    Stoppages,
-    StoppageInfo,
-)
-from sqlalchemy.orm.attributes import flag_modified
-from redis import Redis
-from utils.rq_utils import Queues, enqueue
 
 
 MSG_INVALID = "msg_invalid"
@@ -34,7 +29,7 @@ MSG_TS_INVALID = "msg_timestamp_invalid"
 # setup logging
 log_conf_path = os.path.join(os.getenv("FM_CONFIG_DIR"), "logging.conf")
 logging.config.fileConfig(log_conf_path)
-logger = logging.getLogger("uvicorn")
+logger = logging.getLogger("Uvicorn")
 
 
 redis = Redis.from_url(os.getenv("FM_REDIS_URI"))
@@ -45,8 +40,8 @@ router = APIRouter()
 
 expire_after_ms = timedelta(milliseconds=500)
 
-#performs status updates at regular intervals, read, write, 
-#websocket messages and manages websocket connection between sherpas and FM.
+# performs status updates at regular intervals, read, write,
+# websocket messages and manages websocket connection between sherpas and FM.
 
 
 def manage_sherpa_ip_change(sherpa, x_real_ip):
@@ -168,17 +163,17 @@ async def reader(websocket, sherpa):
         if msg_type == MessageType.TRIP_STATUS:
             # logger.info(f"got a trip status {msg}")
             msg["source"] = sherpa
-            trip_status_msg = TripStatusMsg.from_dict(msg)
-            trip_status_msg.trip_info = TripInfo.from_dict(msg["trip_info"])
-            trip_status_msg.stoppages = Stoppages.from_dict(msg["stoppages"])
-            trip_status_msg.stoppages.extra_info = StoppageInfo.from_dict(
+            trip_status_msg = rqm.TripStatusMsg.from_dict(msg)
+            trip_status_msg.trip_info = rqm.TripInfo.from_dict(msg["trip_info"])
+            trip_status_msg.stoppages = rqm.Stoppages.from_dict(msg["stoppages"])
+            trip_status_msg.stoppages.extra_info = rqm.StoppageInfo.from_dict(
                 msg["stoppages"]["extra_info"]
             )
             enqueue(sherpa_trip_q, handle, handler_obj, trip_status_msg, ttl=1)
 
         elif msg_type == MessageType.SHERPA_STATUS:
             msg["source"] = sherpa
-            status_msg = SherpaStatusMsg.from_dict(msg)
+            status_msg = rqm.SherpaStatusMsg.from_dict(msg)
             enqueue(sherpa_update_q, handle, handler_obj, status_msg, ttl=1)
         else:
             logging.error(f"Unsupported message type {msg_type}")

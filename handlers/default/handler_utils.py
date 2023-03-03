@@ -1,46 +1,57 @@
-from typing import Dict, List
-from core.logs import get_logger
-from models.db_session import DBSession
-from models.fleet_models import SherpaStatus
-from models.trip_models import OngoingTrip, Trip, TripLeg
-from utils.util import generate_random_job_id
-from utils.create_certs import generate_certs_for_sherpa
-from utils.fleet_utils import compute_sha1_hash
-from models.request_models import MapFileInfo
 import json
 import redis
 import os
 import time
 import numpy as np
+from typing import List
+import datetime
 
-AVAILABLE = "available"
 
-#assigns a sherpa for a trip.
-def assign_sherpa(trip: Trip, sherpa: str, session: DBSession):
-    ongoing_trip = session.create_ongoing_trip(sherpa, trip.id)
-    trip.assign_sherpa(sherpa)
-    sherpa_status = session.get_sherpa_status(sherpa)
+from core.logs import get_logger
+from core.config import Config
+from core.constants import DisabledReason
+from models.db_session import DBSession
+from models.fleet_models import SherpaStatus, Sherpa, Station, SherpaEvent
+from models.trip_models import OngoingTrip, Trip, TripLeg
+from utils.util import generate_random_job_id
+from utils.create_certs import generate_certs_for_sherpa
+from utils.fleet_utils import compute_sha1_hash
+from models.request_models import MapFileInfo
+from models.misc_models import NotificationTimeout, NotificationLevels
+
+
+# Trip hutils
+def assign_sherpa(dbsession: DBSession, trip: Trip, sherpa: Sherpa):
+    ongoing_trip = dbsession.create_ongoing_trip(sherpa.name, trip.id)
+    trip.assign_sherpa(sherpa.name)
+    sherpa_status: SherpaStatus = sherpa.status
     sherpa_status.idle = False
     sherpa_status.trip_id = trip.id
-    get_logger(sherpa).info(f"assigned trip id {trip.id} to {sherpa}")
+    get_logger(sherpa.name).info(
+        f"{sherpa.name} assigned trip {trip.id} with route {trip.route}"
+    )
     return ongoing_trip
 
-#starts a trip
 
-def start_trip(ongoing_trip: OngoingTrip, session: DBSession):
+# starts a trip
+
+
+def start_trip(
+    dbsession: DBSession,
+    ongoing_trip: OngoingTrip,
+    sherpa: Sherpa,
+    all_stations: List[Station],
+):
 
     redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
-
-    # populate trip etas, need not be imported for every request
-    sherpa_status = session.get_sherpa_status(ongoing_trip.sherpa_name)
-
+    sherpa_status: SherpaStatus = sherpa.status
     start_pose = sherpa_status.pose
     fleet_name = ongoing_trip.trip.fleet_name
 
     etas_at_start = []
-    for station in ongoing_trip.trip.augmented_route:
+    for station in all_stations:
         job_id = generate_random_job_id()
-        end_pose = session.get_station(station).pose
+        end_pose = station.pose
         control_router_job = [start_pose, end_pose, fleet_name, job_id]
         redis_conn.set(f"control_router_job_{job_id}", json.dumps(control_router_job))
 
@@ -59,11 +70,11 @@ def start_trip(ongoing_trip: OngoingTrip, session: DBSession):
             get_logger(ongoing_trip.sherpa_name).info(
                 f"trip {ongoing_trip.trip_id} with {ongoing_trip.sherpa_name} failed, reason: {reason}"
             )
-            end_trip(ongoing_trip, False, session)
+            end_trip(ongoing_trip, sherpa, dbsession, False)
             return
 
         etas_at_start.append(route_length)
-        start_pose = session.get_station(station).pose
+        start_pose = station.pose
 
     ongoing_trip.trip.etas_at_start = etas_at_start
     ongoing_trip.trip.etas = ongoing_trip.trip.etas_at_start
@@ -72,29 +83,42 @@ def start_trip(ongoing_trip: OngoingTrip, session: DBSession):
     get_logger(ongoing_trip.sherpa_name).info(f"trip {ongoing_trip.trip_id} started")
 
 
-#ends a trip
-def end_trip(ongoing_trip: OngoingTrip, success: bool, session: DBSession):
+def end_trip(
+    dbsession: DBSession, ongoing_trip: OngoingTrip, sherpa: Sherpa, success: bool
+):
+
     ongoing_trip.trip.end(success)
-    session.delete_ongoing_trip(ongoing_trip)
-    sherpa_status = session.get_sherpa_status(ongoing_trip.sherpa_name)
+    dbsession.delete_ongoing_trip(ongoing_trip)
+
+    # update sherpa status on deleting trip
+    sherpa_status: SherpaStatus = sherpa.status
     sherpa_status.idle = True
     sherpa_status.trip_id = None
     sherpa_status.trip_leg_id = None
 
 
-#starts a leg trip. Leg is a direct trip between 2 adjacent stations. 
-def start_leg(ongoing_trip: OngoingTrip, session: DBSession) -> TripLeg:
+def start_leg(
+    dbsession: DBSession,
+    ongoing_trip: OngoingTrip,
+    from_station: Station,
+    to_station: Station,
+) -> TripLeg:
+
     trip: Trip = ongoing_trip.trip
-    trip_leg: TripLeg = session.create_trip_leg(
-        trip.id, ongoing_trip.curr_station(), ongoing_trip.next_station()
+
+    from_station_name = from_station.name if from_station else None
+
+    trip_leg: TripLeg = dbsession.create_trip_leg(
+        trip.id, from_station_name, to_station.name
     )
+
     ongoing_trip.start_leg(trip_leg.id)
     sherpa_name = ongoing_trip.sherpa_name
 
-    if ongoing_trip.curr_station():
-        update_leg_curr_station(ongoing_trip.curr_station(), sherpa_name, session)
+    if from_station:
+        update_leg_curr_station(from_station, sherpa_name)
 
-    update_leg_next_station(ongoing_trip.next_station(), sherpa_name, session)
+    update_leg_next_station(to_station, sherpa_name)
 
     return trip_leg
 
@@ -104,22 +128,24 @@ def end_leg(ongoing_trip: OngoingTrip):
     ongoing_trip.end_leg()
 
 
-def update_leg_curr_station(curr_station_name: str, sherpa: str, session: DBSession):
-    curr_station_status = session.get_station_status(curr_station_name)
+def update_leg_curr_station(curr_station: Station, sherpa_name: str):
+    curr_station_status = curr_station.status
     if not curr_station_status:
         return
-    if sherpa in curr_station_status.arriving_sherpas:
-        curr_station_status.arriving_sherpas.remove(sherpa)
+    if sherpa_name in curr_station_status.arriving_sherpas:
+        curr_station_status.arriving_sherpas.remove(sherpa_name)
 
 
-def update_leg_next_station(next_station_name: str, sherpa: str, session: DBSession):
-    next_station_status = session.get_station_status(next_station_name)
+def update_leg_next_station(next_station: Station, sherpa_name: str):
+    next_station_status = next_station.status
     if not next_station_status:
         return
-    next_station_status.arriving_sherpas.append(sherpa)
+    next_station_status.arriving_sherpas.append(sherpa_name)
 
-#checks the status of sherpa(initialized, inducted) and checks if the sherpa is available for a trip
+
+# checks the status of sherpa(initialized, inducted) and checks if the sherpa is available for a trip
 def is_sherpa_available_for_new_trip(sherpa_status):
+    AVAILABLE = "available"
     reason = None
     if not reason and not sherpa_status.inducted:
         reason = "out of fleet"
@@ -131,17 +157,60 @@ def is_sherpa_available_for_new_trip(sherpa_status):
         reason = AVAILABLE
     return reason == AVAILABLE, reason
 
-#returns all the available sherpas for a trip.
-def get_sherpa_availability(all_sherpa_status: List[SherpaStatus]):
-    availability = {}
 
-    for sherpa_status in all_sherpa_status:
-        available, reason = is_sherpa_available_for_new_trip(sherpa_status)
-        availability[sherpa_status.sherpa_name] = available, reason
+# FM HEALTH CHECK #
+def delete_notifications(dbsession: DBSession):
+    all_notifications = dbsession.get_notifications()
 
-    return availability
+    for notification in all_notifications:
+        time_since_notification = datetime.datetime.now() - notification.created_at
+        timeout = NotificationTimeout.get(notification.log_level, 120)
+
+        if notification.repetitive:
+            timeout = notification.repetition_freq
+
+        if time_since_notification.seconds > timeout:
+
+            # delete any notification which is repetitive and past timeout
+            if notification.repetitive:
+                dbsession.delete_notification(notification.id)
+                continue
+
+            if (
+                notification.log_level != NotificationLevels.info
+                and len(notification.cleared_by) == 0
+            ):
+                continue
+
+            dbsession.delete_notification(notification.id)
 
 
+def check_sherpa_status(dbsession: DBSession):
+    MULE_HEARTBEAT_INTERVAL = Config.get_fleet_comms_params()["mule_heartbeat_interval"]
+    stale_sherpas_status: SherpaStatus = dbsession.get_all_stale_sherpa_status(
+        MULE_HEARTBEAT_INTERVAL
+    )
+
+    for stale_sherpa_status in stale_sherpas_status:
+        if not stale_sherpa_status.disabled:
+            stale_sherpa_status.disabled = True
+            stale_sherpa_status.disabled_reason = DisabledReason.STALE_HEARTBEAT
+
+        get_logger("status_updates").warning(
+            f"stale heartbeat from sherpa {stale_sherpa_status.sherpa_name} last_update_at: {stale_sherpa_status.updated_at} mule_heartbeat_interval: {MULE_HEARTBEAT_INTERVAL}"
+        )
+
+
+def add_sherpa_event(dbsession: DBSession, sherpa_name, msg_type, context):
+    sherpa_event: SherpaEvent = SherpaEvent(
+        sherpa_name=sherpa_name,
+        msg_type=msg_type,
+        context="sent by sherpa",
+    )
+    dbsession.add_to_session(sherpa_event)
+
+
+# miscellaneous
 def get_conveyor_ops_info(trip_metadata):
     get_logger().info(
         f"will parse trip metadata for conveyor ops, Trip metadata: {trip_metadata}"
@@ -154,19 +223,6 @@ def get_conveyor_ops_info(trip_metadata):
             if num_units is not None:
                 num_units = int(num_units)
     return num_units
-
-#among all the available sherpas find which would be most suitable for the trip
-def find_best_sherpa():
-    all_sherpa_status: List[SherpaStatus] = session.get_all_sherpa_status()
-    availability: Dict[str, str] = get_sherpa_availability(all_sherpa_status)
-    get_logger().info(f"sherpa availability: {availability}")
-
-    for name, (available, _) in availability.items():
-        if available:
-            get_logger().info(f"found {name}")
-            return name
-
-    return None
 
 
 def update_map_file_info_with_certs(
