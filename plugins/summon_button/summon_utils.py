@@ -45,14 +45,12 @@ def cancel_trip(dbsession, summon_info, plugin_name="plugin_summon_button"):
   
 def send_job_updates_summon(color = "white"):
     logger = logging.getLogger("plugin_summon_button")
-    logger.info("sending job updates using send_job_updates_summon")
     while True:
         with DBSession() as dbsession:
             all_summon_buttons = dbsession.session.query(SummonInfo).all()
 
             
             for summon_button in all_summon_buttons:
-                logger.info(f" 1 :  summon button : {summon_button}")
                 if summon_button.trip_id:
                     trip_ids = [summon_button.trip_id]
                     req_json = {"trip_ids": trip_ids}
@@ -65,7 +63,6 @@ def send_job_updates_summon(color = "white"):
                         if trip_status not in COMPLETED_TRIP_STATUS:
                             color = "green" 
                     msg = {"Led": color}
-                    logger.info(f" 2 : trip status {trip_status}, led color {color}")
                     send_msg(msg)
 
         time.sleep(30)
