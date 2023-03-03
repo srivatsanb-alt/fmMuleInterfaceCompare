@@ -1,5 +1,8 @@
+import json
 import os
+import time
 from fastapi import APIRouter, Depends
+import aioredis
 
 from utils.util import get_table_as_dict
 import models.request_models as rqm
@@ -9,9 +12,13 @@ from app.routers.dependencies import (
     get_user_from_header,
     raise_error,
 )
+from utils.util import generate_random_job_id
 
 router = APIRouter(responses={404: {"description": "Not found"}}, prefix="/api/v1")
 
+redis_conn = aioredis.Redis.from_url(
+        os.getenv("FM_REDIS_URI"), max_connections=10, decode_responses=True
+    )
 
 @router.get("/site_info")
 async def site_info(user_name=Depends(get_user_from_header)):
@@ -134,11 +141,23 @@ async def get_route_wps(
     if not user_name:
         raise_error("Unknown requester", 401)
 
+    response = {}
+    
     with DBSession() as session:
         stations_poses = []
         fleet_name = route_preview_req.fleet_name
         for station_name in route_preview_req.route:
             station = session.get_station(station_name)
             stations_poses.append(station.pose)
+        job_id = generate_random_job_id()
+        control_router_wps_job = [stations_poses, fleet_name, job_id]
+        await redis_conn.set(f"control_router_wps_job_{job_id}", json.dumps(control_router_wps_job))
 
-    return {}
+        while not await redis_conn.get(f"result_wps_job_{job_id}"):
+            time.sleep(0.005)
+        
+        wps_list = json.loads(await redis_conn.get(f"result_wps_job_{job_id}"))
+        response.update({"wps_list": wps_list})
+        await redis_conn.delete(f"result_wps_job_{job_id}")
+
+    return response
