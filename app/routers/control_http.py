@@ -25,8 +25,6 @@ router = APIRouter(
 # clears visa assignments- traffic zones which cannot be accessed by more than one sherpa at a time.
 # Only one sherpa is assigned a visa to that zone, and after the completion of it's trip
 # the visa is revoked.
-
-
 @router.get("/fleet/clear_all_visa_assignments")
 async def clear_all_visa_assignments(user_name=Depends(get_user_from_header)):
 
@@ -76,8 +74,6 @@ async def diagnostics(
 
 
 # restarts the mule docker container.
-
-
 @router.get("/sherpa/{entity_name}/restart_mule_docker")
 async def restart_mule_docker(
     entity_name=Union[str, None],
@@ -111,8 +107,6 @@ async def restart_mule_docker(
 
 
 # updates sherpa docker image
-
-
 @router.get("/sherpa/{entity_name}/update_sherpa_img")
 async def update_sherpa_img(
     entity_name=Union[str, None],
@@ -214,8 +208,6 @@ async def emergency_stop(
 
 
 # to emergency stop the sherpa
-
-
 @router.post("/sherpa/{entity_name}/emergency_stop")
 async def sherpa_emergency_stop(
     pause_resume_ctrl_req: rqm.PauseResumeCtrlReq,
@@ -261,8 +253,6 @@ async def sherpa_emergency_stop(
 
 
 # switches mode of the sherpa - (various modes - manual, fleet, remote, simulation etc)
-
-
 @router.post("/sherpa/{entity_name}/switch_mode")
 async def switch_mode(
     switch_mode_ctrl_req: rqm.SwitchModeCtrlReq,
@@ -297,8 +287,6 @@ async def switch_mode(
 
 
 # resets the position of sherpa to the station specified by the user
-
-
 @router.post("/sherpa/{entity_name}/recovery")
 async def reset_pose(
     reset_pose_ctrl_req: rqm.ResetPoseCtrlReq,
@@ -342,8 +330,6 @@ async def reset_pose(
 
 # inducts sherpa into the fleet
 # trips not assigned otherwise
-
-
 @router.post("/sherpa/{sherpa_name}/induct")
 async def induct_sherpa(
     sherpa_name: str,
