@@ -62,7 +62,9 @@ async def diagnostics(
 
         if not sherpa_status.sherpa.ip_address:
             raise_error("Sherpa not yet connected to the fleet manager")
-        response = await send_async_req_to_sherpa(dbsession,entity_name,response)
+
+        req = {"endpoint": "diagnostics", "source": user_name}
+        response = await send_async_req_to_sherpa(dbsession, sherpa_status.sherpa, req)
 
     return response
 
@@ -90,8 +92,8 @@ async def restart_mule_docker(
         if not sherpa_status.sherpa.ip_address:
             raise_error("Sherpa not yet connected to the fleet manager")
 
-
-        response =  await send_async_req_to_sherpa(dbsession,entity_name,response)
+        req = {"endpoint": "restart_mule_docker", "source": user_name}
+        response = await send_async_req_to_sherpa(dbsession, sherpa_status.sherpa, req)
 
     return response
 

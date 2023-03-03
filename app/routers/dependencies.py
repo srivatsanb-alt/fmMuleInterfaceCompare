@@ -15,9 +15,8 @@ import json
 from models.request_models import SherpaReq
 from models.db_session import DBSession
 
+
 # upon assignment of a task, it gets added into the job queue
-
-
 def add_job_to_queued_jobs(job_id, source):
     redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
     queued_jobs = redis_conn.get("queued_jobs")
@@ -38,8 +37,6 @@ def add_job_to_queued_jobs(job_id, source):
 
 
 # removes job from the job queue
-
-
 def remove_job_from_queued_jobs(job_id, source):
     redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
     queued_jobs = redis_conn.get("queued_jobs")
@@ -78,7 +75,6 @@ def get_sherpa(x_api_key: str = Header(None)):
 
 
 def get_user_from_header(x_user_token: str = Header(None)):
-    return "admin"
     if x_user_token is None:
         return None
     return decode_token(x_user_token)
@@ -120,8 +116,6 @@ def generate_jwt_token(username: str):
 
 
 # processes the requests in the job queue.
-
-
 def process_req(queue, req, user, dt=None, ttl=None):
 
     if not user:
@@ -162,8 +156,6 @@ def process_req(queue, req, user, dt=None, ttl=None):
 
 
 # processes the requests in the queue and responds back(request finished, failed, etc.)
-
-
 async def process_req_with_response(queue, req, user: str):
     job: Job = process_req(queue, req, user)
     add_job_to_queued_jobs(job.id, req.source)

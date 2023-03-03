@@ -105,7 +105,7 @@ async def sherpa_status(
     sherpa_name=Depends(get_sherpa),
     x_real_ip=Depends(get_real_ip_from_header),
 ):
-    sherpa_name = "FK-S16"
+
     if not sherpa_name:
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
@@ -126,6 +126,7 @@ async def sherpa_status(
         manage_sherpa_ip_change(sherpa, x_real_ip)
 
     await websocket.accept()
+    logger.info(f"websocket connection accepeted: {sherpa_name}")
 
     rw = [
         asyncio.create_task(reader(websocket, sherpa_name)),

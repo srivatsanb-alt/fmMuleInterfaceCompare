@@ -17,6 +17,7 @@ from models.request_models import FMReq, MoveReq
 from models.trip_models import OngoingTrip
 import asyncio
 
+
 def convert_to_dict(msg):
     if isinstance(msg, BaseModel):
         body = msg.dict()
@@ -75,7 +76,8 @@ def send_req_to_sherpa(dbsession, sherpa: Sherpa, msg: FMReq) -> Dict:
         return response
     else:
         raise Exception(f"req id {req_id} failed, req sent: {body}")
-    
+
+
 async def send_async_req_to_sherpa(dbsession, sherpa: Sherpa, msg: FMReq) -> Dict:
     redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
 
@@ -104,7 +106,7 @@ async def send_async_req_to_sherpa(dbsession, sherpa: Sherpa, msg: FMReq) -> Dic
     await asyncio.sleep(0.005)
 
     while redis_conn.get(f"success_{req_id}") is None:
-       await asyncio.sleep(0.005)
+        await asyncio.sleep(0.005)
 
     success = json.loads(redis_conn.get(f"success_{req_id}"))
     if success:
