@@ -2,11 +2,20 @@ import requests
 import redis
 import os
 import json
+import redis
+import os
+import json
 from typing import Union
 from core.constants import FleetStatus, DisabledReason
 from utils.comms import get_sherpa_url
 from fastapi import APIRouter, Depends
 from models.db_session import DBSession
+import models.request_models as rqm
+import models.fleet_models as fm
+from app.routers.dependencies import (
+    get_user_from_header,
+    process_req_with_response,
+    raise_error,
 import models.request_models as rqm
 import models.fleet_models as fm
 from app.routers.dependencies import (
@@ -23,8 +32,11 @@ router = APIRouter(
 )
 
 # clears visa assignments- traffic zones which cannot be accessed by more than one sherpa at a time.
+# clears visa assignments- traffic zones which cannot be accessed by more than one sherpa at a time.
 # Only one sherpa is assigned a visa to that zone, and after the completion of it's trip
 # the visa is revoked.
+
+
 @router.get("/fleet/clear_all_visa_assignments")
 async def clear_all_visa_assignments(user_name=Depends(get_user_from_header)):
 
@@ -32,10 +44,13 @@ async def clear_all_visa_assignments(user_name=Depends(get_user_from_header)):
         raise_error("Unknown requester", 401)
 
     delete_visas_req = rqm.DeleteVisaAssignments()
+    delete_visas_req = rqm.DeleteVisaAssignments()
     response = process_req_with_response(None, delete_visas_req, user_name)
 
     return response
 
+
+# returns the sherpa status(name, assigned, initialized, idle, disabled, inducted, etc.)
 
 # returns the sherpa status(name, assigned, initialized, idle, disabled, inducted, etc.)
 @router.get("/sherpa/{entity_name}/diagnostics")
@@ -133,6 +148,7 @@ async def update_sherpa_img(
     return response
 
 
+# starts or stops the fleet
 # starts or stops the fleet
 @router.post("/fleet/{entity_name}/start_stop")
 async def start_stop(

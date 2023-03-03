@@ -30,6 +30,7 @@ class DBSession:
 
 class SummonInfo(Base):
     __tablename__ = "summon_info"
+    __table_args__ = {"extend_existing": True}
     id = Column(Integer, primary_key=True, index=True)
     hashed_api_key = Column(String, unique=True)
     press = Column(String)

@@ -28,3 +28,8 @@ if "conveyor" in all_plugins:
     from .conveyor import conveyor_comms
 
     app.include_router(conveyor_comms.router)
+
+if "summon_button" in all_plugins:
+    from .summon_button import summon_comms
+
+    app.include_router(summon_comms.router)
