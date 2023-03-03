@@ -14,6 +14,7 @@ from app.routers.dependencies import (
     process_req,
     raise_error,
 )
+from utils.comms import send_async_req_to_sherpa
 
 
 router = APIRouter(
@@ -61,12 +62,7 @@ async def diagnostics(
 
         if not sherpa_status.sherpa.ip_address:
             raise_error("Sherpa not yet connected to the fleet manager")
-
-        response = None
-        if response.status_code == 200:
-            response = response.json()
-        else:
-            raise_error(f"Bad response from sherpa, {response.status_code}")
+        response = await send_async_req_to_sherpa(dbsession,entity_name,response)
 
     return response
 
@@ -94,14 +90,8 @@ async def restart_mule_docker(
         if not sherpa_status.sherpa.ip_address:
             raise_error("Sherpa not yet connected to the fleet manager")
 
-        base_url, verify = get_sherpa_url(sherpa_status.sherpa)
-        url = f"{base_url}/restart_mule_docker"
-        response = requests.get(url, verify=verify)
 
-        if response.status_code == 200:
-            response = response.json()
-        else:
-            raise_error(f"Bad response from sherpa, {response.status_code}")
+        response =  await send_async_req_to_sherpa(dbsession,entity_name,response)
 
     return response
 
