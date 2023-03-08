@@ -31,7 +31,7 @@ MSG_TS_INVALID = "msg_timestamp_invalid"
 # setup logging
 log_conf_path = os.path.join(os.getenv("FM_CONFIG_DIR"), "logging.conf")
 logging.config.fileConfig(log_conf_path)
-logger = logging.getLogger("Uvicorn")
+logger = logging.getLogger("uvicorn")
 
 
 redis = Redis.from_url(os.getenv("FM_REDIS_URI"))
@@ -106,18 +106,18 @@ async def sherpa_status(
     x_real_ip=Depends(get_real_ip_from_header),
 ):
 
+    client_ip = websocket.client.host
+    if x_real_ip is None:
+        x_real_ip = client_ip
+
     if not sherpa_name:
+        logger.info(
+            f"websocket connection initiated with an invalid api_key(sherpa with api key could not be found). client ip addr: {x_real_ip}"
+        )
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
 
     logger.info(f"websocket connection initiated by {sherpa_name}")
-
-    # client.host will be nginx container ip
-    client_ip = websocket.client.host
-
-    # x_real_ip will be denoting sherpas real ip
-    if x_real_ip is None:
-        x_real_ip = client_ip
 
     with DBSession() as dbsession:
         sherpa = dbsession.get_sherpa(sherpa_name)
@@ -125,6 +125,7 @@ async def sherpa_status(
             sherpa.status.other_info = {}
         manage_sherpa_ip_change(sherpa, x_real_ip)
 
+    logger.info(f"websocket connection accepted for {sherpa_name}")
     await websocket.accept()
     logger.info(f"websocket connection accepeted: {sherpa_name}")
 

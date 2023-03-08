@@ -11,8 +11,7 @@ import redis
 from .plugin_rq import enqueue
 
 
-async def ws_reader(websocket, name, handler_obj, unique_id=None):
-
+async def ws_reader(websocket, name, handler_obj, unique_id=None, api_key=None):
     log_conf_path = os.path.join(os.getenv("FM_CONFIG_DIR"), "logging.conf")
     logging.config.fileConfig(log_conf_path)
     logger = logging.getLogger(f"plugin_{name}")
@@ -39,6 +38,10 @@ async def ws_reader(websocket, name, handler_obj, unique_id=None):
         if unique_id is not None:
             msg["unique_id"] = unique_id
 
+
+        if api_key:
+            msg["api_key"]=api_key
+            
         logger.debug(f"Converted msg: {msg}, count: {count}")
         enqueue(plugin_q, handler_obj.handle, msg)
 

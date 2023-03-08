@@ -26,8 +26,6 @@ router = APIRouter(
 # clears visa assignments- traffic zones which cannot be accessed by more than one sherpa at a time.
 # Only one sherpa is assigned a visa to that zone, and after the completion of it's trip
 # the visa is revoked.
-
-
 @router.get("/fleet/clear_all_visa_assignments")
 async def clear_all_visa_assignments(user_name=Depends(get_user_from_header)):
 
@@ -70,8 +68,6 @@ async def diagnostics(
 
 
 # restarts the mule docker container.
-
-
 @router.get("/sherpa/{entity_name}/restart_mule_docker")
 async def restart_mule_docker(
     entity_name=Union[str, None],
@@ -99,8 +95,6 @@ async def restart_mule_docker(
 
 
 # updates sherpa docker image
-
-
 @router.get("/sherpa/{entity_name}/update_sherpa_img")
 async def update_sherpa_img(
     entity_name=Union[str, None],
@@ -202,8 +196,6 @@ async def emergency_stop(
 
 
 # to emergency stop the sherpa
-
-
 @router.post("/sherpa/{entity_name}/emergency_stop")
 async def sherpa_emergency_stop(
     pause_resume_ctrl_req: rqm.PauseResumeCtrlReq,
@@ -249,8 +241,6 @@ async def sherpa_emergency_stop(
 
 
 # switches mode of the sherpa - (various modes - manual, fleet, remote, simulation etc)
-
-
 @router.post("/sherpa/{entity_name}/switch_mode")
 async def switch_mode(
     switch_mode_ctrl_req: rqm.SwitchModeCtrlReq,
@@ -285,8 +275,6 @@ async def switch_mode(
 
 
 # resets the position of sherpa to the station specified by the user
-
-
 @router.post("/sherpa/{entity_name}/recovery")
 async def reset_pose(
     reset_pose_ctrl_req: rqm.ResetPoseCtrlReq,
@@ -330,8 +318,6 @@ async def reset_pose(
 
 # inducts sherpa into the fleet
 # trips not assigned otherwise
-
-
 @router.post("/sherpa/{sherpa_name}/induct")
 async def induct_sherpa(
     sherpa_name: str,
@@ -359,15 +345,3 @@ async def induct_sherpa(
     _ = await process_req_with_response(None, sherpa_induct_req, user_name)
 
     return respone
-
-
-@router.get("/restart_fleet_manager")
-def restart_fm(user_name=Depends(get_user_from_header)):
-    response = {}
-    if not user_name:
-        raise_error("Unknown requester", 401)
-
-    redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
-    redis_conn.set("restart_fm", json.dumps(True))
-
-    return response

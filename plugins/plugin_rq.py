@@ -36,23 +36,6 @@ def get_all_plugins():
     return get_plugin_config()["all_plugins"]
 
 
-class Plugin_Queues:
-    queues_dict = {}
-    all_plugins = get_all_plugins()
-
-    for plugin_name in all_plugins:
-        queues_dict.update(
-            {
-                f"plugin_{plugin_name}": Queue(
-                    f"plugin_{plugin_name}", connection=get_redis_conn()
-                )
-            }
-        )
-
-    @classmethod
-    def get_queue(cls, qname):
-        return getattr(cls, qname)
-
 
 def start_worker(queue_name):
     with Connection():
@@ -75,6 +58,8 @@ def report_failure(job, connection, fail_type, value, traceback):
 
 
 def report_success(job, connection, result, *args, **kwargs):
+    logger = logging.getLogger("plugin_rq")
+    logger.info(f"job done successfully {job}")
     pass
 
 
@@ -83,6 +68,7 @@ def enqueue(queue: Queue, func, *args, **kwargs):
     kwargs.setdefault("failure_ttl", 0)
     kwargs.setdefault("on_failure", report_failure)
     kwargs.setdefault("on_success", report_success)
+
     return queue.enqueue(
         func,
         *args,
@@ -144,16 +130,23 @@ if __name__ == "__main__":
             Process(target=start_worker, args=(f"plugin_conveyor_{conveyor_name}",)).start()
             conveyor_logger.info(f"started a worker for plugin_conveyor_{conveyor_name}")
 
-    # if "summon_button" in all_plugins:
-    #     from summon_button.summon_utils import (
-    #         SummonInfo,
-    #         SummonActions,
-    #         populate_summon_info,
-    #     )
-    #     from plugin_db import init_db
-    #
-    #     summon_logger = logging.getLogger("plugin_summon_button")
-    #     init_db(str("plugin_summon_button"), [SummonInfo, SummonActions])
-    #     populate_summon_info()
+    if "summon_button" in all_plugins:
+        from summon_button.summon_utils import (
+            SummonInfo,
+            SummonActions,
+            populate_summon_info,
+        )
+        from plugin_db import init_db
+
+        summon_logger = logging.getLogger("plugin_summon_button")
+        init_db(str("plugin_summon_button"), [SummonInfo, SummonActions])
+        populate_summon_info()
+        create_dummy_queue = Queue("plugin_summon_button", connection=redis_conn)
+        Process(target=start_worker, args=("plugin_summon_button",)).start()
+        summon_logger.info("started a worker for plugin_summon_button")
+        from summon_button.summon_utils import send_job_updates_summon
+
+        Process(target=send_job_updates_summon,args=[]).start()
+        summon_logger.info("Sending periodic job updates")
 
     redis_conn.set("plugins_workers_db_init", json.dumps(True))

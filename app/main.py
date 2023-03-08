@@ -1,13 +1,12 @@
 import time
-import logging
-import logging.config
+import uvicorn
 import os
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from .routers import (
+from app.routers import (
     sherpa_http,
     sherpa_ws,
     trips_http,
@@ -20,13 +19,13 @@ from .routers import (
     configure_fleet,
 )
 
-#for easy maintainance and usability of the app, we use routers 
-#each functionality can be separately implemented on router rather than modifying the 
-#entire app.
+# for easy maintainance and usability of the app, we use routers
+# each functionality can be separately implemented on router rather than modifying the
+# entire app.
 
 # setup logging
-log_conf_path = os.path.join(os.getenv("FM_CONFIG_DIR"), "logging.conf")
-logging.config.fileConfig(log_conf_path)
+# log_conf_path = os.path.join(os.getenv("FM_CONFIG_DIR"), "logging.conf")
+# logging.config.fileConfig(log_conf_path)
 
 # create FastAPI object
 app = FastAPI()
@@ -50,8 +49,6 @@ async def add_process_time_header(request: Request, call_next):
     return response
 
 
-app.mount("/api/static", StaticFiles(directory="/app/static"), name="static")
-
 app.include_router(sherpa_http.router)
 app.include_router(sherpa_ws.router)
 app.include_router(trips_http.router)
@@ -62,3 +59,26 @@ app.include_router(control_http.router)
 app.include_router(station_http.router)
 app.include_router(notifications.router)
 app.include_router(configure_fleet.router)
+
+
+def get_uvicorn_config():
+    uvi_config = uvicorn.Config(
+        app,
+        host="0.0.0.0",
+        port=int(os.getenv("FM_PORT")),
+        log_level="debug",
+        log_config=os.path.join(os.getenv("FM_CONFIG_DIR"), "logging.conf"),
+        reload=True,
+    )
+    return uvi_config
+
+
+def main():
+    app.mount("/api/static", StaticFiles(directory="/app/static"), name="static")
+    config = get_uvicorn_config()
+    server = uvicorn.Server(config)
+    server.run()
+
+
+if __name__ == "__main__":
+    main()

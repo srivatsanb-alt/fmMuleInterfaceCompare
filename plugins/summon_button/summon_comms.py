@@ -4,12 +4,11 @@ from fastapi import APIRouter, WebSocket, Depends, Header, status
 from plugins.plugin_comms import ws_reader, ws_writer
 from .summon_models import SummonInfo, DBSession
 from .summon_handler import SUMMON_HANDLER
-
+import logging
 router = APIRouter()
 
 
 def get_summon(x_api_key: str = Header(None)):
-    summon_name = None
     if x_api_key is None:
         return None
 
@@ -20,11 +19,7 @@ def get_summon(x_api_key: str = Header(None)):
             .filter(SummonInfo.hashed_api_key == hashed_api_key)
             .one_or_none()
         )
-
-        if summon_info is not None:
-            summon_name = summon_info.name
-
-    return summon_name
+    return summon_info
 
 
 @router.get("/plugin/ws/api/v1/plugin_summon_button")
@@ -33,19 +28,17 @@ async def check_connection():
 
 
 @router.websocket("/plugin/ws/api/v1/summon_button")
-async def conveyor_ws(websocket: WebSocket, summon_name=Depends(get_summon)):
-
-    if summon_name is None:
+async def summon_button_ws(websocket: WebSocket,summon_info = Depends(get_summon)):
+    if not summon_info:
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
-
     await websocket.accept()
 
     summon_handler = SUMMON_HANDLER()
     rw = [
         asyncio.create_task(ws_reader(websocket, "summon_button", summon_handler)),
         asyncio.create_task(
-            ws_writer(websocket, "summon_button", unique_id=summon_name, format="text"),
+            ws_writer(websocket, "summon_button", format="text"),
         ),
     ]
     try:
