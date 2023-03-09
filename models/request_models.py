@@ -344,6 +344,10 @@ class InitReq(FMReq):
     endpoint: str = "init"
 
 
+class ResetVisasHeldReq(FMReq):
+    endpoint: str = "reset_visas_held"
+
+
 class MoveReq(FMReq):
     endpoint: str = "move_to"
     trip_id: int

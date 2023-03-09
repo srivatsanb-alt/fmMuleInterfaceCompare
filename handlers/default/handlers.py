@@ -913,6 +913,9 @@ class Handlers:
         sherpa.status.inducted = req.induct
         sherpa_availability.available = req.induct
 
+        reset_visas_held_req = rqm.ResetVisasHeldReq()
+        _ = utils_comms.send_req_to_sherpa(self.dbsession, sherpa, reset_visas_held_req)
+
         return response
 
     def handle_peripherals(self, req: rqm.SherpaPeripheralsReq):
@@ -1005,7 +1008,7 @@ class Handlers:
             indicator=rqm.IndicatorReq(pattern=rqm.PatternEnum.free, activate=True),
         )
 
-        _: Response = utils_comms.send_req_to_sherpa(self.dbsession, sherpa, sound_msg)
+        _ = utils_comms.send_req_to_sherpa(self.dbsession, sherpa, sound_msg)
 
     def handle_auto_hitch(
         self,
