@@ -295,6 +295,13 @@ class DBSession:
             .filter(OngoingTrip.sherpa_name == sherpa_name)
             .one_or_none()
         )
+    
+    def get_enroute_trip(self, sherpa_name: str):
+        return(
+            self.session.query(Trip)
+            .filter(Trip.sherpa_name == sherpa_name)
+            .filter(Trip.status == "en_route").one_or_none()
+        )
 
     def get_all_ongoing_trips(self):
         return self.session.query(OngoingTrip).all()
