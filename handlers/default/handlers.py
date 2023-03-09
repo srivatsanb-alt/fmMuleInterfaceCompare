@@ -663,8 +663,8 @@ class Handlers:
             if ongoing_trip is not None:
                 all_ongoing_trips.append(ongoing_trip)
 
-            sherpa: fm.Sherpa = self.dbsession.get_sherpa(ongoing_trip.sherpa_name)
-            all_sherpas.append(sherpa)
+                sherpa: fm.Sherpa = self.dbsession.get_sherpa(ongoing_trip.sherpa_name)
+                all_sherpas.append(sherpa)
 
         # end transaction
         self.dbsession.session.commit()
