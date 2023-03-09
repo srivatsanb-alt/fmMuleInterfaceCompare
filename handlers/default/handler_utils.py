@@ -70,7 +70,7 @@ def start_trip(
             get_logger(ongoing_trip.sherpa_name).info(
                 f"trip {ongoing_trip.trip_id} with {ongoing_trip.sherpa_name} failed, reason: {reason}"
             )
-            end_trip(ongoing_trip, sherpa, dbsession, False)
+            end_trip(dbsession, ongoing_trip, sherpa, False)
             return
 
         etas_at_start.append(route_length)
