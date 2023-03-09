@@ -909,12 +909,12 @@ class Handlers:
         if not req.induct:
             for visa_assignment in visa_assignments:
                 self.dbsession.session.delete(visa_assignments)
+        else:
+            reset_visas_held_req = rqm.ResetVisasHeldReq()
+            _ = utils_comms.send_req_to_sherpa(self.dbsession, sherpa, reset_visas_held_req)
 
         sherpa.status.inducted = req.induct
         sherpa_availability.available = req.induct
-
-        reset_visas_held_req = rqm.ResetVisasHeldReq()
-        _ = utils_comms.send_req_to_sherpa(self.dbsession, sherpa, reset_visas_held_req)
 
         return response
 
