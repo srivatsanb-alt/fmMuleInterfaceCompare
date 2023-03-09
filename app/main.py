@@ -66,7 +66,7 @@ def get_uvicorn_config():
         app,
         host="0.0.0.0",
         port=int(os.getenv("FM_PORT")),
-        log_level="debug",
+        log_level="info",
         log_config=os.path.join(os.getenv("FM_CONFIG_DIR"), "logging.conf"),
         reload=True,
     )
