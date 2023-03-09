@@ -267,6 +267,9 @@ class RoutePreview(ClientReq):
     route: List[str]
     fleet_name: str
 
+class LiveRoute(ClientReq):
+    sherpa_name: str
+
 
 class BookingReq(ClientReq):
     trips: List[TripMsg]
