@@ -3,6 +3,7 @@ import os
 import time
 from fastapi import APIRouter, Depends
 import aioredis
+import logging
 
 from utils.util import get_table_as_dict
 import models.request_models as rqm
@@ -161,3 +162,23 @@ async def get_route_wps(
         await redis_conn.delete(f"result_wps_job_{job_id}")
 
     return response
+
+@router.post("/trips/get_sherpa_live_route")
+async def get_sherpa_live_route(live_route_req: rqm.LiveRoute, user_name=Depends(get_user_from_header),):
+    if not user_name:
+        raise_error("Unknown requester", 401)
+
+    response = {}
+
+    with DBSession() as session:
+        ongoing_trip = session.get_enroute_trip(live_route_req.sherpa_name)
+        if ongoing_trip is not None:
+            ongoing_route = ongoing_trip.route
+            logging.info(f"ongoing trip, route: {ongoing_trip.id, ongoing_route}")
+            wps_req = rqm.RoutePreview(route = ongoing_route, fleet_name = ongoing_trip.fleet_name)
+            response = await get_route_wps(wps_req, user_name)
+            logging.info(f"route wps response: {response}")
+        else:
+            logging.info(f"no ongoing trips for sherps ({live_route_req.sherpa_name})")
+    return response
+
