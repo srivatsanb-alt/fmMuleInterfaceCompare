@@ -1124,9 +1124,10 @@ class Handlers:
             )
             get_logger().warning(update_map_msg)
 
-        map_file_info = hutils.update_map_file_info_with_certs(
-            map_file_info, sherpa.name, sherpa.ip_address, ip_changed=ip_changed
-        )
+            # map_file_info = hutils.update_map_file_info_with_certs(
+            # map_file_info, sherpa.name, sherpa.ip_address, ip_changed = ip_changed
+            # )
+
         response: rqm.VerifyFleetFilesResp = rqm.VerifyFleetFilesResp(
             fleet_name=fleet_name, files_info=map_file_info
         )
