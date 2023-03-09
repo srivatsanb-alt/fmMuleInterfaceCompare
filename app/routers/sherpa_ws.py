@@ -4,6 +4,8 @@ import logging
 import logging.config
 import math
 import os
+import datetime
+
 from datetime import timedelta
 import aioredis
 from sqlalchemy.orm.attributes import flag_modified
@@ -103,11 +105,8 @@ async def sherpa_status(
     sherpa_name=Depends(get_sherpa),
     x_real_ip=Depends(get_real_ip_from_header),
 ):
+
     client_ip = websocket.client.host
-
-    # client.host will be nginx container ip
-
-    # x_real_ip will be denoting sherpas real ip
     if x_real_ip is None:
         x_real_ip = client_ip
 
@@ -128,6 +127,7 @@ async def sherpa_status(
 
     logger.info(f"websocket connection accepted for {sherpa_name}")
     await websocket.accept()
+    logger.info(f"websocket connection accepeted: {sherpa_name}")
 
     rw = [
         asyncio.create_task(reader(websocket, sherpa_name)),
@@ -166,7 +166,6 @@ async def reader(websocket, sherpa):
         sherpa_trip_q = Queues.queues_dict[f"{sherpa}_trip_update_handler"]
 
         if msg_type == MessageType.TRIP_STATUS:
-            # logger.info(f"got a trip status {msg}")
             msg["source"] = sherpa
             trip_status_msg = rqm.TripStatusMsg.from_dict(msg)
             trip_status_msg.trip_info = rqm.TripInfo.from_dict(msg["trip_info"])
@@ -183,6 +182,8 @@ async def reader(websocket, sherpa):
         else:
             logging.error(f"Unsupported message type {msg_type}")
 
+        await asyncio.sleep(0.01)
+
 
 async def writer(websocket, sherpa):
     redis = aioredis.Redis.from_url(
@@ -192,7 +193,7 @@ async def writer(websocket, sherpa):
     await psub.subscribe(f"channel:{sherpa}")
 
     while True:
-        message = await psub.get_message(ignore_subscribe_messages=True, timeout=5)
+        message = await psub.get_message(ignore_subscribe_messages=True, timeout=0.5)
         if message:
             data = ast.literal_eval(message["data"])
 
@@ -201,6 +202,8 @@ async def writer(websocket, sherpa):
                 await websocket.close()
 
             await websocket.send_json(data)
+
+        await asyncio.sleep(0.01)
 
 
 def handle(handler, msg):

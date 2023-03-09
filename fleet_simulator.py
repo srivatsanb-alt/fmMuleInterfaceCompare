@@ -1,6 +1,9 @@
 import time
 from utils.rq_utils import Queues, enqueue
 from core.config import Config
+import requests
+import ast
+import redis
 from models.request_models import (
     SherpaStatusMsg,
     TripStatusMsg,
@@ -17,13 +20,10 @@ from utils.router_utils import RouterModule, get_dense_path
 from models.trip_models import OngoingTrip
 from models.trip_models import TripState as ts
 from typing import List
-import sys
 import json
 import random
 import os
-import uvicorn
 from multiprocessing import Process
-import redis
 import numpy as np
 from models.db_session import DBSession
 from models.fleet_models import Sherpa, Station
@@ -143,48 +143,59 @@ def find_next_pose_index(traj, idx, dmax):
     return i - wmin
 
 
-class MuleAPP:
+class MuleWS:
     def __init__(self):
-        self.sherpa_apps = []
-        self.host_all_mule_app()
+        self.sherpa_ws_conns = []
+        self.sherpa_api_keys = {}
+        self.set_sherpa_ip()
+        self.establish_all_sherpa_ws()
 
-    def host_uvicorn(self, config):
-        server = uvicorn.Server(config)
-        server.run()
-
-    def host_all_mule_app(self):
-        self.kill_all_mule_app()
+    def set_sherpa_ip(self):
         with DBSession() as dbsession:
             all_sherpas = dbsession.get_all_sherpas()
-
-            sys.path.append(os.environ["MULE_ROOT"])
-            os.environ["ATI_SUB"] = "ipc:////app/out/zmq_sub"
-            os.environ["ATI_PUB"] = "ipc:////app/out/zmq_sub"
-            redis_db = redis.from_url(os.getenv("FM_REDIS_URI"))
-
-            # mule looks for control_init to accept move_to req
-            redis_db.set("control_init", json.dumps(True))
-
-            from mule.ati.fastapi.mule_app import mule_app
-
-            port = 5001
             for sherpa in all_sherpas:
-                config = uvicorn.Config(mule_app, host="0.0.0.0", port=port, reload=True)
-                sherpa.ip_address = "0.0.0.0"
-                sherpa.port = str(port)
-                self.sherpa_apps.append(
-                    Process(target=self.host_uvicorn, args=[config], daemon=True)
+                sherpa.ip_address = "127.0.0.1"
+
+    def simulate_sherpa_ws(self, sherpa_name):
+        redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
+        psub = redis_conn.pubsub()
+        psub.subscribe(f"channel:{sherpa_name}")
+        while True:
+            message = psub.get_message(ignore_subscribe_messages=True, timeout=0.5)
+            if message:
+                req = ast.literal_eval(message["data"].decode())
+                req_id = req.get("req_id")
+                if req_id:
+                    ws_ack_url = (
+                        "http://127.0.0.1:"
+                        + os.getenv("FM_PORT")
+                        + f"/api/v1/sherpa/req_ack/{req_id}"
+                    )
+                    req_json = {}
+                    req_json["response"] = {}
+                    req_json["success"] = True
+                    requests.post(ws_ack_url, json=req_json)
+                    print(f"sent ws ack to req with req_id {req_id}")
+                else:
+                    print(f"got a ws msg without req_id. sherpa_name: {sherpa_name}")
+
+    def establish_all_sherpa_ws(self):
+        self.kill_all_sherpa_ws()
+        with DBSession() as dbsession:
+            all_sherpas = dbsession.get_all_sherpas()
+            for sherpa in all_sherpas:
+                self.sherpa_ws_conns.append(
+                    Process(
+                        target=self.simulate_sherpa_ws,
+                        args=[sherpa.name],
+                        daemon=True,
+                    )
                 )
-                self.sherpa_apps[-1].start()
-                port = port + 1
+                self.sherpa_ws_conns[-1].start()
 
-    def kill_all_mule_app(self):
-        with DBSession() as dbsession:
-            all_sherpas = dbsession.get_all_sherpas()
-            for sherpa in all_sherpas:
-                sherpa.port = None
-            for proc in self.sherpa_apps:
-                proc.kill()
+    def kill_all_sherpa_ws(self):
+        for proc in self.sherpa_ws_conns:
+            proc.kill()
 
 
 class FleetSimulator:
@@ -276,10 +287,17 @@ class FleetSimulator:
                 session.session.refresh(conveyor)
                 if time.time() - self.last_conveyor_update > random.randrange(30, 60):
                     num_totes_to_add = random.randrange(0, 2)
-                    updated_tote_count = np.min(conveyor.num_totes+num_totes_to_add, self.conveyor_capacity)
+                    updated_tote_count = np.min(
+                        conveyor.num_totes + num_totes_to_add, self.conveyor_capacity
+                    )
                     print(f"Adding {num_totes_to_add} tote/s to conveyor {conveyor.name}")
                     self.last_conveyor_update = time.time()
-                    msg = ToteStatus(num_totes=updated_tote_count, compact_time=0, type="tote_status", name=conveyor.name)
+                    msg = ToteStatus(
+                        num_totes=updated_tote_count,
+                        compact_time=0,
+                        type="tote_status",
+                        name=conveyor.name,
+                    )
                     queue = Queues.queues_dict["generic_handler"]
                     enqueue(queue, handle, self.handler_obj, msg, ttl=1)
 
@@ -290,7 +308,9 @@ class FleetSimulator:
         with DBSession() as session:
             conveyors = session.get_all_conveyors()
             for conveyor in conveyors:
-                t = threading.Thread(target=self.populate_conveyor_with_totes(), args=[conveyor])
+                t = threading.Thread(
+                    target=self.populate_conveyor_with_totes(), args=[conveyor]
+                )
                 t.daemon = True
                 t.start()
 
@@ -564,12 +584,22 @@ class FleetSimulator:
                 states,
             ):
                 peripheral_response.auto_hitch = HitchReq(hitch=True)
-            if self.response_is_needed(ts.WAITING_STATION_CONV_RECEIVE_START, ts.WAITING_STATION_CONV_RECEIVE_END, states):
+            if self.response_is_needed(
+                ts.WAITING_STATION_CONV_RECEIVE_START,
+                ts.WAITING_STATION_CONV_RECEIVE_END,
+                states,
+            ):
                 num_units = ongoing_trip.trip.trip_metadata.get("num_units")
-                peripheral_response.conveyor = ConveyorReq(direction=DirectionEnum.receive, num_units=0)
-            if self.response_is_needed(ts.WAITING_STATION_CONV_SEND_START, ts.WAITING_STATION_CONV_SEND_END, states):
+                peripheral_response.conveyor = ConveyorReq(
+                    direction=DirectionEnum.receive, num_units=0
+                )
+            if self.response_is_needed(
+                ts.WAITING_STATION_CONV_SEND_START, ts.WAITING_STATION_CONV_SEND_END, states
+            ):
                 num_units = ongoing_trip.trip.trip_metadata.get("num_units")
-                peripheral_response.conveyor = ConveyorReq(direction=DirectionEnum.send, num_units=num_units)
+                peripheral_response.conveyor = ConveyorReq(
+                    direction=DirectionEnum.send, num_units=num_units
+                )
             if self.reponse_flag:
                 print(
                     f"Sherpa {sherpa_name} - trip_id {ongoing_trip.trip_id}, leg {ongoing_trip.trip_leg_id} sent a peripheral msg {peripheral_response}"

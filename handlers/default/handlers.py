@@ -354,21 +354,21 @@ class Handlers:
             ),
         )
 
-        _ = utils_comms.send_msg_to_sherpa(self.dbsession, sherpa, sherpa_action_msg)
+        _ = utils_comms.send_req_to_sherpa(self.dbsession, sherpa, sherpa_action_msg)
 
     def add_auto_hitch_start_to_ongoing_trip(
         self, ongoing_trip: tm.OngoingTrip, sherpa: fm.Sherpa
     ):
         ongoing_trip.add_state(tm.TripState.WAITING_STATION_AUTO_HITCH_START)
         hitch_msg = rqm.PeripheralsReq(auto_hitch=rqm.HitchReq(hitch=True))
-        _ = utils_comms.send_msg_to_sherpa(self.dbsession, sherpa, hitch_msg)
+        _ = utils_comms.send_req_to_sherpa(self.dbsession, sherpa, hitch_msg)
 
     def add_auto_unhitch_start_to_ongoing_trip(
         self, ongoing_trip: tm.OngoingTrip, sherpa: fm.Sherpa
     ):
         ongoing_trip.add_state(tm.TripState.WAITING_STATION_AUTO_UNHITCH_START)
         unhitch_msg = rqm.PeripheralsReq(auto_hitch=rqm.HitchReq(hitch=False))
-        _ = utils_comms.send_msg_to_sherpa(self.dbsession, sherpa, unhitch_msg)
+        _ = utils_comms.send_req_to_sherpa(self.dbsession, sherpa, unhitch_msg)
 
     def add_conveyor_start_to_ongoing_trip(
         self, ongoing_trip: tm.OngoingTrip, sherpa: fm.Sherpa, station: fm.Station
@@ -409,7 +409,7 @@ class Handlers:
             conveyor=rqm.ConveyorReq(direction=direction, num_units=num_units)
         )
 
-        _ = utils_comms.send_msg_to_sherpa(self.dbsession, sherpa, conveyor_send_msg)
+        _ = utils_comms.send_req_to_sherpa(self.dbsession, sherpa, conveyor_send_msg)
 
     def do_post_actions(
         self, ongoing_trip: tm.OngoingTrip, sherpa: fm.Sherpa, curr_station: fm.Station
@@ -535,7 +535,7 @@ class Handlers:
                 trip_id=ongoing_trip.trip_id, trip_leg_id=ongoing_trip.trip_leg_id
             )
 
-            _ = utils_comms.send_msg_to_sherpa(self.dbsession, sherpa, terminate_trip_msg)
+            _ = utils_comms.send_req_to_sherpa(self.dbsession, sherpa, terminate_trip_msg)
             get_logger().info(
                 f"Deleted ongoing trip successfully trip_id: {ongoing_trip.trip.id} booking_id: {ongoing_trip.trip.booking_id}"
             )
@@ -699,8 +699,7 @@ class Handlers:
         elif not status.initialized:
             # sherpa switched to fleet mode
             init_req: rqm.InitReq = rqm.InitReq()
-            response: Response = utils_comms.get(sherpa, init_req)
-            _: rqm.InitResp = rqm.InitResp.from_dict(response.json())
+            response = utils_comms.send_req_to_sherpa(self.dbsession, sherpa, init_req)
             self.initialize_sherpa(sherpa)
 
         _, _ = self.should_assign_next_task(sherpa, ongoing_trip, pending_trip)
@@ -1006,7 +1005,7 @@ class Handlers:
             indicator=rqm.IndicatorReq(pattern=rqm.PatternEnum.free, activate=True),
         )
 
-        _: Response = utils_comms.send_msg_to_sherpa(self.dbsession, sherpa, sound_msg)
+        _: Response = utils_comms.send_req_to_sherpa(self.dbsession, sherpa, sound_msg)
 
     def handle_auto_hitch(
         self,
@@ -1248,7 +1247,7 @@ class Handlers:
         get_logger().info(
             f"Sending request {image_update_req} to update docker image on {sherpa.name}"
         )
-        utils_comms.send_msg_to_sherpa(self.dbsession, sherpa, image_update_req)
+        utils_comms.send_req_to_sherpa(self.dbsession, sherpa, image_update_req)
         return response
 
     def handle_pass_to_sherpa(self, req):
@@ -1256,7 +1255,7 @@ class Handlers:
         get_logger(sherpa.name).info(
             f"passing control request to sherpa {sherpa.name}, {req.dict()} "
         )
-        utils_comms.send_msg_to_sherpa(self.dbsession, sherpa, req)
+        utils_comms.send_req_to_sherpa(self.dbsession, sherpa, req)
 
     def handle(self, msg):
         self.dbsession = None

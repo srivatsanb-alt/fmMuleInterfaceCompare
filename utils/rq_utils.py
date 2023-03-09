@@ -5,7 +5,8 @@ from rq import Queue
 import json
 from core.config import Config
 
-#utils for redis rq
+# utils for redis rq
+
 
 class Queues:
 

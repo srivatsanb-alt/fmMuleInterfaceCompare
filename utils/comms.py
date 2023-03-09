@@ -6,87 +6,116 @@ import math
 import requests
 import threading
 import json
+from enum import Enum
 from rq.job import Job
-
-
-from core.config import Config
+import utils.util as utils_util
+from pydantic import BaseModel
 from core.logs import get_logger
 from models.fleet_models import SherpaEvent
 from models.fleet_models import Sherpa, Station
 from models.request_models import FMReq, MoveReq
 from models.trip_models import OngoingTrip
-
-#utility for communication between sherpa and fleet manager
-
-def get_sherpa_url(
-    sherpa: Sherpa,
-):
-    version = Config.get_api_version()
-    port = sherpa.port if sherpa.port else Config.get_sherpa_port()
-    scheme = Config.get_http_scheme() if Config.get_http_scheme() else "http"
-    verify = False
-    if scheme == "https":
-        port = 443
-        verify = os.path.join(os.getenv("FM_MAP_DIR"), "certs", f"{sherpa.name}_cert.pem")
-
-    return f"{scheme}://{sherpa.ip_address}:{port}/api/{version}/fm", verify
+import asyncio
 
 
-def post(url, verify, body: Dict, sherpa: Sherpa) -> Dict:
-    response = requests.post(url, verify=verify, json=body)
-    return process_response(response, url, body, sherpa)
+def convert_to_dict(msg):
+    if isinstance(msg, BaseModel):
+        body = msg.dict()
+    elif isinstance(msg, dict):
+        body = msg
+    else:
+        raise Exception("Cannot convert to dict")
+
+    for key, val in body.items():
+        if isinstance(val, BaseModel):
+            body[key] = convert_to_dict(val)
+        if isinstance(val, Enum):
+            body[key] = str(val.value)
+        if isinstance(val, dict):
+            body[key] = convert_to_dict(val)
+
+    return body
 
 
-def get(sherpa: Sherpa, req: FMReq) -> Dict:
-    base_url, verify = get_sherpa_url(sherpa)
-    url = f"{base_url}/{req.endpoint}"
-    response = requests.get(url, verify=verify)
-    return process_response(response, url, req, sherpa)
+# utility for communication between sherpa and fleet manager
+def send_req_to_sherpa(dbsession, sherpa: Sherpa, msg: FMReq) -> Dict:
+    redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
 
+    body = convert_to_dict(msg)
 
-def send_msg_to_sherpa(dbsession, sherpa: Sherpa, msg: FMReq) -> Dict:
-
-    body = msg.dict()
     body["timestamp"] = time.time()
-    endpoint = body.pop("endpoint")
+    body.pop("source")
 
     if body.get("type", "no_type") == "pass_to_sherpa":
         body.pop("type")
         body.pop("sherpa_name")
 
-    base_url, verify = get_sherpa_url(sherpa)
-    url = f"{base_url}/{endpoint}"
+    req_id = utils_util.generate_random_job_id()
+    body["req_id"] = req_id
 
-    get_logger().info(f"Sending msg to {sherpa.name}")
-    get_logger(sherpa.name).info(f"msg to {sherpa.name}: {body}, {url}")
+    get_logger().info(f"Sending req: {body} to {sherpa.name}")
 
     sherpa_event: SherpaEvent = SherpaEvent(
         sherpa_name=sherpa.name,
-        msg_type=endpoint,
+        msg_type=body["endpoint"],
         context="sent to sherpa",
     )
     dbsession.add_to_session(sherpa_event)
 
-    return post(url, verify, body, sherpa)
+    send_ws_msg_to_sherpa(body, sherpa)
+    time.sleep(0.005)
 
+    while redis_conn.get(f"success_{req_id}") is None:
+        time.sleep(0.005)
 
-def process_response(
-    response: requests.Response,
-    url,
-    req=None,
-    sherpa=None,
-) -> Dict:
-
-    response.raise_for_status()
-    if sherpa:
-        get_logger().info(
-            f"sherpa_name: {sherpa.name} || sherpa_ip: {sherpa.ip_address}:{sherpa.port} \n url: {url} \n Request_to_{sherpa.name}: {req} \n Response_from_{sherpa.name}: {response.json()}\n"
-        )
-
+    success = json.loads(redis_conn.get(f"success_{req_id}"))
+    if success:
+        response = json.loads(redis_conn.get(f"response_{req_id}"))
+        redis_conn.delete(f"success_{req_id}")
+        get_logger().info(f"Response from sherpa {response}")
+        return response
     else:
-        get_logger().info(f"url: {url} \n Request: {req} \n Response: {response.json()}\n")
+        raise Exception(f"req id {req_id} failed, req sent: {body}")
 
-    return response
+
+async def send_async_req_to_sherpa(dbsession, sherpa: Sherpa, msg: FMReq) -> Dict:
+    redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
+
+    body = convert_to_dict(msg)
+
+    body["timestamp"] = time.time()
+    body.pop("source")
+
+    if body.get("type", "no_type") == "pass_to_sherpa":
+        body.pop("type")
+        body.pop("sherpa_name")
+
+    req_id = utils_util.generate_random_job_id()
+    body["req_id"] = req_id
+
+    get_logger().info(f"Sending req: {body} to {sherpa.name}")
+
+    sherpa_event: SherpaEvent = SherpaEvent(
+        sherpa_name=sherpa.name,
+        msg_type=body["endpoint"],
+        context="sent to sherpa",
+    )
+    dbsession.add_to_session(sherpa_event)
+
+    send_ws_msg_to_sherpa(body, sherpa)
+    await asyncio.sleep(0.005)
+
+    while redis_conn.get(f"success_{req_id}") is None:
+        await asyncio.sleep(0.005)
+
+    success = json.loads(redis_conn.get(f"success_{req_id}"))
+    if success:
+        response = json.loads(redis_conn.get(f"response_{req_id}"))
+        redis_conn.delete(f"success_{req_id}")
+        get_logger().info(f"Response from sherpa {response}")
+        return response
+    else:
+        raise Exception(f"req id {req_id} failed, req sent: {body}")
 
 
 def send_move_msg(
@@ -98,7 +127,7 @@ def send_move_msg(
         destination_pose=station.pose,
         destination_name=station.name,
     )
-    return send_msg_to_sherpa(dbsession, sherpa, move_msg)
+    return send_req_to_sherpa(dbsession, sherpa, move_msg)
 
 
 def send_status_update(msg):

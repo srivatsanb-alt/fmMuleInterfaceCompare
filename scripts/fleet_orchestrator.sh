@@ -29,7 +29,7 @@ fm_init() {
 }
 
 run_simulator() {
-  poetry run python debug.py host_all_mule_app 2>&1 &
+  poetry run python debug.py establish_all_sherpa_ws > $LOGS/simulator.log 2>&1 &
   poetry run python debug.py simulate > $LOGS/simulator.log 2>&1 &
 }
 

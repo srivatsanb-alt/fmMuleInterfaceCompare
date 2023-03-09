@@ -21,17 +21,17 @@ all_plugins = plugin_config["all_plugins"]
 
 
 if "ies" in all_plugins:
-    from .ies import ies_comms
+    from plugins.ies import ies_comms
 
     app.include_router(ies_comms.router)
 
 if "conveyor" in all_plugins:
-    from .conveyor import conveyor_comms
+    from plugins.conveyor import conveyor_comms
 
     app.include_router(conveyor_comms.router)
 
 if "summon_button" in all_plugins:
-    from .summon_button import summon_comms
+    from plugins.summon_button import summon_comms
 
     app.include_router(summon_comms.router)
 
@@ -41,7 +41,7 @@ def get_uvicorn_config():
         app,
         host="0.0.0.0",
         port=int(os.getenv("PLUGIN_PORT")),
-        log_level="debug",
+        log_level="info",
         log_config=os.path.join(os.getenv("FM_CONFIG_DIR"), "logging.conf"),
         reload=True,
     )
