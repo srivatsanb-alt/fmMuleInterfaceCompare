@@ -345,3 +345,15 @@ async def induct_sherpa(
     _ = await process_req_with_response(None, sherpa_induct_req, user_name)
 
     return respone
+
+
+@router.get("/restart_fleet_manager")
+def restart_fm(user_name=Depends(get_user_from_header)):
+    response = {}
+    if not user_name:
+        raise_error("Unknown requester", 401)
+
+    redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
+    redis_conn.set("restart_fm", json.dumps(True))
+
+    return response
