@@ -145,7 +145,7 @@ async def get_route_wps(
 
     with DBSession() as session:
         stations_poses = []
-        fleet_name = route_preview_req.fleet_name
+        fleet_name = session.get_fleet_name_from_route(route_preview_req.route)
         for station_name in route_preview_req.route:
             station = session.get_station(station_name)
             stations_poses.append(station.pose)
@@ -182,12 +182,12 @@ async def get_sherpa_live_route(
 
     with DBSession() as session:
         ongoing_trip = session.get_enroute_trip(live_route_req.sherpa_name)
-
+        
         if not ongoing_trip:
-            dpd.raise_error("No ongoing trip for {live_route_req.sherpa_name}")
-
+            dpd.raise_error(f"No ongoing trip for {live_route_req.sherpa_name}")
+        
         ongoing_route = ongoing_trip.route
-        wps_req = rqm.RoutePreview(route=ongoing_route, fleet_name=ongoing_trip.fleet_name)
+        wps_req = rqm.RoutePreview(route = ongoing_route)
         response = await get_route_wps(wps_req, user_name)
-
+        
     return response
