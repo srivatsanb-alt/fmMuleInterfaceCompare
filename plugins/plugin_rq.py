@@ -130,17 +130,16 @@ if __name__ == "__main__":
             Process(target=start_worker, args=(f"plugin_conveyor_{conveyor_name}",)).start()
             conveyor_logger.info(f"started a worker for plugin_conveyor_{conveyor_name}")
 
+
     if "summon_button" in all_plugins:
         from summon_button.summon_utils import (
             SummonInfo,
             SummonActions,
-            populate_summon_info,
         )
         from plugin_db import init_db
 
         summon_logger = logging.getLogger("plugin_summon_button")
         init_db(str("plugin_summon_button"), [SummonInfo, SummonActions])
-        populate_summon_info()
         create_dummy_queue = Queue("plugin_summon_button", connection=redis_conn)
         Process(target=start_worker, args=("plugin_summon_button",)).start()
         summon_logger.info("started a worker for plugin_summon_button")
