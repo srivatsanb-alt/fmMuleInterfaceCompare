@@ -4,9 +4,11 @@ import logging.config
 import aioredis
 import os
 import ast
-from app.routers.dependencies import get_user_from_query, raise_error
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, status
 from sqlalchemy.orm.attributes import flag_modified
+
+# ati code imports
+import app.routers.dependencies as dpd
 from models.db_session import DBSession
 
 # module regarding the http and websocket notifications(read, write, delete)
@@ -21,16 +23,18 @@ router = APIRouter()
 
 
 @router.delete("/api/v1/notification/clear/{id}/{token}")
-async def clear_notification(id: int, token: str, user_name=Depends(get_user_from_query)):
+async def clear_notification(
+    id: int, token: str, user_name=Depends(dpd.get_user_from_query)
+):
 
     response = {}
     if not user_name:
-        raise_error("Unknown requeter")
+        dpd.raise_error("Unknown requeter")
 
     with DBSession() as dbsession:
         notification = dbsession.get_notifications_with_id(id)
         if not notification:
-            raise_error("Bad detail")
+            dpd.raise_error("Bad detail")
 
         if notification.cleared_by is None:
             notification.cleared_by = []
@@ -42,10 +46,10 @@ async def clear_notification(id: int, token: str, user_name=Depends(get_user_fro
 
 
 @router.get("/api/v1/notifications/clear_all/{token}")
-async def clear_notifications(token: str, user_name=Depends(get_user_from_query)):
+async def clear_notifications(token: str, user_name=Depends(dpd.get_user_from_query)):
     response = {}
     if not user_name:
-        raise_error("Unknown requeter")
+        dpd.raise_error("Unknown requeter")
 
     with DBSession() as dbsession:
         all_notifications = dbsession.get_notifications()
@@ -64,7 +68,7 @@ async def clear_notifications(token: str, user_name=Depends(get_user_from_query)
 async def notifications(
     websocket: WebSocket,
     token: str,
-    user_name=Depends(get_user_from_query),
+    user_name=Depends(dpd.get_user_from_query),
 ):
     if not user_name:
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)

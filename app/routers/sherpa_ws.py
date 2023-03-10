@@ -4,23 +4,20 @@ import logging
 import logging.config
 import math
 import os
-import datetime
-
 from datetime import timedelta
 import aioredis
 from sqlalchemy.orm.attributes import flag_modified
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, status
 from redis import Redis
 
+
+# ati code imports
 from core.config import Config
 from core.constants import MessageType
 from models.db_session import DBSession
 import models.request_models as rqm
 from utils.rq_utils import Queues, enqueue
-from app.routers.dependencies import (
-    get_sherpa,
-    get_real_ip_from_header,
-)
+import app.routers.dependencies as dpd
 
 
 MSG_INVALID = "msg_invalid"
@@ -35,13 +32,10 @@ logger = logging.getLogger("uvicorn")
 
 
 redis = Redis.from_url(os.getenv("FM_REDIS_URI"))
-
-
 router = APIRouter()
 
 
 expire_after_ms = timedelta(milliseconds=500)
-
 # performs status updates at regular intervals, read, write,
 # websocket messages and manages websocket connection between sherpas and FM.
 
@@ -102,8 +96,8 @@ def accept_message(sherpa: str, msg):
 @router.websocket("/ws/api/v1/sherpa/")
 async def sherpa_status(
     websocket: WebSocket,
-    sherpa_name=Depends(get_sherpa),
-    x_real_ip=Depends(get_real_ip_from_header),
+    sherpa_name=Depends(dpd.get_sherpa),
+    x_real_ip=Depends(dpd.get_real_ip_from_header),
 ):
 
     client_ip = websocket.client.host

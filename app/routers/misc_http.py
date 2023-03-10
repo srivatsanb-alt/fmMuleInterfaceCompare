@@ -4,27 +4,23 @@ import time
 from fastapi import APIRouter, Depends
 import aioredis
 
+# ati code imports
 from utils.util import get_table_as_dict
 import models.request_models as rqm
 import models.fleet_models as fm
 from models.db_session import DBSession
-from app.routers.dependencies import (
-    get_user_from_header,
-    raise_error,
-)
+import app.routers.dependencies as dpd
 from utils.util import generate_random_job_id
+
 
 router = APIRouter(responses={404: {"description": "Not found"}}, prefix="/api/v1")
 
-redis_conn = aioredis.Redis.from_url(
-        os.getenv("FM_REDIS_URI"), max_connections=10, decode_responses=True
-    )
 
 @router.get("/site_info")
-async def site_info(user_name=Depends(get_user_from_header)):
+async def site_info(user_name=Depends(dpd.get_user_from_header)):
 
     if not user_name:
-        raise_error("Unknown requester", 401)
+        dpd.raise_error("Unknown requester", 401)
 
     with DBSession() as session:
         fleet_names = session.get_all_fleet_names()
@@ -46,17 +42,17 @@ async def site_info(user_name=Depends(get_user_from_header)):
 
 @router.post("/master_data/fleet")
 async def master_data(
-    master_data_info: rqm.MasterDataInfo, user_name=Depends(get_user_from_header)
+    master_data_info: rqm.MasterDataInfo, user_name=Depends(dpd.get_user_from_header)
 ):
 
     if not user_name:
-        raise_error("Unknown requester", 401)
+        dpd.raise_error("Unknown requester", 401)
 
     with DBSession() as session:
         fleet_names = session.get_all_fleet_names()
 
         if master_data_info.fleet_name not in fleet_names:
-            raise_error("Unknown fleet")
+            dpd.raise_error("Unknown fleet")
 
         all_sherpas = session.get_all_sherpas_in_fleet(master_data_info.fleet_name)
         all_stations = session.get_all_stations_in_fleet(master_data_info.fleet_name)
@@ -105,11 +101,11 @@ async def master_data(
 
 @router.get("/sherpa_summary/{sherpa_name}/{viewable}")
 async def sherpa_summary(
-    sherpa_name: str, viewable: int, user_name=Depends(get_user_from_header)
+    sherpa_name: str, viewable: int, user_name=Depends(dpd.get_user_from_header)
 ):
     response = {}
     if not user_name:
-        raise_error("Unknown requester", 401)
+        dpd.raise_error("Unknown requester", 401)
 
     with DBSession() as session:
         recent_events = session.get_sherpa_events(sherpa_name)
@@ -136,13 +132,17 @@ async def sherpa_summary(
 @router.post("/trips/get_route_wps")
 async def get_route_wps(
     route_preview_req: rqm.RoutePreview,
-    user_name=Depends(get_user_from_header),
+    user_name=Depends(dpd.get_user_from_header),
 ):
     if not user_name:
-        raise_error("Unknown requester", 401)
+        dpd.raise_error("Unknown requester", 401)
+
+    redis_conn = aioredis.Redis.from_url(
+        os.getenv("FM_REDIS_URI"), max_connections=10, decode_responses=True
+    )
 
     response = {}
-    
+
     with DBSession() as session:
         stations_poses = []
         fleet_name = route_preview_req.fleet_name
@@ -151,37 +151,43 @@ async def get_route_wps(
             stations_poses.append(station.pose)
         job_id = generate_random_job_id()
         control_router_wps_job = [stations_poses, fleet_name, job_id]
-        await redis_conn.set(f"control_router_wps_job_{job_id}", json.dumps(control_router_wps_job))
+        await redis_conn.set(
+            f"control_router_wps_job_{job_id}", json.dumps(control_router_wps_job)
+        )
 
         while not await redis_conn.get(f"result_wps_job_{job_id}"):
             time.sleep(0.005)
-        
+
         wps_list = json.loads(await redis_conn.get(f"result_wps_job_{job_id}"))
 
         if not len(wps_list):
-            raise_error("Cannot find route")
+            dpd.raise_error("Cannot find route")
 
         response.update({"wps_list": wps_list})
         await redis_conn.delete(f"result_wps_job_{job_id}")
 
     return response
 
+
 @router.post("/trips/get_sherpa_live_route")
-async def get_sherpa_live_route(live_route_req: rqm.LiveRoute, user_name=Depends(get_user_from_header),):
+async def get_sherpa_live_route(
+    live_route_req: rqm.LiveRoute,
+    user_name=Depends(dpd.get_user_from_header),
+):
+
     if not user_name:
-        raise_error("Unknown requester", 401)
+        dpd.raise_error("Unknown requester", 401)
 
     response = {}
 
     with DBSession() as session:
         ongoing_trip = session.get_enroute_trip(live_route_req.sherpa_name)
-        
-        if not ongoing_trip:
-            raise_error("No ongoing trip for {live_route_req.sherpa_name}")
-        
-        ongoing_route = ongoing_trip.route
-        wps_req = rqm.RoutePreview(route = ongoing_route, fleet_name = ongoing_trip.fleet_name)
-        response = await get_route_wps(wps_req, user_name)
-        
-    return response
 
+        if not ongoing_trip:
+            dpd.raise_error("No ongoing trip for {live_route_req.sherpa_name}")
+
+        ongoing_route = ongoing_trip.route
+        wps_req = rqm.RoutePreview(route=ongoing_route, fleet_name=ongoing_trip.fleet_name)
+        response = await get_route_wps(wps_req, user_name)
+
+    return response

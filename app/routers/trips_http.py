@@ -2,11 +2,8 @@ from typing import Union
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm.attributes import flag_modified
 
-from app.routers.dependencies import (
-    get_user_from_header,
-    process_req_with_response,
-    raise_error,
-)
+# ati code imports
+import app.routers.dependencies as dpd
 import models.request_models as rqm
 from models.trip_models import Trip, TripAnalytics
 from models.db_session import DBSession
@@ -25,46 +22,46 @@ router = APIRouter(
 
 
 @router.post("/book")
-async def book(booking_req: rqm.BookingReq, user_name=Depends(get_user_from_header)):
-    response = await process_req_with_response(None, booking_req, user_name)
+async def book(booking_req: rqm.BookingReq, user_name=Depends(dpd.get_user_from_header)):
+    response = await dpd.process_req_with_response(None, booking_req, user_name)
     return response
 
 
 @router.delete("/ongoing/{booking_id}")
-async def delete_ongoing_trip(booking_id: int, user_name=Depends(get_user_from_header)):
+async def delete_ongoing_trip(booking_id: int, user_name=Depends(dpd.get_user_from_header)):
     if not user_name:
-        raise_error("Unknown requester", 401)
+        dpd.raise_error("Unknown requester", 401)
 
     with DBSession() as dbsession:
         trips = dbsession.get_trip_with_booking_id(booking_id)
         if not trips:
-            raise_error("no trip with the given booking_id")
+            dpd.raise_error("no trip with the given booking_id")
 
     delete_ongoing_trip_req: rqm.DeleteOngoingTripReq = rqm.DeleteOngoingTripReq(
         booking_id=booking_id
     )
-    response = await process_req_with_response(None, delete_ongoing_trip_req, user_name)
+    response = await dpd.process_req_with_response(None, delete_ongoing_trip_req, user_name)
 
     return response
 
 
 @router.delete("/booking/{booking_id}")
-async def delete_pending_trip(booking_id: int, user_name=Depends(get_user_from_header)):
+async def delete_pending_trip(booking_id: int, user_name=Depends(dpd.get_user_from_header)):
 
     response = {}
     if not user_name:
-        raise_error("Unknown requester", 401)
+        dpd.raise_error("Unknown requester", 401)
 
     with DBSession() as dbsession:
         trips = dbsession.get_trip_with_booking_id(booking_id)
 
         if not trips:
-            raise_error("no trip with the given booking_id")
+            dpd.raise_error("no trip with the given booking_id")
 
     delete_booked_trip_req: rqm.DeleteBookedTripReq = rqm.DeleteBookedTripReq(
         booking_id=booking_id
     )
-    response = await process_req_with_response(None, delete_booked_trip_req, user_name)
+    response = await dpd.process_req_with_response(None, delete_booked_trip_req, user_name)
 
     return response
 
@@ -75,22 +72,22 @@ async def delete_pending_trip(booking_id: int, user_name=Depends(get_user_from_h
 
 @router.get("/booking/{entity_name}/clear_optimal_dispatch_assignments")
 async def clear_optimal_dispatch_assignments(
-    entity_name=Union[str, None], user_name=Depends(get_user_from_header)
+    entity_name=Union[str, None], user_name=Depends(dpd.get_user_from_header)
 ):
 
     response = {}
 
     if not user_name:
-        raise_error("Unknown requester", 401)
+        dpd.raise_error("Unknown requester", 401)
 
     if not entity_name:
-        raise_error("No entity name")
+        dpd.raise_error("No entity name")
 
     delete_optimal_dispatch_assignments_req = rqm.DeleteOptimalDispatchAssignments(
         fleet_name=entity_name
     )
 
-    response = await process_req_with_response(
+    response = await dpd.process_req_with_response(
         None, delete_optimal_dispatch_assignments_req, user_name
     )
 
@@ -102,12 +99,12 @@ async def clear_optimal_dispatch_assignments(
 
 @router.post("/status")
 async def trip_status(
-    trip_status_req: rqm.TripStatusReq, user_name=Depends(get_user_from_header)
+    trip_status_req: rqm.TripStatusReq, user_name=Depends(dpd.get_user_from_header)
 ):
     response = {}
 
     if not user_name:
-        raise_error("Unknown requester", 401)
+        dpd.raise_error("Unknown requester", 401)
 
     with DBSession() as dbsession:
         if trip_status_req.booked_from and trip_status_req.booked_till:
@@ -119,12 +116,12 @@ async def trip_status(
             )
 
         if not trip_status_req.trip_ids:
-            raise_error("no trip id given or available in the given timeframe")
+            dpd.raise_error("no trip id given or available in the given timeframe")
 
         for trip_id in trip_status_req.trip_ids:
             trip: Trip = dbsession.get_trip(trip_id)
             if not trip:
-                raise_error("invalid trip id")
+                dpd.raise_error("invalid trip id")
             response.update({trip_id: tu.get_trip_status(trip)})
 
     return response
@@ -134,9 +131,9 @@ async def trip_status(
 
 
 @router.get("/ongoing_trip_status")
-async def ongoing_trip_status(user_name=Depends(get_user_from_header)):
+async def ongoing_trip_status(user_name=Depends(dpd.get_user_from_header)):
     if not user_name:
-        raise_error("Unknown requester", 401)
+        dpd.raise_error("Unknown requester", 401)
 
     response = {}
     with DBSession() as dbsession:
@@ -153,12 +150,12 @@ async def ongoing_trip_status(user_name=Depends(get_user_from_header)):
 
 @router.post("/analytics")
 async def trip_analytics(
-    trip_analytics_req: rqm.TripStatusReq, user_name=Depends(get_user_from_header)
+    trip_analytics_req: rqm.TripStatusReq, user_name=Depends(dpd.get_user_from_header)
 ):
 
     response = {}
     if not user_name:
-        raise_error("Unknown requester", 401)
+        dpd.raise_error("Unknown requester", 401)
 
     with DBSession() as dbsession:
         if trip_analytics_req.booked_from and trip_analytics_req.booked_till:
@@ -170,7 +167,7 @@ async def trip_analytics(
             )
 
         if not trip_analytics_req.trip_ids:
-            raise_error("no trip id given or available in the given timeframe")
+            dpd.raise_error("no trip id given or available in the given timeframe")
 
         for trip_id in trip_analytics_req.trip_ids:
             trip_legs_id = dbsession.get_all_trip_legs(trip_id)
@@ -187,12 +184,12 @@ async def trip_analytics(
 async def add_trip_metadata(
     trip_id: int,
     new_trip_metadata: rqm.TripMetaData,
-    user_name=Depends(get_user_from_header),
+    user_name=Depends(dpd.get_user_from_header),
 ):
 
     response = {}
     if not user_name:
-        raise_error("Unknown requester", 401)
+        dpd.raise_error("Unknown requester", 401)
 
     with DBSession() as dbsession:
         trip: Trip = dbsession.get_trip(trip_id)
@@ -207,12 +204,12 @@ async def add_trip_metadata(
 
 @router.get("/{trip_id}/add_trip_description/{description}")
 async def add_trip_description(
-    trip_id: int, description: str, user_name=Depends(get_user_from_header)
+    trip_id: int, description: str, user_name=Depends(dpd.get_user_from_header)
 ):
 
     response = {}
     if not user_name:
-        raise_error("Unknown requester", 401)
+        dpd.raise_error("Unknown requester", 401)
 
     with DBSession() as dbsession:
         trip: Trip = dbsession.get_trip(trip_id)
