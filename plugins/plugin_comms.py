@@ -38,10 +38,9 @@ async def ws_reader(websocket, name, handler_obj, unique_id=None, api_key=None):
         if unique_id is not None:
             msg["unique_id"] = unique_id
 
-
         if api_key:
-            msg["api_key"]=api_key
-            
+            msg["api_key"] = api_key
+
         logger.debug(f"Converted msg: {msg}, count: {count}")
         enqueue(plugin_q, handler_obj.handle, msg)
 
@@ -72,7 +71,13 @@ async def ws_writer(websocket, name, format="json", unique_id=None):
 
             if format == "json":
                 data = ast.literal_eval(message["data"])
+
+                # close WebSocket message
+                if data.get("close_ws", False):
+                    await websocket.close()
+
                 await websocket.send_json(data)
+
             elif format == "text":
                 await websocket.send_text(message["data"])
 

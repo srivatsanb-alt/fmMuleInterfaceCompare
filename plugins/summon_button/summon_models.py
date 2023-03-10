@@ -3,8 +3,9 @@ from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy import create_engine
 from sqlalchemy import Integer, String, Column, ARRAY
 from models.base_models import Base, TimestampMixin
-from typing import List,Union
+from typing import List, Union
 from pydantic import BaseModel
+
 # from ...models.misc_models import Notifications
 class DBSession:
     def __init__(self):
@@ -23,20 +24,6 @@ class DBSession:
         else:
             self.close()
 
-    # def add_notification(
-    #     self, entity_names, log, log_level, module, repetitive=False, repetition_freq=None
-    # ):
-    #     new_notification = Notifications(
-    #         entity_names=entity_names,
-    #         log=log,
-    #         log_level=log_level,
-    #         module=module,
-    #         cleared_by=[],
-    #         repetitive=repetitive,
-    #         repetition_freq=repetition_freq,
-    #     )
-    #     self.add_to_session(new_notification)
-
     def close(self, commit=True):
         if commit:
             self.session.commit()
@@ -54,13 +41,16 @@ class SummonInfo(Base):
     booking_id = Column(Integer)
     trip_id = Column(Integer)
 
+
 class ClientReq(BaseModel):
     source: Union[str, None] = None
+
 
 class AddEditSummonReq(ClientReq):
     id: int
     api_key: str
     route: List[str]
+
 
 class SummonActions(Base, TimestampMixin):
     __tablename__ = "summon_actions"

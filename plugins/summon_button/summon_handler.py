@@ -1,10 +1,8 @@
 import logging
 import hashlib
 from .summon_models import SummonInfo, DBSession
-from .summon_utils import SummonInfo, DBSession
-from .summon_utils import book_trip ,cancel_trip,send_job_updates_summon
-import redis
-import os
+from .summon_utils import book_trip, cancel_trip, send_msg_to_summon_button
+
 
 class ButtonPress:
     ENABLE_DISABLE = "enable_disable"
@@ -14,10 +12,9 @@ class ButtonPress:
 class SUMMON_HANDLER:
     def init_handler(self):
         self.plugin_name = "plugin_summon_button"
-    
-    def send_msg(self, msg):
-        pub = redis.from_url(os.getenv("FM_REDIS_URI"), decode_responses=True)
-        pub.publish("channel:plugin_summon_button", str(msg))
+
+    def send_msg_to_summon_button(self, msg, unique_id):
+        send_msg_to_summon_button(msg, unique_id)
 
     def handle_button_pressed(self, msg: dict):
         hashed_api_key = hashlib.sha256(msg["api_key"].encode("utf-8")).hexdigest()
@@ -37,19 +34,18 @@ class SUMMON_HANDLER:
                     route=summon_info.route,
                     plugin_name="plugin_summon_button",
                 )
-                self.logger.info(f"button pressed - booking trip")
-                self.send_msg({"Led":"green"})
+                self.logger.info("button pressed - booking trip")
+                self.send_msg_to_summon_button({"Led": "green"}, summon_info.id)
             else:
                 cancel_trip(
                     self.session,
                     summon_info,
                     plugin_name="plugin_summon_button",
                 )
-                self.logger.info(f"button pressed - cancelling trip {summon_info.booking_id}")
-                self.send_msg({"Led":"white"})
-
-
-
+                self.logger.info(
+                    f"button pressed - cancelling trip {summon_info.booking_id}"
+                )
+                self.send_msg_to_summon_button({"Led": "white"}, summon_info.id)
 
     def handle(self, msg):
         msg_type = msg.get("type", "unknown")

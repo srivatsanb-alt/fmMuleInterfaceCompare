@@ -1,20 +1,21 @@
 import asyncio
 import hashlib
-from fastapi import APIRouter, WebSocket, Depends, Header, status
-from plugins.plugin_comms import ws_reader, ws_writer
-from .summon_models import SummonInfo, DBSession,AddEditSummonReq
-from .summon_handler import SUMMON_HANDLER
-from typing import List
 import logging
-# import models.misc_models as mm
-from .summon_utils import add_edit_summon_info
-from app.routers.dependencies import (
-    get_user_from_header,
-    raise_error,
-)
+from fastapi import APIRouter, WebSocket, Depends, Header, status
+
+# ati code imports
+from plugins.plugin_comms import ws_reader, ws_writer
+import plugins.plugin_dependencies as pdpd
+
+from .summon_models import SummonInfo, DBSession, AddEditSummonReq
+from .summon_handler import SUMMON_HANDLER
+from .summon_utils import add_edit_summon_info, close_summon_button_ws
+
+
 router = APIRouter()
 logger_name = "plugin_summon_button"
 logger = logging.getLogger(logger_name)
+
 
 def get_summon(x_api_key: str = Header(None)):
     if x_api_key is None:
@@ -27,25 +28,28 @@ def get_summon(x_api_key: str = Header(None)):
             .filter(SummonInfo.hashed_api_key == hashed_api_key)
             .one_or_none()
         )
+
+        if summon_info:
+            dbsession.session.expunge(summon_info)
+
     return summon_info
 
 
-
 @router.get("/plugin/ws/api/v1/all_summon_info")
-def get_all_summon_info(user_name=Depends(get_user_from_header)):
+def get_all_summon_info(user_name=Depends(pdpd.get_user_from_header)):
 
     if not user_name:
-        raise_error("Unknown requester", 401)
+        pdpd.raise_error("Unknown requester", 401)
 
     response = {}
     with DBSession() as dbsession:
-        all_summons= (dbsession.session.query(SummonInfo).all())
+        all_summons = dbsession.session.query(SummonInfo).all()
         if all_summons:
             for summon in all_summons:
                 response.update(
                     {
                         summon.id: {
-                            "api_key": summon.hashed_api_key,
+                            "hashed_api_key": summon.hashed_api_key,
                             "route": summon.route,
                         }
                     }
@@ -57,14 +61,13 @@ def get_all_summon_info(user_name=Depends(get_user_from_header)):
 @router.post("/plugin/ws/api/v1/add_edit_summon")
 def add_edit_summon_button(
     add_edit_summon: AddEditSummonReq,
-    user_name=Depends(get_user_from_header),
+    user_name=Depends(pdpd.get_user_from_header),
 ):
 
     if not user_name:
-        raise_error("Unknown requester", 401)
+        pdpd.raise_error("Unknown requester", 401)
 
     with DBSession() as dbsession:
-        # all_summon_ids = dbsession.session.query(AddEditSummonReq.id).all()
         add_edit_summon_info(
             dbsession,
             id=add_edit_summon.id,
@@ -72,33 +75,30 @@ def add_edit_summon_button(
             route=add_edit_summon.route,
         )
 
-        # if id not in all_summon_ids:
-        #     action_request = f"New Summon Button {id} has been added, please restart FM software using restart fleet manager button in the maintenance page"
-        #     dbsession.add_notification(
-        #         [id],
-        #         action_request,
-        #         mm.NotificationLevels.action_request,
-        #         mm.NotificationModules.generic,
-        #     )
-
     return {}
+
 
 @router.get("/plugin/ws/api/v1/delete_summon/{id}")
 def delete_summon(
     id: int,
-    user_name=Depends(get_user_from_header),
+    user_name=Depends(pdpd.get_user_from_header),
 ):
     if not user_name:
-        raise_error("Unknown requester", 401)
+        pdpd.raise_error("Unknown requester", 401)
 
     with DBSession() as dbsession:
-        summon_info = dbsession.session.query(SummonInfo).filter(SummonInfo.id == id).one_or_none()
+        summon_info = (
+            dbsession.session.query(SummonInfo).filter(SummonInfo.id == id).one_or_none()
+        )
         if not summon_info:
-            raise_error(f"Summon Button {summon_info} not found")
+            pdpd.raise_error(f"Summon Button {summon_info} not found")
 
         dbsession.session.delete(summon_info)
 
+        close_summon_button_ws(summon_info.id)
+
     return {}
+
 
 @router.get("/plugin/ws/api/v1/plugin_summon_button")
 async def check_connection():
@@ -106,17 +106,18 @@ async def check_connection():
 
 
 @router.websocket("/plugin/ws/api/v1/summon_button")
-async def summon_button_ws(websocket: WebSocket,summon_info = Depends(get_summon)):
+async def summon_button_ws(websocket: WebSocket, summon_info=Depends(get_summon)):
     if not summon_info:
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
     await websocket.accept()
 
+    summon_id = summon_info.id
     summon_handler = SUMMON_HANDLER()
     rw = [
         asyncio.create_task(ws_reader(websocket, "summon_button", summon_handler)),
         asyncio.create_task(
-            ws_writer(websocket, "summon_button", format="text"),
+            ws_writer(websocket, "summon_button", format="json", unique_id=summon_id),
         ),
     ]
     try:
