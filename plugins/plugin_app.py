@@ -1,9 +1,13 @@
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends, APIRouter
 import os
 import toml
 import json
 import redis
+
+# ati code imports
+import plugins.plugin_dependencies as pdpd
+
 
 plugins_workers_db_init = False
 redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
@@ -19,6 +23,24 @@ app = FastAPI()
 plugin_config = toml.load(os.path.join(os.getenv("FM_CONFIG_DIR"), "plugin_config.toml"))
 all_plugins = plugin_config["all_plugins"]
 
+router = APIRouter()
+
+
+# get all available plugins
+@router.get("/plugin/api/v1/get_all_plugins")
+async def get_all_plugins(user_name=Depends(pdpd.get_user_from_header)):
+    if not user_name:
+        pdpd.raise_error("Unknown requester", 401)
+
+    plugin_config = toml.load(
+        os.path.join(os.getenv("FM_CONFIG_DIR"), "plugin_config.toml")
+    )
+    all_plugins = plugin_config["all_plugins"]
+
+    return all_plugins
+
+
+app.include_router(router)
 
 if "ies" in all_plugins:
     from plugins.ies import ies_comms

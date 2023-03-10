@@ -79,6 +79,10 @@ async def ws_writer(websocket, name, format="json", unique_id=None):
                 await websocket.send_json(data)
 
             elif format == "text":
+                if message["data"] == "close_ws":
+                    logger.info(f"Got {channel_name} close message")
+                    await websocket.close()
+
                 await websocket.send_text(message["data"])
 
 

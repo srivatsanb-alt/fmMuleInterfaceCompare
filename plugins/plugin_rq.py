@@ -114,15 +114,16 @@ if __name__ == "__main__":
         ies_logger.info("Sending periodic job updates")
 
     if "conveyor" in all_plugins:
-        from conveyor.conveyor_models import ConvInfo, ConvTrips
-        from conveyor.conveyor_utils import populate_conv_info
+        import conveyor.conveyor_models as cm
+
         from plugin_db import init_db
 
         conveyor_logger = logging.getLogger("plugin_conveyor")
-        init_db(str("plugin_conveyor"), [ConvInfo, ConvTrips])
+        init_db(str("plugin_conveyor"), [cm.ConvInfo, cm.ConvTrips])
 
-        all_conveyors = populate_conv_info()
+        from conveyor.conveyor_utils import get_all_conveyors
 
+        all_conveyors = get_all_conveyors()
         conveyor_logger.info(f"Populated conveyor_info table with info of {all_conveyors}")
 
         # start a worker for conveyor plugin
