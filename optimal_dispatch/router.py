@@ -63,7 +63,6 @@ def start_router_module():
                 start_pose = station_poses[0]
                 dest_poses = station_poses[1:]
                 wps_list = rm.get_path_wps(start_pose, dest_poses)
-                redis_conn.set(f"result_wps_job_{job_id}", json.dumps(wps_list))
                 logger.info(f"result of wps req: {wps_list}")
                 redis_conn.delete(key)
 
@@ -72,6 +71,9 @@ def start_router_module():
                     f"unable to get route for poses {station_poses} \n Exception {e}"
                 )
                 wps_list = []
+            
+            redis_conn.set(f"result_wps_job_{job_id}", json.dumps(wps_list))
+
 
         time.sleep(1e-2)
 

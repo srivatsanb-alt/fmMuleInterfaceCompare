@@ -3,7 +3,6 @@ import os
 import time
 from fastapi import APIRouter, Depends
 import aioredis
-import logging
 
 from utils.util import get_table_as_dict
 import models.request_models as rqm
@@ -158,6 +157,10 @@ async def get_route_wps(
             time.sleep(0.005)
         
         wps_list = json.loads(await redis_conn.get(f"result_wps_job_{job_id}"))
+
+        if not len(wps_list):
+            raise_error("Cannot find route")
+
         response.update({"wps_list": wps_list})
         await redis_conn.delete(f"result_wps_job_{job_id}")
 
@@ -172,13 +175,13 @@ async def get_sherpa_live_route(live_route_req: rqm.LiveRoute, user_name=Depends
 
     with DBSession() as session:
         ongoing_trip = session.get_enroute_trip(live_route_req.sherpa_name)
-        if ongoing_trip is not None:
-            ongoing_route = ongoing_trip.route
-            logging.info(f"ongoing trip, route: {ongoing_trip.id, ongoing_route}")
-            wps_req = rqm.RoutePreview(route = ongoing_route, fleet_name = ongoing_trip.fleet_name)
-            response = await get_route_wps(wps_req, user_name)
-            logging.info(f"route wps response: {response}")
-        else:
-            logging.info(f"no ongoing trips for sherps ({live_route_req.sherpa_name})")
+        
+        if not ongoing_trip:
+            raise_error("No ongoing trip for {live_route_req.sherpa_name}")
+        
+        ongoing_route = ongoing_trip.route
+        wps_req = rqm.RoutePreview(route = ongoing_route, fleet_name = ongoing_trip.fleet_name)
+        response = await get_route_wps(wps_req, user_name)
+        
     return response
 
