@@ -36,7 +36,6 @@ def get_all_plugins():
     return get_plugin_config()["all_plugins"]
 
 
-
 def start_worker(queue_name):
     with Connection():
         Worker.log_result_lifespan = False
@@ -115,7 +114,8 @@ if __name__ == "__main__":
         ies_logger.info("Sending periodic job updates")
 
     if "conveyor" in all_plugins:
-        from conveyor.conveyor_utils import ConvInfo, ConvTrips, populate_conv_info
+        from conveyor.conveyor_models import ConvInfo, ConvTrips
+        from conveyor.conveyor_utils import populate_conv_info
         from plugin_db import init_db
 
         conveyor_logger = logging.getLogger("plugin_conveyor")
@@ -129,7 +129,6 @@ if __name__ == "__main__":
         for conveyor_name in all_conveyors:
             Process(target=start_worker, args=(f"plugin_conveyor_{conveyor_name}",)).start()
             conveyor_logger.info(f"started a worker for plugin_conveyor_{conveyor_name}")
-
 
     if "summon_button" in all_plugins:
         from summon_button.summon_utils import (
@@ -145,7 +144,7 @@ if __name__ == "__main__":
         summon_logger.info("started a worker for plugin_summon_button")
         from summon_button.summon_utils import send_job_updates_summon
 
-        Process(target=send_job_updates_summon,args=[]).start()
+        Process(target=send_job_updates_summon, args=[]).start()
         summon_logger.info("Sending periodic job updates")
 
     redis_conn.set("plugins_workers_db_init", json.dumps(True))
