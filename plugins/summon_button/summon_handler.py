@@ -17,7 +17,7 @@ class SUMMON_HANDLER:
         send_msg_to_summon_button(msg, unique_id)
 
     def handle_button_pressed(self, msg: dict):
-        hashed_api_key = hashlib.sha256(msg["api_key"].encode("utf-8")).hexdigest()
+        hashed_api_key = msg["api_key"]
         summon_info: SummonInfo = (
             self.session.session.query(SummonInfo)
             .filter(SummonInfo.hashed_api_key == hashed_api_key)
@@ -28,22 +28,22 @@ class SUMMON_HANDLER:
 
         if summon_info.press == ButtonPress.BOOK_TRIP:
             if summon_info.booking_id is None:
+                self.logger.info("button pressed - booking trip")
                 book_trip(
                     self.session,
                     summon_info,
                     route=summon_info.route,
                     plugin_name="plugin_summon_button",
                 )
-                self.logger.info("button pressed - booking trip")
                 self.send_msg_to_summon_button({"Led": "green"}, summon_info.id)
             else:
+                self.logger.info(
+                    f"button pressed - cancelling trip {summon_info.booking_id}"
+                )
                 cancel_trip(
                     self.session,
                     summon_info,
                     plugin_name="plugin_summon_button",
-                )
-                self.logger.info(
-                    f"button pressed - cancelling trip {summon_info.booking_id}"
                 )
                 self.send_msg_to_summon_button({"Led": "white"}, summon_info.id)
 
