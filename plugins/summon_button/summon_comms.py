@@ -115,7 +115,14 @@ async def summon_button_ws(websocket: WebSocket, summon_info=Depends(get_summon)
     summon_id = summon_info.id
     summon_handler = SUMMON_HANDLER()
     rw = [
-        asyncio.create_task(ws_reader(websocket, "summon_button", summon_handler,api_key=summon_info.hashed_api_key)),
+        asyncio.create_task(
+            ws_reader(
+                websocket,
+                "summon_button",
+                summon_handler,
+                api_key=summon_info.hashed_api_key,
+            )
+        ),
         asyncio.create_task(
             ws_writer(websocket, "summon_button", format="json", unique_id=summon_id),
         ),

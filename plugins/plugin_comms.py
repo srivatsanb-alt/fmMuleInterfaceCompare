@@ -12,7 +12,7 @@ from .plugin_rq import enqueue
 
 
 async def ws_reader(websocket, name, handler_obj, unique_id=None, api_key=None):
-    log_conf_path = os.path.join(os.getenv("FM_CONFIG_DIR"), "logging.conf")
+    log_conf_path = os.path.join(os.getenv("FM_CONFIG_DIR"), "plugin_logging.conf")
     logging.config.fileConfig(log_conf_path)
     logger = logging.getLogger(f"plugin_{name}")
 
@@ -47,7 +47,7 @@ async def ws_reader(websocket, name, handler_obj, unique_id=None, api_key=None):
 
 async def ws_writer(websocket, name, format="json", unique_id=None):
 
-    log_conf_path = os.path.join(os.getenv("FM_CONFIG_DIR"), "logging.conf")
+    log_conf_path = os.path.join(os.getenv("FM_CONFIG_DIR"), "plugin_logging.conf")
     logging.config.fileConfig(log_conf_path)
     logger = logging.getLogger(f"plugin_{name}")
 
