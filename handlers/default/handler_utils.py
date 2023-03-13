@@ -11,20 +11,20 @@ from core.logs import get_logger
 from core.config import Config
 from core.constants import DisabledReason
 from models.db_session import DBSession
-from models.fleet_models import SherpaStatus, Sherpa, Station, SherpaEvent
-from models.trip_models import OngoingTrip, Trip, TripLeg
-from utils.util import generate_random_job_id
+import models.fleet_models as fm
+import models.trip_models as tm
+import utils.util as utils_util
+import models.request_models as rqm
+import models.misc_models as mm
 from utils.create_certs import generate_certs_for_sherpa
 from utils.fleet_utils import compute_sha1_hash
-from models.request_models import MapFileInfo
-from models.misc_models import NotificationTimeout, NotificationLevels
 
 
 # Trip hutils
-def assign_sherpa(dbsession: DBSession, trip: Trip, sherpa: Sherpa):
+def assign_sherpa(dbsession: DBSession, trip: tm.Trip, sherpa: fm.Sherpa):
     ongoing_trip = dbsession.create_ongoing_trip(sherpa.name, trip.id)
     trip.assign_sherpa(sherpa.name)
-    sherpa_status: SherpaStatus = sherpa.status
+    sherpa_status: fm.SherpaStatus = sherpa.status
     sherpa_status.idle = False
     sherpa_status.trip_id = trip.id
     get_logger(sherpa.name).info(
@@ -38,19 +38,19 @@ def assign_sherpa(dbsession: DBSession, trip: Trip, sherpa: Sherpa):
 
 def start_trip(
     dbsession: DBSession,
-    ongoing_trip: OngoingTrip,
-    sherpa: Sherpa,
-    all_stations: List[Station],
+    ongoing_trip: tm.OngoingTrip,
+    sherpa: fm.Sherpa,
+    all_stations: List[fm.Station],
 ):
 
     redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
-    sherpa_status: SherpaStatus = sherpa.status
+    sherpa_status: fm.SherpaStatus = sherpa.status
     start_pose = sherpa_status.pose
     fleet_name = ongoing_trip.trip.fleet_name
 
     etas_at_start = []
     for station in all_stations:
-        job_id = generate_random_job_id()
+        job_id = utils_util.generate_random_job_id()
         end_pose = station.pose
         control_router_job = [start_pose, end_pose, fleet_name, job_id]
         redis_conn.set(f"control_router_job_{job_id}", json.dumps(control_router_job))
@@ -84,14 +84,14 @@ def start_trip(
 
 
 def end_trip(
-    dbsession: DBSession, ongoing_trip: OngoingTrip, sherpa: Sherpa, success: bool
+    dbsession: DBSession, ongoing_trip: tm.OngoingTrip, sherpa: fm.Sherpa, success: bool
 ):
 
     ongoing_trip.trip.end(success)
     dbsession.delete_ongoing_trip(ongoing_trip)
 
     # update sherpa status on deleting trip
-    sherpa_status: SherpaStatus = sherpa.status
+    sherpa_status: fm.SherpaStatus = sherpa.status
     sherpa_status.idle = True
     sherpa_status.trip_id = None
     sherpa_status.trip_leg_id = None
@@ -99,16 +99,16 @@ def end_trip(
 
 def start_leg(
     dbsession: DBSession,
-    ongoing_trip: OngoingTrip,
-    from_station: Station,
-    to_station: Station,
-) -> TripLeg:
+    ongoing_trip: tm.OngoingTrip,
+    from_station: fm.Station,
+    to_station: fm.Station,
+) -> tm.TripLeg:
 
-    trip: Trip = ongoing_trip.trip
+    trip: tm.Trip = ongoing_trip.trip
 
     from_station_name = from_station.name if from_station else None
 
-    trip_leg: TripLeg = dbsession.create_trip_leg(
+    trip_leg: tm.TripLeg = dbsession.create_trip_leg(
         trip.id, from_station_name, to_station.name
     )
 
@@ -123,12 +123,12 @@ def start_leg(
     return trip_leg
 
 
-def end_leg(ongoing_trip: OngoingTrip):
+def end_leg(ongoing_trip: tm.OngoingTrip):
     ongoing_trip.trip_leg.end()
     ongoing_trip.end_leg()
 
 
-def update_leg_curr_station(curr_station: Station, sherpa_name: str):
+def update_leg_curr_station(curr_station: fm.Station, sherpa_name: str):
     curr_station_status = curr_station.status
     if not curr_station_status:
         return
@@ -136,7 +136,7 @@ def update_leg_curr_station(curr_station: Station, sherpa_name: str):
         curr_station_status.arriving_sherpas.remove(sherpa_name)
 
 
-def update_leg_next_station(next_station: Station, sherpa_name: str):
+def update_leg_next_station(next_station: fm.Station, sherpa_name: str):
     next_station_status = next_station.status
     if not next_station_status:
         return
@@ -160,24 +160,35 @@ def is_sherpa_available_for_new_trip(sherpa_status):
 
 # FM HEALTH CHECK #
 def delete_notifications(dbsession: DBSession):
+    # at the most only one dispatch notification can be present for a sherpa
     all_notifications = dbsession.get_notifications()
 
     for notification in all_notifications:
         time_since_notification = datetime.datetime.now() - notification.created_at
-        timeout = NotificationTimeout.get(notification.log_level, 120)
+        timeout = mm.NotificationTimeout.get(notification.log_level, 120)
 
         if notification.repetitive:
             timeout = notification.repetition_freq
 
         if time_since_notification.seconds > timeout:
-
             # delete any notification which is repetitive and past timeout
             if notification.repetitive:
                 dbsession.delete_notification(notification.id)
                 continue
 
+            # delete stale dispatch button notifications
             if (
-                notification.log_level != NotificationLevels.info
+                notification.log_level == mm.NotificationLevels.stale_alert_or_action
+                and notification.module == mm.NotificationModules.dispatch_button
+            ):
+                dbsession.delete_notification(notification.id)
+                continue
+
+            if notification.log_level != mm.NotificationLevels.info:
+                notification.log_level = mm.NotificationLevels.stale_alert_or_action
+
+            if (
+                notification.log_level != mm.NotificationLevels.info
                 and len(notification.cleared_by) == 0
             ):
                 continue
@@ -187,7 +198,7 @@ def delete_notifications(dbsession: DBSession):
 
 def check_sherpa_status(dbsession: DBSession):
     MULE_HEARTBEAT_INTERVAL = Config.get_fleet_comms_params()["mule_heartbeat_interval"]
-    stale_sherpas_status: SherpaStatus = dbsession.get_all_stale_sherpa_status(
+    stale_sherpas_status: fm.SherpaStatus = dbsession.get_all_stale_sherpa_status(
         MULE_HEARTBEAT_INTERVAL
     )
 
@@ -202,7 +213,7 @@ def check_sherpa_status(dbsession: DBSession):
 
 
 def add_sherpa_event(dbsession: DBSession, sherpa_name, msg_type, context):
-    sherpa_event: SherpaEvent = SherpaEvent(
+    sherpa_event: fm.SherpaEvent = fm.SherpaEvent(
         sherpa_name=sherpa_name,
         msg_type=msg_type,
         context="sent by sherpa",
@@ -249,7 +260,9 @@ def update_map_file_info_with_certs(
 
     # hardcoding to 2
     for i in range(2):
-        map_file_info.append(MapFileInfo(file_name=cert_files[i], hash=all_file_hash[i]))
+        map_file_info.append(
+            rqm.MapFileInfo(file_name=cert_files[i], hash=all_file_hash[i])
+        )
 
     return map_file_info
 

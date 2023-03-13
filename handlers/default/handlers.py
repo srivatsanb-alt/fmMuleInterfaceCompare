@@ -432,12 +432,21 @@ class Handlers:
             timeout = StationProperties.DISPATCH_OPTIONAL in curr_station.properties
             self.add_dispatch_start_to_ongoing_trip(ongoing_trip, sherpa, timeout)
 
-            self.dbsession.add_notification(
-                [ongoing_trip.trip.fleet_name, sherpa.name],
-                f"Need a dispatch button press on {sherpa.name} which is parked at {curr_station.name}",
-                mm.NotificationLevels.action_request,
-                mm.NotificationModules.peripheral_devices,
-            )
+            if StationProperties.DISPATCH_OPTIONAL not in curr_station.properties:
+                self.dbsession.add_notification(
+                    [ongoing_trip.trip.fleet_name, sherpa.name],
+                    f"Need a dispatch button press on {sherpa.name} which is parked at {curr_station.name}",
+                    mm.NotificationLevels.action_request,
+                    mm.NotificationModules.dispatch_button,
+                )
+            else:
+                self.dbsession.add_notification(
+                    [ongoing_trip.trip.fleet_name, sherpa.name],
+                    f"Need a dispatch button press on {sherpa.name} which is parked at {curr_station.name}",
+                    mm.NotificationLevels.info,
+                    mm.NotificationModules.dispatch_button,
+                )
+
         if any(
             prop in curr_station.properties
             for prop in [StationProperties.CONVEYOR, StationProperties.CHUTE]
