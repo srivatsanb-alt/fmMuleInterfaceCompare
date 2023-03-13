@@ -5,6 +5,9 @@ import time
 import numpy as np
 from typing import List
 import datetime
+import psutil
+import pandas as pd
+from rq import Worker
 
 
 # ati code imports
@@ -160,6 +163,103 @@ def is_sherpa_available_for_new_trip(sherpa_status):
 
 
 # FM HEALTH CHECK #
+def record_rq_perf():
+    redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
+    fm_backup_path = os.path.join(os.getenv("FM_MAP_DIR"), "data_backup")
+    current_data = redis_conn.get("current_data_folder").decode()
+    csv_save_path = os.path.join(fm_backup_path, current_data, "rq_perf.csv")
+
+    data = []
+    workers = Worker.all(connection=redis_conn)
+
+    column_names = [
+        "datetime",
+        "worker_name",
+        "worker_pid",
+        "worker_state",
+        "worker_queues",
+        "successful_job_count",
+        "failed_job_count",
+        "total_working_time",
+    ]
+
+    for worker in workers:
+        worker_data = [
+            utils_util.dt_to_str(datetime.datetime.now()),
+            worker.name,
+            worker.pid,
+            worker.state,
+            worker.queues,
+            worker.successful_job_count,
+            worker.failed_job_count,
+            worker.total_working_time,
+        ]
+        data.append(worker_data)
+
+    df = pd.DataFrame(data, columns=column_names)
+    df.to_csv(csv_save_path, mode="a", index=False)
+
+
+def record_cpu_perf():
+    ONE_GB = 1024**3
+
+    redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
+    fm_backup_path = os.path.join(os.getenv("FM_MAP_DIR"), "data_backup")
+    current_data = redis_conn.get("current_data_folder").decode()
+    csv_save_path = os.path.join(fm_backup_path, current_data, "sys_perf.csv")
+
+    cpu = psutil.cpu_times_percent()
+    mem = psutil.virtual_memory()
+    swap = psutil.swap_memory()
+    net = psutil.net_io_counters()
+    cpu_count = psutil.cpu_count()
+    load_avg = psutil.getloadavg()
+    cpu_freq = psutil.cpu_freq()[0]
+
+    data = [
+        [
+            utils_util.dt_to_str(datetime.datetime.now()),
+            cpu.user,
+            cpu.system,
+            cpu.idle,
+            cpu_count,
+            cpu_freq,
+            np.round(mem.available / ONE_GB, 3),
+            np.round(mem.used / ONE_GB, 3),
+            np.round(swap.used / ONE_GB, 3),
+            np.round(load_avg[0] * 100 / cpu_count, 1),
+            np.round(load_avg[1] * 100 / cpu_count, 1),
+            np.round(load_avg[2] * 100 / cpu_count, 1),
+            net.packets_sent,
+            net.packets_recv,
+            net.errin,
+            net.errout,
+        ]
+    ]
+
+    column_names = [
+        "datetime",
+        "cpu_user",
+        "cpu_system",
+        "cpu_idle",
+        "mem_available",
+        "mem_used",
+        "swap_used",
+        "cpu_count",
+        "cpu_freq",
+        "load_avg_1",
+        "load_avg_5",
+        "load_avg_15",
+        "net_packets_sent",
+        "net_packets_recv",
+        "net_errin",
+        "net_errout",
+    ]
+
+    df = pd.DataFrame(data, columns=column_names)
+    df.to_csv(csv_save_path, mode="a", index=False)
+
+
 def delete_notifications(dbsession: DBSession):
     # at the most only one dispatch notification can be present for a sherpa
     all_notifications = dbsession.get_notifications()

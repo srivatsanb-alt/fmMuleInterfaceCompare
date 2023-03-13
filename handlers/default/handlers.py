@@ -27,7 +27,6 @@ import handlers.default.handler_utils as hutils
 class RequestContext:
     msg_type: str
     sherpa_name: str
-    logger = None
 
 
 req_ctxt = RequestContext()
@@ -41,12 +40,6 @@ def init_request_context(req):
         req_ctxt.source = req.source
     else:
         req_ctxt.sherpa_name = None
-
-    # do not send a move to current destination, except if asked
-    if isinstance(req, rqm.SherpaReq) or isinstance(req, rqm.SherpaMsg):
-        req_ctxt.logger = get_logger(req.source)
-    else:
-        req_ctxt.logger = get_logger()
 
 
 class Handlers:
@@ -89,6 +82,8 @@ class Handlers:
     def run_health_check(self):
         hutils.check_sherpa_status(self.dbsession)
         hutils.delete_notifications(self.dbsession)
+        hutils.record_cpu_perf()
+        hutils.record_rq_perf()
         get_logger("status_updates").info("Ran a FM health check")
 
     def get_sherpa_trips(self, sherpa_name):
@@ -426,18 +421,18 @@ class Handlers:
             timeout = StationProperties.DISPATCH_OPTIONAL in curr_station.properties
             self.add_dispatch_start_to_ongoing_trip(ongoing_trip, sherpa, timeout)
 
-            if StationProperties.DISPATCH_OPTIONAL not in curr_station.properties:
+            if StationProperties.DISPATCH_OPTIONAL in curr_station.properties:
                 self.dbsession.add_notification(
                     [ongoing_trip.trip.fleet_name, sherpa.name],
                     f"Need a dispatch button press on {sherpa.name} which is parked at {curr_station.name}",
-                    mm.NotificationLevels.action_request,
+                    mm.NotificationLevels.info,
                     mm.NotificationModules.dispatch_button,
                 )
             else:
                 self.dbsession.add_notification(
                     [ongoing_trip.trip.fleet_name, sherpa.name],
                     f"Need a dispatch button press on {sherpa.name} which is parked at {curr_station.name}",
-                    mm.NotificationLevels.info,
+                    mm.NotificationLevels.action_request,
                     mm.NotificationModules.dispatch_button,
                 )
 

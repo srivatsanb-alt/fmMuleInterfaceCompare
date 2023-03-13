@@ -37,6 +37,7 @@ slack-sdk = "3.19.5"
 zstandard = "^0.20.0"
 opencv-python = "^4.7.0.68"
 psycopg2 = "^2.9.5"
+psutil = "^5.9.4"
 
 [tool.poetry.dev-dependencies]
 
