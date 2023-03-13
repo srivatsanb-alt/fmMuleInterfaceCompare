@@ -4,6 +4,7 @@ from typing import List
 from requests import Response
 from sqlalchemy.orm.attributes import flag_modified
 
+# ati code imports
 import models.fleet_models as fm
 import models.misc_models as mm
 import models.request_models as rqm
@@ -15,15 +16,8 @@ from models.db_session import DBSession
 import utils.comms as utils_comms
 import utils.util as utils_util
 import utils.visa_utils as utils_visa
-
+import core.constants as cc
 from core.logs import get_logger
-from core.constants import (
-    FleetStatus,
-    DisabledReason,
-    MessageType,
-    OptimalDispatchInfluencers,
-    UpdateMsgs,
-)
 from core.config import Config
 
 from optimal_dispatch.dispatcher import OptimalDispatch
@@ -64,7 +58,7 @@ class Handlers:
         sherpa: fm.Sherpa = self.dbsession.get_sherpa(sherpa_name)
         fleet: fm.Fleet = sherpa.fleet
 
-        if fleet.status == FleetStatus.PAUSED:
+        if fleet.status == cc.FleetStatus.PAUSED:
             return False, f"fleet {fleet.name} is paused"
 
         return True, None
@@ -178,7 +172,7 @@ class Handlers:
     ):
         fleet: fm.Fleet = sherpa.fleet
 
-        if fleet.status == FleetStatus.STOPPED:
+        if fleet.status == cc.FleetStatus.STOPPED:
             get_logger(sherpa.name).info(
                 f"fleet {fleet.name} is stopped, not assigning new trip to {sherpa.name}"
             )
@@ -696,7 +690,7 @@ class Handlers:
         status.battery_status = req.battery_status
         status.error = req.error_info if req.error else None
 
-        if status.disabled and status.disabled_reason == DisabledReason.STALE_HEARTBEAT:
+        if status.disabled and status.disabled_reason == cc.DisabledReason.STALE_HEARTBEAT:
             status.disabled = False
             status.disabled_reason = None
 
@@ -1277,16 +1271,16 @@ class Handlers:
         with DBSession() as dbsession:
             self.dbsession = dbsession
 
-            if msg.type == MessageType.FM_HEALTH_CHECK:
+            if msg.type == cc.MessageType.FM_HEALTH_CHECK:
                 self.run_health_check()
                 return
 
             # log, add msg to sherpa events
-            self.record_msg_received(msg, UpdateMsgs)
+            self.record_msg_received(msg, cc.UpdateMsgs)
             handle_ok, reason = self.should_handle_msg(msg)
 
             if not handle_ok:
-                self.ignore_msg(msg, UpdateMsgs, reason)
+                self.ignore_msg(msg, cc.UpdateMsgs, reason)
                 return
 
             # get handler
@@ -1299,7 +1293,7 @@ class Handlers:
             response = msg_handler(msg)
 
         # run optimal dispatch if needs be - need not be coupled with handler
-        if msg.type in OptimalDispatchInfluencers:
+        if msg.type in cc.OptimalDispatchInfluencers:
             with DBSession() as dbsession:
                 self.dbsession = dbsession
                 self.run_optimal_dispatch()
