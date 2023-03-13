@@ -197,7 +197,9 @@ def record_rq_perf():
         data.append(worker_data)
 
     df = pd.DataFrame(data, columns=column_names)
-    df.to_csv(csv_save_path, mode="a", index=False)
+
+    header = True if not os.path.exists(csv_save_path) else False
+    df.to_csv(csv_save_path, mode="a", index=False, header=header)
 
 
 def record_cpu_perf():
@@ -257,7 +259,9 @@ def record_cpu_perf():
     ]
 
     df = pd.DataFrame(data, columns=column_names)
-    df.to_csv(csv_save_path, mode="a", index=False)
+
+    header = True if not os.path.exists(csv_save_path) else False
+    df.to_csv(csv_save_path, mode="a", index=False, header=header)
 
 
 def delete_notifications(dbsession: DBSession):

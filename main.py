@@ -14,6 +14,7 @@ from utils.rq_utils import Queues
 from scripts.periodic_updates import send_periodic_updates
 from scripts.periodic_backup import backup_data
 from scripts.periodic_assigner import assign_next_task
+from scripts.periodic_fm_health_check import periodic_health_check
 from scripts.alerts import send_slack_alerts
 
 
@@ -54,6 +55,9 @@ if __name__ == "__main__":
 
     # start periodic assigner scripts
     Process(target=assign_next_task).start()
+
+    # start periodic fm health check
+    Process(target=periodic_health_check).start()
 
     # start backup data
     Process(target=backup_data).start()

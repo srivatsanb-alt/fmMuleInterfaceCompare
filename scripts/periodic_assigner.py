@@ -1,14 +1,14 @@
 from models.db_session import DBSession
-from models.request_models import AssignNextTask, FMHealthCheck
+from models.request_models import AssignNextTask
 from models.fleet_models import SherpaStatus
 from app.routers.dependencies import process_req
 from models.trip_models import PendingTrip
 from utils.util import check_if_timestamp_has_passed
 import time
 import logging
-from utils.rq_utils import Queues, enqueue
 
-#adds scheduled trips to the job queue.
+# adds scheduled trips to the job queue.
+
 
 def enqueue_scheduled_trips(db_session: DBSession, schdeuled_job_id):
     pending_trips = db_session.session.query(PendingTrip).all()
@@ -30,7 +30,9 @@ def enqueue_scheduled_trips(db_session: DBSession, schdeuled_job_id):
 
     return schdeuled_job_id
 
-#assigns next task to the sherpa.
+
+# assigns next task to the sherpa.
+
 
 def assign_next_task():
     while True:
@@ -58,10 +60,6 @@ def assign_next_task():
                         process_req(None, assign_next_task_req, "self")
 
                     schdeuled_job_id = enqueue_scheduled_trips(db_session, schdeuled_job_id)
-
-                    fm_health_check = FMHealthCheck()
-                    q = Queues.queues_dict.get("misc_handler")
-                    process_req(q, fm_health_check, "self", ttl=2)
                     time.sleep(2)
 
         except Exception as e:
