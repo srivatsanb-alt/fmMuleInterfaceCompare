@@ -55,7 +55,9 @@ def can_lock_exclusion_zone(
         get_logger("visa").error(reason)
         return False, reason
 
-    get_logger("visa").info(f"{ezone.zone_id} access held by {[s for s in ezone.sherpas]}")
+    get_logger("visa").info(
+        f"{ezone.zone_id} access held by {[s.name for s in ezone.sherpas]}"
+    )
 
     if len(ezone.sherpas) == 0:
         reason = f"{sherpa.name} granted lock for {zone_id} exclusive={exclusive}"
@@ -68,16 +70,16 @@ def can_lock_exclusion_zone(
         return True, reason
 
     if ezone.exclusivity:
-        reason = f"{sherpa.name} denied lock for {zone_id} exclusive access held by {ezone.sherpas[0]}"
+        reason = f"{sherpa.name} denied lock for {zone_id} exclusive access held by {[s.name for s in ezone.sherpas]}"
         get_logger("visa").info(reason)
         return False, reason
 
     elif not exclusive:
-        reason = f"{sherpa.name} granted lock for {zone_id} ezone held by sherpas {ezone.sherpas} without exclusivity"
+        reason = f"{sherpa.name} granted lock for {zone_id} ezone held by sherpas {[s.name for s in ezone.sherpas]} without exclusivity"
         get_logger("visa").info(reason)
         return True, reason
     else:
-        reason = f"exlusive access to {zone_id} can't be granted already held by sherpas {ezone.sherpas}"
+        reason = f"exlusive access to {zone_id} can't be granted already held by sherpas {[s.name for s in ezone.sherpas]}"
         get_logger("visa").info(reason)
         return False, reason
 
