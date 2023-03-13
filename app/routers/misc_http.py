@@ -182,12 +182,39 @@ async def get_sherpa_live_route(
 
     with DBSession() as session:
         ongoing_trip = session.get_enroute_trip(live_route_req.sherpa_name)
-        
+
         if not ongoing_trip:
             dpd.raise_error(f"No ongoing trip for {live_route_req.sherpa_name}")
-        
+
         ongoing_route = ongoing_trip.route
-        wps_req = rqm.RoutePreview(route = ongoing_route)
+        wps_req = rqm.RoutePreview(route=ongoing_route)
         response = await get_route_wps(wps_req, user_name)
-        
+
+    return response
+
+
+@router.get("/sherpa_build_info/{sherpa_name}")
+async def sherpa_build_info(sherpa_name: str, user_name=Depends(dpd.get_user_from_header)):
+    response = {}
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    with DBSession() as dbsession:
+        sherpa_status = dbsession.get_sherpa_status(sherpa_name)
+
+        if not sherpa_status:
+            dpd.raise_error("Invalid sherpa name")
+
+        if sherpa_status.other_info is not None:
+            response.update(
+                {
+                    "last_software_update": sherpa_status.other_info.get(
+                        "last_software_update"
+                    )
+                }
+            )
+            response.update({"sw_date": sherpa_status.other_info.get("sw_date")})
+            response.update({"sw_tag": sherpa_status.other_info.get("sw_tag")})
+            response.update({"sw_id": sherpa_status.other_info.get("sw_id")})
+
     return response

@@ -697,7 +697,19 @@ class Handlers:
         elif not status.initialized:
             # sherpa switched to fleet mode
             init_req: rqm.InitReq = rqm.InitReq()
-            response = utils_comms.send_req_to_sherpa(self.dbsession, sherpa, init_req)
+            init_response = utils_comms.send_req_to_sherpa(self.dbsession, sherpa, init_req)
+
+            if status.other_info is None:
+                status.other_info = {}
+
+            status.other_info.update(
+                {"last_software_update": init_response.get("last_software_update")}
+            )
+            status.other_info.update({"sw_date": init_response.get("sw_date")})
+            status.other_info.update({"sw_tag": init_response.get("sw_tag")})
+            status.other_info.update({"sw_id": init_response.get("sw_id")})
+            flag_modified(status, "other_info")
+
             self.initialize_sherpa(sherpa)
 
         _, _ = self.should_assign_next_task(sherpa, ongoing_trip, pending_trip)
