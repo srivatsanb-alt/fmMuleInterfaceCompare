@@ -121,6 +121,7 @@ if __name__ == "__main__":
         conveyor_logger = logging.getLogger("plugin_conveyor")
         init_db(str("plugin_conveyor"), [cm.ConvInfo, cm.ConvTrips])
 
+        # IMPORT AFTER INIT DB #
         from conveyor.conveyor_utils import get_all_conveyors
 
         all_conveyors = get_all_conveyors()
