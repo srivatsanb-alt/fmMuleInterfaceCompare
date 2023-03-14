@@ -3,8 +3,10 @@ from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy import create_engine
 from sqlalchemy import Integer, String, Column, ARRAY
 from models.base_models import Base, TimestampMixin
+from typing import List, Union
+from pydantic import BaseModel
 
-
+# from ...models.misc_models import Notifications
 class DBSession:
     def __init__(self):
         engine = create_engine(
@@ -30,6 +32,7 @@ class DBSession:
 
 class SummonInfo(Base):
     __tablename__ = "summon_info"
+    __table_args__ = {"extend_existing": True}
     id = Column(Integer, primary_key=True, index=True)
     hashed_api_key = Column(String, unique=True)
     press = Column(String)
@@ -37,6 +40,16 @@ class SummonInfo(Base):
     station = Column(String)
     booking_id = Column(Integer)
     trip_id = Column(Integer)
+
+
+class ClientReq(BaseModel):
+    source: Union[str, None] = None
+
+
+class AddEditSummonReq(ClientReq):
+    id: int
+    api_key: str
+    route: List[str]
 
 
 class SummonActions(Base, TimestampMixin):

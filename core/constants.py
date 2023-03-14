@@ -17,6 +17,17 @@ class MessageType:
     SHERPA_ALERTS = "sherpa_alerts"
 
 
+OptimalDispatchInfluencers = [
+    MessageType.BOOKING,
+    MessageType.DELETE_BOOKED_TRIP,
+    MessageType.DELETE_ONGOING_TRIP,
+    MessageType.INDUCT_SHERPA,
+    MessageType.PASS_TO_SHERPA,
+]
+
+UpdateMsgs = [MessageType.SHERPA_STATUS, MessageType.TRIP_STATUS]
+
+
 class FleetStatus:
     STARTED = "started"
     STOPPED = "stopped"

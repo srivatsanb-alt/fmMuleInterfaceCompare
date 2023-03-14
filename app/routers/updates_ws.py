@@ -6,7 +6,9 @@ import os
 import aioredis
 from fastapi import APIRouter, Depends, WebSocket, status
 
-from app.routers.dependencies import get_user_from_query
+
+# ati code imports
+import app.routers.dependencies as dpd
 
 # setup logging
 log_conf_path = os.path.join(os.getenv("FM_CONFIG_DIR"), "logging.conf")
@@ -17,7 +19,7 @@ router = APIRouter()
 
 
 @router.websocket("/ws/api/v1/updates/{token}")
-async def update_ws(websocket: WebSocket, user_name=Depends(get_user_from_query)):
+async def update_ws(websocket: WebSocket, user_name=Depends(dpd.get_user_from_query)):
 
     if not user_name:
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)

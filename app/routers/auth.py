@@ -1,10 +1,9 @@
 import hashlib
-from app.routers.dependencies import (
-    generate_jwt_token,
-    raise_error,
-)
-from models.db_session import DBSession
 from fastapi import APIRouter
+
+# ati code imports
+import app.routers.dependencies as dpd
+from models.db_session import DBSession
 from models.request_models import UserLogin
 
 router = APIRouter(
@@ -13,7 +12,8 @@ router = APIRouter(
     responses={404: {"description": "Not found"}},
 )
 
-#performs user authentication
+# performs user authentication
+
 
 @router.post("/login")
 async def login(user_login: UserLogin):
@@ -23,10 +23,10 @@ async def login(user_login: UserLogin):
     with DBSession() as dbsession:
         user = dbsession.get_frontend_user(user_login.name, hashed_password)
         if user is None:
-            raise_error("Unknown requester", 401)
+            dpd.raise_error("Unknown requester", 401)
 
         response = {
-            "access_token": generate_jwt_token(user_login.name),
+            "access_token": dpd.generate_jwt_token(user_login.name),
             "user_details": {"user_name": user_login.name, "role": user.role},
         }
 

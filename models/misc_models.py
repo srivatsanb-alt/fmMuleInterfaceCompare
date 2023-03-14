@@ -9,18 +9,21 @@ class NotificationModules:
     obstructed = "obstructed"
     peripheral_devices = "peripheral_devices"
     map_file_check = "map_file_check"
+    dispatch_button = "dispatch_button"
 
 
 class NotificationLevels:
     info = "info"
     alert = "alert"
     action_request = "action_request"
+    stale_alert_or_action = "stale_alert_or_action"
 
 
 NotificationTimeout = {
     NotificationLevels.info: 120,
-    NotificationLevels.action_request: 300,
-    NotificationLevels.alert: 300,
+    NotificationLevels.action_request: 150,
+    NotificationLevels.alert: 150,
+    NotificationLevels.stale_alert_or_action: 300,
 }
 
 

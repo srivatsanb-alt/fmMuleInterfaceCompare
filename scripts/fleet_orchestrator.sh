@@ -13,10 +13,10 @@ start() {
     poetry run python /app/main.py > $LOGS/fm.out 2>&1 &
 
     echo "starting fleet manager uvicorn, listening on port $FM_PORT"
-    poetry run uvicorn app.main:app --host 0.0.0.0 --port $FM_PORT 2>&1 &
+    poetry run python /app/app/main.py 2>&1 &
 
     echo "starting plugins uvicorn, listening on port $PLUGIN_PORT"
-    poetry run uvicorn plugins.plugin_app:app --host 0.0.0.0 --port $PLUGIN_PORT 2>&1 &
+    poetry run python /app/plugins/plugin_app.py 2>&1 &
 
     echo "starting plugins worker"
     poetry run python plugins/plugin_rq.py 2>&1 &
@@ -29,7 +29,7 @@ fm_init() {
 }
 
 run_simulator() {
-  poetry run python debug.py host_all_mule_app 2>&1 &
+  poetry run python debug.py establish_all_sherpa_ws > $LOGS/simulator.log 2>&1 &
   poetry run python debug.py simulate > $LOGS/simulator.log 2>&1 &
 }
 

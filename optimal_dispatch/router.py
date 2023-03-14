@@ -50,6 +50,31 @@ def start_router_module():
             logger.info(f"Result : {control_router_job} - {route_length}")
             redis_conn.delete(key)
 
+        for key in redis_conn.scan_iter("control_router_wps_job_*"):
+            try:
+                str_job = redis_conn.get(key)
+                logger.info(f"got a route preview estimation job {str_job}")
+                control_router_wps_job = json.loads(str_job)
+                station_poses = control_router_wps_job[0]
+                fleet_name = control_router_wps_job[1]
+                job_id = control_router_wps_job[2]
+                rm = all_router_modules.get_router_module(fleet_name)
+
+                start_pose = station_poses[0]
+                dest_poses = station_poses[1:]
+                wps_list = rm.get_path_wps(start_pose, dest_poses)
+                logger.info(f"result of wps req: {wps_list}")
+                redis_conn.delete(key)
+
+            except Exception as e:
+                logger.info(
+                    f"unable to get route for poses {station_poses} \n Exception {e}"
+                )
+                wps_list = []
+            
+            redis_conn.set(f"result_wps_job_{job_id}", json.dumps(wps_list))
+
+
         time.sleep(1e-2)
 
 

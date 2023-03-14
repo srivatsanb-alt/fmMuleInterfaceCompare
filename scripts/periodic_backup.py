@@ -9,6 +9,7 @@ from core.db import engine
 import pandas as pd
 import datetime
 import shutil
+import redis
 
 
 def backup_data():
@@ -16,6 +17,9 @@ def backup_data():
     fm_backup_path = os.path.join(os.getenv("FM_MAP_DIR"), "data_backup")
     start_time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
     current_data = f"{start_time}_data"
+
+    redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
+    redis_conn.set("current_data_folder", current_data)
 
     if not os.path.exists(fm_backup_path):
         os.mkdir(fm_backup_path)

@@ -11,9 +11,8 @@ import redis
 from .plugin_rq import enqueue
 
 
-async def ws_reader(websocket, name, handler_obj, unique_id=None):
-
-    log_conf_path = os.path.join(os.getenv("FM_CONFIG_DIR"), "logging.conf")
+async def ws_reader(websocket, name, handler_obj, unique_id=None, api_key=None):
+    log_conf_path = os.path.join(os.getenv("FM_CONFIG_DIR"), "plugin_logging.conf")
     logging.config.fileConfig(log_conf_path)
     logger = logging.getLogger(f"plugin_{name}")
 
@@ -39,13 +38,16 @@ async def ws_reader(websocket, name, handler_obj, unique_id=None):
         if unique_id is not None:
             msg["unique_id"] = unique_id
 
+        if api_key:
+            msg["api_key"] = api_key
+
         logger.debug(f"Converted msg: {msg}, count: {count}")
         enqueue(plugin_q, handler_obj.handle, msg)
 
 
 async def ws_writer(websocket, name, format="json", unique_id=None):
 
-    log_conf_path = os.path.join(os.getenv("FM_CONFIG_DIR"), "logging.conf")
+    log_conf_path = os.path.join(os.getenv("FM_CONFIG_DIR"), "plugin_logging.conf")
     logging.config.fileConfig(log_conf_path)
     logger = logging.getLogger(f"plugin_{name}")
 
@@ -69,8 +71,18 @@ async def ws_writer(websocket, name, format="json", unique_id=None):
 
             if format == "json":
                 data = ast.literal_eval(message["data"])
+
+                # close WebSocket message
+                if data.get("close_ws", False):
+                    await websocket.close()
+
                 await websocket.send_json(data)
+
             elif format == "text":
+                if message["data"] == "close_ws":
+                    logger.info(f"Got {channel_name} close message")
+                    await websocket.close()
+
                 await websocket.send_text(message["data"])
 
 
