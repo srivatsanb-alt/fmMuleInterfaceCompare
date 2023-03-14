@@ -111,17 +111,12 @@ def send_job_updates_summon():
 
 
 def add_edit_summon_info(
-    dbsession: DBSession,
-    id=None,
-    api_key=None,
-    route=None,
+    dbsession: DBSession, id=None, api_key=None, route=None, description=None
 ):
+
     summon_info: SummonInfo = (
         dbsession.session.query(SummonInfo).filter(SummonInfo.id == id).one_or_none()
     )
-    logger.info(f"inside add or edit summon button:{summon_info}")
-    if id is None:
-        raise ValueError("Cannot add a summon button without id")
 
     if route:
         for station_name in route:
@@ -130,19 +125,26 @@ def add_edit_summon_info(
                 ValueError(f"invalid station : {station_name}")
 
     if api_key is None:
-        api_key = gen_api_key(id)
-        logger.info(f"generated api_key {api_key}  for id {id}")
-
-    hashed_api_key = hashlib.sha256(api_key.encode("utf-8")).hexdigest()
+        if not summon_info:
+            api_key = gen_api_key(id)
+            logger.info(
+                f"generated api_key {api_key} for summon button with id {id}, description: {description}"
+            )
+            hashed_api_key = hashlib.sha256(api_key.encode("utf-8")).hexdigest()
 
     if summon_info:
         summon_info.id = id
-        summon_info.hashed_api_key = hashed_api_key
+        if api_key:
+            summon_info.hashed_api_key = hashed_api_key
         summon_info.route = route
         summon_info.press = "book_trip"
+        summon_info.description = description
     else:
         summon_info: SummonInfo = SummonInfo(
-            id=id, hashed_api_key=hashed_api_key, route=route, press="book_trip"
+            hashed_api_key=hashed_api_key,
+            route=route,
+            press="book_trip",
+            description=description,
         )
         dbsession.session.add(summon_info)
         logger.info(f"added summon button {id}, with route: {route}")

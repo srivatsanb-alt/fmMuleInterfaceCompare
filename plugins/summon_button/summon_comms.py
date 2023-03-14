@@ -51,6 +51,7 @@ def get_all_summon_info(user_name=Depends(pdpd.get_user_from_header)):
                         summon.id: {
                             "hashed_api_key": summon.hashed_api_key,
                             "route": summon.route,
+                            "description": summon.description,
                         }
                     }
                 )
@@ -73,6 +74,7 @@ def add_edit_summon_button(
             id=add_edit_summon.id,
             api_key=add_edit_summon.api_key,
             route=add_edit_summon.route,
+            description=add_edit_summon.description,
         )
 
     return {}

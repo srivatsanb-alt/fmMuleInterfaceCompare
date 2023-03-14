@@ -3,7 +3,7 @@ from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy import create_engine
 from sqlalchemy import Integer, String, Column, ARRAY
 from models.base_models import Base, TimestampMixin
-from typing import List, Union
+from typing import List, Union, Optional
 from pydantic import BaseModel
 
 # from ...models.misc_models import Notifications
@@ -40,6 +40,7 @@ class SummonInfo(Base):
     station = Column(String)
     booking_id = Column(Integer)
     trip_id = Column(Integer)
+    description = Column(String)
 
 
 class ClientReq(BaseModel):
@@ -47,9 +48,10 @@ class ClientReq(BaseModel):
 
 
 class AddEditSummonReq(ClientReq):
-    id: int
+    id: Optional[int]
     api_key: str
     route: List[str]
+    description: str
 
 
 class SummonActions(Base, TimestampMixin):
