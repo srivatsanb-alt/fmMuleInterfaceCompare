@@ -1,10 +1,11 @@
-from rq import Queue, Worker, Connection
-from rq.job import Job
 import redis
 import time
 import toml
 import asyncio
 import os
+import asyncio
+from rq import Queue, Worker, Connection
+from rq.job import Job
 from multiprocessing import Process
 from fastapi import HTTPException
 import logging
@@ -108,10 +109,15 @@ if __name__ == "__main__":
         Process(target=start_worker, args=("plugin_ies",)).start()
         ies_logger.info("started a worker for plugin_ies")
 
-        from ies.ies_job_updates import send_job_updates
-
+        from ies.ies_job_updates import check_status_and_combine_trips, send_job_updates
         Process(target=send_job_updates, args=[]).start()
-        ies_logger.info("Sending periodic job updates")
+        ies_logger.info("Sending continuous job updates")
+
+        def ies_combine_trips_handler():
+            return asyncio.get_event_loop().run_until_complete(check_status_and_combine_trips())
+
+        Process(target=ies_combine_trips_handler, args=[]).start()
+        ies_logger.info("Starting ies combine trips handler")
 
     if "conveyor" in all_plugins:
         import conveyor.conveyor_models as cm
