@@ -121,7 +121,7 @@ def add_edit_conv_info(
     return {}
 
 
-@router.post("/plugin/ws/api/v1/delete_conv/{station_name}")
+@router.get("/plugin/ws/api/v1/delete_conv/{station_name}")
 def delete_conv(
     station_name: str,
     user_name=Depends(pdpd.get_user_from_header),
