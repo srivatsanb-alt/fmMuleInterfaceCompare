@@ -95,13 +95,6 @@ async def send_async_req_to_sherpa(dbsession, sherpa: Sherpa, msg: FMReq) -> Dic
 
     get_logger().info(f"Sending req: {body} to {sherpa.name}")
 
-    sherpa_event: SherpaEvent = SherpaEvent(
-        sherpa_name=sherpa.name,
-        msg_type=body["endpoint"],
-        context="sent to sherpa",
-    )
-    dbsession.add_to_session(sherpa_event)
-
     send_ws_msg_to_sherpa(body, sherpa)
     await asyncio.sleep(0.005)
 

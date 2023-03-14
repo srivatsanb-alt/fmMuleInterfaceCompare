@@ -57,7 +57,7 @@ async def diagnostics(
         if not sherpa_status.sherpa.ip_address:
             dpd.raise_error("Sherpa not yet connected to the fleet manager")
 
-        req = {"endpoint": "diagnostics", "source": user_name}
+        req = rqm.DiagnosticsReq(sherpa_name=entity_name)
         response = await send_async_req_to_sherpa(dbsession, sherpa_status.sherpa, req)
 
     return response

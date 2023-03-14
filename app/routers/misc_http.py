@@ -8,6 +8,7 @@ import aioredis
 from utils.util import get_table_as_dict
 import models.request_models as rqm
 import models.fleet_models as fm
+import models.misc_models as mm
 from models.db_session import DBSession
 import app.routers.dependencies as dpd
 from utils.util import generate_random_job_id
@@ -218,3 +219,20 @@ async def sherpa_build_info(sherpa_name: str, user_name=Depends(dpd.get_user_fro
             response.update({"sw_id": sherpa_status.other_info.get("sw_id")})
 
     return response
+
+
+# alerts the FM with messages from Sherpa
+@router.get("/create_generic_alerts/{alert_description}")
+async def sherpa_alerts(
+    alert_description: str, user_name=Depends(dpd.get_user_from_header)
+):
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    with DBSession() as dbsession:
+        dbsession.add_notification(
+            [],
+            alert_description,
+            mm.NotificationLevels.action_request,
+            mm.NotificationModules.generic,
+        )

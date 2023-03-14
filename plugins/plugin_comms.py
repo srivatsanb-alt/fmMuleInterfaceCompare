@@ -145,5 +145,12 @@ def get_fm_url(endpoint, query):
         "sherpa_summary": os.path.join(
             "http://", fm_ip, "api/v1/sherpa_summary/", str(query)
         ),
+        "create_generic_alerts": os.path.join(
+            "http://", fm_ip, "api/v1/create_generic_alerts/", str(query)
+        ),
     }
     return fm_endpoints.get(endpoint, None)
+
+
+def create_fm_notification(plugin_name, alert: str):
+    send_req_to_FM(plugin_name, "create_generic_alerts", "get", query=alert)

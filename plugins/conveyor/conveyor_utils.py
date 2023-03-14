@@ -1,4 +1,4 @@
-from plugins.plugin_comms import send_req_to_FM
+from plugins.plugin_comms import send_req_to_FM, create_fm_notification
 import logging
 import hashlib
 import secrets
@@ -149,6 +149,10 @@ def add_edit_conv(
             fleet_name=conveyor_details["fleet_name"],
         )
         dbsession.session.add(conv_info)
+        create_fm_notification(
+            "plugin_conveyor",
+            f"Please restart fleet manager new conveyor: {conveyor_name} has been added",
+        )
         logging.getLogger(logger_name).info(
             f"added conveyor info with api_key {api_key}, with station name: {conveyor_name}"
         )
