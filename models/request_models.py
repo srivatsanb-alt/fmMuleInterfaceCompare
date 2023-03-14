@@ -89,7 +89,7 @@ class SherpaReq(BaseModel):
 
 class WSResp(BaseModel):
     success: bool
-    response: Optional[Dict[str, str]]
+    response: Optional[Dict[str, Union[str, int, float, None]]]
 
 
 class InitExtraInfo(BaseModel):
@@ -265,6 +265,7 @@ class TripMsg(ClientReq):
 
 class RoutePreview(ClientReq):
     route: List[str]
+
 
 class LiveRoute(ClientReq):
     sherpa_name: str
