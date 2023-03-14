@@ -130,7 +130,8 @@ def add_edit_summon_info(
             logger.info(
                 f"generated api_key {api_key} for summon button with id {id}, description: {description}"
             )
-            hashed_api_key = hashlib.sha256(api_key.encode("utf-8")).hexdigest()
+
+    hashed_api_key = hashlib.sha256(api_key.encode("utf-8")).hexdigest()
 
     if summon_info:
         summon_info.id = id
