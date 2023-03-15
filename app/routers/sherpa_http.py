@@ -72,6 +72,18 @@ async def ws_ack(req: rqm.WSResp, req_id: str):
     return {}
 
 
+@router.get("/get_static_files_auth_credentials")
+async def get_static_files_auth_credentials(sherpa: str = Depends(dpd.get_sherpa)):
+    if not sherpa:
+        dpd.raise_error("Unknown requester", 401)
+
+    response = {
+        "user_name": os.getenv("ATI_STATIC_AUTH_USERNAME"),
+        "password": os.getenv("ATI_STATIC_AUTH_PASSWORD"),
+    }
+    return response
+
+
 # alerts the FM with messages from Sherpa
 @router.post("/alerts")
 async def sherpa_alerts(

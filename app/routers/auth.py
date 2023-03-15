@@ -1,4 +1,5 @@
 import hashlib
+import os
 from fastapi import APIRouter
 
 # ati code imports
@@ -28,6 +29,10 @@ async def login(user_login: UserLogin):
         response = {
             "access_token": dpd.generate_jwt_token(user_login.name),
             "user_details": {"user_name": user_login.name, "role": user.role},
+            "static_files_auth": {
+                "user_name": os.getenv("ATI_STATIC_AUTH_USERNAME"),
+                "password": os.getenv("ATI_STATIC_AUTH_PASSWORD"),
+            },
         }
 
     return response
