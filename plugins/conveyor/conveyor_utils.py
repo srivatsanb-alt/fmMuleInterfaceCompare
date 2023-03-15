@@ -123,22 +123,24 @@ def add_edit_conv(
         if status_code != 200:
             raise ValueError(f"Invalid nearest_chute entry, reason: invalid station")
 
-    if api_key is None:
-        api_key = gen_api_key(id)
-        logging.getLogger(logger_name).info(
-            f"generated api_key {api_key}  for conveyor name: {conveyor_name}"
-        )
-
-    hashed_api_key = hashlib.sha256(api_key.encode("utf-8")).hexdigest()
-
     conv_info: ConvInfo = (
         dbsession.session.query(ConvInfo)
         .filter(ConvInfo.name == conveyor_name)
         .one_or_none()
     )
+
+    if api_key is None:
+        if not conv_info:
+            api_key = gen_api_key(id)
+            logging.getLogger(logger_name).info(
+                f"generated api_key {api_key}  for conveyor name: {conveyor_name}"
+            )
+    hashed_api_key = hashlib.sha256(api_key.encode("utf-8")).hexdigest()
+
     if conv_info:
         conv_info.name = conveyor_name
-        conv_info.hashed_api_key = hashed_api_key
+        if api_key:
+            conv_info.hashed_api_key = hashed_api_key
         conv_info.nearest_chute = nearest_chute
     else:
         conv_info: ConvInfo = ConvInfo(
