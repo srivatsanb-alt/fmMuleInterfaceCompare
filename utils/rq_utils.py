@@ -6,7 +6,6 @@ import json
 
 # utils for redis rq
 class Queues:
-
     redis_conn = redis.from_url(
         os.getenv("FM_REDIS_URI"), encoding="utf-8", decode_responses=True
     )

@@ -1,5 +1,6 @@
 import uvicorn
 from fastapi import FastAPI, Depends, APIRouter
+from fastapi.middleware.cors import CORSMiddleware
 import os
 import toml
 import json
@@ -19,6 +20,16 @@ while not plugins_workers_db_init:
         plugins_workers_db_init = json.loads(plugin_init)
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["X-Process-Time"],
+)
+
 
 plugin_config = toml.load(os.path.join(os.getenv("FM_CONFIG_DIR"), "plugin_config.toml"))
 all_plugins = plugin_config["all_plugins"]
