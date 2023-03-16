@@ -30,7 +30,7 @@ async def login(user_login: UserLogin):
             "access_token": dpd.generate_jwt_token(user_login.name),
             "user_details": {"user_name": user_login.name, "role": user.role},
             "static_files_auth": {
-                "user_name": os.getenv("ATI_STATIC_AUTH_USERNAME"),
+                "username": os.getenv("ATI_STATIC_AUTH_USERNAME"),
                 "password": os.getenv("ATI_STATIC_AUTH_PASSWORD"),
             },
         }
