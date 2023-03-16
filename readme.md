@@ -286,8 +286,6 @@ d. Setup mule nginx container (if not already present)
 # Setup Plugin #
 a. [Setup IES](#setup-ies)
 
-b. [Setup conveyor booking](#setup-conveyor-booking)
-
 # Setup IES #
 a. Add IES plugin to static/fleet_config/plugin_config.toml
 ```markdown
@@ -300,23 +298,6 @@ b. Modify static/plugin_ies/locationID_station_mapping.json file. Map IES statio
     "Warehouse_Pick": "ECFA start",
     "HP02_FA02": "ECFA-2",
     "HP03_FA01": "ECFA-1",
-}
-```
-
-# Setup conveyor booking #
-a. Add conveyor plugin to static/fleet_config/plugin_config.toml
-```markdown
-all_plugins=["conveyor"]
-```
-b. Modify static/plugin_conveyor/api_key_conveyor_mapping.json. Map api keys to conveyor station names, also specify the nearest chute station.
-
-```markdown
-{
-
-"E2bKHiYNMk5kCvSKZfOVThr5t8oUQ_8mrot36QVrk9E_CONV1": {"name": "Conveyor1", "nearest_chute": "Meeting Room 1"},
-
-"B2bKHiYNMk5kCvSKZfOVThr5t8oUQ_8mrot36QVrk9K_CONV2": {"name": "Conveyor2", "nearest_chute": "Meeting Room 2"}
-
 }
 ```
 
