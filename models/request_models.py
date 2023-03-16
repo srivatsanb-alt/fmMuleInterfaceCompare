@@ -89,7 +89,7 @@ class SherpaReq(BaseModel):
 
 class WSResp(BaseModel):
     success: bool
-    response: Optional[Dict[str, Union[str, int, float, None]]]
+    response: Optional[Dict[str, Union[str, int, float, dict, None]]]
 
 
 class InitExtraInfo(BaseModel):
