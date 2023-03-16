@@ -11,7 +11,7 @@ def get_reqd_zone_types(visa_type):
         reqd_zone_types.append(vm.ZoneType.LANE)
 
     elif visa_type == rqm.VisaType.PARKING:
-        reqd_zone_types.append(vm.ZoneType.STAION)
+        reqd_zone_types.append(vm.ZoneType.STATION)
 
     elif visa_type in {
         rqm.VisaType.EXCLUSIVE_PARKING,
