@@ -49,7 +49,7 @@ class ClientReq(BaseModel):
 
 class AddEditSummonReq(ClientReq):
     id: Optional[int]
-    api_key: str
+    api_key: Optional[str]
     route: List[str]
     description: str
 

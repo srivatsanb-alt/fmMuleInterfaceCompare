@@ -135,7 +135,9 @@ def add_edit_conv(
             logging.getLogger(logger_name).info(
                 f"generated api_key {api_key}  for conveyor name: {conveyor_name}"
             )
-    hashed_api_key = hashlib.sha256(api_key.encode("utf-8")).hexdigest()
+            hashed_api_key = hashlib.sha256(api_key.encode("utf-8")).hexdigest()
+    else:
+        hashed_api_key = hashlib.sha256(api_key.encode("utf-8")).hexdigest()
 
     if conv_info:
         conv_info.name = conveyor_name

@@ -5,7 +5,7 @@ from sqlalchemy import Integer, String, Column, ARRAY, Boolean
 from dataclasses import dataclass
 from models.base_models import Base, JsonMixin
 from pydantic import BaseModel
-from typing import Union
+from typing import Union, Optional
 
 
 class DBSession:
@@ -67,4 +67,4 @@ class ClientReq(BaseModel):
 class AddEditConvReq(ClientReq):
     station_name: str
     nearest_chute: str
-    api_key: str
+    api_key: Optional[str]
