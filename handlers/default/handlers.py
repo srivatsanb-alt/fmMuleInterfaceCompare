@@ -99,7 +99,7 @@ class Handlers:
         sherpa_status: fm.SherpaStatus = sherpa.status
         sherpa_status.initialized = True
         sherpa_status.continue_curr_task = True
-        get_logger(sherpa.name).info(f"{sherpa.name} initialized")
+        get_logger("status_updates").info(f"{sherpa.name} initialized")
 
     def update_sherpa_info(self, sherpa_status: fm.SherpaStatus, init_response: dict):
 
@@ -112,6 +112,10 @@ class Handlers:
         sherpa_status.other_info.update({"sw_tag": init_response.get("sw_tag")})
         sherpa_status.other_info.update({"sw_id": init_response.get("sw_id")})
         flag_modified(sherpa_status, "other_info")
+
+        get_logger("status_updates").info(
+            f"updated {sherpa_status.sherpa_name} build info {sherpa_status.other_info}"
+        )
 
     def check_if_booking_is_valid(
         self, trip_msg: rqm.TripMsg, all_stations: List[fm.Station]
@@ -705,7 +709,7 @@ class Handlers:
             status.disabled_reason = None
 
         if req.mode != "fleet":
-            get_logger(sherpa.name).info(f"{sherpa.name} uninitialized")
+            get_logger("status_updates").info(f"{sherpa.name} uninitialized")
             status.initialized = False
             status.continue_curr_task = False
 
@@ -735,19 +739,19 @@ class Handlers:
         trip_analytics = self.dbsession.get_trip_analytics(ongoing_trip.trip_leg_id)
 
         if not ongoing_trip:
-            get_logger().info(
+            get_logger("status_updates").info(
                 f"Trip status sent by {sherpa.name} is invalid/delayed no ongoing trip data found trip_id: {req.trip_id}"
             )
             return
 
         if req.trip_leg_id != ongoing_trip.trip_leg_id:
-            get_logger().info(
+            get_logger("status_updates").info(
                 f"Trip status sent by {sherpa.name} is invalid sherpa_trip_leg_id: {req.trip_leg_id} FM_trip_leg_id: {ongoing_trip.trip_leg_id}"
             )
             return
 
         if not ongoing_trip.next_station():
-            get_logger().info(
+            get_logger("status_updates").info(
                 f"Trip status sent by {sherpa.name} is delayed all trip legs completed trip_id: {req.trip_id}"
             )
             return
@@ -792,7 +796,7 @@ class Handlers:
                 num_trip_msg=1,
             )
             self.dbsession.add_to_session(trip_analytics)
-            get_logger().info(
+            get_logger("status_updates").info(
                 f"added TripAnalytics entry for trip_leg_id: {ongoing_trip.trip_leg_id}"
             )
 
