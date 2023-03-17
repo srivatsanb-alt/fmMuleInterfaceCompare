@@ -923,7 +923,7 @@ class Handlers:
         # update db
         if not req.induct:
             for visa_assignment in visa_assignments:
-                self.dbsession.session.delete(visa_assignments)
+                self.dbsession.session.delete(visa_assignment)
         else:
             reset_visas_held_req = rqm.ResetVisasHeldReq()
             _ = utils_comms.send_req_to_sherpa(self.dbsession, sherpa, reset_visas_held_req)
