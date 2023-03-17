@@ -248,6 +248,17 @@ def update_map(
         for sherpa in all_fleet_sherpas:
             close_websocket_for_sherpa(sherpa.name)
 
+        restart_fm_notification = (
+            f"Map files of fleet: {fleet_name} updated! Please restart fleet manager"
+        )
+
+        dbsession.add_notification(
+            [fleet_name],
+            restart_fm_notification,
+            mm.NotificationLevels.alert,
+            mm.NotificationModules.map_file_check,
+        )
+
     return response
 
 
