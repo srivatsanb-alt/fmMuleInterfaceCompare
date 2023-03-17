@@ -116,7 +116,8 @@ async def trip_status(
             )
 
         if not trip_status_req.trip_ids:
-            dpd.raise_error("no trip id given or available in the given timeframe")
+            return response
+            # dpd.raise_error("no trip id given or available in the given timeframe")
 
         for trip_id in trip_status_req.trip_ids:
             trip: Trip = dbsession.get_trip(trip_id)
@@ -167,7 +168,8 @@ async def trip_analytics(
             )
 
         if not trip_analytics_req.trip_ids:
-            dpd.raise_error("no trip id given or available in the given timeframe")
+            return response
+            # dpd.raise_error("no trip id given or available in the given timeframe")
 
         for trip_id in trip_analytics_req.trip_ids:
             trip_legs_id = dbsession.get_all_trip_legs(trip_id)

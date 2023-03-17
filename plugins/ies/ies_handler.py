@@ -163,7 +163,7 @@ class IES_HANDLER:
     def handle_JobQuery(self, msg):
         trips_update_response = self._process_job_query_msg(msg)
         # send update for all trips
-        if trips_update_response is not None:
+        if trips_update_response:
             for trip_id, trip_details in trips_update_response.items():
                 trip_ies = query_trip_id(trip_id)
                 if trip_ies is not None:
@@ -249,12 +249,8 @@ class IES_HANDLER:
             job_create.externalReferenceId,
             "",
         ).to_dict()
-        msg_to_ies.update(
-            {"lastCompletedTask": {"ActionName": "", "LocationId": ""}}
-        )
-        self.logger.info(
-            "Sending JobUpdate {booked_msg_to_ies} to IES in JobCreate"
-        )
+        msg_to_ies.update({"lastCompletedTask": {"ActionName": "", "LocationId": ""}})
+        self.logger.info("Sending JobUpdate {booked_msg_to_ies} to IES in JobCreate")
         self.send_msg(msg_to_ies)
         self.logger.info(f"adding job to db {job_create}")
         self._add_to_pending_jobs_db(job_create)
@@ -269,4 +265,3 @@ def query_ref_id(ref_id):
     return (
         session.query(TripsIES).filter(TripsIES.externalReferenceId == ref_id).one_or_none()
     )
-
