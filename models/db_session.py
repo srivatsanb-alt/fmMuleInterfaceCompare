@@ -206,6 +206,13 @@ class DBSession:
             .all()
         )
 
+    def delete_stale_sherpa_events(self, sherpa_name: str):
+        stale_sherpa_events = self.session.query(SherpaEvent).filter(
+            SherpaEvent.sherpa_name == sherpa_name
+        )[:-10]
+        for stale_sherpa_event in stale_sherpa_events:
+            self.session.delete(stale_sherpa_event)
+
     def get_station(self, name: str) -> Station:
         return self.session.query(Station).filter(Station.name == name).one()
 
@@ -393,6 +400,9 @@ class DBSession:
 
     def get_notifications(self):
         return self.session.query(Notifications).all()
+
+    def delete_all_notifications(self):
+        return self.session.query(Notifications).delete()
 
     def get_notifications_with_id(self, id):
         return (

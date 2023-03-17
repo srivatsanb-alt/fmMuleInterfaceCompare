@@ -325,7 +325,7 @@ docker push <fm_ip>:443/mule:fm
 ## Update map files ## 
 1. Copy all the new map files to <fm_static_directory>/<fleet_name>/map/ folder
 2. Select the fleet which needs the map update from the webpage header in the dashboard and press update_map button on the webpage header(present along with start/stop fleet , emergency_stop fleet etc.)
-3. Restart of FM is not required - for map updates
+3. Restart of FM after update map button is pressed. FM Pop up would ask for restart. 
 
 
 ## Swap sherpas between fleets ##
