@@ -13,13 +13,13 @@ from rq import Worker
 # ati code imports
 from core.logs import get_logger
 from core.config import Config
-from core.constants import DisabledReason
+import core.constants as cc
 from models.db_session import DBSession
 import models.fleet_models as fm
 import models.trip_models as tm
-import utils.util as utils_util
 import models.request_models as rqm
 import models.misc_models as mm
+import utils.util as utils_util
 from utils.create_certs import generate_certs_for_sherpa
 from utils.fleet_utils import compute_sha1_hash
 
@@ -316,7 +316,7 @@ def check_sherpa_status(dbsession: DBSession):
     for stale_sherpa_status in stale_sherpas_status:
         if not stale_sherpa_status.disabled:
             stale_sherpa_status.disabled = True
-            stale_sherpa_status.disabled_reason = DisabledReason.STALE_HEARTBEAT
+            stale_sherpa_status.disabled_reason = cc.DisabledReason.STALE_HEARTBEAT
 
         get_logger("status_updates").warning(
             f"stale heartbeat from sherpa {stale_sherpa_status.sherpa_name} last_update_at: {stale_sherpa_status.updated_at} mule_heartbeat_interval: {MULE_HEARTBEAT_INTERVAL}"
