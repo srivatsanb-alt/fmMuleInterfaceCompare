@@ -475,7 +475,7 @@ class Handlers:
                 ongoing_trip.add_state(tm.TripState.WAITING_STATION_AUTO_UNHITCH_END)
                 peripheral_msg = f"Resolving {req.error_device} error for {sherpa_name}, will wait for dispatch button press to continue"
                 get_logger().warning(peripheral_msg)
-                self.add_dispatch_start_to_ongoing_trip(ongoing_trip)
+                self.add_dispatch_start_to_ongoing_trip(ongoing_trip, sherpa)
                 self.dbsession.add_notification(
                     [fleet_name, sherpa_name],
                     peripheral_msg,
@@ -527,7 +527,7 @@ class Handlers:
                 mm.NotificationLevels.action_request,
                 mm.NotificationModules.peripheral_devices,
             )
-            self.add_dispatch_start_to_ongoing_trip(ongoing_trip)
+            self.add_dispatch_start_to_ongoing_trip(ongoing_trip, sherpa)
         else:
             get_logger().info(
                 f"Ignoring {req.error_device} error message from {sherpa_name}"
