@@ -27,7 +27,7 @@ OptimalDispatchInfluencers = [
 
 UpdateMsgs = [MessageType.SHERPA_STATUS, MessageType.TRIP_STATUS]
 
-MAX_NUM_NOTIFICATIONS = 30
+MAX_NUM_NOTIFICATIONS = 50
 
 
 class FleetStatus:
