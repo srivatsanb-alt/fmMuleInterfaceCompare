@@ -106,12 +106,13 @@ async def sherpa_status(
 
     if not sherpa_name:
         logger.info(
-            f"websocket connection initiated with an invalid api_key(sherpa with api key could not be found). client ip addr: {x_real_ip}"
+            f"websocket connection initiated with an invalid api_key or sherpa has not been added to DB. WS request came from ip: {x_real_ip}"
         )
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
 
     logger.info(f"websocket connection initiated by {sherpa_name}")
+    logger.info(f"websocket connection has to be accepeted for {sherpa_name}")
 
     with DBSession() as dbsession:
         sherpa = dbsession.get_sherpa(sherpa_name)
@@ -119,9 +120,8 @@ async def sherpa_status(
             sherpa.status.other_info = {}
         manage_sherpa_ip_change(sherpa, x_real_ip)
 
-    logger.info(f"websocket connection accepted for {sherpa_name}")
     await websocket.accept()
-    logger.info(f"websocket connection accepeted: {sherpa_name}")
+    logger.info(f"websocket connection accepeted for {sherpa_name}")
 
     rw = [
         asyncio.create_task(reader(websocket, sherpa_name)),
