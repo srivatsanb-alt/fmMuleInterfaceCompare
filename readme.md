@@ -38,7 +38,7 @@
 2.  Checkout to release/branch, update mule submodule.
     ```markdown
     git checkout <branch>
-    git submodule update --remote 
+    git submodule update --remote [Optional]
     git submodule update 
     ```
 
@@ -177,10 +177,6 @@ bash load_docker_images.sh
   ```markdown
   [fleet.simulator]
   simulate=true
-  
-  [fleet]
-  http_scheme="http"
-
   ```
 
   c. To get trip bookings done automatically add routes(list of station names), trip booking frequency(seconds) to fleet_config.
@@ -218,7 +214,6 @@ bash load_docker_images.sh
 
 a. Copy fm cert file(fm_rev_proxy_cert.pem) generated in [Setup FM with push_fm script](#setup-fm-with-push_fm-script) step 3 to sherpa's /opt/ati/config directory
 
-
 b. Add this patch to /opt/ati/config/config.toml in the mule
 ```markdown
 [fleet]
@@ -230,61 +225,12 @@ ws_url = "wss://<fm_ip_address>:443/ws/api/v1/sherpa/"
 fm_cert_file="/app/config/fm_rev_proxy_cert.pem"
 ```
 
-c. Setup/update ati_mule_maintenance service
-```markdown
-git clone https://github.com/AtiMotors/system
-
-copy latest mmts_utils.sh, ati_mule_maintenance.sh from ati_core folder to /etc/systemd directory in sherpa
-copy ati_mule_maintenance.service from ati_core folder to /etc/systemd/system directory in sherpa
-
-#stop the ati_mule_maintenance service and delete maintenance fifo file
-ssh into mule
-sudo systemctl stop ati_mule_maintenance
-sudo systemctl disable ati_mule_maintenance
-sudo rm /opt/ati/run/maintenance_req_fifo
-
-#start maintenance service
-ssh into mule
-cd /etc/systemd
-sudo chmod ugo+rwx mmts_utils.sh
-sudo chmod ugo+rwx ati_mule_maintenance.sh
-sudo chmod ugo+rwx /opt/ati/uniflash
-sudo systemctl enable ati_mule_maintenance
-sudo systemctl start ati_mule_maintenance
-
-#enable 443 port
-sudo ufw allow 443
-```
-
-d. Setup mule nginx container (if not already present)
-1. Check if mule nginx container is running: (below command should show container running)
-    ```markdown
-    ssh into mule
-    docker ps | grep mule_nginx
-    ```
-
-2. Build container (if nginx container is not present):
--  Make a new folder, shell_scripts
-    ```markdown
-    cd /opt/ati
-    mkdir shell_scripts
-    ```
-
-- Copy load_mule_nginx.sh file from server(data@192.168.10.21:/atidata/datasets/FM_v<fm_version>_docker_images/load_mule_nginx.sh) to mule (/opt/ati/shell_scripts). (DO NOT copy this script to /opt/ati folder on mule)
-
-- Run load_mule_nginx.sh
-    ```markdown
-    cd /opt/ati/shell_scripts
-    bash load_mule_nginx.sh
-    ```
-
-- Restart mule docker
-    ```markdown
-    docker restart mule
-    ```
-
 # Setup Plugin #
 a. [Setup IES](#setup-ies)
+b. Summon button, conveyor plugins can be configured through UI. Add the required plugins to static/fleet_config/plugin_config.toml. Restart would be required after you add a new plugin,post restart you would see a plugin editor page in UI.
+```markdown
+all_plugins=["summon_button", "conveyor"]
+```
 
 # Setup IES #
 a. Add IES plugin to static/fleet_config/plugin_config.toml
@@ -369,6 +315,8 @@ sudo cp <fm_static_dir>/certs/fm_rev_proxy_cert.pem /etc/docker/certs.d/<fm_ip>:
 
 4. Push mule docker image to FM local registry 
 ```markdown
+# auth has been added to docker registry
+docker login -u ati_sherpa -p atiCode112  <fm_ip>:443/mule:fm
 docker push <fm_ip>:443/mule:fm
 ```
 
@@ -406,5 +354,3 @@ hashed_password=<hashed password>
 
 3. Remove unwanted entries from <fm_static_directory>/fleet_config/frontend_users.toml if any.
 
-
- 
