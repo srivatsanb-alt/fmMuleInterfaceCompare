@@ -228,7 +228,8 @@ fm_cert_file="/app/config/fm_rev_proxy_cert.pem"
 
 # Setup Plugin #
 a. [Setup IES](#setup-ies)
-b. Summon button, conveyor plugins can be configured through UI. Add the required plugins to static/fleet_config/plugin_config.toml. Restart would be required after you add a new plugin,post restart you would see a plugin editor page in UI.
+
+b. Summon button, conveyor plugins can be configured through UI (maintenance/Plugin Editor). Add the required plugins to static/fleet_config/plugin_config.toml. Restart would be required after you add a new plugin,post restart you would see a plugin editor page in UI.
 ```markdown
 all_plugins=["summon_button", "conveyor"]
 ```
@@ -388,14 +389,14 @@ a. Connect summon button to your laptop via USB to flash firmware
 b. Copy FlashTool_v2.3.6 from data@192.168.10.21:/atidata/datasets/FM_v<fm_version>_docker_images> to your laptop, run the same. 
 ```markdown 
 cd FlashTool_v2.3.6
-bash ./install.sh
-bash ./flashtool_8mb.sh 
+sudo bash ./install.sh
+sudo bash ./flashtool_8mb.sh 
 ```
 c. Upon flashing, reconnect the summon button usb. 
 
 d. Generate unique api key for summon button by using following generate api keys section in [Fleet Maintenance](#fleet-maintenance)
 
-e. Press and hold the button until led turns blue, connect to summon button via wifi. For instance you would see something like Summon_<id> in the available/known wifi networks. Upon successful connection to summon button wifi, you will see a summon button UI.
+e. Press and hold the button until LED turns blue, connect to summon button via wifi. For instance you would see something like Summon_192049 in the available/known wifi networks. Upon successful connection to summon button wifi, you will see a summon button UI.
 
 f. Press configure WiFi, choose the preferred network and add the wifi password for the same, save it. Wait unitl summon button led turns from yellow to blinking red .
 
