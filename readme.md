@@ -378,10 +378,11 @@ role: operator
 
 a. Connect summon button to your laptop via USB to flash firmware
 
-b. Copy FlashTool_v2.3.6 2 from data@192.168.10.21:/atidata/datasets/FM_v<fm_version>_docker_images> to your laptop, run the same. 
+b. Copy FlashTool_v2.3.6 from data@192.168.10.21:/atidata/datasets/FM_v<fm_version>_docker_images> to your laptop, run the same. 
 ```markdown 
-cd FlashTool_v2.3.6 2
-./flashtool_8mb.sh 
+cd FlashTool_v2.3.6
+bash ./install.sh
+bash ./flashtool_8mb.sh 
 ```
 c. Upon flashing, reconnect the summon button usb. 
 
