@@ -131,8 +131,8 @@ class Trip(Base, TimestampMixin):
         self.augmented_route = route
         self.aug_idxs_booked = list(range(len(self.augmented_route)))
 
-    def assign_sherpa(self, sherpa: str):
-        self.sherpa_name = sherpa
+    def assign_sherpa(self, sherpa_name: str):
+        self.sherpa_name = sherpa_name
         self.status = TripStatus.ASSIGNED
 
     def start(self):
@@ -211,6 +211,9 @@ class OngoingTrip(Base, TimestampMixin):
         self.next_idx_aug = 0
         self.next_idx = 0 if 0 in self.trip.aug_idxs_booked else -1
         self.states = []
+
+    def first_station(self):
+        return self.trip.augmented_route[0]
 
     def curr_station(self):
         if self.next_idx_aug > 0:

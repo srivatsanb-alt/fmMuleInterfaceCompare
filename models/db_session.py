@@ -3,7 +3,7 @@ from core.db import session_maker
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 from models.frontend_models import FrontendUser
-from models.misc_models import Notifications
+from models.misc_models import Notifications, NotificationLevels
 from models.fleet_models import (
     Fleet,
     MapFile,
@@ -104,13 +104,8 @@ class DBSession:
             .all()
         )
 
-    def clear_all_visa_assignments(self):
-        self.session.query(VisaAssignment).delete()
-
-    def clear_visa_held_by_sherpa(self, sherpa_name: str):
-        self.session.query(VisaAssignment).filter(
-            VisaAssignment.sherpa_name == sherpa_name
-        ).delete()
+    def get_all_visa_assignments(self):
+        return self.session.query(VisaAssignment).all()
 
     def get_all_fleets(self) -> List[Fleet]:
         return self.session.query(Fleet).all()
@@ -211,6 +206,13 @@ class DBSession:
             .all()
         )
 
+    def delete_stale_sherpa_events(self, sherpa_name: str):
+        stale_sherpa_events = self.session.query(SherpaEvent).filter(
+            SherpaEvent.sherpa_name == sherpa_name
+        )[:-10]
+        for stale_sherpa_event in stale_sherpa_events:
+            self.session.delete(stale_sherpa_event)
+
     def get_station(self, name: str) -> Station:
         return self.session.query(Station).filter(Station.name == name).one()
 
@@ -284,10 +286,18 @@ class DBSession:
             sherpas.append(val[0])
         return sherpas
 
-    def get_ongoing_trip(self, sherpa: str):
+    def get_ongoing_trip(self, sherpa_name: str):
         return (
             self.session.query(OngoingTrip)
-            .filter(OngoingTrip.sherpa_name == sherpa)
+            .filter(OngoingTrip.sherpa_name == sherpa_name)
+            .one_or_none()
+        )
+
+    def get_enroute_trip(self, sherpa_name: str):
+        return (
+            self.session.query(Trip)
+            .filter(Trip.sherpa_name == sherpa_name)
+            .filter(Trip.status == "en_route")
             .one_or_none()
         )
 
@@ -344,8 +354,8 @@ class DBSession:
     def get_last_n_trips(self, last_n=10):
         return self.session.query(Trip).order_by(Trip.id.desc()).limit(last_n).all()
 
-    def get_trip_leg(self, sherpa: str):
-        ongoing_trip: OngoingTrip = self.get_ongoing_trip(sherpa)
+    def get_trip_leg(self, sherpa_name: str):
+        ongoing_trip: OngoingTrip = self.get_ongoing_trip(sherpa_name)
         if ongoing_trip:
             return (
                 self.session.query(TripLeg)
@@ -390,6 +400,17 @@ class DBSession:
 
     def get_notifications(self):
         return self.session.query(Notifications).all()
+
+    def delete_all_notifications(self):
+        return self.session.query(Notifications).delete()
+
+    def make_pop_ups_stale(self, max_num_pop_up_notifications):
+        pop_ups = [NotificationLevels.alert, NotificationLevels.action_request]
+        all_stale_pop_ups = self.session.query(Notifications).filter(
+            Notifications.log_level.in_(pop_ups)
+        )[:-max_num_pop_up_notifications]
+        for stale_pop_ups in all_stale_pop_ups:
+            stale_pop_ups.log_level = NotificationLevels.stale_alert_or_action
 
     def get_notifications_with_id(self, id):
         return (

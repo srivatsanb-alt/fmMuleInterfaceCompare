@@ -1,6 +1,9 @@
 import time
 from utils.rq_utils import Queues, enqueue
 from core.config import Config
+import requests
+import ast
+import redis
 from models.request_models import (
     SherpaStatusMsg,
     TripStatusMsg,
@@ -15,17 +18,24 @@ from models.request_models import (
 )
 from utils.router_utils import RouterModule, get_dense_path
 from models.trip_models import OngoingTrip
+from models.trip_models import TripState as ts
 from typing import List
-import sys
 import json
+import random
 import os
-import uvicorn
 from multiprocessing import Process
-import redis
 import numpy as np
 from models.db_session import DBSession
 from models.fleet_models import Sherpa, Station
-from models.request_models import ReachedReq
+from models.request_models import (
+    ReachedReq,
+    DispatchButtonReq,
+    SherpaPeripheralsReq,
+    HitchReq,
+    ConveyorReq,
+    DirectionEnum,
+)
+from plugins.conveyor.conveyor_models import ToteStatus
 import threading
 
 LOOKAHEAD = 5.0
@@ -133,48 +143,59 @@ def find_next_pose_index(traj, idx, dmax):
     return i - wmin
 
 
-class MuleAPP:
+class MuleWS:
     def __init__(self):
-        self.sherpa_apps = []
-        self.host_all_mule_app()
+        self.sherpa_ws_conns = []
+        self.sherpa_api_keys = {}
+        self.set_sherpa_ip()
+        self.establish_all_sherpa_ws()
 
-    def host_uvicorn(self, config):
-        server = uvicorn.Server(config)
-        server.run()
-
-    def host_all_mule_app(self):
-        self.kill_all_mule_app()
+    def set_sherpa_ip(self):
         with DBSession() as dbsession:
             all_sherpas = dbsession.get_all_sherpas()
-
-            sys.path.append(os.environ["MULE_ROOT"])
-            os.environ["ATI_SUB"] = "ipc:////app/out/zmq_sub"
-            os.environ["ATI_PUB"] = "ipc:////app/out/zmq_sub"
-            redis_db = redis.from_url(os.getenv("FM_REDIS_URI"))
-
-            # mule looks for control_init to accept move_to req
-            redis_db.set("control_init", json.dumps(True))
-
-            from mule.ati.fastapi.mule_app import mule_app
-
-            port = 5001
             for sherpa in all_sherpas:
-                config = uvicorn.Config(mule_app, host="0.0.0.0", port=port, reload=True)
-                sherpa.ip_address = "0.0.0.0"
-                sherpa.port = str(port)
-                self.sherpa_apps.append(
-                    Process(target=self.host_uvicorn, args=[config], daemon=True)
+                sherpa.ip_address = "127.0.0.1"
+
+    def simulate_sherpa_ws(self, sherpa_name):
+        redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
+        psub = redis_conn.pubsub()
+        psub.subscribe(f"channel:{sherpa_name}")
+        while True:
+            message = psub.get_message(ignore_subscribe_messages=True, timeout=0.5)
+            if message:
+                req = ast.literal_eval(message["data"].decode())
+                req_id = req.get("req_id")
+                if req_id:
+                    ws_ack_url = (
+                        "http://127.0.0.1:"
+                        + os.getenv("FM_PORT")
+                        + f"/api/v1/sherpa/req_ack/{req_id}"
+                    )
+                    req_json = {}
+                    req_json["response"] = {}
+                    req_json["success"] = True
+                    requests.post(ws_ack_url, json=req_json)
+                    print(f"sent ws ack to req with req_id {req_id}")
+                else:
+                    print(f"got a ws msg without req_id. sherpa_name: {sherpa_name}")
+
+    def establish_all_sherpa_ws(self):
+        self.kill_all_sherpa_ws()
+        with DBSession() as dbsession:
+            all_sherpas = dbsession.get_all_sherpas()
+            for sherpa in all_sherpas:
+                self.sherpa_ws_conns.append(
+                    Process(
+                        target=self.simulate_sherpa_ws,
+                        args=[sherpa.name],
+                        daemon=True,
+                    )
                 )
-                self.sherpa_apps[-1].start()
-                port = port + 1
+                self.sherpa_ws_conns[-1].start()
 
-    def kill_all_mule_app(self):
-        with DBSession() as dbsession:
-            all_sherpas = dbsession.get_all_sherpas()
-            for sherpa in all_sherpas:
-                sherpa.port = None
-            for proc in self.sherpa_apps:
-                proc.kill()
+    def kill_all_sherpa_ws(self):
+        for proc in self.sherpa_ws_conns:
+            proc.kill()
 
 
 class FleetSimulator:
@@ -184,12 +205,15 @@ class FleetSimulator:
             self.fleet_names = dbsession.get_all_fleet_names()
         self.simulator_config = Config.get_simulator_config()
         self.should_book_trips = self.simulator_config.get("book_trips", False)
+        self.conveyor_capacity = self.simulator_config.get("conveyor_capacity", 6)
         self.router_modules = {}
         self.exclusion_zones = {}
         self.visas_held = {}
         self.visa_needed = {}
         self.visa_handling = {}
-        self.sim_speedup_factor = self.simulator_config.get("speedup_factor", 1)
+        print(f"simulator config {self.simulator_config}")
+        self.pause_at_station = self.simulator_config.get("pause_at_station", 10.0)
+        self.sim_speedup_factor = self.simulator_config.get("speedup_factor", 1.0)
         self.avg_velocity = self.simulator_config.get("average_velocity", 0.8)
         self.initialize_sherpas_at = self.simulator_config.get("initialize_sherpas_at")
         for fleet_name in self.fleet_names:
@@ -200,7 +224,9 @@ class FleetSimulator:
                 self.visa_handling[fleet_name] = self.simulator_config["visa_handling"]
             except:
                 self.visa_handling[fleet_name] = False
-            print(f"Exclusion zones... {self.exclusion_zones}")
+            print(
+                f"Visa handling {self.visa_handling} Exclusion zones... {self.exclusion_zones}"
+            )
             self.router_modules.update({fleet_name: RouterModule(map_path)})
 
     def initialize_sherpas(self):
@@ -220,16 +246,20 @@ class FleetSimulator:
                 for sherpa in sherpas:
                     station_fleet_name = None
                     station_name = self.initialize_sherpas_at.get(sherpa.name)
+                    print(f"Initializing sherpa {sherpa.name} station_name {station_name}")
                     try:
                         st = dbsession.get_station(station_name)
                     except:
                         st = None
                     station_fleet_name = st.fleet.name if st else None
+                    print(
+                        f"sherpa fleet {sherpa.fleet.name} station_fleet_name {station_fleet_name}"
+                    )
                     while sherpa.fleet.name != station_fleet_name:
                         i = np.random.randint(0, len(stations))
                         station_fleet_name = stations[i].fleet.name
                         st = stations[i]
-
+                        print("Randomizing the start station")
                     self.send_sherpa_status(sherpa.name, mode="fleet", pose=st.pose)
 
     def book_trip(self, route, freq):
@@ -250,6 +280,46 @@ class FleetSimulator:
                 t = threading.Thread(target=self.book_trip, args=[route, freq])
                 t.daemon = True
                 t.start()
+
+    def populate_conveyor_with_totes(self, conveyor):
+        while True:
+            with DBSession() as session:
+                session.session.refresh(conveyor)
+                if time.time() - self.last_conveyor_update > random.randrange(30, 60):
+                    num_totes_to_add = random.randrange(0, 2)
+                    updated_tote_count = np.min(
+                        conveyor.num_totes + num_totes_to_add, self.conveyor_capacity
+                    )
+                    print(f"Adding {num_totes_to_add} tote/s to conveyor {conveyor.name}")
+                    self.last_conveyor_update = time.time()
+                    msg = ToteStatus(
+                        num_totes=updated_tote_count,
+                        compact_time=0,
+                        type="tote_status",
+                        name=conveyor.name,
+                    )
+                    queue = Queues.queues_dict["generic_handler"]
+                    enqueue(queue, handle, self.handler_obj, msg, ttl=1)
+
+    def book_conveyor_trips(self):
+        print(
+            f"populating conveyors and booking pickups. Max capacity on conveyor = {self.conveyor_capacity} totes."
+        )
+        with DBSession() as session:
+            conveyors = session.get_all_conveyors()
+            for conveyor in conveyors:
+                t = threading.Thread(
+                    target=self.populate_conveyor_with_totes(), args=[conveyor]
+                )
+                t.daemon = True
+                t.start()
+
+    def simulate_conveyors(self):
+        self.last_conveyor_update = 0
+        print(f"booking trips to conveyors")
+        t = threading.Thread(target=self.book_conveyor_trips)
+        t.daemon = True
+        t.start()
 
     def send_verify_fleet_files_req(self, sherpa_name):
         generic_q = Queues.queues_dict["generic_handler"]
@@ -334,7 +404,7 @@ class FleetSimulator:
             steps = 1000
             sleep_time = self.sim_speedup_factor
             print(
-                f"{sherpa.name}, trip_leg_id: {ongoing_trip.trip_leg_id} sleep time {sleep_time}"
+                f"{sherpa.name}, trip_leg_id: {ongoing_trip.trip_leg_id} Pause_at_station: {self.pause_at_station}"
             )
             i = 0
             blocked_for_visa = False
@@ -360,6 +430,7 @@ class FleetSimulator:
                     i += steps
                     blocked_for_visa = False
                 else:
+                    print(f"Sherpa {sherpa_name} is waiting for a visa")
                     stoppage_type = "Waiting for visa"
                     blocked_for_visa = True
                 # obst_random = np.random.rand(1)[0]
@@ -392,6 +463,7 @@ class FleetSimulator:
                         print(f"Is Visa needed? {visa_params}")
                         if visa_params is not None:
                             self.visa_needed[sherpa_name] = visa_params[0]
+                        if len(self.visa_needed[sherpa_name]) > 0:
                             print(
                                 f"Visa for zone: {self.visa_needed[sherpa_name]}, needed for {sherpa_name}"
                             )
@@ -463,6 +535,7 @@ class FleetSimulator:
             self.send_sherpa_status(sherpa.name, mode="fleet", pose=dest_pose)
             self.send_reached_msg(sherpa_name)
             print(f"ending trip leg {from_station}, {to_station}")
+            time.sleep(self.pause_at_station)
 
     def send_reached_msg(self, sherpa_name):
         queue = Queues.queues_dict["generic_handler"]
@@ -481,8 +554,62 @@ class FleetSimulator:
             print(f"will send a reached msg for {sherpa_name}, {reached_req}")
             enqueue(queue, handle, self.handler_obj, reached_req, ttl=1)
 
+    def response_is_needed(self, waiting_start, waiting_end, states):
+        if waiting_start in states and waiting_end not in states:
+            print(f"Waiting for peripherals response: {waiting_start}")
+            self.reponse_flag = True
+            return True
+        return False
+
+    def simulate_peripherals(self, ongoing_trip):
+        self.reponse_flag = False
+        if ongoing_trip:
+            states, sherpa_name = ongoing_trip.states, ongoing_trip.sherpa_name
+            peripheral_response = SherpaPeripheralsReq(timestamp=time.time())
+            peripheral_response.source = sherpa_name
+            # check is trip state requires a peripherals response from sherpa
+            if self.response_is_needed(
+                ts.WAITING_STATION_DISPATCH_START, ts.WAITING_STATION_DISPATCH_END, states
+            ):
+                peripheral_response.dispatch_button = DispatchButtonReq(value=True)
+            if self.response_is_needed(
+                ts.WAITING_STATION_AUTO_UNHITCH_START,
+                ts.WAITING_STATION_AUTO_UNHITCH_END,
+                states,
+            ):
+                peripheral_response.auto_hitch = HitchReq(hitch=False)
+            if self.response_is_needed(
+                ts.WAITING_STATION_AUTO_HITCH_START,
+                ts.WAITING_STATION_AUTO_HITCH_END,
+                states,
+            ):
+                peripheral_response.auto_hitch = HitchReq(hitch=True)
+            if self.response_is_needed(
+                ts.WAITING_STATION_CONV_RECEIVE_START,
+                ts.WAITING_STATION_CONV_RECEIVE_END,
+                states,
+            ):
+                num_units = ongoing_trip.trip.trip_metadata.get("num_units")
+                peripheral_response.conveyor = ConveyorReq(
+                    direction=DirectionEnum.receive, num_units=0
+                )
+            if self.response_is_needed(
+                ts.WAITING_STATION_CONV_SEND_START, ts.WAITING_STATION_CONV_SEND_END, states
+            ):
+                num_units = ongoing_trip.trip.trip_metadata.get("num_units")
+                peripheral_response.conveyor = ConveyorReq(
+                    direction=DirectionEnum.send, num_units=num_units
+                )
+            if self.reponse_flag:
+                print(
+                    f"Sherpa {sherpa_name} - trip_id {ongoing_trip.trip_id}, leg {ongoing_trip.trip_leg_id} sent a peripheral msg {peripheral_response}"
+                )
+                queue = Queues.queues_dict["generic_handler"]
+                enqueue(queue, handle, self.handler_obj, peripheral_response, ttl=1)
+
     def act_on_sherpa_events(self):
         simulated_trip_legs = []
+        active_threads = {}
         print("Will act on sherpa events")
         with DBSession() as dbsession:
             while True:
@@ -490,6 +617,8 @@ class FleetSimulator:
                 for sherpa in sherpas:
                     dbsession.session.refresh(sherpa)
                     trip_leg = dbsession.get_trip_leg(sherpa.name)
+                    ongoing_trip: OngoingTrip = dbsession.get_ongoing_trip(sherpa.name)
+                    self.simulate_peripherals(ongoing_trip)
                     if trip_leg:
                         if trip_leg.id not in simulated_trip_legs:
                             print(
@@ -501,8 +630,12 @@ class FleetSimulator:
                             t.daemon = True
                             t.start()
                             simulated_trip_legs.append(trip_leg.id)
+                            active_threads[sherpa.name] = t
+                        else:
+                            if not active_threads.get(sherpa.name).is_alive():
+                                self.send_sherpa_status(sherpa.name)
                     else:
-                        print(f"no trip_leg for {sherpa.name}")
+                        # print(f"no trip_leg for {sherpa.name}")
                         self.send_sherpa_status(sherpa.name)
 
                     if sherpa.status.disabled:

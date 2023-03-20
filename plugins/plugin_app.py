@@ -1,8 +1,14 @@
-from fastapi import FastAPI
+import uvicorn
+from fastapi import FastAPI, Depends, APIRouter
+from fastapi.middleware.cors import CORSMiddleware
 import os
 import toml
 import json
 import redis
+
+# ati code imports
+import plugins.plugin_dependencies as pdpd
+
 
 plugins_workers_db_init = False
 redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
@@ -15,16 +21,71 @@ while not plugins_workers_db_init:
 
 app = FastAPI()
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["X-Process-Time"],
+)
+
+
 plugin_config = toml.load(os.path.join(os.getenv("FM_CONFIG_DIR"), "plugin_config.toml"))
 all_plugins = plugin_config["all_plugins"]
 
+router = APIRouter()
+
+
+# get all available plugins
+@router.get("/plugin/api/v1/get_all_plugins")
+async def get_all_plugins(user_name=Depends(pdpd.get_user_from_header)):
+    if not user_name:
+        pdpd.raise_error("Unknown requester", 401)
+
+    plugin_config = toml.load(
+        os.path.join(os.getenv("FM_CONFIG_DIR"), "plugin_config.toml")
+    )
+    all_plugins = plugin_config["all_plugins"]
+
+    return all_plugins
+
+
+app.include_router(router)
 
 if "ies" in all_plugins:
-    from .ies import ies_comms
+    from plugins.ies import ies_comms
 
     app.include_router(ies_comms.router)
 
 if "conveyor" in all_plugins:
-    from .conveyor import conveyor_comms
+    from plugins.conveyor import conveyor_comms
 
     app.include_router(conveyor_comms.router)
+
+if "summon_button" in all_plugins:
+    from plugins.summon_button import summon_comms
+
+    app.include_router(summon_comms.router)
+
+
+def get_uvicorn_config():
+    uvi_config = uvicorn.Config(
+        app,
+        host="0.0.0.0",
+        port=int(os.getenv("PLUGIN_PORT")),
+        log_level="info",
+        log_config=os.path.join(os.getenv("FM_CONFIG_DIR"), "plugin_logging.conf"),
+        reload=True,
+    )
+    return uvi_config
+
+
+def main():
+    config = get_uvicorn_config()
+    server = uvicorn.Server(config)
+    server.run()
+
+
+if __name__ == "__main__":
+    main()

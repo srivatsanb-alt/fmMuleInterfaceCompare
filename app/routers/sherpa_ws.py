@@ -6,24 +6,18 @@ import math
 import os
 from datetime import timedelta
 import aioredis
-from app.routers.dependencies import (
-    get_sherpa,
-    get_real_ip_from_header,
-)
-from models.db_session import DBSession
+from sqlalchemy.orm.attributes import flag_modified
+from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, status
+from redis import Redis
+
+
+# ati code imports
 from core.config import Config
 from core.constants import MessageType
-from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, status
-from models.request_models import (
-    SherpaStatusMsg,
-    TripStatusMsg,
-    TripInfo,
-    Stoppages,
-    StoppageInfo,
-)
-from sqlalchemy.orm.attributes import flag_modified
-from redis import Redis
+from models.db_session import DBSession
+import models.request_models as rqm
 from utils.rq_utils import Queues, enqueue
+import app.routers.dependencies as dpd
 
 
 MSG_INVALID = "msg_invalid"
@@ -38,15 +32,12 @@ logger = logging.getLogger("uvicorn")
 
 
 redis = Redis.from_url(os.getenv("FM_REDIS_URI"))
-
-
 router = APIRouter()
 
 
 expire_after_ms = timedelta(milliseconds=500)
-
-#performs status updates at regular intervals, read, write, 
-#websocket messages and manages websocket connection between sherpas and FM.
+# performs status updates at regular intervals, read, write,
+# websocket messages and manages websocket connection between sherpas and FM.
 
 
 def manage_sherpa_ip_change(sherpa, x_real_ip):
@@ -105,21 +96,23 @@ def accept_message(sherpa: str, msg):
 @router.websocket("/ws/api/v1/sherpa/")
 async def sherpa_status(
     websocket: WebSocket,
-    sherpa_name=Depends(get_sherpa),
-    x_real_ip=Depends(get_real_ip_from_header),
+    sherpa_name=Depends(dpd.get_sherpa),
+    x_real_ip=Depends(dpd.get_real_ip_from_header),
 ):
+
+    client_ip = websocket.client.host
+    if x_real_ip is None:
+        x_real_ip = client_ip
+
     if not sherpa_name:
+        logger.info(
+            f"websocket connection initiated with an invalid api_key or sherpa has not been added to DB. WS request came from ip: {x_real_ip}"
+        )
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
 
     logger.info(f"websocket connection initiated by {sherpa_name}")
-
-    # client.host will be nginx container ip
-    client_ip = websocket.client.host
-
-    # x_real_ip will be denoting sherpas real ip
-    if x_real_ip is None:
-        x_real_ip = client_ip
+    logger.info(f"websocket connection has to be accepeted for {sherpa_name}")
 
     with DBSession() as dbsession:
         sherpa = dbsession.get_sherpa(sherpa_name)
@@ -128,6 +121,7 @@ async def sherpa_status(
         manage_sherpa_ip_change(sherpa, x_real_ip)
 
     await websocket.accept()
+    logger.info(f"websocket connection accepeted for {sherpa_name}")
 
     rw = [
         asyncio.create_task(reader(websocket, sherpa_name)),
@@ -149,7 +143,7 @@ async def reader(websocket, sherpa):
         try:
             msg = await websocket.receive_json()
         except WebSocketDisconnect as e:
-            logger.info(f"websocket with {websocket.client.host} disconnected")
+            logger.info(f"websocket with {sherpa} disconnected")
             raise e
 
         msg_type = msg.get("type")
@@ -166,22 +160,23 @@ async def reader(websocket, sherpa):
         sherpa_trip_q = Queues.queues_dict[f"{sherpa}_trip_update_handler"]
 
         if msg_type == MessageType.TRIP_STATUS:
-            # logger.info(f"got a trip status {msg}")
             msg["source"] = sherpa
-            trip_status_msg = TripStatusMsg.from_dict(msg)
-            trip_status_msg.trip_info = TripInfo.from_dict(msg["trip_info"])
-            trip_status_msg.stoppages = Stoppages.from_dict(msg["stoppages"])
-            trip_status_msg.stoppages.extra_info = StoppageInfo.from_dict(
+            trip_status_msg = rqm.TripStatusMsg.from_dict(msg)
+            trip_status_msg.trip_info = rqm.TripInfo.from_dict(msg["trip_info"])
+            trip_status_msg.stoppages = rqm.Stoppages.from_dict(msg["stoppages"])
+            trip_status_msg.stoppages.extra_info = rqm.StoppageInfo.from_dict(
                 msg["stoppages"]["extra_info"]
             )
             enqueue(sherpa_trip_q, handle, handler_obj, trip_status_msg, ttl=1)
 
         elif msg_type == MessageType.SHERPA_STATUS:
             msg["source"] = sherpa
-            status_msg = SherpaStatusMsg.from_dict(msg)
+            status_msg = rqm.SherpaStatusMsg.from_dict(msg)
             enqueue(sherpa_update_q, handle, handler_obj, status_msg, ttl=1)
         else:
             logging.error(f"Unsupported message type {msg_type}")
+
+        await asyncio.sleep(0.01)
 
 
 async def writer(websocket, sherpa):
@@ -192,7 +187,7 @@ async def writer(websocket, sherpa):
     await psub.subscribe(f"channel:{sherpa}")
 
     while True:
-        message = await psub.get_message(ignore_subscribe_messages=True, timeout=5)
+        message = await psub.get_message(ignore_subscribe_messages=True, timeout=0.5)
         if message:
             data = ast.literal_eval(message["data"])
 
@@ -201,6 +196,8 @@ async def writer(websocket, sherpa):
                 await websocket.close()
 
             await websocket.send_json(data)
+
+        await asyncio.sleep(0.01)
 
 
 def handle(handler, msg):

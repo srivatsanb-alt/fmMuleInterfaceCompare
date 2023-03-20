@@ -4,6 +4,8 @@ from sqlalchemy import create_engine
 from sqlalchemy import Integer, String, Column, ARRAY, Boolean
 from dataclasses import dataclass
 from models.base_models import Base, JsonMixin
+from pydantic import BaseModel
+from typing import Union, Optional
 
 
 class DBSession:
@@ -56,3 +58,13 @@ class ToteStatus(JsonMixin):
     compact_time: int
     type: str
     name: str = None
+
+
+class ClientReq(BaseModel):
+    source: Union[str, None] = None
+
+
+class AddEditConvReq(ClientReq):
+    station_name: str
+    nearest_chute: str
+    api_key: Optional[str]

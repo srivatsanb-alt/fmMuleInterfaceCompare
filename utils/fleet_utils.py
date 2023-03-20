@@ -34,8 +34,8 @@ import mule.ati.tools.gmaj_creator as gmac
 import mule.ati.control.bridge.router_planner_interface as rpi
 import mule.ati.control.dynamic_router.graph_builder_utils as gbu
 
-#utils are collection of functions and classes which have common patterns.
-#this module contains frequently used functions by fleet.
+# utils are collection of functions and classes which have common patterns.
+# this module contains frequently used functions by fleet.
 
 
 def gen_api_key(hwid: str) -> str:
@@ -284,7 +284,7 @@ class FleetUtils:
 
     @classmethod
     def update_stations_in_map(cls, dbsession: DBSession, fleet_name: str, fleet_id: int):
-        maybe_update_map_files(fleet_name=fleet_name)
+        # maybe_update_map_files(fleet_name=fleet_name)
         gmaj_path = get_map_file_path(fleet_name, "grid_map_attributes.json")
         if not os.path.exists(gmaj_path):
             raise ValueError(f"GMAJ doesn't exists for {fleet_name}")

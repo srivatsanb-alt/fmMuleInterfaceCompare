@@ -87,6 +87,11 @@ class SherpaReq(BaseModel):
     timestamp: float
 
 
+class WSResp(BaseModel):
+    success: bool
+    response: Optional[Dict[str, Union[str, int, float, dict, None]]]
+
+
 class InitExtraInfo(BaseModel):
     display_name: str
     ip_address: str
@@ -101,6 +106,10 @@ class InitMsg(SherpaReq):
 
 class SherpaAlertMsg(SherpaReq):
     trolley_load_cell: Union[str, None]
+    low_battery_alarm: Union[str, None]
+    obstructed: Union[str, None]
+    emergency_button: Union[str, None]
+    user_pause: Union[str, None]
     type = MessageType.SHERPA_ALERTS
 
 
@@ -256,7 +265,10 @@ class TripMsg(ClientReq):
 
 class RoutePreview(ClientReq):
     route: List[str]
-    fleet_name: str
+
+
+class LiveRoute(ClientReq):
+    sherpa_name: str
 
 
 class BookingReq(ClientReq):
@@ -333,6 +345,10 @@ class FMReq(BaseModel):
 
 class InitReq(FMReq):
     endpoint: str = "init"
+
+
+class ResetVisasHeldReq(FMReq):
+    endpoint: str = "reset_visas_held"
 
 
 class MoveReq(FMReq):

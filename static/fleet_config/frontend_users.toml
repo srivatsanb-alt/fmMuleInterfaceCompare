@@ -1,2 +1,15 @@
 [frontenduser.admin]
 hashed_password="03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4"
+role="support"
+
+[frontenduser.operator]
+hashed_password="03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4"
+role="operator"
+
+[frontenduser.supervisor]
+hashed_password="6d79dd50aeb4ae194a200cfcf7769f2b2c79d5591805b79ea9df481b7ad0b95d"
+role="supervisor"
+
+[frontenduser.ati_support]
+hashed_password="d7b246a18ee33880dfee57fe222fba969ac4f100c8da92e90bf937851dbd9faf"
+role="support"

@@ -3,12 +3,9 @@ import os
 import redis
 from rq import Queue
 import json
-from core.config import Config
 
-#utils for redis rq
-
+# utils for redis rq
 class Queues:
-
     redis_conn = redis.from_url(
         os.getenv("FM_REDIS_URI"), encoding="utf-8", decode_responses=True
     )
@@ -40,7 +37,7 @@ class Queues:
         {"resource_handler": Queue("resource_handler", connection=redis_conn)}
     )
     queues_dict.update({"generic_handler": Queue("generic_handler", connection=redis_conn)})
-    queues_dict.update({"misc": Queue("misc_handler", connection=redis_conn)})
+    queues_dict.update({"misc_handler": Queue("misc_handler", connection=redis_conn)})
 
     queues = [q_name for q_name in queues_dict.keys()]
 

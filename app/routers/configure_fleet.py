@@ -1,16 +1,14 @@
 import os
 import logging
 from fastapi import APIRouter, Depends
-from models.request_models import AddEditSherpaReq, AddFleetReq
-from models.frontend_models import FrontendUser
-from models.db_session import DBSession
+
 from utils import fleet_utils as fu
+from models.db_session import DBSession
+from models.frontend_models import FrontendUser
 import models.fleet_models as fm
 import models.misc_models as mm
-from app.routers.dependencies import (
-    get_user_from_header,
-    raise_error,
-)
+import models.request_models as rqm
+import app.routers.dependencies as dpd
 from utils.comms import close_websocket_for_sherpa
 
 
@@ -27,10 +25,10 @@ router = APIRouter(
 
 
 @router.get("/all_sherpa_info")
-def get_all_sherpa_info(user_name=Depends(get_user_from_header)):
+def get_all_sherpa_info(user_name=Depends(dpd.get_user_from_header)):
 
     if not user_name:
-        raise_error("Unknown requester", 401)
+        dpd.raise_error("Unknown requester", 401)
 
     response = {}
     with DBSession() as dbsession:
@@ -52,20 +50,20 @@ def get_all_sherpa_info(user_name=Depends(get_user_from_header)):
 
 @router.post("/add_edit_sherpa/{sherpa_name}")
 def add_edit_sherpa(
-    add_edit_sherpa: AddEditSherpaReq,
+    add_edit_sherpa: rqm.AddEditSherpaReq,
     sherpa_name: str,
-    user_name=Depends(get_user_from_header),
+    user_name=Depends(dpd.get_user_from_header),
 ):
 
     if not user_name:
-        raise_error("Unknown requester", 401)
+        dpd.raise_error("Unknown requester", 401)
 
     with DBSession() as dbsession:
         all_sherpa_names = dbsession.get_all_sherpa_names()
 
         fleet = dbsession.get_fleet(add_edit_sherpa.fleet_name)
         if not fleet:
-            raise_error("Unkown fleet")
+            dpd.raise_error("Unkown fleet")
 
         fu.SherpaUtils.add_edit_sherpa(
             dbsession,
@@ -90,24 +88,24 @@ def add_edit_sherpa(
 @router.get("/delete_sherpa/{sherpa_name}")
 def delete_sherpa(
     sherpa_name: str,
-    user_name=Depends(get_user_from_header),
+    user_name=Depends(dpd.get_user_from_header),
 ):
     if not user_name:
-        raise_error("Unknown requester", 401)
+        dpd.raise_error("Unknown requester", 401)
 
     with DBSession() as dbsession:
         sherpa_status: fm.SherpaStatus = dbsession.get_sherpa_status(sherpa_name)
         if not sherpa_status:
-            raise_error(f"Sherpa {sherpa_name} not found")
+            dpd.raise_error(f"Sherpa {sherpa_name} not found")
 
         if sherpa_status.trip_id:
             trip = dbsession.get_trip(sherpa_status.trip_id)
-            raise_error(
+            dpd.raise_error(
                 f"delete the ongoing trip with booking_id: {trip.booking_id} and disable {sherpa_status.sherpa_name} for trips to delete the sherpa"
             )
 
         if sherpa_status.inducted:
-            raise_error(
+            dpd.raise_error(
                 f"disable {sherpa_status.sherpa_name} for trips to delete the sherpa"
             )
 
@@ -118,10 +116,10 @@ def delete_sherpa(
 
 
 @router.get("/all_fleet_info")
-def get_all_fleet_info(user_name=Depends(get_user_from_header)):
+def get_all_fleet_info(user_name=Depends(dpd.get_user_from_header)):
 
     if not user_name:
-        raise_error("Unknown requester", 401)
+        dpd.raise_error("Unknown requester", 401)
 
     response = {}
     with DBSession() as dbsession:
@@ -144,12 +142,12 @@ def get_all_fleet_info(user_name=Depends(get_user_from_header)):
 
 @router.post("/add_edit_fleet/{fleet_name}")
 def add_fleet(
-    add_fleet_req: AddFleetReq,
+    add_fleet_req: rqm.AddFleetReq,
     fleet_name: str,
-    user_name=Depends(get_user_from_header),
+    user_name=Depends(dpd.get_user_from_header),
 ):
     if not user_name:
-        raise_error("Unknown requester", 401)
+        dpd.raise_error("Unknown requester", 401)
 
     with DBSession() as dbsession:
         all_fleets = dbsession.get_all_fleet_names()
@@ -184,19 +182,19 @@ def add_fleet(
 @router.get("/delete_fleet/{fleet_name}")
 def delete_fleet(
     fleet_name: str,
-    user_name=Depends(get_user_from_header),
+    user_name=Depends(dpd.get_user_from_header),
 ):
     if not user_name:
-        raise_error("Unknown requester", 401)
+        dpd.raise_error("Unknown requester", 401)
 
     with DBSession() as dbsession:
         fleet: fm.Fleet = dbsession.get_fleet(fleet_name)
         if not fleet:
-            raise_error("Bad detail invalid fleet name")
+            dpd.raise_error("Bad detail invalid fleet name")
 
         all_ongoing_trips_fleet = dbsession.get_all_ongoing_trips_fleet(fleet_name)
         if len(all_ongoing_trips_fleet):
-            raise_error("Cancel all the ongoing trips before deleting the fleet")
+            dpd.raise_error("Cancel all the ongoing trips before deleting the fleet")
 
         all_fleet_sherpas = dbsession.get_all_sherpas_in_fleet(fleet_name)
 
@@ -205,11 +203,11 @@ def delete_fleet(
             close_websocket_for_sherpa(sherpa.name)
             if sherpa.status.trip_id:
                 trip = dbsession.get_trip(sherpa.status.trip_id)
-                raise_error(
+                dpd.raise_error(
                     f"delete the ongoing trip with booking_id: {trip.booking_id} and disable {sherpa.name} for trips to delete the sherpa and fleet"
                 )
             if sherpa.status.inducted:
-                raise_error(
+                dpd.raise_error(
                     f"disable {sherpa.name} for trips to delete the sherpa and fleet"
                 )
 
@@ -226,18 +224,18 @@ def delete_fleet(
 @router.get("/update_map/{fleet_name}")
 def update_map(
     fleet_name: str,
-    user_name=Depends(get_user_from_header),
+    user_name=Depends(dpd.get_user_from_header),
 ):
     response = {}
 
     with DBSession() as dbsession:
         fleet: fm.Fleet = dbsession.get_fleet(fleet_name)
         if not fleet:
-            raise_error("Bad detail invalid fleet name")
+            dpd.raise_error("Bad detail invalid fleet name")
 
         all_ongoing_trips_fleet = dbsession.get_all_ongoing_trips_fleet(fleet_name)
         if len(all_ongoing_trips_fleet):
-            raise_error("Cancel all the ongoing trips before updating the map")
+            dpd.raise_error("Cancel all the ongoing trips before updating the map")
 
         fu.FleetUtils.add_map(dbsession, fleet_name)
         fu.FleetUtils.update_stations_in_map(dbsession, fleet_name, fleet.id)
@@ -250,14 +248,25 @@ def update_map(
         for sherpa in all_fleet_sherpas:
             close_websocket_for_sherpa(sherpa.name)
 
+        restart_fm_notification = (
+            f"Map files of fleet: {fleet_name} updated! Please restart fleet manager"
+        )
+
+        dbsession.add_notification(
+            [fleet_name],
+            restart_fm_notification,
+            mm.NotificationLevels.alert,
+            mm.NotificationModules.map_file_check,
+        )
+
     return response
 
 
 @router.get("/all_user_info")
-def all_user_info(user_name=Depends(get_user_from_header)):
+def all_user_info(user_name=Depends(dpd.get_user_from_header)):
 
     if not user_name:
-        raise_error("Unknown requester", 401)
+        dpd.raise_error("Unknown requester", 401)
 
     response = {}
     with DBSession() as dbsession:

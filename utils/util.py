@@ -8,6 +8,7 @@ import os
 
 
 TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
+IES_TIME_FORMAT = "%Y-%m-%dT%H:%M:%S.%f"
 
 
 def get_mule_config():
@@ -31,7 +32,7 @@ def str_to_ts(dt_str):
 
 
 def str_to_dt_UTC(dt_str):
-    return datetime.datetime.strptime(dt_str, TIME_FORMAT + " %z")
+    return datetime.datetime.strptime(dt_str, IES_TIME_FORMAT + " %z")
 
 
 def are_poses_close(pose1, pose2):

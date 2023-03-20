@@ -1,14 +1,17 @@
-import os
-import json
-from plugins.plugin_comms import send_req_to_FM
+from plugins.plugin_comms import send_req_to_FM, create_fm_notification
 import logging
 import hashlib
+import secrets
+import redis
+import os
 from .conveyor_models import DBSession, ConvInfo, ConvTrips
-
-
 from models.trip_models import COMPLETED_TRIP_STATUS
 
 logger_name = "plugin_conveyor"
+
+
+def gen_api_key(name: str) -> str:
+    return secrets.token_urlsafe(32) + "_" + name
 
 
 def get_station_info(station_name):
@@ -18,7 +21,7 @@ def get_station_info(station_name):
         req_type="get",
         query=station_name,
     )
-    return response_json
+    return status_code, response_json
 
 
 def book_trip(dbsession, route, plugin_name):
@@ -84,11 +87,8 @@ def get_tote_trip_info(dbsession, num_totes, conveyor_name, plugin_name):
     epsilon = 1e-6
     num_trips = 0
     for trip in incomplete_trips:
-
-        # check has_sherpa_passed_conveyor only for the conveyor involved
         if conveyor_name not in trip.route:
             continue
-
         if not has_sherpa_passed_conveyor(trip.trip_id, conveyor_name, plugin_name):
             num_trips += 1
         else:
@@ -98,56 +98,75 @@ def get_tote_trip_info(dbsession, num_totes, conveyor_name, plugin_name):
     return {"num_trips": num_trips, "num_totes": num_totes, "book_trip": book_trip}
 
 
-def populate_conv_info():
+def get_all_conveyors():
     all_conveyors = []
     with DBSession() as dbsession:
-        api_key_conveyor_mapper = os.path.join(
-            os.getenv("FM_MAP_DIR"), "plugin_conveyor", "api_key_conveyor_mapping.json"
-        )
-        with open(api_key_conveyor_mapper, "r") as f:
-            api_key_conveyor_mapping = json.load(f)
-        for api_key, conveyor_details in api_key_conveyor_mapping.items():
-            conveyor_name = conveyor_details["name"]
-            status_code, response_json = send_req_to_FM(
-                "plugin_conveyor",
-                "station_info",
-                req_type="get",
-                query=conveyor_name,
+        all_conv_info = dbsession.session.query(ConvInfo).all()
+        for conv_info in all_conv_info:
+            all_conveyors.append(conv_info.name)
+
+    return all_conveyors
+
+
+def add_edit_conv(
+    dbsession: DBSession, api_key=None, conveyor_name=None, nearest_chute=None
+):
+
+    if conveyor_name:
+        status_code, conveyor_details = get_station_info(conveyor_name)
+        if status_code != 200:
+            raise ValueError(
+                f"cannot add {conveyor_name} as conveyor, reason: invalid station"
             )
+    if nearest_chute:
+        status_code, conveyor_details = get_station_info(nearest_chute)
+        if status_code != 200:
+            raise ValueError(f"Invalid nearest_chute entry, reason: invalid station")
 
-            if status_code != 200:
-                conv_info = (
-                    dbsession.session.query(ConvInfo)
-                    .filter(ConvInfo.name == conveyor_name)
-                    .one_or_none()
-                )
-                if conv_info:
-                    dbsession.session.delete(conv_info)
-            else:
-                all_conveyors.append(conveyor_name)
-                station_info = response_json
-                logging.getLogger(logger_name).info(
-                    f"Will add the conveyor '{conveyor_name}' to DB"
-                )
-                hashed_api_key = hashlib.sha256(api_key.encode("utf-8")).hexdigest()
-                conv_info = (
-                    dbsession.session.query(ConvInfo)
-                    .filter(ConvInfo.name == conveyor_name)
-                    .one_or_none()
-                )
-                if conv_info is None:
-                    conv_info = ConvInfo(
-                        name=conveyor_details["name"],
-                        hashed_api_key=hashed_api_key,
-                        num_totes=0,
-                        nearest_chute=conveyor_details["nearest_chute"],
-                        fleet_name=station_info["fleet_name"],
-                    )
-                    dbsession.session.add(conv_info)
-                else:
-                    conv_info.nearest_chute = conveyor_details["nearest_chute"]
-                    conv_info.fleet_name = station_info["fleet_name"]
+    conv_info: ConvInfo = (
+        dbsession.session.query(ConvInfo)
+        .filter(ConvInfo.name == conveyor_name)
+        .one_or_none()
+    )
 
-        dbsession.session.commit()
+    if api_key is None:
+        if not conv_info:
+            api_key = gen_api_key(id)
+            logging.getLogger(logger_name).info(
+                f"generated api_key {api_key}  for conveyor name: {conveyor_name}"
+            )
+            hashed_api_key = hashlib.sha256(api_key.encode("utf-8")).hexdigest()
+    else:
+        hashed_api_key = hashlib.sha256(api_key.encode("utf-8")).hexdigest()
 
-        return all_conveyors
+    if conv_info:
+        conv_info.name = conveyor_name
+        if api_key:
+            conv_info.hashed_api_key = hashed_api_key
+        conv_info.nearest_chute = nearest_chute
+    else:
+        conv_info: ConvInfo = ConvInfo(
+            name=conveyor_name,
+            hashed_api_key=hashed_api_key,
+            num_totes=0,
+            nearest_chute=nearest_chute,
+            fleet_name=conveyor_details["fleet_name"],
+        )
+        dbsession.session.add(conv_info)
+        create_fm_notification(
+            "plugin_conveyor",
+            f"Please restart fleet manager new conveyor: {conveyor_name} has been added",
+        )
+        logging.getLogger(logger_name).info(
+            f"added conveyor info with api_key {api_key}, with station name: {conveyor_name}"
+        )
+
+
+def send_msg_to_conveyor(msg, conveyor_name):
+    pub = redis.from_url(os.getenv("FM_REDIS_URI"), decode_responses=True)
+    pub.publish(f"channel:plugin_conveyor_{conveyor_name}", str(msg))
+
+
+def close_conveyor_ws(conveyor_name):
+    msg = "close_ws"
+    send_msg_to_conveyor(msg, conveyor_name)

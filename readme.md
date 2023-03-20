@@ -10,6 +10,7 @@
 7. [Setup optimal dispatch config](#setup-optimal-dispatch-config)
 8. [Push mule docker image to local docker registry](#push-mule-docker-image-to-local-docker-registry)
 9. [Fleet maintenance](#fleet-maintenance)
+10.[Flash Summon button firmware](#flash-summon-button-firmware)
 
 # FM Installation #
 
@@ -38,7 +39,7 @@
 2.  Checkout to release/branch, update mule submodule.
     ```markdown
     git checkout <branch>
-    git submodule update --remote 
+    git submodule update --remote [Optional]
     git submodule update 
     ```
 
@@ -177,10 +178,6 @@ bash load_docker_images.sh
   ```markdown
   [fleet.simulator]
   simulate=true
-  
-  [fleet]
-  http_scheme="http"
-
   ```
 
   c. To get trip bookings done automatically add routes(list of station names), trip booking frequency(seconds) to fleet_config.
@@ -218,7 +215,6 @@ bash load_docker_images.sh
 
 a. Copy fm cert file(fm_rev_proxy_cert.pem) generated in [Setup FM with push_fm script](#setup-fm-with-push_fm-script) step 3 to sherpa's /opt/ati/config directory
 
-
 b. Add this patch to /opt/ati/config/config.toml in the mule
 ```markdown
 [fleet]
@@ -230,63 +226,12 @@ ws_url = "wss://<fm_ip_address>:443/ws/api/v1/sherpa/"
 fm_cert_file="/app/config/fm_rev_proxy_cert.pem"
 ```
 
-c. Setup/update ati_mule_maintenance service
-```markdown
-git clone https://github.com/AtiMotors/system
-
-copy latest mmts_utils.sh, ati_mule_maintenance.sh from ati_core folder to /etc/systemd directory in sherpa
-copy ati_mule_maintenance.service from ati_core folder to /etc/systemd/system directory in sherpa
-
-#stop the ati_mule_maintenance service and delete maintenance fifo file
-ssh into mule
-sudo systemctl stop ati_mule_maintenance
-sudo systemctl disable ati_mule_maintenance
-sudo rm /opt/ati/run/maintenance_req_fifo
-
-#start maintenance service
-ssh into mule
-cd /etc/systemd
-sudo chmod ugo+rwx mmts_utils.sh
-sudo chmod ugo+rwx ati_mule_maintenance.sh
-sudo chmod ugo+rwx /opt/ati/uniflash
-sudo systemctl enable ati_mule_maintenance
-sudo systemctl start ati_mule_maintenance
-
-#enable 443 port
-sudo ufw allow 443
-```
-
-d. Setup mule nginx container (if not already present)
-1. Check if mule nginx container is running: (below command should show container running)
-    ```markdown
-    ssh into mule
-    docker ps | grep mule_nginx
-    ```
-
-2. Build container (if nginx container is not present):
--  Make a new folder, shell_scripts
-    ```markdown
-    cd /opt/ati
-    mkdir shell_scripts
-    ```
-
-- Copy load_mule_nginx.sh file from server(data@192.168.10.21:/atidata/datasets/FM_v<fm_version>_docker_images/load_mule_nginx.sh) to mule (/opt/ati/shell_scripts). (DO NOT copy this script to /opt/ati folder on mule)
-
-- Run load_mule_nginx.sh
-    ```markdown
-    cd /opt/ati/shell_scripts
-    bash load_mule_nginx.sh
-    ```
-
-- Restart mule docker
-    ```markdown
-    docker restart mule
-    ```
-
 # Setup Plugin #
 a. [Setup IES](#setup-ies)
-
-b. [Setup conveyor booking](#setup-conveyor-booking)
+b. Summon button, conveyor plugins can be configured through UI. Add the required plugins to static/fleet_config/plugin_config.toml. Restart would be required after you add a new plugin,post restart you would see a plugin editor page in UI.
+```markdown
+all_plugins=["summon_button", "conveyor"]
+```
 
 # Setup IES #
 a. Add IES plugin to static/fleet_config/plugin_config.toml
@@ -300,23 +245,6 @@ b. Modify static/plugin_ies/locationID_station_mapping.json file. Map IES statio
     "Warehouse_Pick": "ECFA start",
     "HP02_FA02": "ECFA-2",
     "HP03_FA01": "ECFA-1",
-}
-```
-
-# Setup conveyor booking #
-a. Add conveyor plugin to static/fleet_config/plugin_config.toml
-```markdown
-all_plugins=["conveyor"]
-```
-b. Modify static/plugin_conveyor/api_key_conveyor_mapping.json. Map api keys to conveyor station names, also specify the nearest chute station.
-
-```markdown
-{
-
-"E2bKHiYNMk5kCvSKZfOVThr5t8oUQ_8mrot36QVrk9E_CONV1": {"name": "Conveyor1", "nearest_chute": "Meeting Room 1"},
-
-"B2bKHiYNMk5kCvSKZfOVThr5t8oUQ_8mrot36QVrk9K_CONV2": {"name": "Conveyor2", "nearest_chute": "Meeting Room 2"}
-
 }
 ```
 
@@ -388,6 +316,8 @@ sudo cp <fm_static_dir>/certs/fm_rev_proxy_cert.pem /etc/docker/certs.d/<fm_ip>:
 
 4. Push mule docker image to FM local registry 
 ```markdown
+# auth has been added to docker registry
+docker login -u ati_sherpa -p atiCode112  <fm_ip>:443/mule:fm
 docker push <fm_ip>:443/mule:fm
 ```
 
@@ -396,7 +326,7 @@ docker push <fm_ip>:443/mule:fm
 ## Update map files ## 
 1. Copy all the new map files to <fm_static_directory>/<fleet_name>/map/ folder
 2. Select the fleet which needs the map update from the webpage header in the dashboard and press update_map button on the webpage header(present along with start/stop fleet , emergency_stop fleet etc.)
-3. Restart of FM is not required - for map updates
+3. Restart of FM after update map button is pressed. FM Pop up would ask for restart. 
 
 
 ## Swap sherpas between fleets ##
@@ -423,7 +353,59 @@ python3 utils/gen_hashed_password.py --password <password>
 hashed_password=<hashed password>
 ```
 
-3. Remove unwanted entries from <fm_static_directory>/fleet_config/frontend_users.toml if any.
+3. Remove unwanted entries from <fm_static_directory>/fleet_config/frontend_users.toml if any, restart FM for the changes to take effect.
 
+4. Default FM login credentials
+```markdown
+username: ati_support 
+password: atiSupport112 
+role: support
 
- 
+username: admin 
+password: 1234
+role: support
+
+username: supervisor 
+password: ati1234
+role: supervisor
+
+username: operator 
+password: 1234
+role: operator
+```
+
+# Flash summon button firmware #
+
+a. Connect summon button to your laptop via USB to flash firmware
+
+b. Copy FlashTool_v2.3.6 2 from data@192.168.10.21:/atidata/datasets/FM_v<fm_version>_docker_images> to your laptop, run the same. 
+```markdown 
+cd FlashTool_v2.3.6 2
+./flashtool_8mb.sh 
+```
+c. Upon flashing, reconnect the summon button usb. 
+
+d. Generate unique api key for summon button by using following generate api keys section in [Fleet Maintenance](#fleet-maintenance)
+
+e. Press and hold the button until led turns blue, connect to summon button via wifi. For instance you would see something like Summon_<id> in the available/known wifi networks. Upon successful connection to summon button wifi, you will see a summon button UI.
+
+f. Press configure WiFi, choose the preferred network and add the wifi password for the same, save it. Wait unitl summon button led turns from yellow to blinking red .
+
+g. Repeat step e, connect to summon button network
+
+h. Now press configure device, add FM plugin url to HOST. PLUGIN_PORT by default would be 8002
+```markdown 
+ws://<FM_IP>:<PLUGIN_PORT>/plugin/ws/api/v1/summon_button
+```
+
+i. Set wifi type: WPA/WPA2
+
+j. Set Mode to WiFi-Only
+
+k. Set HEARTBEAT to disable
+
+l. Set APIKEY using api key generated in step d , save.
+```markdown
+X-API-Key:<api_key>
+```
+m. Press restart device in summon button UI.

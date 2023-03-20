@@ -1,6 +1,7 @@
 import hashlib
 import time
 import jwt
+import asyncio
 from fastapi import HTTPException
 from fastapi import Header
 from fastapi.param_functions import Query
@@ -14,8 +15,8 @@ import json
 from models.request_models import SherpaReq
 from models.db_session import DBSession
 
-#upon assignment of a task, it gets added into the job queue
 
+# upon assignment of a task, it gets added into the job queue
 def add_job_to_queued_jobs(job_id, source):
     redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
     queued_jobs = redis_conn.get("queued_jobs")
@@ -34,8 +35,8 @@ def add_job_to_queued_jobs(job_id, source):
     redis_conn.set("queued_jobs", json.dumps(queued_jobs))
     redis_conn.close()
 
-#removes job from the job queue
 
+# removes job from the job queue
 def remove_job_from_queued_jobs(job_id, source):
     redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
     queued_jobs = redis_conn.get("queued_jobs")
@@ -113,8 +114,8 @@ def generate_jwt_token(username: str):
     )
     return access_token
 
-#processes the requests in the job queue.
 
+# processes the requests in the job queue.
 def process_req(queue, req, user, dt=None, ttl=None):
 
     if not user:
@@ -153,9 +154,9 @@ def process_req(queue, req, user, dt=None, ttl=None):
     job = enqueue(queue, handle, *args, **kwargs)
     return job
 
-#processes the requests in the queue and responds back(request finished, failed, etc.)
 
-def process_req_with_response(queue, req, user: str):
+# processes the requests in the queue and responds back(request finished, failed, etc.)
+async def process_req_with_response(queue, req, user: str):
     job: Job = process_req(queue, req, user)
     add_job_to_queued_jobs(job.id, req.source)
 
@@ -175,7 +176,7 @@ def process_req_with_response(queue, req, user: str):
             job.cancel()
             raise HTTPException(status_code=500, detail="Unable to process the request")
 
-        time.sleep(0.01)
+        await asyncio.sleep(0.05)
 
     return response
 
