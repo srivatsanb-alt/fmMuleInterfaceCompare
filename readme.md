@@ -352,5 +352,24 @@ python3 utils/gen_hashed_password.py --password <password>
 hashed_password=<hashed password>
 ```
 
-3. Remove unwanted entries from <fm_static_directory>/fleet_config/frontend_users.toml if any.
+3. Remove unwanted entries from <fm_static_directory>/fleet_config/frontend_users.toml if any, restart FM for the changes to take effect.
+
+4. Default FM login credentials
+```markdown
+username: ati_support 
+password: atiSupport112 
+role: support
+
+username: supervisor 
+password: ati1234
+role: supervisor
+
+username: operator 
+password: 1234
+role: operator
+
+username: admin 
+password: 1234
+role: operator
+```
 

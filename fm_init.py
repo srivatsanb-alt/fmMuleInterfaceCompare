@@ -47,9 +47,10 @@ def main():
     logger.info(f"frontend user details in config {frontend_user_config}")
 
     with DBSession() as dbsession:
+        fu.FrontendUserUtils.delete_all_frontend_users(dbsession)
+
         for user_name, user_details in frontend_user_config["frontenduser"].items():
             role = user_details.get("role", "operator")
-            fu.FrontendUserUtils.delete_all_frontend_users(dbsession)
             fu.FrontendUserUtils.add_update_frontend_user(
                 dbsession, user_name, user_details["hashed_password"], role
             )

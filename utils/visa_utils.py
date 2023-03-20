@@ -88,12 +88,12 @@ def unlock_exclusion_zone(dbsession: DBSession, ezone: vm.ExclusionZone, sherpa:
 
     reason = None
     if ezone is None:
-        reason = f"Unable to get a ezone with zone_id: {ezone.zone_id}"
+        reason = f"Unable to get a ezone with zone_id: {ezone.zone_id} but will still accept release request"
         get_logger("visa").error(reason)
         return False, reason
 
     if sherpa not in ezone.sherpas:
-        reason = f"{sherpa.name} doesn't hold {ezone.zone_id}"
+        reason = f"{sherpa.name} doesn't hold {ezone.zone_id} but will still accept release request"
         get_logger("visa").warning(reason)
         return False, reason
 
@@ -101,7 +101,7 @@ def unlock_exclusion_zone(dbsession: DBSession, ezone: vm.ExclusionZone, sherpa:
     if len(ezone.sherpas) == 0:
         ezone.exclusivity = None
 
-    reason = f"{sherpa.name} doesn't hold {ezone.zone_id} anymore"
+    reason = f"{sherpa.name} doesn't hold {ezone.zone_id} anymore, visa release done"
     get_logger("visa").info(reason)
     return True, reason
 
