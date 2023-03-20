@@ -360,15 +360,15 @@ username: ati_support
 password: atiSupport112 
 role: support
 
+username: admin 
+password: 1234
+role: support
+
 username: supervisor 
 password: ati1234
 role: supervisor
 
 username: operator 
-password: 1234
-role: operator
-
-username: admin 
 password: 1234
 role: operator
 ```
