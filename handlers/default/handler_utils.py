@@ -56,8 +56,8 @@ def start_trip(
     for station in all_stations:
         job_id = utils_util.generate_random_job_id()
         end_pose = station.pose
-        control_router_job = [start_pose, end_pose, fleet_name, job_id]
-        redis_conn.set(f"control_router_job_{job_id}", json.dumps(control_router_job))
+        control_router_rl_job = [start_pose, end_pose, fleet_name, job_id]
+        redis_conn.set(f"control_router_rl_job_{job_id}", json.dumps(control_router_rl_job))
 
         while not redis_conn.get(f"result_{job_id}"):
             time.sleep(0.005)
@@ -66,13 +66,19 @@ def start_trip(
         redis_conn.delete(f"result_{job_id}")
 
         get_logger(ongoing_trip.sherpa_name).info(
-            f"route_length {control_router_job}- {route_length}"
+            f"route_length {control_router_rl_job}- {route_length}"
         )
 
         if route_length == np.inf:
             reason = f"no route from {start_pose} to {end_pose}"
-            get_logger(ongoing_trip.sherpa_name).info(
-                f"trip {ongoing_trip.trip_id} with {ongoing_trip.sherpa_name} failed, reason: {reason}"
+            trip_failed_log = f"trip {ongoing_trip.trip_id} failed, sherpa_name: {ongoing_trip.sherpa_name} , reason: {reason}"
+            get_logger(ongoing_trip.sherpa_name).warning(trip_failed_log)
+
+            dbsession.add_notification(
+                [sherpa.name, sherpa.fleet.name],
+                trip_failed_log,
+                mm.NotificationLevels.alert,
+                mm.NotificationModules.trip,
             )
             end_trip(dbsession, ongoing_trip, sherpa, False)
             return

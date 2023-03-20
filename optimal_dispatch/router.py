@@ -8,7 +8,10 @@ import numpy as np
 
 from models.db_session import DBSession
 
+
+# to avoid mule router module logs
 logging.getLogger().level == logging.ERROR
+
 sys.path.append("/app")
 from core.logs import get_seperate_logger
 from utils.util import are_poses_close
@@ -26,14 +29,14 @@ def start_router_module():
     logger = get_seperate_logger("control_module_router")
 
     while True:
-        for key in redis_conn.scan_iter("control_router_job_*"):
+        for key in redis_conn.scan_iter("control_router_rl_job_*"):
             str_job = redis_conn.get(key)
             logger.info(f"Got a route length estimation job {str_job}")
-            control_router_job = json.loads(str_job)
-            pose_1 = control_router_job[0]
-            pose_2 = control_router_job[1]
-            fleet_name = control_router_job[2]
-            job_id = control_router_job[3]
+            control_router_rl_job = json.loads(str_job)
+            pose_1 = control_router_rl_job[0]
+            pose_2 = control_router_rl_job[1]
+            fleet_name = control_router_rl_job[2]
+            job_id = control_router_rl_job[3]
             rm = all_router_modules.get_router_module(fleet_name)
 
             route_length = 0
@@ -47,7 +50,7 @@ def start_router_module():
                     route_length = json.dumps(np.inf)
 
             redis_conn.set(f"result_{job_id}", route_length)
-            logger.info(f"Result : {control_router_job} - {route_length}")
+            logger.info(f"Result : {control_router_rl_job} - {route_length}")
             redis_conn.delete(key)
 
         for key in redis_conn.scan_iter("control_router_wps_job_*"):
@@ -71,9 +74,8 @@ def start_router_module():
                     f"unable to get route for poses {station_poses} \n Exception {e}"
                 )
                 wps_list = []
-            
-            redis_conn.set(f"result_wps_job_{job_id}", json.dumps(wps_list))
 
+            redis_conn.set(f"result_wps_job_{job_id}", json.dumps(wps_list))
 
         time.sleep(1e-2)
 

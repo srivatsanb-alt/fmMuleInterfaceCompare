@@ -13,9 +13,10 @@ import redis
 import time
 import json
 
-#as per the bookings of trips, and their priorities, optimal dispatch will assign trips to the sherpas
-#while ensuring the bookings and trips are valid(eg.start time of the trip should be greater than 
+# as per the bookings of trips, and their priorities, optimal dispatch will assign trips to the sherpas
+# while ensuring the bookings and trips are valid(eg.start time of the trip should be greater than
 # or equal to the current time)
+
 
 class OptimalDispatch:
     def __init__(self, optimal_dispatch_config: dict):
@@ -255,9 +256,9 @@ class OptimalDispatch:
                     total_eta = np.inf
                 else:
                     job_id = generate_random_job_id()
-                    control_router_job = [pose_1, pose_2, fleet_name, job_id]
+                    control_router_rl_job = [pose_1, pose_2, fleet_name, job_id]
                     redis_conn.set(
-                        f"control_router_job_{job_id}", json.dumps(control_router_job)
+                        f"control_router_rl_job_{job_id}", json.dumps(control_router_rl_job)
                     )
                     while not redis_conn.get(f"result_{job_id}"):
                         time.sleep(0.005)
