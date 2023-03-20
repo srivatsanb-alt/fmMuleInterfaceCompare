@@ -3,7 +3,7 @@ from core.db import session_maker
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 from models.frontend_models import FrontendUser
-from models.misc_models import Notifications
+from models.misc_models import Notifications, NotificationLevels
 from models.fleet_models import (
     Fleet,
     MapFile,
@@ -403,6 +403,14 @@ class DBSession:
 
     def delete_all_notifications(self):
         return self.session.query(Notifications).delete()
+
+    def make_pop_ups_stale(self, max_num_pop_up_notifications):
+        pop_ups = [NotificationLevels.alert, NotificationLevels.action_request]
+        all_stale_pop_ups = self.session.query(Notifications).filter(
+            Notifications.log_level.in_(pop_ups)
+        )[:-max_num_pop_up_notifications]
+        for stale_pop_ups in all_stale_pop_ups:
+            stale_pop_ups.log_level = NotificationLevels.stale_alert_or_action
 
     def get_notifications_with_id(self, id):
         return (

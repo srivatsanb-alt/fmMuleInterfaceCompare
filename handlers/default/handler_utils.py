@@ -274,12 +274,6 @@ def delete_notifications(dbsession: DBSession):
     # at the most only one dispatch notification can be present for a sherpa
     all_notifications = dbsession.get_notifications()
 
-    # to make sure notification moduule doesn't get loaded
-    if len(all_notifications) > cc.MAX_NUM_NOTIFICATIONS:
-        get_logger().warning("Too many notifications, clearing all the notifications....")
-        dbsession.delete_all_notifications()
-        return
-
     for notification in all_notifications:
         time_since_notification = datetime.datetime.now() - notification.created_at
         timeout = mm.NotificationTimeout.get(notification.log_level, 120)
@@ -293,7 +287,7 @@ def delete_notifications(dbsession: DBSession):
                 dbsession.delete_notification(notification.id)
                 continue
 
-            # delete stale dispatch button notifications
+            # delete stale alerts caused by dispatch button
             if (
                 notification.log_level == mm.NotificationLevels.stale_alert_or_action
                 and notification.module == mm.NotificationModules.dispatch_button
@@ -311,6 +305,9 @@ def delete_notifications(dbsession: DBSession):
                 continue
 
             dbsession.delete_notification(notification.id)
+
+    # donot allow more pop ups than MAX_NUM_POP_UP_NOTIFICATIONS
+    dbsession.make_pop_ups_stale(cc.MAX_NUM_POP_UP_NOTIFICATIONS)
 
 
 def check_sherpa_status(dbsession: DBSession):
