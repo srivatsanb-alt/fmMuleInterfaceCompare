@@ -10,6 +10,7 @@
 7. [Setup optimal dispatch config](#setup-optimal-dispatch-config)
 8. [Push mule docker image to local docker registry](#push-mule-docker-image-to-local-docker-registry)
 9. [Fleet maintenance](#fleet-maintenance)
+10.[Flash Summon button firmware](#flash-summon-button-firmware)
 
 # FM Installation #
 
@@ -373,3 +374,38 @@ password: 1234
 role: operator
 ```
 
+# Flash summon button firmware #
+
+a. Connect summon button to your laptop via USB to flash firmware
+
+b. Copy FlashTool_v2.3.6 2 from data@192.168.10.21:/atidata/datasets/FM_v<fm_version>_docker_images> to your laptop, run the same. 
+```markdown 
+cd FlashTool_v2.3.6 2
+./flashtool_8mb.sh 
+```
+c. Upon flashing, reconnect the summon button usb. 
+
+d. Generate unique api key for summon button by using following generate api keys section in [Fleet Maintenance](#fleet-maintenance)
+
+e. Press and hold the button until led turns blue, connect to summon button via wifi. For instance you would see something like Summon_<id> in the available/known wifi networks. Upon successful connection to summon button wifi, you will see a summon button UI.
+
+f. Press configure WiFi, choose the preferred network and add the wifi password for the same, save it. Wait unitl summon button led turns from yellow to blinking red .
+
+g. Repeat step e, connect to summon button network
+
+h. Now press configure device, add FM plugin url to HOST. PLUGIN_PORT by default would be 8002
+```markdown 
+ws://<FM_IP>:<PLUGIN_PORT>/plugin/ws/api/v1/summon_button
+```
+
+i. Set wifi type: WPA/WPA2
+
+j. Set Mode to WiFi-Only
+
+k. Set HEARTBEAT to disable
+
+l. Set APIKEY using api key generated in step d , save.
+```markdown
+X-API-Key:<api_key>
+```
+m. Press restart device in summon button UI.
