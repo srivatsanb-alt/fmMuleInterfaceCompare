@@ -10,7 +10,7 @@
 7. [Setup optimal dispatch config](#setup-optimal-dispatch-config)
 8. [Push mule docker image to local docker registry](#push-mule-docker-image-to-local-docker-registry)
 9. [Fleet maintenance](#fleet-maintenance)
-10.[Flash Summon button firmware](#flash-summon-button-firmware)
+10. [Flash Summon button firmware](#flash-summon-button-firmware)
 
 # FM Installation #
 
@@ -339,6 +339,13 @@ docker push <fm_ip>:443/mule:fm
 cd <path_to_fleet_manager_repository>/utils
 python3 api_key_gen.py --hw_id <unique_hwid>
 ```
+
+2. To generate api keys for n devices like summon_button
+```markdown
+cd <path_to_fleet_manager_repository>/utils
+python3 utils/gen_api_keys_n_devices.py --num_devices 10 
+```
+
 
 ## Add/Remove frontendusers ##
 1. Run utils/gen_hashed_password.py in utils directory in fleet_manager - You will need fleet_manager repository access, python installed in your machine to run this. Python dependecies required: hashlib, click
