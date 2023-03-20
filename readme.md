@@ -10,7 +10,7 @@
 7. [Setup optimal dispatch config](#setup-optimal-dispatch-config)
 8. [Push mule docker image to local docker registry](#push-mule-docker-image-to-local-docker-registry)
 9. [Fleet maintenance](#fleet-maintenance)
-10.[Flash Summon button firmware](#flash-summon-button-firmware)
+10. [Flash Summon button firmware](#flash-summon-button-firmware)
 
 # FM Installation #
 
@@ -228,7 +228,8 @@ fm_cert_file="/app/config/fm_rev_proxy_cert.pem"
 
 # Setup Plugin #
 a. [Setup IES](#setup-ies)
-b. Summon button, conveyor plugins can be configured through UI. Add the required plugins to static/fleet_config/plugin_config.toml. Restart would be required after you add a new plugin,post restart you would see a plugin editor page in UI.
+
+b. Summon button, conveyor plugins can be configured through UI (maintenance/Plugin Editor). Add the required plugins to static/fleet_config/plugin_config.toml. Restart would be required after you add a new plugin,post restart you would see a plugin editor page in UI.
 ```markdown
 all_plugins=["summon_button", "conveyor"]
 ```
@@ -340,6 +341,13 @@ cd <path_to_fleet_manager_repository>/utils
 python3 api_key_gen.py --hw_id <unique_hwid>
 ```
 
+2. To generate api keys for n devices like summon_button
+```markdown
+cd <path_to_fleet_manager_repository>/utils
+python3 utils/gen_api_keys_n_devices.py --num_devices 10 
+```
+
+
 ## Add/Remove frontendusers ##
 1. Run utils/gen_hashed_password.py in utils directory in fleet_manager - You will need fleet_manager repository access, python installed in your machine to run this. Python dependecies required: hashlib, click
 ```markdown
@@ -381,14 +389,14 @@ a. Connect summon button to your laptop via USB to flash firmware
 b. Copy FlashTool_v2.3.6 from data@192.168.10.21:/atidata/datasets/FM_v<fm_version>_docker_images> to your laptop, run the same. 
 ```markdown 
 cd FlashTool_v2.3.6
-bash ./install.sh
-bash ./flashtool_8mb.sh 
+sudo bash ./install.sh
+sudo bash ./flashtool_8mb.sh 
 ```
 c. Upon flashing, reconnect the summon button usb. 
 
 d. Generate unique api key for summon button by using following generate api keys section in [Fleet Maintenance](#fleet-maintenance)
 
-e. Press and hold the button until led turns blue, connect to summon button via wifi. For instance you would see something like Summon_<id> in the available/known wifi networks. Upon successful connection to summon button wifi, you will see a summon button UI.
+e. Press and hold the button until LED turns blue, connect to summon button via wifi. For instance you would see something like Summon_192049 in the available/known wifi networks. Upon successful connection to summon button wifi, you will see a summon button UI.
 
 f. Press configure WiFi, choose the preferred network and add the wifi password for the same, save it. Wait unitl summon button led turns from yellow to blinking red .
 
