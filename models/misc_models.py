@@ -22,14 +22,9 @@ class NotificationLevels:
 
 NotificationTimeout = {
     NotificationLevels.info: 120,
-<<<<<<< HEAD
-    NotificationLevels.action_request: 150,
-    NotificationLevels.alert: 150,
-=======
     NotificationLevels.action_request: 120,
     NotificationLevels.alert: 120,
     NotificationLevels.stale_alert_or_action: 300,
->>>>>>> fm_dev
 }
 
 

@@ -47,30 +47,6 @@ class Handlers:
         sherpa_name = req_ctxt.sherpa_name
         if not sherpa_name:
             return True, None
-<<<<<<< HEAD
-        sherpa: Sherpa = self.session.get_sherpa(sherpa_name)
-        fleet: Fleet = sherpa.fleet
-        if fleet.status == FleetStatus.PAUSED:
-            return False, f"fleet {fleet.name} is paused"
-
-        return True, None
-
-    # starts the trip for a particular sherpa
-    def start_trip(self, trip: Trip, sherpa_name: str):
-        ongoing_trip = hutils.assign_sherpa(trip, sherpa_name, self.session)
-        get_logger(sherpa_name).info(
-            f"{sherpa_name} assigned trip {trip.id} with route {trip.route}"
-        )
-        hutils.start_trip(ongoing_trip, self.session)
-
-    def end_trip(self, ongoing_trip: OngoingTrip, success: bool = True):
-        if not ongoing_trip:
-            return
-        sherpa_name = ongoing_trip.sherpa_name
-        hutils.end_trip(ongoing_trip, success, self.session)
-        get_logger(sherpa_name).info(f"trip {ongoing_trip.trip_id} finished")
-=======
->>>>>>> fm_dev
 
         sherpa: fm.Sherpa = self.dbsession.get_sherpa(sherpa_name)
         fleet: fm.Fleet = sherpa.fleet
@@ -81,11 +57,7 @@ class Handlers:
         ):
             return False, f"fleet {fleet.name} is paused"
 
-<<<<<<< HEAD
-    # leg is the trip between 2 adjacent stations.
-=======
         return True, None
->>>>>>> fm_dev
 
     def record_msg_received(self, msg, update_msgs):
 
@@ -94,37 +66,6 @@ class Handlers:
             hutils.add_sherpa_event(
                 self.dbsession, req_ctxt.sherpa_name, msg.type, "sent by sherpa"
             )
-<<<<<<< HEAD
-            return
-        next_station: Station = self.session.get_station(ongoing_trip.next_station())
-
-        ongoing_trip.clear_states()
-        self.do_pre_actions(ongoing_trip)
-        hutils.start_leg(ongoing_trip, self.session)
-        started_leg_log = f"{sherpa_name} started a trip leg of trip (trip_id: {trip.id}) from {ongoing_trip.curr_station()} to {ongoing_trip.next_station()}"
-        get_logger(sherpa_name).info(started_leg_log)
-        response: Response = send_move_msg(self.session, sherpa, ongoing_trip, next_station)
-        get_logger(sherpa_name).info(
-            f"received from {sherpa_name}: status {response.status_code}"
-        )
-        self.session.add_notification(
-            [sherpa_name, fleet.name],
-            started_leg_log,
-            NotificationLevels.info,
-            NotificationModules.trip,
-        )
-
-    # deletes notofications from FM.
-    def delete_notifications(self):
-        all_notifications = self.session.get_notifications()
-        for notification in all_notifications:
-            time_since_notification = datetime.datetime.now() - notification.created_at
-            timeout = NotificationTimeout.get(notification.log_level, 120)
-
-            if notification.repetitive:
-                timeout = notification.repetition_freq
-=======
->>>>>>> fm_dev
 
         if msg.type in update_msgs:
             get_logger("status_updates").info(f"{req_ctxt.sherpa_name} :  {msg}")
@@ -133,16 +74,6 @@ class Handlers:
                 f"Got message of type {msg.type} from {req_ctxt.source} \n Message: {msg} \n"
             )
 
-<<<<<<< HEAD
-                if notification.log_level != NotificationLevels.info:
-                    notification.log_level = NotificationLevels.stale_alert_or_action
-
-                if (
-                    notification.log_level != NotificationLevels.info
-                    and len(notification.cleared_by) == 0
-                ):
-                    continue
-=======
     def ignore_msg(self, msg, update_msgs, reason):
         if msg.type in update_msgs:
             get_logger("status_updates").warning(
@@ -169,7 +100,6 @@ class Handlers:
         sherpa_status.initialized = True
         sherpa_status.continue_curr_task = True
         get_logger("status_updates").info(f"{sherpa.name} initialized")
->>>>>>> fm_dev
 
     def update_sherpa_info(self, sherpa_status: fm.SherpaStatus, init_response: dict):
 
@@ -187,14 +117,9 @@ class Handlers:
             f"updated {sherpa_status.sherpa_name} build info {sherpa_status.other_info}"
         )
 
-<<<<<<< HEAD
-    # checks for a valid booking.
-    def check_if_booking_is_valid(self, trip_msg):
-=======
     def check_if_booking_is_valid(
         self, trip_msg: rqm.TripMsg, all_stations: List[fm.Station]
     ):
->>>>>>> fm_dev
         reason = None
         if trip_msg.priority <= 0.0:
             reason = f"trip priority cannot be less than/ equal to zero, priority: {trip_msg.priority}"
@@ -220,53 +145,8 @@ class Handlers:
         if reason:
             raise ValueError(f"{reason}")
 
-<<<<<<< HEAD
-    def add_sherpa_event(self, sherpa_name, msg_type, context):
-        sherpa_event: SherpaEvent = SherpaEvent(
-            sherpa_name=sherpa_name,
-            msg_type=msg_type,
-            context="sent by sherpa",
-        )
-        self.session.add_to_session(sherpa_event)
-
-    def end_leg(self, ongoing_trip: OngoingTrip):
-        trip: Trip = ongoing_trip.trip
-        sherpa_name = trip.sherpa_name
-        fleet_name = ongoing_trip.trip.fleet_name
-
-        end_leg_log = f"{sherpa_name} finished a trip leg of trip (trip_id: {trip.id}) from {ongoing_trip.trip_leg.from_station} to {ongoing_trip.trip_leg.to_station}"
-        get_logger(sherpa_name).info(end_leg_log)
-
-        hutils.end_leg(ongoing_trip)
-
-        trip_analytics = self.session.get_trip_analytics(ongoing_trip.trip_leg_id)
-
-        # ongoing_trip.trip_leg.end_time is set only hutils.end_leg using current time for analytics end time
-        if trip_analytics:
-            trip_analytics.end_time = datetime.datetime.now()
-            time_delta = datetime.datetime.now() - ongoing_trip.trip_leg.start_time
-            trip_analytics.actual_trip_time = time_delta.seconds
-            get_logger(sherpa_name).info(
-                f"{sherpa_name} finished leg of trip {trip.id} \n trip_analytics: {get_table_as_dict(TripAnalytics, trip_analytics)}"
-            )
-
-        self.do_post_actions(ongoing_trip)
-        self.session.add_notification(
-            [fleet_name, sherpa_name],
-            end_leg_log,
-            NotificationLevels.info,
-            NotificationModules.trip,
-        )
-
-    # checks if the scheduled time period has passed and accordingly checks if trip schedule should
-    # be recreated or not.
-    def should_recreate_scheduled_trip(self, pending_trip: PendingTrip):
-
-        if not check_if_timestamp_has_passed(pending_trip.trip.end_time):
-=======
     def should_recreate_scheduled_trip(self, pending_trip: tm.PendingTrip):
         if not utils_util.check_if_timestamp_has_passed(pending_trip.trip.end_time):
->>>>>>> fm_dev
             new_metadata = pending_trip.trip.trip_metadata
             time_period = new_metadata["scheduled_time_period"]
             new_start_time = datetime.datetime.now() + datetime.timedelta(
@@ -298,13 +178,6 @@ class Handlers:
                 f"will not recreate trip {pending_trip.trip.id}, scheduled_end_time past current time"
             )
 
-<<<<<<< HEAD
-    # assigns a new trip to the sherpa.
-    def assign_new_trip(self, sherpa_name: str):
-
-        sherpa: Sherpa = self.session.get_sherpa(sherpa_name)
-        fleet: Fleet = sherpa.fleet
-=======
     def assign_new_trip(
         self,
         sherpa: fm.Sherpa,
@@ -312,7 +185,6 @@ class Handlers:
         all_stations: List[fm.Station],
     ):
         fleet: fm.Fleet = sherpa.fleet
->>>>>>> fm_dev
 
         if fleet.status == cc.FleetStatus.STOPPED:
             get_logger(sherpa.name).info(
@@ -445,12 +317,7 @@ class Handlers:
             self.dbsession, sherpa, ongoing_trip, to_station
         )
 
-<<<<<<< HEAD
-    # returns true if the current trip leg has finished and if we need to start a new leg
-    def check_start_new_leg(self, ongoing_trip: OngoingTrip):
-=======
     def check_start_new_leg(self, ongoing_trip: tm.OngoingTrip):
->>>>>>> fm_dev
         if not ongoing_trip:
             return False
         if not ongoing_trip.trip_leg:
@@ -458,15 +325,6 @@ class Handlers:
         if ongoing_trip.trip_leg.finished():
             return True
 
-<<<<<<< HEAD
-    # initializes sherpa upon power on.
-    def initialize_sherpa(self, sherpa_name):
-        sherpa_status: SherpaStatus = self.session.get_sherpa_status(sherpa_name)
-        sherpa_status.initialized = True
-        sherpa_status.idle = True
-        sherpa_status.continue_curr_task = True
-        get_logger(sherpa_name).info(f"{sherpa_name} initialized")
-=======
     def check_continue_curr_leg(self, ongoing_trip: tm.OngoingTrip):
         return (
             ongoing_trip and ongoing_trip.trip_leg and not ongoing_trip.trip_leg.finished()
@@ -477,7 +335,6 @@ class Handlers:
         optimal_dispatch_config = Config.get_optimal_dispatch_config()
         optimal_dispatch = OptimalDispatch(optimal_dispatch_config)
         optimal_dispatch.run(self.dbsession)
->>>>>>> fm_dev
 
     def do_pre_actions(self, ongoing_trip: tm.OngoingTrip):
         curr_station = ongoing_trip.curr_station()
@@ -567,43 +424,6 @@ class Handlers:
     ):
 
         if not curr_station:
-<<<<<<< HEAD
-            get_logger(sherpa_name).info(
-                f"no post-actions performed since {sherpa_name} is not at a trip station"
-            )
-            return
-        station: Station = self.session.get_station(curr_station)
-
-        # if at hitch station send hitch command.
-        if StationProperties.AUTO_HITCH in station.properties:
-            device_types.append(StationProperties.AUTO_HITCH)
-            get_logger(sherpa_name).info(f"{sherpa_name} reached a auto hitch station")
-            self.add_auto_hitch_start_to_ongoing_trip(ongoing_trip)
-
-        # if at unhitch station send unhitch command.
-        if StationProperties.AUTO_UNHITCH in station.properties:
-            device_types.append(StationProperties.AUTO_UNHITCH)
-            get_logger(sherpa_name).info(f"{sherpa_name} reached an auto-unhitch station")
-            self.add_auto_unhitch_start_to_ongoing_trip(ongoing_trip)
-
-        if StationProperties.DISPATCH_NOT_REQD not in station.properties:
-            get_logger(sherpa_name).info(f"{sherpa_name} reached a dispatch station")
-            timeout = StationProperties.DISPATCH_OPTIONAL in station.properties
-            self.add_dispatch_start_to_ongoing_trip(ongoing_trip, timeout)
-            if StationProperties.DISPATCH_OPTIONAL not in station.properties:
-                self.session.add_notification(
-                    [fleet_name, sherpa_name],
-                    f"Need a dispatch button press on {sherpa_name} which is parked at {ongoing_trip.curr_station()}",
-                    NotificationLevels.action_request,
-                    NotificationModules.peripheral_devices,
-                )
-            else:
-                self.session.add_notification(
-                    [fleet_name, sherpa_name],
-                    f"Need a dispatch button press on {sherpa_name} which is parked at {ongoing_trip.curr_station()}",
-                    NotificationLevels.info,
-                    NotificationModules.peripheral_devices,
-=======
             raise ValueError("Sherpa not at a station, cannot do post action")
 
         get_logger(sherpa.name).info(
@@ -633,7 +453,6 @@ class Handlers:
                     f"Need a dispatch button press on {sherpa.name} which is parked at {curr_station.name}",
                     mm.NotificationLevels.action_request,
                     mm.NotificationModules.dispatch_button,
->>>>>>> fm_dev
                 )
 
         if any(
@@ -718,36 +537,6 @@ class Handlers:
                 f"Ignoring {req.error_device} error message from {sherpa_name}"
             )
 
-<<<<<<< HEAD
-    # deletes ongoing trip with a particular booking id
-    def delete_ongoing_trip(self, req: DeleteOngoingTripReq):
-        trips = self.session.get_trip_with_booking_id(req.booking_id)
-        for trip in trips:
-            ongoing_trip: OngoingTrip = self.session.get_ongoing_trip_with_trip_id(trip.id)
-            if ongoing_trip:
-                get_logger().info(
-                    f"Deleting ongoing trip  - trip_id: {trip.id}, booking_id: {req.booking_id}"
-                )
-                sherpa: Sherpa = self.session.get_sherpa(ongoing_trip.sherpa_name)
-                self.end_trip(ongoing_trip, False)
-                trip.cancel()
-                terminate_trip_msg = TerminateTripReq(
-                    trip_id=ongoing_trip.trip_id, trip_leg_id=ongoing_trip.trip_leg_id
-                )
-                _ = send_msg_to_sherpa(self.session, sherpa, terminate_trip_msg)
-                get_logger().info(
-                    f"Deleted ongoing trip successfully - trip_id: {trip.id}, booking_id: {req.booking_id}"
-                )
-            else:
-                get_logger().info(
-                    f"No ongoing trip  - trip_id: {trip.id}, booking_id: {req.booking_id}"
-                )
-
-        return {}
-
-    # returns the next task to be performed based on ongoing trip status.
-    def should_assign_next_task(self, sherpa_name):
-=======
     def delete_ongoing_trip(
         self,
         all_ongoing_trips: List[tm.OngoingTrip],
@@ -773,7 +562,6 @@ class Handlers:
         self, sherpa: fm.Sherpa, ongoing_trip: tm.OngoingTrip, pending_trip: tm.PendingTrip
     ):
 
->>>>>>> fm_dev
         done = False
         next_task = "no new task to assign"
         sherpa_status: fm.SherpaStatus = sherpa.status
@@ -852,70 +640,10 @@ class Handlers:
     def handle_delete_booked_trip(self, req: rqm.DeleteBookedTripReq):
         response = {}
 
-<<<<<<< HEAD
-            elif next_task == "start_leg":
-                get_logger(req.sherpa_name).info(f"{req.sherpa_name} starting new leg")
-                self.start_leg(ongoing_trip)
-
-    # based on the destination station of the trip and the station where the sherpa
-    # has reached, it will assign pose to sherpa and raise an error if there is a mismatch
-    # in the actual expected destination and the sherpa's final position.
-    def handle_reached(self, msg: ReachedReq):
-        sherpa_name = msg.source
-        sherpa: SherpaStatus = self.session.get_sherpa_status(sherpa_name)
-        ongoing_trip: OngoingTrip = self.session.get_ongoing_trip(sherpa_name)
-
-        if (
-            ongoing_trip.trip_leg_id != msg.trip_leg_id
-            or ongoing_trip.trip_id != msg.trip_id
-        ):
-            raise ValueError(
-                f"Trip information mismatch(trip_id: {msg.trip_id}, trip_leg_id: {msg.trip_leg_id}), ongoing_trip_id: {ongoing_trip.trip_id}, ongoing_trip_leg_id: {ongoing_trip.trip_leg_id}"
-            )
-
-        dest_pose = self.session.get_station(ongoing_trip.next_station()).pose
-        if not are_poses_close(dest_pose, msg.destination_pose):
-            raise ValueError(
-                f"{sherpa_name} sent to {dest_pose} but reached {msg.destination_pose}"
-            )
-        sherpa.pose = msg.destination_pose
-        self.end_leg(ongoing_trip)
-
-    # based on the sherpas status, takes necessary actions.
-    def handle_sherpa_status(self, msg: SherpaStatusMsg):
-        sherpa_name = msg.sherpa_name
-        sherpa: Sherpa = self.session.get_sherpa(sherpa_name)
-        status: SherpaStatus = self.session.get_sherpa_status(sherpa_name)
-
-        status.pose = msg.current_pose
-        status.battery_status = msg.battery_status
-        status.error = msg.error_info if msg.error else None
-
-        if status.disabled and status.disabled_reason == DisabledReason.STALE_HEARTBEAT:
-            status.disabled = False
-            status.disabled_reason = None
-
-        if msg.mode != "fleet":
-            get_logger(sherpa_name).info(f"{sherpa_name} uninitialized")
-            status.initialized = False
-            status.continue_curr_task = False
-
-        elif not status.initialized:
-            # sherpa switched to fleet mode
-            init_req: InitReq = InitReq()
-            response: Response = get(sherpa, init_req)
-            init_resp: InitResp = InitResp.from_dict(response.json())
-            get_logger(sherpa_name).info(f"received from {sherpa_name}: {init_resp}")
-            self.initialize_sherpa(sherpa_name)
-
-        if msg.mode == status.mode:
-            return
-=======
         # query db
         trips: List[tm.Trip] = self.dbsession.get_trip_with_booking_id(req.booking_id)
         all_to_be_cancelled_trips: List[tm.Trip] = []
         all_pending_trips: List[tm.PendingTrip] = []
->>>>>>> fm_dev
 
         for trip in trips:
             if trip.status in tm.YET_TO_START_TRIP_STATUS:
@@ -925,15 +653,8 @@ class Handlers:
                 all_pending_trips.append(pending_trip)
                 all_to_be_cancelled_trips.append(trip)
 
-<<<<<<< HEAD
-    # handles induct request of a sherpa
-    def handle_induct_sherpa(self, req: SherpaInductReq):
-        response = {}
-        sherpa: Sherpa = self.session.get_sherpa(req.sherpa_name)
-=======
         # end transaction
         self.dbsession.session.commit()
->>>>>>> fm_dev
 
         # update db
         for trip, pending_trip in zip(all_to_be_cancelled_trips, all_pending_trips):
@@ -945,50 +666,6 @@ class Handlers:
 
         return response
 
-<<<<<<< HEAD
-    # on receiving a sherpa image update request, updates the image.
-    def handle_sherpa_img_update(self, req: SherpaImgUpdateCtrlReq):
-        sherpa_name = req.sherpa_name
-        sherpa = self.session.get_sherpa(sherpa_name)
-        image_tag = "fm"
-        fm_server_username = os.getenv("FM_SERVER_USERNAME")
-        time_zone = os.getenv("PGTZ")
-        image_update_req: SherpaImgUpdate = SherpaImgUpdate(
-            image_tag=image_tag,
-            fm_server_username=fm_server_username,
-            time_zone=time_zone,
-        )
-        get_logger().info(
-            f"Sending request {image_update_req} to update docker image on {sherpa_name}"
-        )
-        send_msg_to_sherpa(self.session, sherpa, image_update_req)
-        return
-
-    # handles peripheral errors and tries to resolve it.
-    def handle_peripheral_error(self, req: SherpaPeripheralsReq):
-
-        valid_error_devices = ["auto_hitch", "conveyor"]
-        if req.error_device in valid_error_devices:
-            # get error resolver
-            peripheral_error_resolver = getattr(
-                self, f"resolve_{req.error_device}_error", None
-            )
-            peripheral_info = getattr(req, req.error_device, None)
-            if peripheral_info is not None and peripheral_error_resolver is not None:
-                peripheral_error_resolver(req)
-            else:
-                raise ValueError(f"Unable to resolve {req.error_device} peripheral error")
-        else:
-            raise ValueError(f" {req.error_device} peripheral error can't be handled")
-
-    # handles peripheral events such as dispatch, auto hitch , etc.
-    def handle_peripherals(self, req: SherpaPeripheralsReq):
-        sherpa_name = req.source
-        ongoing_trip: OngoingTrip = self.session.get_ongoing_trip(sherpa_name)
-        if not ongoing_trip:
-            get_logger(sherpa_name).info(
-                f"ignoring peripherals request from {sherpa_name} without ongoing trip"
-=======
     def handle_delete_ongoing_trip(self, req: rqm.DeleteOngoingTripReq):
 
         # query db
@@ -999,7 +676,6 @@ class Handlers:
         for trip in trips:
             ongoing_trip: tm.OngoingTrip = self.dbsession.get_ongoing_trip_with_trip_id(
                 trip.id
->>>>>>> fm_dev
             )
             if ongoing_trip is not None:
                 all_ongoing_trips.append(ongoing_trip)
@@ -1028,18 +704,9 @@ class Handlers:
         status.battery_status = req.battery_status
         status.error = req.error_info if req.error else None
 
-<<<<<<< HEAD
-    # handles starting and stopping of conveyor based on incoming request.
-    def handle_conveyor(self, req: ConveyorReq, ongoing_trip: OngoingTrip):
-        sherpa_name = ongoing_trip.sherpa_name
-        conveyor_start_state = getattr(
-            TripState, f"WAITING_STATION_CONV_{req.direction.upper()}_START"
-        )
-=======
         if status.disabled and status.disabled_reason == cc.DisabledReason.STALE_HEARTBEAT:
             status.disabled = False
             status.disabled_reason = None
->>>>>>> fm_dev
 
         if req.mode != "fleet":
             get_logger("status_updates").info(f"{sherpa.name} uninitialized")
@@ -1050,70 +717,10 @@ class Handlers:
             # sherpa switched to fleet mode
             self.initialize_sherpa(sherpa)
 
-<<<<<<< HEAD
-    # handles auto hitch of the vehicle to the trolly.
-    def handle_auto_hitch(self, req: HitchReq, ongoing_trip: OngoingTrip):
-        sherpa_name = ongoing_trip.sherpa_name
-        if req.hitch:
-            # auto hitch
-            if TripState.WAITING_STATION_AUTO_HITCH_START not in ongoing_trip.states:
-                error = f"auto-hitch done by {sherpa_name} without auto-hitch command"
-                get_logger(sherpa_name).error(error)
-                raise ValueError(error)
-            get_logger(sherpa_name).info(f"auto-hitch done by {sherpa_name}")
-            ongoing_trip.add_state(TripState.WAITING_STATION_AUTO_HITCH_END)
-        else:
-            # auto unhitch
-            if TripState.WAITING_STATION_AUTO_UNHITCH_START not in ongoing_trip.states:
-                error = f"auto-unhitch done by {sherpa_name} without auto-unhitch command"
-                get_logger(sherpa_name).error(error)
-                raise ValueError(error)
-            get_logger(sherpa_name).info(f"auto-unhitch done by {sherpa_name}")
-            ongoing_trip.add_state(TripState.WAITING_STATION_AUTO_UNHITCH_END)
-
-    # on receiving a dispatch request from the peripheral, perform the necessary actions
-    def handle_dispatch_button(self, req: DispatchButtonReq, ongoing_trip: OngoingTrip):
-        sherpa: Sherpa = self.session.get_sherpa(ongoing_trip.trip.sherpa_name)
-        sherpa_name = ongoing_trip.sherpa_name
-        if not req.value:
-            get_logger(sherpa_name).info(
-                f"dispatch button not pressed on {sherpa_name}, taking no action"
-            )
-            return
-        if TripState.WAITING_STATION_DISPATCH_START not in ongoing_trip.states:
-            get_logger(sherpa_name).error(
-                f"ignoring dispatch button press on {sherpa_name}"
-            )
-            return
-        get_logger(sherpa_name).info(f"dispatch button pressed on {sherpa_name}")
-        ongoing_trip.add_state(TripState.WAITING_STATION_DISPATCH_END)
-        # ask sherpa to stop playing the sound
-        sound_msg = PeripheralsReq(
-            speaker=SpeakerReq(sound=SoundEnum.wait_for_dispatch, play=False),
-            indicator=IndicatorReq(pattern=PatternEnum.free, activate=True),
-        )
-
-        response = send_msg_to_sherpa(self.session, sherpa, sound_msg)
-        get_logger(sherpa_name).info(
-            f"sent speaker request to {sherpa_name}: response status {response.status_code}"
-        )
-
-    # on receiving a booking request, creates a trip.
-    def handle_book(self, req: BookingReq):
-        response = {}
-        for trip_msg in req.trips:
-            booking_id = self.session.get_new_booking_id()
-            fleet_name = self.session.get_fleet_name_from_route(trip_msg.route)
-            if fleet_name:
-                # need priority for optimal dispatch logic, default is 1
-                if not trip_msg.priority:
-                    trip_msg.priority = 1.0
-=======
         _, _ = self.should_assign_next_task(sherpa, ongoing_trip, pending_trip)
 
         if req.mode == status.mode:
             return
->>>>>>> fm_dev
 
         init_req: rqm.InitReq = rqm.InitReq()
         init_response = utils_comms.send_req_to_sherpa(self.dbsession, sherpa, init_req)
@@ -1122,35 +729,6 @@ class Handlers:
         status.mode = req.mode
         get_logger(sherpa.name).info(f"{sherpa.name} switched to {req.mode} mode")
 
-<<<<<<< HEAD
-        return response
-
-    # deletes an ongoing trip
-    def handle_delete_ongoing_trip(self, req: DeleteOngoingTripReq):
-        response = self.delete_ongoing_trip(req)
-        return response
-
-    # deletes a booked trip
-    def handle_delete_booked_trip(self, req: DeleteBookedTripReq):
-        trips = self.session.get_trip_with_booking_id(req.booking_id)
-        valid_trip_status = [TripStatus.BOOKED, TripStatus.ASSIGNED]
-        for trip in trips:
-            if trip.status in valid_trip_status:
-                pending_trip: PendingTrip = self.session.get_pending_trip_with_trip_id(
-                    trip.id
-                )
-                self.session.delete_pending_trip(pending_trip)
-                trip.status = TripStatus.CANCELLED
-                get_logger().info(
-                    f"Successfully deleted booked trip trip_id: {trip.id}, booking_id: {trip.booking_id}"
-                )
-
-    # based on the trip status, performs trip analysis ,updates the trip status on the FM front end.
-    def handle_trip_status(self, req: TripStatusMsg):
-        sherpa_name = req.source
-        sherpa: Sherpa = self.session.get_sherpa(sherpa_name)
-        ongoing_trip: OngoingTrip = self.session.get_ongoing_trip_with_trip_id(req.trip_id)
-=======
     def handle_trip_status(self, req: rqm.TripStatusMsg):
 
         # query db
@@ -1159,7 +737,6 @@ class Handlers:
             req.trip_id
         )
         trip_analytics = self.dbsession.get_trip_analytics(ongoing_trip.trip_leg_id)
->>>>>>> fm_dev
 
         if not ongoing_trip:
             get_logger("status_updates").info(
@@ -1358,11 +935,6 @@ class Handlers:
         sherpa.status.inducted = req.induct
         sherpa_availability.available = req.induct
 
-<<<<<<< HEAD
-    # deletes optimal dispatch assignments
-    def handle_delete_optimal_dispatch_assignments(
-        self, req: DeleteOptimalDispatchAssignments
-=======
         return response
 
     def handle_peripherals(self, req: rqm.SherpaPeripheralsReq):
@@ -1411,7 +983,6 @@ class Handlers:
         sherpa: fm.Sherpa,
         curr_station: fm.Station,
         req: rqm.SherpaPeripheralsReq,
->>>>>>> fm_dev
     ):
 
         valid_error_devices = ["auto_hitch", "conveyor"]
@@ -1427,12 +998,6 @@ class Handlers:
         else:
             raise ValueError(f" {req.error_device} peripheral error can't be handled")
 
-<<<<<<< HEAD
-    # verifies change in ip address; on change in fleet files(eg.map files) updates the map on the FM
-    def handle_verify_fleet_files(self, req: SherpaReq):
-        sherpa_name = req.source
-        sherpa: Sherpa = self.session.get_sherpa(sherpa_name)
-=======
     def handle_dispatch_button(
         self,
         ongoing_trip: tm.OngoingTrip,
@@ -1555,7 +1120,6 @@ class Handlers:
 
         # query db
         sherpa: fm.Sherpa = self.dbsession.get_sherpa(req.source)
->>>>>>> fm_dev
         fleet_name = sherpa.fleet.name
         map_files = self.dbsession.get_map_files(fleet_name)
 
@@ -1599,37 +1163,12 @@ class Handlers:
 
         return response.to_json()
 
-<<<<<<< HEAD
-    def handle_pass_to_sherpa(self, req):
-        sherpa: Sherpa = self.session.get_sherpa(req.sherpa_name)
-        get_logger(sherpa.name).info(
-            f"passing control request to sherpa {sherpa.name}, {req.dict()} "
-        )
-        send_msg_to_sherpa(self.session, sherpa, req)
-
-    # revokes the visa access of a sherpa.
-    def handle_visa_release(self, req: VisaReq, sherpa_name):
-        visa_type = req.visa_type
-        zone_name = req.zone_name
-        if visa_type in [VisaType.UNPARKING, VisaType.SEZ]:
-            unlock_exclusion_zone(self.session, zone_name, "station", sherpa_name)
-            unlock_exclusion_zone(self.session, zone_name, "lane", sherpa_name)
-        elif visa_type == VisaType.TRANSIT:
-            unlock_exclusion_zone(self.session, zone_name, "lane", sherpa_name)
-
-        get_logger().info(f"{sherpa_name} released {visa_type} visa to zone {zone_name}")
-        response: ResourceResp = ResourceResp(
-            granted=True, visa=req, access_type=AccessType.RELEASE
-        )
-        get_logger().info(f"visa released by {sherpa_name}")
-=======
     def handle_resource_access(self, req: rqm.ResourceReq):
         sherpa: fm.Sherpa = self.dbsession.get_sherpa(req.source)
         if not req.visa:
             get_logger(sherpa.name).warning("requested access type not supported")
             return None
         return self.handle_visa_access(req.visa, req.access_type, sherpa)
->>>>>>> fm_dev
 
     def handle_visa_access(
         self, req: rqm.VisaReq, access_type: rqm.AccessType, sherpa: fm.Sherpa
@@ -1654,15 +1193,6 @@ class Handlers:
             for ezone in set(reqd_ezones):
                 utils_visa.lock_exclusion_zone(ezone, sherpa)
 
-<<<<<<< HEAD
-    # handles visa requests and grants visas to an exclusion zone based on thier availability
-    # since only one vehicle can access those zones at a time.
-    def handle_visa_request(self, req: VisaReq, sherpa_name):
-        visa_type = req.visa_type
-        zone_name = req.zone_name
-        granted = maybe_grant_visa(self.session, zone_name, visa_type, sherpa_name)
-=======
->>>>>>> fm_dev
         granted_message = "granted" if granted else "not granted"
         visa_log = f"{sherpa.name} {granted_message} {req.visa_type} type visa to zone {req.zone_name}, reason: {reason}"
         get_logger().info(visa_log)
@@ -1705,15 +1235,6 @@ class Handlers:
         )
         return response.to_json()
 
-<<<<<<< HEAD
-    # handles visa request.
-    def handle_visa_access(self, req: VisaReq, access_type: AccessType, sherpa_name):
-        # do not assign next destination after processing a visa request.
-        if access_type == AccessType.REQUEST:
-            return self.handle_visa_request(req, sherpa_name)
-        elif access_type == AccessType.RELEASE:
-            return self.handle_visa_release(req, sherpa_name)
-=======
     def handle_delete_visa_assignments(self, req: rqm.DeleteVisaAssignments):
 
         # query db
@@ -1725,18 +1246,9 @@ class Handlers:
         # update db
         for visa_assignment in visa_assignments:
             self.dbsession.session.delete(visa_assignment)
->>>>>>> fm_dev
 
         return {}
 
-<<<<<<< HEAD
-    def handle_resource_access(self, req: ResourceReq):
-        sherpa_name = req.source
-        if not req.visa:
-            get_logger(sherpa_name).warning("requested access type not supported")
-            return None
-        return self.handle_visa_access(req.visa, req.access_type, sherpa_name)
-=======
     def handle_sherpa_img_update(self, req: rqm.SherpaImgUpdateCtrlReq):
         response = {}
         # query db
@@ -1744,7 +1256,6 @@ class Handlers:
 
         # end transaction
         self.dbsession.session.commit()
->>>>>>> fm_dev
 
         # update db
         image_tag = "fm"
