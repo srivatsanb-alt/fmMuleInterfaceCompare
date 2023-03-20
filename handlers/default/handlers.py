@@ -690,7 +690,10 @@ class Handlers:
         self.dbsession.session.commit()
 
         # update db
+        if len(all_ongoing_trips)==0:
+            raise ValueError(f"No ongoing trips to be deleted with booking_id : {req.booking_id}")
         response = self.delete_ongoing_trip(all_ongoing_trips, all_sherpas)
+        
         return response
 
     def handle_sherpa_status(self, req: rqm.SherpaStatusMsg):
