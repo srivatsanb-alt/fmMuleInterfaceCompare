@@ -657,6 +657,9 @@ class Handlers:
         self.dbsession.session.commit()
 
         # update db
+        if len(all_to_be_cancelled_trips)==0:
+            raise ValueError(f"No Booked Trips to be Cancelled for booking_id: {req.booking_id}")
+
         for trip, pending_trip in zip(all_to_be_cancelled_trips, all_pending_trips):
             self.dbsession.delete_pending_trip(pending_trip)
             trip.status = tm.TripStatus.CANCELLED
