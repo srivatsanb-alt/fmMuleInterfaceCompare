@@ -449,7 +449,7 @@ class SherpaUtils:
     @classmethod
     def add_sherpa_status(cls, dbsession, sherpa_name, other_info={}):
         sherpa_status: fm.SherpaStatus = fm.SherpaStatus(
-            sherpa_name=sherpa_name, other_info={}
+            sherpa_name=sherpa_name, idle = True, other_info={}
         )
         dbsession.add_to_session(sherpa_status)
         logger.info(f"added sherpa status entry for sherpa: {sherpa_name}")
