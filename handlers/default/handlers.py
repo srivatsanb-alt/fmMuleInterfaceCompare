@@ -620,6 +620,12 @@ class Handlers:
 
                 self.check_if_booking_is_valid(trip_msg, all_stations)
 
+                # add source of booking
+                if trip_msg.metadata is None:
+                    trip_msg.metadata = {}
+
+                trip_msg.metadata.update({"booked_by": req.source})
+
                 trip: tm.Trip = self.dbsession.create_trip(
                     trip_msg.route,
                     trip_msg.priority,

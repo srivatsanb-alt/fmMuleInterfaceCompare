@@ -19,7 +19,7 @@ def main():
             logging.getLogger().info("Will restart fleet manager software")
             raise Exception("Will restart fleet manager software")
 
-        time.sleep(1e-2)
+        time.sleep(5e-1)
 
 
 if __name__ == "__main__":

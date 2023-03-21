@@ -12,14 +12,6 @@ class DBUpgrade:
             conn.execute("commit")
             conn.execute('CREATE INDEX "booking_time_index" on "trips" ("booking_time")')
 
-    def upgrade_to_3_0(self):
-        print("will upgrade db to version 3.0")
-        with engine.connect() as conn:
-            conn.execute("commit")
-
-            # need to differentiate trips booked from various sources(ies, conveyor etc)
-            conn.execute('ALTER TABLE "trips" ADD COLUMN booked_by VARCHAR')
-
 
 def upgrade_db_schema():
 
