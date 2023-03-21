@@ -3,7 +3,7 @@ import logging
 import os
 from sqlalchemy import inspect
 from sqlalchemy import create_engine
-from models.base_models import Base
+from sqlalchemy import MetaData
 from sqlalchemy.orm import sessionmaker
 from core.db import engine
 import pandas as pd
@@ -54,7 +54,9 @@ def backup_data():
 
             for table in all_tables:
                 try:
-                    model = Base.metadata.tables[table]
+                    metadata = MetaData(db_engine)
+                    metadata.reflect()
+                    model = metadata.tables[table]
                     column_names = [column.name for column in inspect(model).c]
                     data = session.query(model).all()
                     df = pd.DataFrame(data, columns=column_names)
