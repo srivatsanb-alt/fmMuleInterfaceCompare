@@ -49,7 +49,7 @@ def backup_data():
             db_engine = create_engine(path_to_db)
             inspector = inspect(db_engine)
             all_tables = inspector.get_table_names("public")
-            session_maker = sessionmaker(autocommit=False, autoflush=True, bind=engine)
+            session_maker = sessionmaker(autocommit=False, autoflush=True, bind=db_engine)
             session = session_maker()
 
             for table in all_tables:
