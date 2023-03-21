@@ -106,7 +106,7 @@ class Handlers:
         if sherpa_status.other_info is None:
             sherpa_status.other_info = {}
         sherpa_status.other_info.update(
-            {"last_software_update": init_response.get("last_software_update")}
+            {"last_software_update": init_response.get("last_updated")}
         )
         sherpa_status.other_info.update({"sw_date": init_response.get("sw_date")})
         sherpa_status.other_info.update({"sw_tag": init_response.get("sw_tag")})
@@ -657,8 +657,10 @@ class Handlers:
         self.dbsession.session.commit()
 
         # update db
-        if len(all_to_be_cancelled_trips)==0:
-            raise ValueError(f"No Booked Trips to be Cancelled for booking_id: {req.booking_id}")
+        if len(all_to_be_cancelled_trips) == 0:
+            raise ValueError(
+                f"No Booked Trips to be Cancelled for booking_id: {req.booking_id}"
+            )
 
         for trip, pending_trip in zip(all_to_be_cancelled_trips, all_pending_trips):
             self.dbsession.delete_pending_trip(pending_trip)
@@ -690,10 +692,12 @@ class Handlers:
         self.dbsession.session.commit()
 
         # update db
-        if len(all_ongoing_trips)==0:
-            raise ValueError(f"No ongoing trips to be deleted with booking_id : {req.booking_id}")
+        if len(all_ongoing_trips) == 0:
+            raise ValueError(
+                f"No ongoing trips to be deleted with booking_id : {req.booking_id}"
+            )
         response = self.delete_ongoing_trip(all_ongoing_trips, all_sherpas)
-        
+
         return response
 
     def handle_sherpa_status(self, req: rqm.SherpaStatusMsg):
