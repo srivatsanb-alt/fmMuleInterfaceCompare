@@ -10,6 +10,7 @@ import pandas as pd
 import datetime
 import shutil
 import redis
+import json
 
 
 def backup_data():
@@ -25,6 +26,26 @@ def backup_data():
         os.mkdir(fm_backup_path)
     os.mkdir(os.path.join(fm_backup_path, current_data))
 
+    logs_save_path = os.path.join(fm_backup_path, current_data, "logs")
+
+    with open(os.path.join(fm_backup_path, current_data, "info.txt"), "w") as info_file:
+        info_file.write(os.getenv("FM_IMAGE_INFO"))
+
+    redis_conn = redis.from_url(
+        os.getenv("FM_REDIS_URI"), encoding="utf-8", decode_responses=True
+    )
+
+    plugin_db_init = False
+    while not plugin_db_init:
+        plugin_db_init = (
+            False
+            if redis_conn.get("plugins_workers_db_init") is None
+            else json.loads(redis_conn.get("plugins_workers_db_init"))
+        )
+        if not plugin_db_init:
+            logging.info("Will wait for plugin db init")
+            time.sleep(20)
+
     # get all databases
     all_databases = [
         datnames[0]
@@ -34,14 +55,10 @@ def backup_data():
     valid_dbs = []
     for database_name in all_databases:
         if not any(excludable in database_name for excludable in ["postgres", "template"]):
-            logging.getLogger().info(f"Will periodically backup database: {database_name}")
-            os.mkdir(os.path.join(fm_backup_path, current_data, database_name))
+            db_backup_path = os.path.join(fm_backup_path, current_data, database_name)
+            os.mkdir(os.path.join(db_backup_path))
+            logging.info(f"Will periodically backup {database_name} db")
             valid_dbs.append(database_name)
-
-    logs_save_path = os.path.join(fm_backup_path, current_data, "logs")
-
-    with open(os.path.join(fm_backup_path, current_data, "info.txt"), "w") as info_file:
-        info_file.write(os.getenv("FM_IMAGE_INFO"))
 
     while True:
         for db_name in valid_dbs:
