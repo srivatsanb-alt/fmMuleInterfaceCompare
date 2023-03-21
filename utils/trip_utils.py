@@ -3,7 +3,8 @@ from models.db_session import DBSession
 from utils import util
 from utils.util import get_table_as_dict
 
-#utils for trips
+# utils for trips
+
 
 def get_trip_status(trip: Trip):
     trip_status = {}
@@ -45,6 +46,9 @@ def get_trip_status(trip: Trip):
             "start_time": start_time,
             "end_time": end_time,
             "updated_at": updated_at,
+            "booked_by": trip.trip_metadata.get("booked_by")
+            if trip.trip_metadata is not None
+            else None,
         }
 
         trip_status = {
