@@ -138,6 +138,9 @@ async def start_stop(
         if not fleet:
             dpd.raise_error("Fleet not found")
 
+        if fleet.status == FleetStatus.PAUSED:
+            dpd.raise_error("Fleet is paused, cannot start/stop ops")
+
         fleet.status = (
             FleetStatus.STARTED if start_stop_ctrl_req.start else FleetStatus.STOPPED
         )
