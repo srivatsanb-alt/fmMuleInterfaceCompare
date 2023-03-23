@@ -412,6 +412,11 @@ class DBSession:
         for stale_pop_ups in all_stale_pop_ups:
             stale_pop_ups.log_level = NotificationLevels.stale_alert_or_action
 
+    def delete_old_notifications(self, datetime):
+        self.session.query(Notifications).filter(
+            Notifications.created_at < datetime
+        ).delete()
+
     def get_notifications_with_id(self, id):
         return (
             self.session.query(Notifications).filter(Notifications.id == id).one_or_none()

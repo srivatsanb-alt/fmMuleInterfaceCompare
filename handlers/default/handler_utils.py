@@ -309,6 +309,10 @@ def delete_notifications(dbsession: DBSession):
     # donot allow more pop ups than MAX_NUM_POP_UP_NOTIFICATIONS
     dbsession.make_pop_ups_stale(cc.MAX_NUM_POP_UP_NOTIFICATIONS)
 
+    # clear notification created an hour back
+    dt = datetime.datetime.now() + datetime.timedelta(hours=-1)
+    dbsession.delete_old_notifications(dt)
+
 
 def check_sherpa_status(dbsession: DBSession):
     MULE_HEARTBEAT_INTERVAL = Config.get_fleet_comms_params()["mule_heartbeat_interval"]
