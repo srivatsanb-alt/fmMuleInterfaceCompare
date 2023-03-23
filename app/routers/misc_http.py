@@ -223,7 +223,7 @@ async def sherpa_build_info(sherpa_name: str, user_name=Depends(dpd.get_user_fro
 
 # alerts the FM with messages from Sherpa
 @router.get("/create_generic_alerts/{alert_description}")
-async def sherpa_alerts(
+async def create_generic_alerts(
     alert_description: str, user_name=Depends(dpd.get_user_from_header)
 ):
     if not user_name:
