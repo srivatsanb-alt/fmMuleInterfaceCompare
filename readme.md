@@ -128,7 +128,7 @@ cd FM_v<fm_version>_docker_images
 bash load_docker_images.sh
 ```
 
-3. Backup the current static directory if already present. Copy "static" directory from fleet_manager repository/FM_v<fm_version>_docker_images folder to the FM server, update it with the info from backup.
+3. Backup the current fleet_config directory if already present. Copy fleet_config directory from FM_v<fm_version>_docker_images folder to the FM server static dir, update it with the info from backup. With updated new config parameters might be added/removed, redoing config will help.
     
 4. Copy docker-compose.yml from <fm_repository>/misc/ or FM_v<fm_version>_docker_images folder to the static folder.
 

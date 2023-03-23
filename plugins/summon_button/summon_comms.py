@@ -102,7 +102,7 @@ def delete_summon(
     return {}
 
 
-@router.get("/plugin/ws/api/v1/plugin_summon_button")
+@router.get("/plugin/api/v1/plugin_summon_button")
 async def check_connection():
     return {"uvicorn": "I Am Alive"}
 
