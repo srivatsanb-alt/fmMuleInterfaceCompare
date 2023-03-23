@@ -2,6 +2,7 @@ import time
 import redis
 import json
 import os
+import logging
 from fastapi import Depends, APIRouter
 
 from models.db_session import DBSession
@@ -59,6 +60,13 @@ async def verify_fleet_files(sherpa: str = Depends(dpd.get_sherpa)):
         None, rqm.SherpaReq(type="verify_fleet_files", timestamp=time.time()), sherpa
     )
     return rqm.VerifyFleetFilesResp.from_json(response)
+
+
+@router.post("/fatal_errors", )
+async def fatal_errors(sherpa: str = Depends(dpd.get_sherpa), err_info:rqm.ErrInfo):
+    logging.getLogger(sherpa)
+    response = {}
+    return response
 
 
 @router.post("/req_ack/{req_id}")

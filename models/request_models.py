@@ -80,6 +80,13 @@ class VisaReq:
 #################################################
 # Messages from sherpas
 
+class ErrInfo(BaseModel):
+    err_id: int
+    module: str
+    sub_moudle: str
+    err_msg: str
+    err_disp_msg: str
+    recovery_msg: str
 
 class SherpaReq(BaseModel):
     source: Union[str, None] = None
@@ -142,7 +149,6 @@ class ResourceReq(SherpaReq):
 
 #################################################
 # Messages from sherpas (Websocket)
-
 
 @dataclass
 class SherpaMsg(JsonMixin):
