@@ -62,8 +62,8 @@ async def verify_fleet_files(sherpa: str = Depends(dpd.get_sherpa)):
     return rqm.VerifyFleetFilesResp.from_json(response)
 
 
-@router.post("/fatal_errors", )
-async def fatal_errors(sherpa: str = Depends(dpd.get_sherpa), err_info:rqm.ErrInfo):
+@router.post("/fatal_errors")
+async def fatal_errors(err_info: rqm.ErrInfo, sherpa: str = Depends(dpd.get_sherpa)):
     logging.getLogger(sherpa)
     response = {}
     return response
