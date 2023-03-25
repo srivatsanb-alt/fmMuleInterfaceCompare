@@ -69,13 +69,12 @@ def report_success(job, connection, result, *args, **kwargs):
 def enqueue(queue: Queue, func, *args, **kwargs):
     kwargs.setdefault("result_ttl", 100)
     kwargs.setdefault("failure_ttl", 0)
-    kwargs.setdefault("job_timeout", 15)
+    kwargs.setdefault("timeout", 15)
     kwargs.setdefault("on_failure", report_failure)
     kwargs.setdefault("on_success", report_success)
     return queue.enqueue(
         func,
         *args,
-        **kwargs,
     )
 
 
