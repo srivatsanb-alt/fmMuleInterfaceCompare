@@ -61,6 +61,12 @@ async def verify_fleet_files(sherpa: str = Depends(dpd.get_sherpa)):
     return rqm.VerifyFleetFilesResp.from_json(response)
 
 
+@router.post("/fatal_errors")
+async def fatal_errors(err_info: rqm.ErrInfo, sherpa: str = Depends(dpd.get_sherpa)):
+    response = {}
+    return response
+
+
 @router.post("/req_ack/{req_id}")
 async def ws_ack(req: rqm.WSResp, req_id: str):
     redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))

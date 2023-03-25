@@ -309,6 +309,10 @@ def delete_notifications(dbsession: DBSession):
     # donot allow more pop ups than MAX_NUM_POP_UP_NOTIFICATIONS
     dbsession.make_pop_ups_stale(cc.MAX_NUM_POP_UP_NOTIFICATIONS)
 
+    # clear notification created an hour back
+    dt = datetime.datetime.now() + datetime.timedelta(hours=-1)
+    dbsession.delete_old_notifications(dt)
+
 
 def check_sherpa_status(dbsession: DBSession):
     MULE_HEARTBEAT_INTERVAL = Config.get_fleet_comms_params()["mule_heartbeat_interval"]
@@ -324,6 +328,12 @@ def check_sherpa_status(dbsession: DBSession):
         get_logger("status_updates").warning(
             f"stale heartbeat from sherpa {stale_sherpa_status.sherpa_name} last_update_at: {stale_sherpa_status.updated_at} mule_heartbeat_interval: {MULE_HEARTBEAT_INTERVAL}"
         )
+        if stale_sherpa_status.trip_id:
+            maybe_add_alert(
+                dbsession,
+                [stale_sherpa_status.sherpa_name],
+                f"Lost connection to {stale_sherpa_status.sherpa_name}",
+            )
 
 
 def add_sherpa_event(dbsession: DBSession, sherpa_name, msg_type, context):
@@ -396,3 +406,24 @@ def is_reset_fleet_required(fleet_name, map_files):
             )
             return True
     return False
+
+
+def check_if_notification_alert_present(
+    dbsession: DBSession, log: str, enitity_names: list
+):
+    notification = (
+        dbsession.session.query(mm.Notifications)
+        .filter(mm.Notifications.entity_names == enitity_names)
+        .filter(mm.Notifications.log == log)
+        .all()
+    )
+    if len(notification):
+        return True
+    return False
+
+
+def maybe_add_alert(dbsession: DBSession, enitity_names: list, log: str):
+    if not check_if_notification_alert_present(dbsession, log, enitity_names):
+        dbsession.add_notification(
+            enitity_names, log, mm.NotificationLevels.alert, mm.NotificationModules.generic
+        )
