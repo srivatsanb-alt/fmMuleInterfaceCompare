@@ -223,7 +223,7 @@ class DBSession:
         return (
             self.session.query(fm.Station)
             .join(fm.Station.fleet)
-            .filter(fm.Station.name == fleet_name)
+            .filter(fm.Fleet.name == fleet_name)
             .all()
         )
 
