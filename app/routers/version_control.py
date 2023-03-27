@@ -25,9 +25,11 @@ async def allow_new_sherpa_version(
     with DBSession() as dbsession:
         software_compatability = dbsession.get_compatability_info()
         sherpa_versions = software_compatability.info.get("sherpa_versions", [])
-        sherpa_versions.append(version)
-        software_compatability.info.update({"sherpa_versions": sherpa_versions})
-        flag_modified(software_compatability, "info")
+
+        if version not in sherpa_versions:
+            sherpa_versions.append(version)
+            software_compatability.info.update({"sherpa_versions": sherpa_versions})
+            flag_modified(software_compatability, "info")
 
     return response
 
@@ -49,6 +51,6 @@ async def disallow_sherpa_version(
             software_compatability.info.update({"sherpa_versions": sherpa_versions})
             flag_modified(software_compatability, "info")
         else:
-            dpd.raise_error(f"{version} already not allowed", 401)
+            dpd.raise_error(f"Sherpa version: {version} already not allowed", 401)
 
     return response
