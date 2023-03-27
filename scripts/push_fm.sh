@@ -61,14 +61,40 @@ fi
 if [[ $copy_static == 1 ]] && [[ $server == 1 ]] ; then
 {
   printf "\n \n \n"
-  echo "Copying \"static\" folder from the FM server $DOCKER_HOST"
+
+  if rsync -azP --no-o --no-g --no-perms $IP_ADDRESS:static/fleet_config static ; then
   {
-	  rsync -azP --no-o --no-g --no-perms $IP_ADDRESS:static/fleet_config static/
-	  rsync -azP --no-o --no-g --no-perms $IP_ADDRESS:static/certs static/
-	  rsync -azP --no-o --no-g --no-perms $IP_ADDRESS:static/plugin* static/ || echo "Unable to copy plugin data"
-  } || {
-	  echo "couldn't find fleet_manager container, cannot copy static files"
+      echo "Copied fleet_config dir from FM server successfully"
   }
+  else
+  {
+      echo "Unable to copy fleet_config dir from FM server"
+      exit
+  }
+  fi
+
+  if rsync -azP --no-o --no-g --no-perms $IP_ADDRESS:static/certs static/ ; then
+  {
+      echo "Copied certs dir from FM server successfully"
+  }
+  else
+  {
+      echo "Unable to copy certs dir from FM server"
+      exit
+  }
+  fi
+
+  if rsync -azP --no-o --no-g --no-perms $IP_ADDRESS:static/plugin_*["ies"] static/ ; then
+  {
+      echo "Copied plugin dirs from server successfully"
+  }
+  else
+  {
+      echo "Unable to copy plugin dirs from FM server"
+      exit
+  }
+  fi
+
 }
 else
 {
@@ -106,7 +132,7 @@ BRANCH=$(git rev-parse --abbrev-ref HEAD)
 GIT_COMMIT="$(git rev-parse HEAD)"
 GIT_TAG=$(git describe --all | awk '{split($0,a,"/"); print a[2];}')
 IS_DIRTY="$(git diff --quiet || echo 'dirty')"
-FM_IMAGE_INFO="FM image built on $USER@$(hostname) branch $BRANCH $GIT_COMMIT (tags $GIT_TAG) IS_DIRTY $IS_DIRTY $(date)" 
+FM_IMAGE_INFO="FM image built on $USER@$(hostname) branch $BRANCH $GIT_COMMIT (tags $GIT_TAG) IS_DIRTY $IS_DIRTY $(date)"
 
 
 echo "FM_IMAGE_INFO: $FM_IMAGE_INFO"
@@ -128,7 +154,7 @@ else
 fi
 
 docker image build -t fm_nginx:1.23.3 -f docker_files/nginx.Dockerfile .
-echo "Successfully built nginx image" 
+echo "Successfully built nginx image"
 
 
 MULE_IMAGE_ID=$(docker images --format {{.ID}} localhost:$DOCKER_REGISTRY_PORT/mule)

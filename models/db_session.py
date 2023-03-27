@@ -1,7 +1,7 @@
 import datetime
 from typing import List
 from core.db import session_maker
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 import models.frontend_models as fem
 import models.misc_models as mm
@@ -186,7 +186,12 @@ class DBSession:
         )
         return (
             self.session.query(fm.SherpaStatus)
-            .filter(fm.SherpaStatus.updated_at < filter_time)
+            .filter(
+                or_(
+                    fm.SherpaStatus.updated_at < filter_time,
+                    fm.SherpaStatus.updated_at == None,
+                )
+            )
             .all()
         )
 
