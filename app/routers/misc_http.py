@@ -25,6 +25,8 @@ async def site_info(user_name=Depends(dpd.get_user_from_header)):
 
     with DBSession() as session:
         fleet_names = session.get_all_fleet_names()
+        software_compatability = session.get_compatability_info()
+        compatible_sherpa_versions = software_compatability.info.get("sherpa_versions", [])
 
     timezone = os.environ["PGTZ"]
     fm_tag = os.environ["FM_TAG"]
@@ -33,6 +35,7 @@ async def site_info(user_name=Depends(dpd.get_user_from_header)):
         "fleet_names": fleet_names,
         "timezone": timezone,
         "software_version": fm_tag,
+        "compatible_sherpa_versions": compatible_sherpa_versions,
     }
 
     return response

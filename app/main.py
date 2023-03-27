@@ -19,6 +19,7 @@ from app.routers import (
     station_http,
     notifications,
     configure_fleet,
+    version_control,
 )
 
 # for easy maintainance and usability of the app, we use routers
@@ -61,6 +62,7 @@ app.include_router(control_http.router)
 app.include_router(station_http.router)
 app.include_router(notifications.router)
 app.include_router(configure_fleet.router)
+app.include_router(version_control.router)
 
 
 def get_uvicorn_config():

@@ -433,3 +433,6 @@ class DBSession:
 
     def delete_notification(self, id):
         self.session.query(mm.Notifications).filter(mm.Notifications.id == id).delete()
+
+    def get_compatability_info(self):
+        return self.session.query(mm.SoftwareCompatability).one_or_none()
