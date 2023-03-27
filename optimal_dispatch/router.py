@@ -77,7 +77,7 @@ def start_router_module():
 
             redis_conn.set(f"result_wps_job_{job_id}", json.dumps(wps_list))
 
-        time.sleep(1e-2)
+        time.sleep(0.3)
 
 
 if __name__ == "__main__":
