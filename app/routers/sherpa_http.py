@@ -28,6 +28,10 @@ async def check_connection():
 # checks connection of sherpa with fleet manager
 @router.get("/is_sherpa_version_compatible/{version}")
 async def is_sherpa_version_compatible(version: str, sherpa: str = Depends(dpd.get_sherpa)):
+
+    if not sherpa:
+        dpd.raise_error("Unknown requester", 401)
+
     with DBSession() as dbsession:
         software_compatability = dbsession.get_compatability_info()
         sherpa_versions = software_compatability.info.get("sherpa_versions", [])
