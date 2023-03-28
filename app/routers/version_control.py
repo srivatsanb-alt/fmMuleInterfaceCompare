@@ -51,6 +51,6 @@ async def disallow_sherpa_version(
             software_compatability.info.update({"sherpa_versions": sherpa_versions})
             flag_modified(software_compatability, "info")
         else:
-            dpd.raise_error(f"Sherpa version: {version} already not allowed", 401)
+            dpd.raise_error(f"Sherpa version: {version} already not allowed")
 
     return response
