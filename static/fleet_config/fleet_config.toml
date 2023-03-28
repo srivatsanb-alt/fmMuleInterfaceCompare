@@ -15,6 +15,7 @@ method="hungarian"
 prioritise_waiting_stations=true
 eta_power_factor=1.0
 priority_power_factor=0.1
+max_trips_to_consider=15
 
 [fleet.stations]
 dispatch_timeout=10.0
