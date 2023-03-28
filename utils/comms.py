@@ -11,6 +11,7 @@ from rq.job import Job
 import utils.util as utils_util
 from pydantic import BaseModel
 from core.logs import get_logger
+import core.constants as cc
 from models.fleet_models import SherpaEvent
 from models.fleet_models import Sherpa, Station
 from models.request_models import FMReq, MoveReq
@@ -53,6 +54,9 @@ def send_req_to_sherpa(dbsession, sherpa: Sherpa, msg: FMReq) -> Dict:
     req_id = utils_util.generate_random_job_id()
     body["req_id"] = req_id
 
+    if sherpa.status.disabled_reason == cc.DisabledReason.STALE_HEARTBEAT:
+        raise ValueError("Sherpa disconnected, cannot send req to sherpa")
+
     get_logger().info(f"Sending req: {body} to {sherpa.name}")
 
     sherpa_event: SherpaEvent = SherpaEvent(
@@ -92,6 +96,9 @@ async def send_async_req_to_sherpa(dbsession, sherpa: Sherpa, msg: FMReq) -> Dic
 
     req_id = utils_util.generate_random_job_id()
     body["req_id"] = req_id
+
+    if sherpa.status.disabled_reason == cc.DisabledReason.STALE_HEARTBEAT:
+        raise ValueError("Sherpa disconnected, cannot send req to sherpa")
 
     get_logger().info(f"Sending req: {body} to {sherpa.name}")
 

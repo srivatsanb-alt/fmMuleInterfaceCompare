@@ -25,6 +25,22 @@ async def check_connection():
     return {"uvicorn": "I am alive"}
 
 
+# checks connection of sherpa with fleet manager
+@router.get("/is_sherpa_version_compatible/{version}")
+async def is_sherpa_version_compatible(version: str, sherpa: str = Depends(dpd.get_sherpa)):
+
+    if not sherpa:
+        dpd.raise_error("Unknown requester", 401)
+
+    with DBSession() as dbsession:
+        software_compatability = dbsession.get_compatability_info()
+        sherpa_versions = software_compatability.info.get("sherpa_versions", [])
+        if version not in sherpa_versions:
+            dpd.raise_error(f"Cannot allow sherpa to connect to FM with version {version}")
+
+    return {}
+
+
 # initiates sherpa
 @router.post("/init")
 async def init_sherpa(init_msg: rqm.InitMsg, sherpa: str = Depends(dpd.get_sherpa)):

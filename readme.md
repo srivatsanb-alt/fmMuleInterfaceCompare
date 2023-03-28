@@ -17,7 +17,6 @@
 ## FM installation prerequisites ##
 1. Install docker(https://docs.docker.com/engine/install/)
 2. Install docker-compose(https://www.digitalocean.com/community/tutorials/how-to-install-and-use-docker-compose-on-ubuntu-20-04)
-3. Works only on x86 arch
 
 ## Setup FM with push_fm script ##
 1. Clone fleet manager repository and setup git config for submodule 
@@ -128,7 +127,7 @@ cd FM_v<fm_version>_docker_images
 bash load_docker_images.sh
 ```
 
-3. Backup the current fleet_config directory present in the FM server. Copy the updated fleet_config directory from FM_v<fm_version>_docker_images folder to the FM server static dir, update it with the info from fleet_config backup . With updates, config parameters change, redoing config will help. 
+3. Backup the current fleet_config directory present in the FM server. Copy the updated fleet_config directory from FM_v<fm_version>_docker_images folder to the FM server static dir, update it with the info from fleet_config backup . With updates, config parameters change, redoing config will help.  Static dir should contain updated fleet_config, mule_config, certs, all the required map_folders etc.
     
 4. Copy docker-compose.yml from <fm_repository>/misc/ or FM_v<fm_version>_docker_images folder to the static folder.
 
@@ -296,6 +295,13 @@ priority_power_factor=1.0
 [optimal_dispatch.exclude_stations]
 sample_sherpa=["Station A", "Station B"]
 ```
+
+6. To reduce computation load due to optimal dispatch, max_trips_to_consider can be lowered. For a standalone/FM on sherpa, max_trips_to_consider can be set to a value less than 5 depending on the use case. Optimal dispatch logic will be run only for the first max_trips_to_consider number of trips. Default is set to 15.
+```markdown
+[optimal_dispatch]
+max_trips_to_consider=15
+```
+
 
  
 # Push mule docker image to local docker registry #

@@ -328,11 +328,12 @@ def check_sherpa_status(dbsession: DBSession):
         get_logger("status_updates").warning(
             f"stale heartbeat from sherpa {stale_sherpa_status.sherpa_name} last_update_at: {stale_sherpa_status.updated_at} mule_heartbeat_interval: {MULE_HEARTBEAT_INTERVAL}"
         )
+
         if stale_sherpa_status.trip_id:
             maybe_add_alert(
                 dbsession,
                 [stale_sherpa_status.sherpa_name],
-                f"Lost connection to {stale_sherpa_status.sherpa_name}",
+                f"Lost connection to {stale_sherpa_status.sherpa_name}, sherpa doing trip: {stale_sherpa_status.trip_id}",
             )
 
 

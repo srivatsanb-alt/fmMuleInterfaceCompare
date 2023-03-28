@@ -1,4 +1,5 @@
 from models.base_models import Base, TimestampMixin
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy import Column, Integer, String, ARRAY, Boolean
 
 
@@ -43,3 +44,9 @@ class Notifications(TimestampMixin, Base):
 class FMVersion(Base):
     __tablename__ = "fm_version"
     version = Column(String, primary_key=True)
+
+
+class SoftwareCompatability(Base):
+    __tablename__ = "software_compatability"
+    id = Column(Integer, primary_key=True)
+    info = Column(JSONB)

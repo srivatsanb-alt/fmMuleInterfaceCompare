@@ -19,6 +19,7 @@ from sqlalchemy.orm.attributes import flag_modified
 from models.db_session import DBSession
 import models.fleet_models as fm
 import models.visa_models as vm
+import models.misc_models as mm
 from models.frontend_models import FrontendUser
 from models.base_models import StationProperties
 
@@ -139,6 +140,14 @@ def maybe_create_graph_object(fleet_name: str) -> None:
         graph_object_path=graph_object_path,
     )
     return
+
+
+def add_software_compatability(dbsession: DBSession):
+    software_compatability = dbsession.get_compatability_info()
+
+    if software_compatability is None:
+        sc = mm.SoftwareCompatability(info={"sherpa_versions": []})
+        dbsession.add_to_session(sc)
 
 
 class FrontendUserUtils:
@@ -449,7 +458,7 @@ class SherpaUtils:
     @classmethod
     def add_sherpa_status(cls, dbsession, sherpa_name, other_info={}):
         sherpa_status: fm.SherpaStatus = fm.SherpaStatus(
-            sherpa_name=sherpa_name, idle = True, other_info={}
+            sherpa_name=sherpa_name, idle=True, other_info={}
         )
         dbsession.add_to_session(sherpa_status)
         logger.info(f"added sherpa status entry for sherpa: {sherpa_name}")

@@ -126,7 +126,14 @@ class Trip(Base, TimestampMixin):
                 self.scheduled = True
                 self.start_time = str_to_dt(metadata["scheduled_start_time"])
                 self.end_time = str_to_dt(metadata["scheduled_end_time"])
+
+                if self.end_time < self.start_time:
+                    raise ValueError("trip end time less than start time")
+
                 self.time_period = int(metadata["scheduled_time_period"])
+
+                if self.time_period <= 0:
+                    raise ValueError("trip time period should be greater than zero")
 
         self.augmented_route = route
         self.aug_idxs_booked = list(range(len(self.augmented_route)))

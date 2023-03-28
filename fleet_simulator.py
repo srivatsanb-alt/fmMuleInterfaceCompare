@@ -56,7 +56,7 @@ def should_trip_msg_be_sent(sherpa_events):
     return move_to_flag and not reached_flag
 
 
-def handle(handler, msg):
+def handle(handler, msg, **kwargs):
     handler.handle(msg)
 
 

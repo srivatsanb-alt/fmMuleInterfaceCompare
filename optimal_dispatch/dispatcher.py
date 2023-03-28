@@ -232,6 +232,8 @@ class OptimalDispatch:
         redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
         w1 = self.config["eta_power_factor"]
         w2 = self.config["priority_power_factor"]
+        max_trips_to_consider = self.config.get("max_trips_to_consider", 15)
+
         cost_matrix = np.ones((len(self.pickup_q), len(self.sherpa_q))) * np.inf
         priority_normalised_cost_matrix = (
             np.ones((len(self.pickup_q), len(self.sherpa_q))) * np.inf
@@ -252,6 +254,11 @@ class OptimalDispatch:
                 ):
                     self.logger.info(
                         f"cannot send {sherpa_q} to {route}, {sherpa_q} restricted from going to {exclude_stations}"
+                    )
+                    total_eta = np.inf
+                elif i + 1 > max_trips_to_consider:
+                    self.logger.info(
+                        f"cannot send {sherpa_q} to {route}, num trips to consider for optimal_dispatch exceeded : {max_trips_to_consider}, trip num: {i}"
                     )
                     total_eta = np.inf
                 else:

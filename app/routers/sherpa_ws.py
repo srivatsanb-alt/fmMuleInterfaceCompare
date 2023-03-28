@@ -45,20 +45,10 @@ def manage_sherpa_ip_change(sherpa, x_real_ip):
         logger.info(
             f"{sherpa.name} ip has changed since last connection , last_connection_ip: {sherpa.ip_address}"
         )
+
         sherpa.ip_address = x_real_ip
         sherpa.port = None
-
-        try:
-            os.remove(
-                os.path.join(os.getenv("FM_MAP_DIR"), "certs", f"{sherpa.name}_cert.pem")
-            )
-            logger.info(f"Removed {sherpa.name} cert file since ip has changed")
-        except Exception as e:
-            logger.info(f"Unable to remove cert file {e}")
-            sherpa.status.other_info.update({"ip_changed": True})
-            logger.info(
-                f"Updated {sherpa.name} ip address, committed  it the ip change to DB"
-            )
+        sherpa.status.other_info.update({"ip_changed": True})
     else:
         sherpa.status.other_info.update({"ip_changed": False})
         logger.info(f"{sherpa.name} ip hasn't changed since last connection")
@@ -200,5 +190,5 @@ async def writer(websocket, sherpa):
         await asyncio.sleep(0.01)
 
 
-def handle(handler, msg):
+def handle(handler, msg, **kwargs):
     handler.handle(msg)

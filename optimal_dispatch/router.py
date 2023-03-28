@@ -29,7 +29,7 @@ def start_router_module():
     logger = get_seperate_logger("control_module_router")
 
     while True:
-        for key in redis_conn.scan_iter("control_router_rl_job_*"):
+        for key in redis_conn.keys("control_router_rl_job_*"):
             str_job = redis_conn.get(key)
             logger.info(f"Got a route length estimation job {str_job}")
             control_router_rl_job = json.loads(str_job)
@@ -53,7 +53,7 @@ def start_router_module():
             logger.info(f"Result : {control_router_rl_job} - {route_length}")
             redis_conn.delete(key)
 
-        for key in redis_conn.scan_iter("control_router_wps_job_*"):
+        for key in redis_conn.keys("control_router_wps_job_*"):
             try:
                 str_job = redis_conn.get(key)
                 logger.info(f"got a route preview estimation job {str_job}")
@@ -77,7 +77,7 @@ def start_router_module():
 
             redis_conn.set(f"result_wps_job_{job_id}", json.dumps(wps_list))
 
-        time.sleep(1e-2)
+        time.sleep(0.2)
 
 
 if __name__ == "__main__":
