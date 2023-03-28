@@ -1317,9 +1317,12 @@ class Handlers:
             response = msg_handler(msg)
 
         # run optimal dispatch if needs be - need not be coupled with handler
-        if msg.type in cc.OptimalDispatchInfluencers:
-            with DBSession() as dbsession:
-                self.dbsession = dbsession
-                self.run_optimal_dispatch()
+        try:
+            if msg.type in cc.OptimalDispatchInfluencers:
+                with DBSession() as dbsession:
+                    self.dbsession = dbsession
+                    self.run_optimal_dispatch()
+        except Exception as e:
+            get_logger().error(f"couldn't run optimal dispatch, {e}")
 
         return response
