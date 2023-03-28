@@ -72,7 +72,7 @@ def enqueue(queue: Queue, func, *args, **kwargs):
     kwargs.setdefault("timeout", 15)
     kwargs.setdefault("on_failure", report_failure)
     kwargs.setdefault("on_success", report_success)
-    return queue.enqueue(func, *args)
+    return queue.enqueue(func, *args, **kwargs)
 
 
 def enqueue_at(queue: Queue, dt, func, *args, **kwargs):
@@ -80,4 +80,4 @@ def enqueue_at(queue: Queue, dt, func, *args, **kwargs):
     kwargs.setdefault("failure_ttl", 0)
     kwargs.setdefault("on_failure", report_failure)
     kwargs.setdefault("on_success", report_success)
-    return queue.enqueue_at(dt, func, *args)
+    return queue.enqueue_at(dt, func, *args, **kwargs)

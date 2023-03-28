@@ -190,5 +190,5 @@ async def writer(websocket, sherpa):
         await asyncio.sleep(0.01)
 
 
-def handle(handler, msg):
+def handle(handler, msg, **kwargs):
     handler.handle(msg)

@@ -221,7 +221,3 @@ async def add_trip_description(
         flag_modified(trip, "trip_metadata")
 
     return response
-
-
-def handle(handler, msg):
-    handler.handle(msg)

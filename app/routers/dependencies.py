@@ -181,5 +181,5 @@ async def process_req_with_response(queue, req, user: str):
     return response
 
 
-def handle(handler, msg):
+def handle(handler, msg, **kwargs):
     return handler.handle(msg)
