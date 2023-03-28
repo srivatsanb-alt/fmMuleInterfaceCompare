@@ -256,7 +256,7 @@ class OptimalDispatch:
                         f"cannot send {sherpa_q} to {route}, {sherpa_q} restricted from going to {exclude_stations}"
                     )
                     total_eta = np.inf
-                elif i > max_trips_to_consider:
+                elif i + 1 > max_trips_to_consider:
                     self.logger.info(
                         f"cannot send {sherpa_q} to {route}, num trips to consider for optimal_dispatch exceeded : {max_trips_to_consider}, trip num: {i}"
                     )
