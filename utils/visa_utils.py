@@ -88,7 +88,7 @@ def unlock_exclusion_zone(dbsession: DBSession, ezone: vm.ExclusionZone, sherpa:
 
     reason = None
     if ezone is None:
-        reason = f"Unable to get a ezone with zone_id: {ezone.zone_id} but will still accept release request"
+        reason = f"Unable to get a ezone but will still accept release request"
         get_logger("visa").error(reason)
         return False, reason
 

@@ -53,7 +53,7 @@ class Handlers:
 
         if (
             fleet.status == cc.FleetStatus.PAUSED
-            and msg.type != cc.MessageType.SherpaStatus
+            and msg.type != cc.MessageType.SHERPA_STATUS
         ):
             return False, f"fleet {fleet.name} is paused"
 
