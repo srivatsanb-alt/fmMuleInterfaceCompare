@@ -69,6 +69,12 @@ class Handlers:
 
         if msg.type in update_msgs:
             get_logger("status_updates").info(f"{req_ctxt.sherpa_name} :  {msg}")
+
+        elif msg.type == cc.MessageType.RESOURCE_ACCESS:
+            get_logger("visa").info(
+                f"Got message of type {msg.type} from {req_ctxt.source} \n Message: {msg} \n"
+            )
+
         else:
             get_logger().info(
                 f"Got message of type {msg.type} from {req_ctxt.source} \n Message: {msg} \n"
@@ -1203,8 +1209,9 @@ class Handlers:
 
         granted_message = "granted" if granted else "not granted"
         visa_log = f"{sherpa.name} {granted_message} {req.visa_type} type visa to zone {req.zone_name}, reason: {reason}"
-        get_logger().info(visa_log)
-        get_logger().info(f"visa {granted_message} to {sherpa.name}")
+
+        get_logger("visa").info(visa_log)
+        get_logger("visa").info(f"visa {granted_message} to {sherpa.name}")
 
         response: rqm.ResourceResp = rqm.ResourceResp(
             granted=granted, visa=req, access_type=rqm.AccessType.REQUEST
@@ -1231,7 +1238,7 @@ class Handlers:
             utils_visa.unlock_exclusion_zone(self.dbsession, ezone, sherpa)
 
         visa_log = f"{sherpa.name} released {req.visa_type} visa to zone {req.zone_name}"
-        get_logger().info(visa_log)
+        get_logger("visa").info(visa_log)
         response: rqm.ResourceResp = rqm.ResourceResp(
             granted=True, visa=req, access_type=rqm.AccessType.RELEASE
         )
