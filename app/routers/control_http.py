@@ -174,8 +174,17 @@ async def emergency_stop(
         )
 
         all_sherpa_status = dbsession.get_all_sherpa_status()
+        sherpa_status_fleet = []
+        for ss in all_sherpa_status:
+            if ss.sherpa.fleet.name == entity_name:
+                sherpa_status_fleet.append(ss)
+
         unconnected_sherpas = []
-        for sherpa_status in all_sherpa_status:
+        for sherpa_status in sherpa_status_fleet:
+            if sherpa_status.disabled_reason == DisabledReason.STALE_HEARTBEAT:
+                unconnected_sherpas.append([sherpa_status.sherpa_name, "stale heartbeat"])
+                continue
+
             sherpa_status.disabled = pause_resume_ctrl_req.pause
             if pause_resume_ctrl_req.pause:
                 sherpa_status.disabled_reason = DisabledReason.EMERGENCY_STOP
@@ -190,6 +199,11 @@ async def emergency_stop(
                 _ = await dpd.process_req_with_response(None, pause_resume_req, user_name)
             except Exception as e:
                 unconnected_sherpas.append([sherpa_status.sherpa_name, e])
+
+        if len(unconnected_sherpas) == len(sherpa_status_fleet):
+            dpd.raise_error(
+                "failed to pass the emergency_stop request to any of the sherpas"
+            )
 
     return response
 
@@ -221,8 +235,8 @@ async def sherpa_emergency_stop(
         fleet_name = sherpa_status.sherpa.fleet.name
         fleet_status = dbsession.get_fleet(fleet_name)
 
-        if fleet_status.status == "emergency_stop":
-            dpd.raise_error("Start/resume fleet to resume/pause sherpas")
+        if fleet_status.status == FleetStatus.PAUSED:
+            dpd.raise_error("Resume fleet to resume/pause sherpa")
 
         sherpa_status.disabled = pause_resume_ctrl_req.pause
         if pause_resume_ctrl_req.pause:
