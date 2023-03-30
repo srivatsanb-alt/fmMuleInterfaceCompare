@@ -60,22 +60,22 @@ def can_lock_exclusion_zone(
     )
 
     if len(ezone.sherpas) == 0:
-        reason = f"{sherpa.name} granted lock for {zone_id} exclusive={exclusive}"
+        reason = f"{sherpa.name} can be granted lock for {zone_id} exclusive={exclusive}"
         get_logger("visa").info(reason)
         return True, reason
 
     if sherpa in ezone.sherpas and len(ezone.sherpas) == 1:
-        reason = f"{sherpa.name} already granted lock for {zone_id} exclusive={exclusive}"
+        reason = f"{sherpa.name} already has {zone_id} exclusive={exclusive}"
         get_logger("visa").info(reason)
         return True, reason
 
     if ezone.exclusivity:
-        reason = f"{sherpa.name} denied lock for {zone_id} exclusive access held by {[s.name for s in ezone.sherpas]}"
+        reason = f"{sherpa.name} cannot be granted {zone_id} exclusive access held by {[s.name for s in ezone.sherpas]}"
         get_logger("visa").info(reason)
         return False, reason
 
     elif not exclusive:
-        reason = f"{sherpa.name} granted lock for {zone_id} ezone held by sherpas {[s.name for s in ezone.sherpas]} without exclusivity"
+        reason = f"{sherpa.name} can be granted {zone_id} without exclusivity, ezone held by sherpas {[s.name for s in ezone.sherpas]}"
         get_logger("visa").info(reason)
         return True, reason
     else:
@@ -88,7 +88,7 @@ def unlock_exclusion_zone(dbsession: DBSession, ezone: vm.ExclusionZone, sherpa:
 
     reason = None
     if ezone is None:
-        reason = f"Unable to get a ezone with zone_id: {ezone.zone_id} but will still accept release request"
+        reason = f"Unable to get a ezone but will still accept release request"
         get_logger("visa").error(reason)
         return False, reason
 
