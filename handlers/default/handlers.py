@@ -695,10 +695,14 @@ class Handlers:
                 trip.id
             )
             if ongoing_trip is not None:
-                all_ongoing_trips.append(ongoing_trip)
-
                 sherpa: fm.Sherpa = self.dbsession.get_sherpa(ongoing_trip.sherpa_name)
-                all_sherpas.append(sherpa)
+                if sherpa.status.disabled_reason == cc.DisabledReason.STALE_HEARTBEAT:
+                    get_logger().warning(
+                        f"Cannot delete ongoing_trip {ongoing_trip.trip_id}, sherpa: {ongoing_trip.sherpa_name} not connected"
+                    )
+                else:
+                    all_ongoing_trips.append(ongoing_trip)
+                    all_sherpas.append(sherpa)
 
         # end transaction
         self.dbsession.session.commit()
