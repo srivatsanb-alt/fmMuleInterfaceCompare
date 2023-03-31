@@ -697,7 +697,7 @@ class Handlers:
             if ongoing_trip is not None:
                 sherpa: fm.Sherpa = self.dbsession.get_sherpa(ongoing_trip.sherpa_name)
                 if sherpa.status.disabled_reason == cc.DisabledReason.STALE_HEARTBEAT:
-                    get_logger().info(
+                    get_logger().warning(
                         f"Cannot delete ongoing_trip {ongoing_trip.trip_id}, sherpa: {ongoing_trip.sherpa_name} not connected"
                     )
                 else:
