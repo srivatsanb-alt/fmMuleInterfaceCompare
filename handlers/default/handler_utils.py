@@ -222,7 +222,7 @@ def record_cpu_perf():
     net = psutil.net_io_counters()
     cpu_count = psutil.cpu_count()
     load_avg = psutil.getloadavg()
-    cpu_freq = psutil.cpu_freq()[0]
+    cpu_freq = psutil.cpu_freq()
 
     data = [
         [

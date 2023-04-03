@@ -1,6 +1,7 @@
 from typing import Union
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm.attributes import flag_modified
+from sqlalchemy.sql import func
 
 # ati code imports
 import app.routers.dependencies as dpd
@@ -221,3 +222,19 @@ async def add_trip_description(
         flag_modified(trip, "trip_metadata")
 
     return response
+
+@router.get("/populate_route/{fleet_name}")
+async def populate_route(fleet_name :str, user_name=Depends(dpd.get_user_from_header)
+):
+
+    response = {}
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    with DBSession() as dbsession:
+        populate_routes =  dbsession.session.query(Trip.route).filter(Trip.fleet_name==fleet_name).group_by(Trip.route).order_by(func.count(Trip.route).desc()).all()
+    
+    routes = []
+    for route in populate_routes:
+        routes.extend(route)
+    return routes
