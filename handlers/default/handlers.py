@@ -624,7 +624,9 @@ class Handlers:
                 for station_name in trip_msg.route:
                     station = self.dbsession.get_station(station_name)
                     if station.status.disabled:
-                        raise ValueError(f"can not execute {trip_msg.route} , {station_name} is disabled")
+                        raise ValueError(
+                            f"Cannot execute {trip_msg.route} , {station_name} is disabled"
+                        )
                     all_stations.append(station)
 
                 self.check_if_booking_is_valid(trip_msg, all_stations)
