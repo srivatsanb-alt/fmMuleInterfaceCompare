@@ -622,7 +622,10 @@ class Handlers:
                 all_stations: List[fm.Station] = []
 
                 for station_name in trip_msg.route:
-                    all_stations.append(self.dbsession.get_station(station_name))
+                    station = self.dbsession.get_station(station_name)
+                    if station.status.disabled:
+                        raise ValueError(f"can not execute {trip_msg.route} , {station_name} is disabled")
+                    all_stations.append(station)
 
                 self.check_if_booking_is_valid(trip_msg, all_stations)
 
