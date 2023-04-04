@@ -16,6 +16,7 @@ from scripts.periodic_backup import backup_data
 from scripts.periodic_assigner import assign_next_task
 from scripts.periodic_fm_health_check import periodic_health_check
 from scripts.alerts import send_slack_alerts
+from master_fm_comms.send_updates_to_mfm import send_mfm_updates
 
 
 def init_fleet_manager(config):
@@ -64,6 +65,9 @@ if __name__ == "__main__":
 
     # start send slack alerts script
     Process(target=send_slack_alerts).start()
+
+    # start mfm update script
+    # Process(target=send_mfm_updates).start()
 
     redis_conn.set("is_fleet_manager_up", json.dumps(True))
     logging.info("Ati Fleet Manager started")

@@ -49,3 +49,9 @@ class SoftwareCompatability(Base):
     __tablename__ = "software_compatability"
     id = Column(Integer, primary_key=True)
     info = Column(JSONB)
+
+
+class MasterFMDataUpload(Base):
+    __tablename__ = "master_fm_data_upload"
+    id = Column(Integer, primary_key=True)
+    info = Column(JSONB)

@@ -25,6 +25,7 @@ def init_logging():
     setup_logger(logdir, "optimal_dispatch", propagate=False)
     setup_logger(logdir, "status_updates", propagate=False)
     setup_logger(logdir, "visa", propagate=False)
+    setup_logger(logdir, "mfm_updates", propagate=False)
 
 
 def init_logging_for_fleet(fleet: Fleet, logdir):
