@@ -86,8 +86,16 @@ def enqueue(queue: Queue, func, *args, **kwargs):
 
 
 def enqueue_at(queue: Queue, dt, func, *args, **kwargs):
+
+    rq_params = Config.get_fleet_rq_params()
+    if queue.name == "generic_handler":
+        job_timeout = rq_params.get("generic_handler_job_timeout", 2)
+    else:
+        job_timeout = rq_params.get("default_job_timeout", 10)
+
     kwargs.setdefault("result_ttl", 100)
     kwargs.setdefault("failure_ttl", 0)
+    kwargs.setdefault("job_timeout", job_timeout)
     kwargs.setdefault("on_failure", report_failure)
     kwargs.setdefault("on_success", report_success)
     return queue.enqueue_at(dt, func, *args, **kwargs)
