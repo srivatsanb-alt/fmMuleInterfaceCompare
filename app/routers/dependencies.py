@@ -121,26 +121,17 @@ def process_req(queue, req, user, dt=None, ttl=None):
     if not user:
         raise HTTPException(status_code=403, detail=f"Unknown requeter {user}")
 
-    rq_params = Config.get_fleet_rq_params()
-
     job = None
-
     req.source = user
 
     handler_obj = Config.get_handler()
     args = [handler_obj, req]
     kwargs = {}
 
-    job_timeout = rq_params.get("default_job_timeout", 15)
-    kwargs.update({"timeout": job_timeout})
-
     if ttl:
         kwargs.update({"ttl": ttl})
 
     if not queue:
-        # generic handler - is high priority queue - cannot wait for default timeout(180 seconds)
-        job_timeout = rq_params.get("generic_handler_job_timeout", 10)
-        kwargs.update({"timeout": job_timeout})
         queue = Queues.queues_dict["generic_handler"]
 
     # add retry only for SherpaReq(req comes from Sherpa)
