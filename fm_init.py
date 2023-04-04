@@ -48,7 +48,6 @@ def main():
 
     with DBSession() as dbsession:
         fu.add_software_compatability(dbsession)
-        fu.add_master_fm_data_upload(dbsession)
         fu.FrontendUserUtils.delete_all_frontend_users(dbsession)
         for user_name, user_details in frontend_user_config["frontenduser"].items():
             role = user_details.get("role", "operator")

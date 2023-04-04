@@ -20,7 +20,6 @@ from models.db_session import DBSession
 import models.fleet_models as fm
 import models.visa_models as vm
 import models.misc_models as mm
-import utils.util as utils_util
 from models.frontend_models import FrontendUser
 from models.base_models import StationProperties
 
@@ -149,16 +148,6 @@ def add_software_compatability(dbsession: DBSession):
     if software_compatability is None:
         sc = mm.SoftwareCompatability(info={"sherpa_versions": []})
         dbsession.add_to_session(sc)
-
-
-def add_master_fm_data_upload(dbsession: DBSession):
-    master_fm_data_upload_info = dbsession.get_master_data_upload_info()
-
-    if master_fm_data_upload_info is None:
-        mfm_du = mm.MasterFMDataUpload(
-            info={"last_trip_update_dt": utils_util.dt_to_str(datetime.datetime.now()) ,"last_trip_analytics_update_dt": utils_util.dt_to_str(datetime.datetime.now())}
-        )
-        dbsession.add_to_session(mfm_du)
 
 
 class FrontendUserUtils:

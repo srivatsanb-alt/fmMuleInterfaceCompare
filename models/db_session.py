@@ -436,6 +436,3 @@ class DBSession:
 
     def get_compatability_info(self):
         return self.session.query(mm.SoftwareCompatability).one_or_none()
-
-    def get_master_data_upload_info(self):
-        return self.session.query(mm.MasterFMDataUpload).one_or_none()
