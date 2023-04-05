@@ -270,36 +270,39 @@ def send_mfm_updates():
                 with DBSession() as dbsession:
                     master_fm_data_upload_info = dbsession.get_master_data_upload_info()
                     any_updates_sent = False
-                    last_trip_update_dt = master_fm_data_upload_info.info.get(
+
+                    # send trip update
+                    last_trip_update_dt: str = master_fm_data_upload_info.info.get(
                         "last_trip_update_dt", None
-                    )
-                    last_trip_analytics_update_dt = master_fm_data_upload_info.info.get(
-                        "last_trip_analytics_update_dt", None
                     )
                     last_trip_update_sent = update_trip_info(
                         mfm_context, dbsession, last_trip_update_dt
                     )
+                    if last_trip_update_sent:
+                        last_trip_update_dt = utils_util.dt_to_str(datetime.datetime.now())
+                        any_updates_sent = True
+
+                    # send trip analytics update
+                    last_trip_analytics_update_dt: str = (
+                        master_fm_data_upload_info.info.get(
+                            "last_trip_analytics_update_dt", None
+                        )
+                    )
                     last_trip_analytics_sent = update_trip_analytics(
                         mfm_context, dbsession, last_trip_analytics_update_dt
                     )
-
-                    if last_trip_update_sent:
-                        last_trip_update_dt = datetime.datetime.now()
-                        any_updates_sent = True
-
                     if last_trip_analytics_sent:
-                        last_trip_analytics_update_dt = datetime.datetime.now()
+                        last_trip_analytics_update_dt = utils_util.dt_to_str(
+                            datetime.datetime.now()
+                        )
                         any_updates_sent = True
 
+                    # commit last update time to db
                     if any_updates_sent:
                         master_fm_data_upload_info.info.update(
                             {
-                                "last_trip_analytics_update_dt": utils_util.dt_to_str(
-                                    last_trip_update_dt
-                                ),
-                                "last_trip_update_dt": utils_util.dt_to_str(
-                                    last_trip_analytics_update_dt
-                                ),
+                                "last_trip_analytics_update_dt": last_trip_analytics_update_dt,
+                                "last_trip_update_dt": last_trip_update_dt,
                             }
                         )
                         flag_modified(master_fm_data_upload_info, "info")
