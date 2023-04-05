@@ -269,6 +269,7 @@ def send_mfm_updates():
             while True:
                 with DBSession() as dbsession:
                     master_fm_data_upload_info = dbsession.get_master_data_upload_info()
+                    any_updates_sent = False
                     last_trip_update_dt = master_fm_data_upload_info.info.get(
                         "last_trip_update_dt", None
                     )
@@ -284,21 +285,24 @@ def send_mfm_updates():
 
                     if last_trip_update_sent:
                         last_trip_update_dt = datetime.datetime.now()
+                        any_updates_sent = True
 
                     if last_trip_analytics_sent:
                         last_trip_analytics_update_dt = datetime.datetime.now()
+                        any_updates_sent = True
 
-                    master_fm_data_upload_info.info.update(
-                        {
-                            "last_trip_analytics_update_dt": utils_util.dt_to_str(
-                                last_trip_update_dt
-                            ),
-                            "last_trip_update_dt": utils_util.dt_to_str(
-                                last_trip_analytics_update_dt
-                            ),
-                        }
-                    )
-                    flag_modified(master_fm_data_upload_info, "info")
+                    if any_updates_sent:
+                        master_fm_data_upload_info.info.update(
+                            {
+                                "last_trip_analytics_update_dt": utils_util.dt_to_str(
+                                    last_trip_update_dt
+                                ),
+                                "last_trip_update_dt": utils_util.dt_to_str(
+                                    last_trip_analytics_update_dt
+                                ),
+                            }
+                        )
+                        flag_modified(master_fm_data_upload_info, "info")
 
                 time.sleep(mfm_context.update_freq)
 
