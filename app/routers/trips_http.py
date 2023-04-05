@@ -227,7 +227,7 @@ async def add_trip_description(
 @router.get("/populate_route/{fleet_name}/{num_routes}")
 async def populate_route(
     fleet_name: str,
-    num_routes: Union[int, None],
+    num_routes: int,
     user_name=Depends(dpd.get_user_from_header),
 ):
 
