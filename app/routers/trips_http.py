@@ -224,8 +224,12 @@ async def add_trip_description(
     return response
 
 
-@router.get("/populate_route/{fleet_name}")
-async def populate_route(fleet_name: str, user_name=Depends(dpd.get_user_from_header)):
+@router.get("/populate_route/{fleet_name}/{num_routes}")
+async def populate_route(
+    fleet_name: str,
+    num_routes: Union[int, None],
+    user_name=Depends(dpd.get_user_from_header),
+):
 
     response = []
 
@@ -241,7 +245,10 @@ async def populate_route(fleet_name: str, user_name=Depends(dpd.get_user_from_he
             .all()
         )
 
+    if num_routes is None:
+        num_routes = 5
+
     for route in populate_routes:
-        response.extend(route)
+        response.extend(route[:num_routes])
 
     return response

@@ -51,10 +51,10 @@ class Handlers:
         sherpa: fm.Sherpa = self.dbsession.get_sherpa(sherpa_name)
         fleet: fm.Fleet = sherpa.fleet
 
-        if (
-            fleet.status == cc.FleetStatus.PAUSED
-            and msg.type != cc.MessageType.SHERPA_STATUS
-        ):
+        if fleet.status == cc.FleetStatus.PAUSED and msg.type not in [
+            cc.MessageType.SHERPA_STATUS,
+            cc.MessageType.VERIFY_FLEET_FILES,
+        ]:
             return False, f"fleet {fleet.name} is paused"
 
         return True, None
