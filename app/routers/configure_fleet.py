@@ -228,6 +228,9 @@ def update_map(
 ):
     response = {}
 
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
     with DBSession() as dbsession:
         fleet: fm.Fleet = dbsession.get_fleet(fleet_name)
         if not fleet:
