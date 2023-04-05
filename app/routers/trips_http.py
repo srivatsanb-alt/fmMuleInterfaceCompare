@@ -245,10 +245,7 @@ async def populate_route(
             .all()
         )
 
-    if num_routes is None:
-        num_routes = 5
-
-    for route in populate_routes:
-        response.extend(route[:num_routes])
+    for route in populate_routes[:num_routes]:
+        response.extend(route)
 
     return response
