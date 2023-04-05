@@ -156,7 +156,12 @@ def add_master_fm_data_upload(dbsession: DBSession):
 
     if master_fm_data_upload_info is None:
         mfm_du = mm.MasterFMDataUpload(
-            info={"last_trip_update_dt": utils_util.dt_to_str(datetime.datetime.now()) ,"last_trip_analytics_update_dt": utils_util.dt_to_str(datetime.datetime.now())}
+            info={
+                "last_trip_update_dt": utils_util.dt_to_str(datetime.datetime.now()),
+                "last_trip_analytics_update_dt": utils_util.dt_to_str(
+                    datetime.datetime.now()
+                ),
+            }
         )
         dbsession.add_to_session(mfm_du)
 

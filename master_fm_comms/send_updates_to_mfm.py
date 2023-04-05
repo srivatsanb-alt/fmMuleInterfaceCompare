@@ -162,13 +162,10 @@ def update_trip_info(
     trips_info = []
     for trip in new_trips:
         trips_info.append(tu.get_trip_status(trip))
-    
+
     logging.getLogger("mfm_updates").info(f"new trips: {trips_info}")
-    
-    
-    req_json = {
-            "trips_info": trips_info
-        }
+
+    req_json = {"trips_info": trips_info}
 
     endpoint = "update_trip_info"
     req_type = "post"
@@ -182,47 +179,50 @@ def update_trip_info(
             f"sent trip_info to mfm successfully, details: {req_json}"
         )
         success = True
-        
+
     else:
         logging.getLogger("mfm_updates").info(
             f"unable to send trip_info to mfm,  status_code {response_status_code}"
         )
     return success
-    
+
+
 def update_trip_analytics(
     mfm_context: mu.MFMContext,
     dbsession: DBSession,
     master_fm_data_upload_info: mm.MasterFMDataUpload,
 ):
     success = False
-    last_mfm_update_dt = master_fm_data_upload_info.info.get("last_trip_analytics_update_dt", None)
+    last_mfm_update_dt = master_fm_data_upload_info.info.get(
+        "last_trip_analytics_update_dt", None
+    )
     if last_mfm_update_dt is None:
         last_mfm_update_dt = datetime.datetime.now()
     else:
         last_mfm_update_dt = utils_util.str_to_dt(last_mfm_update_dt)
     new_trip_analytics = (
         dbsession.session.query(tm.TripAnalytics)
-        .filter(tm.TripAnalytics.updated_at + datetime.timedelta(seconds = mfm_context.update_freq) > last_mfm_update_dt)
+        .filter(
+            tm.TripAnalytics.updated_at
+            + datetime.timedelta(seconds=mfm_context.update_freq)
+            > last_mfm_update_dt
+        )
         .all()
     )
-
-
 
     trips_analytics = []
     for trip_analytics in new_trip_analytics:
         trip: tm.Trip = dbsession.get_trip(trip_analytics.trip_id)
         if trip.status in tm.COMPLETED_TRIP_STATUS:
             trips_analytics.append(tu.get_trip_analytics(trip_analytics))
-        
-    logging.getLogger("mfm_updates").info(f"new trip analytics: {trips_analytics}")
-    
+
     if len(trips_analytics) == 0:
         logging.getLogger("mfm_updates").info(f"no new trip analytics to be updated")
         return success
 
-    req_json = {
-            "trips_analytics": trips_analytics
-        }
+    logging.getLogger("mfm_updates").info(f"new trip analytics: {trips_analytics}")
+
+    req_json = {"trips_analytics": trips_analytics}
 
     endpoint = "update_trip_analytics"
     req_type = "post"
@@ -235,7 +235,7 @@ def update_trip_analytics(
         logging.getLogger("mfm_updates").info(
             f"sent trip_analytics to mfm successfully, details: {req_json}"
         )
-        success=True
+        success = True
     else:
         logging.getLogger("mfm_updates").info(
             f"unable to send trip_analytics to mfm,  status_code {response_status_code}"
@@ -273,20 +273,32 @@ def send_mfm_updates():
             while True:
                 with DBSession() as dbsession:
                     master_fm_data_upload_info = dbsession.get_master_data_upload_info()
-                    last_trip_update_sent = update_trip_info(mfm_context, dbsession, master_fm_data_upload_info)
-                    last_trip_analytics_sent = update_trip_analytics(mfm_context, dbsession, master_fm_data_upload_info)
+                    last_trip_update_sent = update_trip_info(
+                        mfm_context, dbsession, master_fm_data_upload_info
+                    )
+                    last_trip_analytics_sent = update_trip_analytics(
+                        mfm_context, dbsession, master_fm_data_upload_info
+                    )
+
                     if last_trip_update_sent:
-                    # modify last update dt
                         master_fm_data_upload_info.info.update(
-                            {"last_trip_update_dt": utils_util.dt_to_str(datetime.datetime.now())}
+                            {
+                                "last_trip_update_dt": utils_util.dt_to_str(
+                                    datetime.datetime.now()
+                                )
+                            }
                         )
+                        flag_modified(master_fm_data_upload_info, "info")
+
                     if last_trip_analytics_sent:
-                    # modify last update dt
                         master_fm_data_upload_info.info.update(
-                            {"last_trip_analytics_update_dt": utils_util.dt_to_str(datetime.datetime.now())}
+                            {
+                                "last_trip_analytics_update_dt": utils_util.dt_to_str(
+                                    datetime.datetime.now()
+                                )
+                            }
                         )
-                        
-                    flag_modified(master_fm_data_upload_info, "info")
+                        flag_modified(master_fm_data_upload_info, "info")
 
                 time.sleep(mfm_context.update_freq)
 
