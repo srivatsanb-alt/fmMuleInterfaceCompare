@@ -137,20 +137,17 @@ def update_sherpa_info(mfm_context: mu.MFMContext):
 def update_trip_info(
     mfm_context: mu.MFMContext,
     dbsession: DBSession,
-    master_fm_data_upload_info: mm.MasterFMDataUpload,
+    last_trip_update_dt: str,
 ):
     success = False
-
-    last_mfm_update_dt = master_fm_data_upload_info.info.get("last_trip_update_dt", None)
-
-    if last_mfm_update_dt is None:
-        last_mfm_update_dt = datetime.datetime.now()
+    if last_trip_update_dt is None:
+        last_trip_update_dt = datetime.datetime.now()
     else:
-        last_mfm_update_dt = utils_util.str_to_dt(last_mfm_update_dt)
+        last_trip_update_dt = utils_util.str_to_dt(last_trip_update_dt)
 
     new_trips = (
         dbsession.session.query(tm.Trip)
-        .filter(tm.Trip.updated_at > last_mfm_update_dt)
+        .filter(tm.Trip.updated_at > last_trip_update_dt)
         .filter(tm.Trip.status.in_(tm.COMPLETED_TRIP_STATUS))
         .all()
     )
@@ -190,22 +187,21 @@ def update_trip_info(
 def update_trip_analytics(
     mfm_context: mu.MFMContext,
     dbsession: DBSession,
-    master_fm_data_upload_info: mm.MasterFMDataUpload,
+    last_trip_analytics_update_dt: str,
 ):
+
     success = False
-    last_mfm_update_dt = master_fm_data_upload_info.info.get(
-        "last_trip_analytics_update_dt", None
-    )
-    if last_mfm_update_dt is None:
-        last_mfm_update_dt = datetime.datetime.now()
+    if last_trip_analytics_update_dt is None:
+        last_trip_analytics_update_dt = datetime.datetime.now()
     else:
-        last_mfm_update_dt = utils_util.str_to_dt(last_mfm_update_dt)
+        last_trip_analytics_update_dt = utils_util.str_to_dt(last_trip_analytics_update_dt)
+
     new_trip_analytics = (
         dbsession.session.query(tm.TripAnalytics)
         .filter(
             tm.TripAnalytics.updated_at
             + datetime.timedelta(seconds=mfm_context.update_freq)
-            > last_mfm_update_dt
+            > last_trip_analytics_update_dt
         )
         .all()
     )
@@ -273,32 +269,36 @@ def send_mfm_updates():
             while True:
                 with DBSession() as dbsession:
                     master_fm_data_upload_info = dbsession.get_master_data_upload_info()
+                    last_trip_update_dt = master_fm_data_upload_info.info.get(
+                        "last_trip_update_dt", None
+                    )
+                    last_trip_analytics_update_dt = master_fm_data_upload_info.info.get(
+                        "last_trip_analytics_update_dt", None
+                    )
                     last_trip_update_sent = update_trip_info(
-                        mfm_context, dbsession, master_fm_data_upload_info
+                        mfm_context, dbsession, last_trip_update_dt
                     )
                     last_trip_analytics_sent = update_trip_analytics(
-                        mfm_context, dbsession, master_fm_data_upload_info
+                        mfm_context, dbsession, last_trip_analytics_update_dt
                     )
 
                     if last_trip_update_sent:
-                        master_fm_data_upload_info.info.update(
-                            {
-                                "last_trip_update_dt": utils_util.dt_to_str(
-                                    datetime.datetime.now()
-                                )
-                            }
-                        )
-                        flag_modified(master_fm_data_upload_info, "info")
+                        last_trip_update_dt = datetime.datetime.now()
 
                     if last_trip_analytics_sent:
-                        master_fm_data_upload_info.info.update(
-                            {
-                                "last_trip_analytics_update_dt": utils_util.dt_to_str(
-                                    datetime.datetime.now()
-                                )
-                            }
-                        )
-                        flag_modified(master_fm_data_upload_info, "info")
+                        last_trip_analytics_update_dt = datetime.datetime.now()
+
+                    master_fm_data_upload_info.info.update(
+                        {
+                            "last_trip_analytics_update_dt": utils_util.dt_to_str(
+                                last_trip_update_dt
+                            ),
+                            "last_trip_update_dt": utils_util.dt_to_str(
+                                last_trip_analytics_update_dt
+                            ),
+                        }
+                    )
+                    flag_modified(master_fm_data_upload_info, "info")
 
                 time.sleep(mfm_context.update_freq)
 
