@@ -547,11 +547,15 @@ class Handlers:
         self,
         all_ongoing_trips: List[tm.OngoingTrip],
         all_sherpas: List[fm.Sherpa],
+        all_trip_analytics: List[tm.TripAnalytics],
     ):
-        for ongoing_trip, sherpa in zip(all_ongoing_trips, all_sherpas):
+        for ongoing_trip, sherpa, trip_analytics in zip(
+            all_ongoing_trips, all_sherpas, all_trip_analytics
+        ):
             get_logger().info(
                 f"Will try to deleting ongoing trip trip_id: {ongoing_trip.trip.id} booking_id: {ongoing_trip.trip.booking_id}"
             )
+            trip_analytics.end_time = datetime.datetime.now()
             self.end_trip(ongoing_trip, sherpa, False)
             ongoing_trip.trip.cancel()
             terminate_trip_msg = rqm.TerminateTripReq(
@@ -694,6 +698,7 @@ class Handlers:
         trips: List[tm.Trip] = self.dbsession.get_trip_with_booking_id(req.booking_id)
         all_ongoing_trips: List[tm.OngoingTrip] = []
         all_sherpas: List[fm.Sherpa] = []
+        all_trip_analytics: List[tm.TripAnalytics] = []
 
         for trip in trips:
             ongoing_trip: tm.OngoingTrip = self.dbsession.get_ongoing_trip_with_trip_id(
@@ -701,11 +706,13 @@ class Handlers:
             )
             if ongoing_trip is not None:
                 sherpa: fm.Sherpa = self.dbsession.get_sherpa(ongoing_trip.sherpa_name)
+                trip_analytics = self.dbsession.get_trip_analytics(ongoing_trip.trip_leg_id)
                 if sherpa.status.disabled_reason == cc.DisabledReason.STALE_HEARTBEAT:
                     get_logger().warning(
                         f"Cannot delete ongoing_trip {ongoing_trip.trip_id}, sherpa: {ongoing_trip.sherpa_name} not connected"
                     )
                 else:
+                    all_trip_analytics.append(trip_analytics)
                     all_ongoing_trips.append(ongoing_trip)
                     all_sherpas.append(sherpa)
 
@@ -717,7 +724,9 @@ class Handlers:
             raise ValueError(
                 f"No ongoing trips to be deleted with booking_id : {req.booking_id}"
             )
-        response = self.delete_ongoing_trip(all_ongoing_trips, all_sherpas)
+        response = self.delete_ongoing_trip(
+            all_ongoing_trips, all_sherpas, all_trip_analytics
+        )
 
         return response
 
@@ -767,13 +776,14 @@ class Handlers:
         ongoing_trip: tm.OngoingTrip = self.dbsession.get_ongoing_trip_with_trip_id(
             req.trip_id
         )
-        trip_analytics = self.dbsession.get_trip_analytics(ongoing_trip.trip_leg_id)
 
         if not ongoing_trip:
             get_logger("status_updates").info(
                 f"Trip status sent by {sherpa.name} is invalid/delayed no ongoing trip data found trip_id: {req.trip_id}"
             )
             return
+
+        trip_analytics = self.dbsession.get_trip_analytics(ongoing_trip.trip_leg_id)
 
         if req.trip_leg_id != ongoing_trip.trip_leg_id:
             get_logger("status_updates").info(

@@ -203,6 +203,7 @@ def update_trip_analytics(
             + datetime.timedelta(seconds=mfm_context.update_freq)
             > last_trip_analytics_update_dt
         )
+        .filter(tm.TripAnalytics.endtime is not None)
         .all()
     )
 
@@ -213,7 +214,7 @@ def update_trip_analytics(
             trips_analytics.append(tu.get_trip_analytics(trip_analytics))
 
     if len(trips_analytics) == 0:
-        logging.getLogger("mfm_updates").info(f"no new trip analytics to be updated")
+        logging.getLogger("mfm_updates").info("no new trip analytics to be updated")
         return success
 
     logging.getLogger("mfm_updates").info(f"new trip analytics: {trips_analytics}")
