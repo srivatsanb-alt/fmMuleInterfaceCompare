@@ -1,6 +1,7 @@
 from models.base_models import Base, TimestampMixin
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy import Column, Integer, String, ARRAY, Boolean
+from typing import Optional
 
 
 class NotificationModules:
@@ -18,6 +19,11 @@ class NotificationLevels:
     alert = "alert"
     action_request = "action_request"
     stale_alert_or_action = "stale_alert_or_action"
+
+
+class FMIncidentTypes:
+    mule_error = "mule_error"
+    fm_error = "fm_error"
 
 
 NotificationTimeout = {
@@ -55,3 +61,17 @@ class MasterFMDataUpload(Base):
     __tablename__ = "master_fm_data_upload"
     id = Column(Integer, primary_key=True)
     info = Column(JSONB)
+
+
+class FMIncidents(TimestampMixin, Base):
+    __tablename__ = "fm_incidents"
+    id = Column(Integer, primary_key=True)
+    type = Column(String, nullable=False)
+    error_code = Column(String, nullable=False)
+    entity_name = Column(String)
+    module = Column(String)
+    sub_module = Column(String)
+    error_message = Column(String, nullable=False)
+    display_message = Column(String)
+    recovery_message = Column(String)
+    other_info = Column(JSONB)
