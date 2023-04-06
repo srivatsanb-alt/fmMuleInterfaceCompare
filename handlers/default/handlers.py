@@ -555,7 +555,10 @@ class Handlers:
             get_logger().info(
                 f"Will try to deleting ongoing trip trip_id: {ongoing_trip.trip.id} booking_id: {ongoing_trip.trip.booking_id}"
             )
-            trip_analytics.end_time = datetime.datetime.now()
+
+            if trip_analytics:
+                trip_analytics.end_time = datetime.datetime.now()
+
             self.end_trip(ongoing_trip, sherpa, False)
             ongoing_trip.trip.cancel()
             terminate_trip_msg = rqm.TerminateTripReq(
