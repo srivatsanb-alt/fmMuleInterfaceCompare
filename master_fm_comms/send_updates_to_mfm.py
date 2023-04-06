@@ -1,12 +1,10 @@
 import time
 import logging
 import os
-import toml
 import datetime
 from sqlalchemy.orm.attributes import flag_modified
 
 # ati code imports
-import models.misc_models as mm
 import models.trip_models as tm
 import master_fm_comms.mfm_utils as mu
 import utils.trip_utils as tu
@@ -240,22 +238,9 @@ def update_trip_analytics(
 def send_mfm_updates():
     logging.getLogger().info("starting send_updates_to_mfm script")
 
-    mfm_config_path = os.path.join(os.getenv("FM_CONFIG_DIR"), "master_fm_config.toml")
-
-    if not os.path.exists(mfm_config_path):
-        logging.getLogger("mfm_updates").error(f"mfm_config : {mfm_config_path} not found")
+    mfm_context: mu.MFMContext = mu.get_mfm_context()
+    if mfm_context is None:
         return
-
-    mfm_config = toml.load(mfm_config_path)
-
-    mfm_context = mu.MFMContext(
-        http_scheme=mfm_config["master_fm"]["http_scheme"],
-        server_ip=mfm_config["master_fm"]["mfm_ip"],
-        server_port=mfm_config["master_fm"]["mfm_port"],
-        cert_file=mfm_config["master_fm"]["mfm_cert_file"],
-        x_api_key=mfm_config["master_fm"]["comms"]["api_key"],
-        update_freq=mfm_config["master_fm"]["comms"]["update_freq"],
-    )
 
     update_fleet_info(mfm_context)
     upload_map_files(mfm_context)

@@ -66,6 +66,8 @@ def get_ongoing_trips_status(session, fleet):
         msg.update({ongoing_trip.trip_id: tu.get_trip_status(ongoing_trip.trip)})
 
     msg["type"] = "ongoing_trips_status"
+    msg["fleet_name"] = fleet.name
+
     return msg
 
 
