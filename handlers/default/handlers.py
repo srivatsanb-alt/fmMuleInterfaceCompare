@@ -397,10 +397,10 @@ class Handlers:
         )
         ongoing_trip.add_state(conveyor_start_state)
 
+        trip_metadata = ongoing_trip.trip.trip_metadata
         if direction == "receive":
             num_units = utils_comms.get_num_units_converyor(station.name)
             # update metadata with num totes for dropping totes at chute
-            trip_metadata = ongoing_trip.trip.trip_metadata
             trip_metadata["num_units"] = num_units
             flag_modified(ongoing_trip.trip, "trip_metadata")
 
