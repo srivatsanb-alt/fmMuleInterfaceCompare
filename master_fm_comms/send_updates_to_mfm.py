@@ -199,7 +199,7 @@ def update_trip_analytics(
     new_trip_analytics = (
         dbsession.session.query(tm.TripAnalytics)
         .filter(tm.TripAnalytics.updated_at > last_trip_analytics_update_dt)
-        .filter(tm.TripAnalytics.endtime is not None)
+        .filter(tm.TripAnalytics.end_time is not None)
         .all()
     )
 
