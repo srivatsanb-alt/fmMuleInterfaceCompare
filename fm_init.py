@@ -62,6 +62,9 @@ def main():
             sherpa_names.append(sherpa.name)
         redis_conn.set("all_sherpas", json.dumps(sherpa_names))
 
+        all_fleet_names = dbsession.get_all_fleet_names()
+        redis_conn.set("all_fleet_names", json.dumps(all_fleet_names))
+
 
 if __name__ == "__main__":
     main()

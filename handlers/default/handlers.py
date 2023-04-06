@@ -410,7 +410,7 @@ class Handlers:
                 raise ValueError("No tote/units information present")
 
         if num_units == 0:
-            get_logger().info(
+            get_logger(sherpa.name).info(
                 f"will not send conveyor msg to {ongoing_trip.sherpa_name}, reason: num_units is {num_units}"
             )
             return
