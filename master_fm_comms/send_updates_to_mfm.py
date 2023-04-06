@@ -198,11 +198,7 @@ def update_trip_analytics(
 
     new_trip_analytics = (
         dbsession.session.query(tm.TripAnalytics)
-        .filter(
-            tm.TripAnalytics.updated_at
-            + datetime.timedelta(seconds=mfm_context.update_freq)
-            > last_trip_analytics_update_dt
-        )
+        .filter(tm.TripAnalytics.updated_at > last_trip_analytics_update_dt)
         .filter(tm.TripAnalytics.endtime is not None)
         .all()
     )
