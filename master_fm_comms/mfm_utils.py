@@ -121,3 +121,32 @@ def get_mfm_context():
     )
 
     return mfm_context
+
+
+def prune_fleet_status(fleet_status_msg: dict):
+    pruned_msg = {}
+    pruned_msg.update({"type": "fleet_status"})
+    pruned_msg.update({"fleet_name": fleet_status_msg["fleet_name"]})
+
+    new_sherpa_status = {}
+    for sherpa_name, sherpa_status in fleet_status_msg["sherpa_status"].items():
+        pruned_sherpa_status = {}
+        pruned_sherpa_status.update({"sherpa_name": sherpa_name})
+        pruned_sherpa_status.update({"mode": sherpa_status["mode"]})
+        pruned_sherpa_status.update({"initialized": sherpa_status["initialized"]})
+        pruned_sherpa_status.update({"inducted": sherpa_status["inducted"]})
+        pruned_sherpa_status.update({"disabled": sherpa_status["disabled"]})
+        pruned_sherpa_status.update({"disabled_reason": sherpa_status["disabled_reason"]})
+        pruned_sherpa_status.update({"idle": sherpa_status["idle"]})
+        pruned_sherpa_status.update({"error": sherpa_status["error"]})
+        pruned_sherpa_status.update({"pose": sherpa_status["pose"]})
+        pruned_sherpa_status.update({"trip_id": sherpa_status["trip_id"]})
+        pruned_sherpa_status.update({"battery_status": sherpa_status["battery_status"]})
+        pruned_sherpa_status.update({"ip_address": sherpa_status["ip_address"]})
+
+        # update new_sherpa_status
+        new_sherpa_status.update({sherpa_name: pruned_sherpa_status})
+
+    pruned_msg.update({"sherpa_status": new_sherpa_status})
+
+    return pruned_msg
