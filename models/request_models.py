@@ -82,12 +82,13 @@ class VisaReq:
 
 
 class ErrInfo(BaseModel):
-    err_id: int
-    module: str
-    sub_moudle: str
+    err_code: str
+    module: Optional[str] = None
+    sub_module: Optional[str] = None
     err_msg: str
-    err_disp_msg: str
-    recovery_msg: str
+    err_disp_msg: Optional[str] = None
+    recovery_msg: Optional[str] = None
+    other_info: Optional[dict] = None
 
 
 class SherpaReq(BaseModel):
@@ -341,6 +342,10 @@ class DeleteVisaAssignments(ClientReq):
 class DeleteOptimalDispatchAssignments(ClientReq):
     type: str = MessageType.DELETE_OPTIMAL_DISPATCH_ASSIGNMENTS
     fleet_name: str
+
+
+class GetFMIncidents(ClientReq):
+    sherpa_name: str
 
 
 #################################################

@@ -28,7 +28,6 @@ async def check_connection():
 # checks connection of sherpa with fleet manager
 @router.get("/is_sherpa_version_compatible/{version}")
 async def is_sherpa_version_compatible(version: str, sherpa: str = Depends(dpd.get_sherpa)):
-
     if not sherpa:
         dpd.raise_error("Unknown requester", 401)
 
@@ -77,10 +76,23 @@ async def verify_fleet_files(sherpa: str = Depends(dpd.get_sherpa)):
     return rqm.VerifyFleetFilesResp.from_json(response)
 
 
-@router.post("/fatal_errors")
+@router.post("/fatal_error")
 async def fatal_errors(err_info: rqm.ErrInfo, sherpa: str = Depends(dpd.get_sherpa)):
-    response = {}
-    return response
+    with DBSession() as dbsession:
+        fm_incident = mm.FMIncidents(
+            type=mm.FMIncidentTypes.mule_error,
+            error_code=err_info.err_code,
+            entity_name=sherpa,
+            module=err_info.module,
+            sub_module=err_info.sub_module,
+            error_message=err_info.err_msg,
+            display_message=err_info.err_disp_msg,
+            recovery_message=err_info.recovery_msg,
+            other_info=err_info.other_info,
+        )
+        dbsession.add_to_session(fm_incident)
+
+    return {}
 
 
 @router.post("/req_ack/{req_id}")

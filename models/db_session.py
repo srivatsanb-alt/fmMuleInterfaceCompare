@@ -1,7 +1,7 @@
 import datetime
 from typing import List
 from core.db import session_maker
-from sqlalchemy import func, or_
+from sqlalchemy import func, or_, and_
 from sqlalchemy.orm import Session
 import models.frontend_models as fem
 import models.misc_models as mm
@@ -337,7 +337,6 @@ class DBSession:
         return self.session.query(tm.Trip).filter(tm.Trip.booking_id == booking_id).all()
 
     def get_trip_ids_with_timestamp(self, booked_from, booked_till):
-
         temp = (
             self.session.query(tm.Trip.id)
             .filter(tm.Trip.booking_time > booked_from)
@@ -439,3 +438,31 @@ class DBSession:
 
     def get_master_data_upload_info(self):
         return self.session.query(mm.MasterFMDataUpload).one_or_none()
+
+    def get_fm_incidents(
+        self, from_datetime, to_datetime=datetime.datetime.now(), entity_name=None
+    ):
+        if entity_name:
+            return self.session.query(mm.FMIncidents).filter(
+                and_(
+                    mm.FMIncidents.created_at > from_datetime,
+                    mm.FMIncidents.created_at < to_datetime,
+                )
+                .filter(mm.FMIncidents.entity_name == entity_name)
+                .all()
+            )
+        else:
+            return self.session.query(mm.FMIncidents).filter(
+                and_(
+                    mm.FMIncidents.created_at > from_datetime,
+                    mm.FMIncidents.created_at < to_datetime,
+                ).all()
+            )
+
+    def get_recent_fm_incident(self, entity_name):
+        return (
+            self.session.query(mm.FMIncidents)
+            .filter(mm.FMIncidents.entity_name == entity_name)
+            .order_by(mm.FMIncidents.created_at.desc())
+            .first()
+        )
