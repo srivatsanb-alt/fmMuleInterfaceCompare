@@ -239,13 +239,15 @@ async def create_generic_alerts(
 
 
 @router.post("/get_fm_incidents")
-async def get_fm_incidents(sherpa_name: str, user_name=Depends(dpd.get_user_from_header)):
+async def get_fm_incidents(
+    get_fm_incident: rqm.GetFMIncidents, user_name=Depends(dpd.get_user_from_header)
+):
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
     response = {}
     with DBSession() as dbsession:
-        fm_incident = dbsession.get_recent_fm_incident(sherpa_name)
+        fm_incident = dbsession.get_recent_fm_incident(get_fm_incident.sherpa_name)
 
         if fm_incident is not None:
             response.update({"error_code": fm_incident.error_code})

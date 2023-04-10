@@ -344,6 +344,10 @@ class DeleteOptimalDispatchAssignments(ClientReq):
     fleet_name: str
 
 
+class GetFMIncidents(ClientReq):
+    sherpa_name: str
+
+
 #################################################
 # Messages to sherpas
 
