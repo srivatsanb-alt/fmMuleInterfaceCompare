@@ -97,7 +97,7 @@ async def async_send_ws_msgs_to_mfm():
         ws_url = mu.get_mfm_ws_url(mfm_context)
 
         if "wss" in ws_url:
-            ssl_context.load_verify_locations(mfm_context.mfm_cert_file)
+            ssl_context.load_verify_locations(mfm_context.cert_file)
         else:
             ssl_context = None
 
