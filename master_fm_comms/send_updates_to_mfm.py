@@ -235,6 +235,39 @@ def update_trip_analytics(
     return success
 
 
+def update_fm_version_info(mfm_context: mu.MFMContext):
+    fm_version_info_sent = False
+    while not fm_version_info_sent:
+        with DBSession() as dbsession:
+            software_compatability = dbsession.get_compatability_info()
+            compatible_sherpa_versions = software_compatability.info.get(
+                "sherpa_versions", []
+            )
+
+            req_json = {
+                "fm_tag": os.getenv("FM_TAG"),
+                "compatible_sherpa_tags": compatible_sherpa_versions,
+            }
+
+            endpoint = "update_fm_version_info"
+            req_type = "post"
+
+            response_status_code, response_json = mu.send_http_req_to_mfm(
+                mfm_context, endpoint, req_type, req_json
+            )
+
+            if response_status_code == 200:
+                logging.getLogger("mfm_updates").info(
+                    f"sent fm_version_info to mfm successfully, details: {req_json}"
+                )
+                fm_version_info_sent = True
+            else:
+                logging.getLogger("mfm_updates").info(
+                    f"unable to send fm_version_info_sent to mfm,  status_code {response_status_code}"
+                )
+                time.sleep(10)
+
+
 def send_mfm_updates():
     logging.getLogger().info("starting send_updates_to_mfm script")
 
@@ -242,6 +275,7 @@ def send_mfm_updates():
     if mfm_context is None:
         return
 
+    update_fm_version_info(mfm_context)
     update_fleet_info(mfm_context)
     upload_map_files(mfm_context)
     update_sherpa_info(mfm_context)

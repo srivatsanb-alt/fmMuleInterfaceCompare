@@ -53,6 +53,9 @@ def get_mfm_url(mfm_context: MFMContext, endpoint, query=""):
         "update_trip_analytics": os.path.join(
             mfm_url, "api/v1/master_fm/fm_client/update_trip_analytics"
         ),
+        "update_fm_version_info": os.path.join(
+            mfm_url, "api/v1/master_fm/fm_client/update_fm_version_info"
+        ),
     }
     return fm_endpoints.get(endpoint, None)
 
