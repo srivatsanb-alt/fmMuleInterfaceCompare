@@ -224,7 +224,7 @@ async def add_trip_description(
     return response
 
 
-@router.get("/populate_route/{fleet_name}/{num_routes}")
+@router.get("/popular_route/{fleet_name}/{num_routes}")
 async def populate_route(
     fleet_name: str,
     num_routes: int,

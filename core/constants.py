@@ -41,3 +41,4 @@ class FleetStatus:
 class DisabledReason:
     EMERGENCY_STOP = "emergency_stop"
     STALE_HEARTBEAT = "stale_heartbeat"
+    SOFTWARE_NOT_COMPATIBLE = "software not compatible"
