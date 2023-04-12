@@ -199,6 +199,11 @@ class OptimalDispatch:
             pending_trip.sherpa_name = None
             pending_trip.trip.sherpa_name = None
             pending_trip.trip.status = TripStatus.BOOKED
+            trip_metadata = pending_trip.trip.trip_metadata
+
+            sherpa_name = None
+            if trip_metadata is not None:
+                sherpa_name = trip_metadata.get("sherpa_name")
 
             pose = dbsession.get_station(pending_trip.trip.route[0]).pose
             if not pose:
@@ -222,6 +227,7 @@ class OptimalDispatch:
                         "pose": pose,
                         "priority": updated_priority,
                         "route": pending_trip.trip.augmented_route,
+                        "sherpa_name": sherpa_name,
                     },
                 }
             )
@@ -247,6 +253,8 @@ class OptimalDispatch:
                 pose_2 = pickup_q_val["pose"]
                 pickup_priority = pickup_q_val["priority"]
                 route = pickup_q_val["route"]
+                sherpa_name = pickup_q_val["sherpa_name"]
+
                 exclude_stations = sherpa_q_val["exclude_stations"]
                 if any(
                     station in sherpa_q_val["exclude_stations"]
@@ -259,6 +267,11 @@ class OptimalDispatch:
                 elif i + 1 > max_trips_to_consider:
                     self.logger.info(
                         f"cannot send {sherpa_q} to {route}, num trips to consider for optimal_dispatch exceeded : {max_trips_to_consider}, trip num: {i}"
+                    )
+                    total_eta = np.inf
+                elif sherpa_name and sherpa_name != sherpa_q:
+                    self.logger.info(
+                        f"cannot assign {sherpa_q} for trip_id: {pickup_keys}, can be assigned only to {sherpa_name} "
                     )
                     total_eta = np.inf
                 else:
