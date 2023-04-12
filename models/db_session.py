@@ -341,6 +341,7 @@ class DBSession:
             self.session.query(tm.Trip.id)
             .filter(tm.Trip.booking_time > booked_from)
             .filter(tm.Trip.booking_time < booked_till)
+            .order_by(tm.Trip.id.desc())
             .all()
         )
         trip_ids = []
