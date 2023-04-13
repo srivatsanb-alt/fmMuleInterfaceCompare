@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends
 import aioredis
 
 # ati code imports
-from utils.util import get_table_as_dict
+from utils.util import dt_to_str, get_table_as_dict
 import models.request_models as rqm
 import models.fleet_models as fm
 import models.misc_models as mm
@@ -253,4 +253,6 @@ async def get_fm_incidents(
             response.update({"error_code": fm_incident.error_code})
             response.update({"description": fm_incident.display_message})
             response.update({"how_to_recover": fm_incident.recovery_message})
+            response.update({"reported_at": dt_to_str(fm_incident.created_at)})
+            response.update({"other_info": fm_incident.other_info})
     return response

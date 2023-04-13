@@ -93,6 +93,9 @@ async def verify_fleet_files(sherpa: str = Depends(dpd.get_sherpa)):
 
 @router.post("/fatal_error")
 async def fatal_errors(err_info: rqm.ErrInfo, sherpa: str = Depends(dpd.get_sherpa)):
+    if not sherpa:
+        dpd.raise_error("Unknown requester", 401)
+
     with DBSession() as dbsession:
         fm_incident = mm.FMIncidents(
             type=mm.FMIncidentTypes.mule_error,
