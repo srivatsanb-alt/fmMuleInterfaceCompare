@@ -111,7 +111,7 @@ async def async_send_ws_msgs_to_mfm():
                 ssl=ssl_context,
                 extra_headers=(("X-API-Key", mfm_context.x_api_key),),
             ) as ws:
-                logging.info(f"connected to {ws_url}")
+                logging.getLogger("mfm_updates").info(f"connected to {ws_url}")
                 await asyncio.gather(
                     send_ongoing_trip_status(ws, mfm_context),
                     send_fleet_status(ws, mfm_context),
@@ -124,7 +124,7 @@ async def async_send_ws_msgs_to_mfm():
             )
             await asyncio.sleep(sl)
 
-    logging.info("closed websocket connection with fleet manager")
+    logging.getLogger("mfm_updates").info("closed websocket connection with fleet manager")
 
 
 def send_ws_msgs_to_mfm():
