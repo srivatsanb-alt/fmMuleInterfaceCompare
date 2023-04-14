@@ -156,7 +156,9 @@ def update_trip_info(
 
     trips_info = []
     for trip in new_trips:
-        trips_info.append(tu.get_trip_status(trip))
+        trip_info = tu.get_trip_status(trip)
+        del trip_info["trip_details"]["updated_at"]
+        trips_info.append(trip_info)
 
     logging.getLogger("mfm_updates").info(f"new trips: {trips_info}")
 
@@ -205,7 +207,10 @@ def update_trip_analytics(
     for trip_analytics in new_trip_analytics:
         trip: tm.Trip = dbsession.get_trip(trip_analytics.trip_id)
         if trip.status in tm.COMPLETED_TRIP_STATUS:
-            trips_analytics.append(tu.get_trip_analytics(trip_analytics))
+            ta = tu.get_trip_analytics(trip_analytics)
+            del ta["updated_at"]
+            del ta["created_at"]
+            trips_analytics.append(ta)
 
     if len(trips_analytics) == 0:
         logging.getLogger("mfm_updates").info("no new trip analytics to be updated")
