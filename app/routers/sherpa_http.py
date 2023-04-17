@@ -116,11 +116,13 @@ async def fatal_errors(err_info: rqm.ErrInfo, sherpa: str = Depends(dpd.get_sher
 @router.post("/req_ack/{req_id}")
 async def ws_ack(req: rqm.WSResp, req_id: str):
     redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
-    redis_conn.set(f"success_{req_id}", json.dumps(req.success))
     if req.success:
         if req.response is None:
             req.response = {}
         redis_conn.set(f"response_{req_id}", json.dumps(req.response))
+
+    redis_conn.set(f"success_{req_id}", json.dumps(req.success))
+
     return {}
 
 

@@ -703,6 +703,7 @@ class Handlers:
         all_sherpas: List[fm.Sherpa] = []
         all_trip_analytics: List[tm.TripAnalytics] = []
 
+        reasons = {}
         for trip in trips:
             ongoing_trip: tm.OngoingTrip = self.dbsession.get_ongoing_trip_with_trip_id(
                 trip.id
@@ -711,9 +712,9 @@ class Handlers:
                 sherpa: fm.Sherpa = self.dbsession.get_sherpa(ongoing_trip.sherpa_name)
                 trip_analytics = self.dbsession.get_trip_analytics(ongoing_trip.trip_leg_id)
                 if sherpa.status.disabled_reason == cc.DisabledReason.STALE_HEARTBEAT:
-                    get_logger().warning(
-                        f"Cannot delete ongoing_trip {ongoing_trip.trip_id}, sherpa: {ongoing_trip.sherpa_name} not connected"
-                    )
+                    sherpa_not_connected_warning = f"Cannot delete ongoing_trip {ongoing_trip.trip_id}, sherpa: {ongoing_trip.sherpa_name} not connected"
+                    get_logger().warning(sherpa_not_connected_warning)
+                    reasons.update({trip.id: sherpa_not_connected_warning})
                 else:
                     all_trip_analytics.append(trip_analytics)
                     all_ongoing_trips.append(ongoing_trip)
@@ -725,7 +726,7 @@ class Handlers:
         # update db
         if len(all_ongoing_trips) == 0:
             raise ValueError(
-                f"No ongoing trips to be deleted with booking_id : {req.booking_id}"
+                f"No ongoing trips with sherpas online to be deleted for booking_id : {req.booking_id}, reasons: {reasons}"
             )
         response = self.delete_ongoing_trip(
             all_ongoing_trips, all_sherpas, all_trip_analytics
