@@ -987,10 +987,11 @@ class Handlers:
         sherpa: fm.Sherpa = self.dbsession.get_sherpa(req.source)
         ongoing_trip: tm.OngoingTrip = self.dbsession.get_ongoing_trip(sherpa.name)
         curr_station = None
-        if ongoing_trip.curr_station():
-            curr_station: fm.Station = self.dbsession.get_station(
-                ongoing_trip.curr_station()
-            )
+        if ongoing_trip:
+            if ongoing_trip.curr_station():
+                curr_station: fm.Station = self.dbsession.get_station(
+                    ongoing_trip.curr_station()
+                )
 
         # end transaction
         self.dbsession.session.commit()
