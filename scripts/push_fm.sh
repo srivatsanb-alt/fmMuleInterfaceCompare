@@ -7,7 +7,7 @@ clean_static_dir=0
 copy_static=1
 server=0
 build_base=1
-cert_reqd=0
+cert_reqd=1
 
 # Set variables
 IP_ADDRESS="localhost"
