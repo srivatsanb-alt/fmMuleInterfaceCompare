@@ -1,7 +1,7 @@
 import datetime
 from typing import List
 from core.db import session_maker
-from sqlalchemy import func, or_, and_
+from sqlalchemy import func, or_, and_, extract
 from sqlalchemy.orm import Session
 import models.frontend_models as fem
 import models.misc_models as mm
@@ -466,4 +466,40 @@ class DBSession:
             .filter(mm.FMIncidents.entity_name == entity_name)
             .order_by(mm.FMIncidents.created_at.desc())
             .first()
+        )
+
+    def get_last_sherpa_mode_change(self, sherpa_name):
+        return (
+            self.session.query(mm.SherpaModeChange)
+            .filter(mm.SherpaModeChange.sherpa_name == sherpa_name)
+            .order_by(mm.SherpaModeChange.started_at.desc())
+            .first()
+        )
+
+    def get_sherpa_oee(self, sherpa_name, today_start):
+        return (
+            self.session.query(mm.SherpaOEE)
+            .filter(mm.SherpaOEE.sherpa_name == sherpa_name)
+            .filter(mm.SherpaOEE.dt == today_start)
+            .one_or_none()
+        )
+
+    def get_sherpa_mode_split_up(self, sherpa_name, today_start):
+        return (
+            self.session.query(
+                mm.SherpaModeChange.mode,
+                func.sum(
+                    extract(
+                        "seconds",
+                        func.age(
+                            mm.SherpaModeChange.ended_at, mm.SherpaModeChange.started_at
+                        ),
+                    )
+                ),
+            )
+            .filter(mm.SherpaModeChange.sherpa_name == sherpa_name)
+            .filter(mm.SherpaModeChange.ended_at > today_start)
+            .filter(mm.SherpaModeChange.started_at > today_start)
+            .group_by(mm.SherpaModeChange.mode)
+            .all()
         )

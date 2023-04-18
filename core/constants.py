@@ -16,6 +16,7 @@ class MessageType:
     ASSIGN_NEXT_TASK = "assign_next_task"
     FM_HEALTH_CHECK = "fm_health_check"
     SHERPA_ALERTS = "sherpa_alerts"
+    MISC_PROCESS = "misc_process"
 
 
 OptimalDispatchInfluencers = [

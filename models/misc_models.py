@@ -1,6 +1,6 @@
 from models.base_models import Base, TimestampMixin
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy import Column, Integer, String, ARRAY, Boolean
+from sqlalchemy import Column, Integer, String, ARRAY, Boolean, DateTime
 from typing import Optional
 
 
@@ -75,3 +75,20 @@ class FMIncidents(TimestampMixin, Base):
     display_message = Column(String)
     recovery_message = Column(String)
     other_info = Column(JSONB)
+
+
+class SherpaModeChange(Base):
+    __tablename__ = "sherpa_mode_change"
+    id = Column(Integer, primary_key=True)
+    sherpa_name = Column(String, nullable=False, index=True)
+    mode = Column(String, nullable=False, index=True)
+    started_at = Column(DateTime, index=True, nullable=False)
+    ended_at = Column(DateTime, index=True)
+
+
+class SherpaOEE(Base):
+    __tablename__ = "sherpa_oee"
+    id = Column(Integer, primary_key=True)
+    sherpa_name = Column(String, nullable=False, index=True)
+    dt = Column(DateTime, nullable=False, index=True)
+    mode_split_up = Column(JSONB)

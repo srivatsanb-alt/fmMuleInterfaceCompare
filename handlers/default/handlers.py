@@ -95,6 +95,10 @@ class Handlers:
         hutils.record_rq_perf()
         get_logger("status_updates").info("Ran a FM health check")
 
+    def run_misc_processes(self):
+        hutils.update_sherpa_oee(self.dbsession)
+        pass
+
     def get_sherpa_trips(self, sherpa_name):
         sherpa: fm.Sherpa = self.dbsession.get_sherpa(sherpa_name)
         ongoing_trip: tm.OngoingTrip = self.dbsession.get_ongoing_trip(sherpa.name)
@@ -665,7 +669,12 @@ class Handlers:
         response = {}
 
         # query db
-        trips: List[tm.Trip] = self.dbsession.get_trip_with_booking_id(req.booking_id)
+        if req.trip_id is None:
+            trips: List[tm.Trip] = self.dbsession.get_trip_with_booking_id(req.booking_id)
+        else:
+            trip: tm.Trip = self.dbsession.get_trip(req.trip_id)
+            trips: List[tm.Trip] = [trip]
+
         all_to_be_cancelled_trips: List[tm.Trip] = []
         all_pending_trips: List[tm.PendingTrip] = []
 
@@ -698,7 +707,12 @@ class Handlers:
     def handle_delete_ongoing_trip(self, req: rqm.DeleteOngoingTripReq):
 
         # query db
-        trips: List[tm.Trip] = self.dbsession.get_trip_with_booking_id(req.booking_id)
+        if req.trip_id is None:
+            trips: List[tm.Trip] = self.dbsession.get_trip_with_booking_id(req.booking_id)
+        else:
+            trip: tm.Trip = self.dbsession.get_trip(req.trip_id)
+            trips: List[tm.Trip] = [trip]
+
         all_ongoing_trips: List[tm.OngoingTrip] = []
         all_sherpas: List[fm.Sherpa] = []
         all_trip_analytics: List[tm.TripAnalytics] = []
@@ -740,6 +754,11 @@ class Handlers:
         sherpa, ongoing_trip, pending_trip = self.get_sherpa_trips(req.sherpa_name)
         status: fm.SherpaStatus = sherpa.status
 
+        if req.mode != status.mode:
+            last_sherpa_mode_change = self.dbsession.get_last_sherpa_mode_change(
+                req.sherpa_name
+            )
+
         # end transaction
         self.dbsession.session.commit()
 
@@ -771,6 +790,11 @@ class Handlers:
         self.update_sherpa_info(status, init_response)
 
         status.mode = req.mode
+
+        hutils.record_sherpa_mode_change(
+            self.dbsession, sherpa.name, req.mode, last_sherpa_mode_change
+        )
+
         get_logger(sherpa.name).info(f"{sherpa.name} switched to {req.mode} mode")
 
     def handle_trip_status(self, req: rqm.TripStatusMsg):
@@ -1324,6 +1348,10 @@ class Handlers:
 
             if msg.type == cc.MessageType.FM_HEALTH_CHECK:
                 self.run_health_check()
+                return
+
+            if msg.type == cc.MessageType.MISC_PROCESS:
+                self.run_misc_processes()
                 return
 
             # log, add msg to sherpa events

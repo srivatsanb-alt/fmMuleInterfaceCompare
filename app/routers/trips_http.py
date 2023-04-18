@@ -28,8 +28,10 @@ async def book(booking_req: rqm.BookingReq, user_name=Depends(dpd.get_user_from_
     return response
 
 
-@router.delete("/ongoing/{booking_id}")
-async def delete_ongoing_trip(booking_id: int, user_name=Depends(dpd.get_user_from_header)):
+@router.delete("/ongoing/{booking_id}/{trip_id}")
+async def delete_ongoing_trip(
+    booking_id: int, trip_id: int, user_name=Depends(dpd.get_user_from_header)
+):
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
@@ -38,16 +40,33 @@ async def delete_ongoing_trip(booking_id: int, user_name=Depends(dpd.get_user_fr
         if not trips:
             dpd.raise_error("no trip with the given booking_id")
 
-    delete_ongoing_trip_req: rqm.DeleteOngoingTripReq = rqm.DeleteOngoingTripReq(
-        booking_id=booking_id
-    )
+        if trip_id == -1:
+            delete_ongoing_trip_req: rqm.DeleteOngoingTripReq = rqm.DeleteOngoingTripReq(
+                booking_id=booking_id
+            )
+        else:
+            valid_trip_id = False
+            for trip in trips:
+                if trip_id == trip.id:
+                    valid_trip_id = True
+
+            if not valid_trip_id:
+                dpd.raise_error(
+                    f"Invalid detail, no trip (trip_id: {trip_id}) for booking_id: {booking_id}"
+                )
+            delete_ongoing_trip_req: rqm.DeleteOngoingTripReq = rqm.DeleteOngoingTripReq(
+                booking_id=booking_id, trip_id=trip_id
+            )
+
     response = await dpd.process_req_with_response(None, delete_ongoing_trip_req, user_name)
 
     return response
 
 
-@router.delete("/booking/{booking_id}")
-async def delete_pending_trip(booking_id: int, user_name=Depends(dpd.get_user_from_header)):
+@router.delete("/booking/{booking_id}/{trip_id}")
+async def delete_pending_trip(
+    booking_id: int, trip_id: int, user_name=Depends(dpd.get_user_from_header)
+):
 
     response = {}
     if not user_name:
@@ -59,9 +78,26 @@ async def delete_pending_trip(booking_id: int, user_name=Depends(dpd.get_user_fr
         if not trips:
             dpd.raise_error("no trip with the given booking_id")
 
-    delete_booked_trip_req: rqm.DeleteBookedTripReq = rqm.DeleteBookedTripReq(
-        booking_id=booking_id
-    )
+        if trip_id == -1:
+            delete_booked_trip_req: rqm.DeleteBookedTripReq = rqm.DeleteBookedTripReq(
+                booking_id=booking_id
+            )
+
+        else:
+            valid_trip_id = False
+            for trip in trips:
+                if trip_id == trip.id:
+                    valid_trip_id = True
+
+            if not valid_trip_id:
+                dpd.raise_error(
+                    f"Invalid detail, no pending trip (trip_id: {trip_id}) for booking_id: {booking_id}"
+                )
+
+            delete_booked_trip_req: rqm.DeleteBookedTripReq = rqm.DeleteBookedTripReq(
+                booking_id=booking_id, trip_id=trip_id
+            )
+
     response = await dpd.process_req_with_response(None, delete_booked_trip_req, user_name)
 
     return response

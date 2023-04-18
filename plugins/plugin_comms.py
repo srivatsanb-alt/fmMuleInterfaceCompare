@@ -134,10 +134,10 @@ def get_fm_url(endpoint, query):
         "trip_book": os.path.join("http://", fm_ip, "api/v1/trips/book/"),
         "trip_status": os.path.join("http://", fm_ip, "api/v1/trips/status/"),
         "delete_ongoing_trip": os.path.join(
-            "http://", fm_ip, "api/v1/trips/ongoing/", str(query)
+            "http://", fm_ip, "api/v1/trips/ongoing/", str(query), "-1"
         ),
         "delete_booked_trip": os.path.join(
-            "http://", fm_ip, "api/v1/trips/booking/", str(query)
+            "http://", fm_ip, "api/v1/trips/booking/", str(query), "-1"
         ),
         "station_info": os.path.join(
             "http://", fm_ip, "api/v1/station/", str(query), "info"
