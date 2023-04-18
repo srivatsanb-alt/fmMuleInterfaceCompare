@@ -1,4 +1,5 @@
 import logging
+import logging.handlers
 import os
 
 from .db import session_maker
@@ -50,7 +51,9 @@ def setup_root_logger(logdir, level=logging.INFO):
     logger = logging.getLogger()
     logger.setLevel(level)
     logger.handlers.clear()
-    handler = logging.FileHandler(logdir + "/fleet_manager.log")
+    handler = logging.handlers.RotatingFileHandler(
+        logdir + "/fleet_manager.log", maxBytes=2e8, backupCount=1
+    )
     handler.setFormatter(FORMATTER)
     logger.addHandler(handler)
 
@@ -65,7 +68,9 @@ def setup_logger(logdir, name=None, propagate=True, level=logging.INFO):
 
     logger.propagate = propagate
     logger.setLevel(level)
-    handler = logging.FileHandler(logdir + f"/{name}.log")
+    handler = logging.handlers.RotatingFileHandler(
+        logdir + f"/{name}.log", maxBytes=2e8, backupCount=1
+    )
     handler.setFormatter(FORMATTER)
     logger.addHandler(handler)
     loggers[name] = logger
@@ -85,7 +90,9 @@ def setup_logger_for_fleet(fleet: str, logdir, name=None, level=logging.INFO):
         # propagate messages to fleet logger.
 
     logger.setLevel(level)
-    handler = logging.FileHandler(logdir + f"/{fleet}/{name}.log")
+    handler = logging.handlers.RotatingFileHandler(
+        logdir + f"/{fleet}/{name}.log", maxBytes=2e8, backupCount=1
+    )
     handler.setFormatter(FORMATTER)
     logger.addHandler(handler)
     loggers[name] = logger
@@ -104,7 +111,7 @@ def get_seperate_logger(name):
     logger.propagate = False
     log_file = os.path.join(os.getenv("FM_LOG_DIR"), f"{name}.log")
     logger.setLevel(logging.INFO)
-    f_handler = logging.FileHandler(log_file)
+    f_handler = logging.handlers.RotatingFileHandler(log_file, maxBytes=2e8, backupCount=1)
     f_handler.setFormatter(FORMATTER)
     logger.addHandler(f_handler)
 
