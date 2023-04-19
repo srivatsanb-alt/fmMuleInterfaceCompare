@@ -89,6 +89,7 @@ class Handlers:
             get_logger().warning(f"message of type {msg.type} ignored, reason={reason}")
 
     def run_health_check(self):
+        # have not seperated queries and DB - Need to be done
         hutils.check_sherpa_status(self.dbsession)
         hutils.delete_notifications(self.dbsession)
         hutils.record_cpu_perf()
@@ -96,8 +97,8 @@ class Handlers:
         get_logger("status_updates").info("Ran a FM health check")
 
     def run_misc_processes(self):
+        # have not seperated queries and DB - Need to be done
         hutils.update_sherpa_oee(self.dbsession)
-        pass
 
     def get_sherpa_trips(self, sherpa_name):
         sherpa: fm.Sherpa = self.dbsession.get_sherpa(sherpa_name)
@@ -121,8 +122,8 @@ class Handlers:
         sherpa_status.other_info.update({"sw_date": init_response.get("sw_date")})
         sherpa_status.other_info.update({"sw_tag": init_response.get("sw_tag")})
         sherpa_status.other_info.update({"sw_id": init_response.get("sw_id")})
-        flag_modified(sherpa_status, "other_info")
 
+        flag_modified(sherpa_status, "other_info")
         get_logger("status_updates").info(
             f"updated {sherpa_status.sherpa_name} build info {sherpa_status.other_info}"
         )
@@ -552,6 +553,7 @@ class Handlers:
         all_ongoing_trips: List[tm.OngoingTrip],
         all_sherpas: List[fm.Sherpa],
         all_trip_analytics: List[tm.TripAnalytics],
+        force_delete=False,
     ):
         for ongoing_trip, sherpa, trip_analytics in zip(
             all_ongoing_trips, all_sherpas, all_trip_analytics
@@ -565,11 +567,18 @@ class Handlers:
 
             self.end_trip(ongoing_trip, sherpa, False)
             ongoing_trip.trip.cancel()
-            terminate_trip_msg = rqm.TerminateTripReq(
-                trip_id=ongoing_trip.trip_id, trip_leg_id=ongoing_trip.trip_leg_id
-            )
 
-            _ = utils_comms.send_req_to_sherpa(self.dbsession, sherpa, terminate_trip_msg)
+            if not force_delete:
+                terminate_trip_msg = rqm.TerminateTripReq(
+                    trip_id=ongoing_trip.trip_id, trip_leg_id=ongoing_trip.trip_leg_id
+                )
+
+                _ = utils_comms.send_req_to_sherpa(
+                    self.dbsession, sherpa, terminate_trip_msg
+                )
+            else:
+                get_logger().info(f"Not sending terminate_trip request to {sherpa.name}")
+
             get_logger().info(
                 f"Deleted ongoing trip successfully trip_id: {ongoing_trip.trip.id} booking_id: {ongoing_trip.trip.booking_id}"
             )
@@ -744,6 +753,42 @@ class Handlers:
             )
         response = self.delete_ongoing_trip(
             all_ongoing_trips, all_sherpas, all_trip_analytics
+        )
+
+        return response
+
+    def handle_force_delete_ongoing_trip(self, req: rqm.ForceDeleteOngoingTripReq):
+        response = {}
+
+        all_trip_analytics = []
+        all_ongoing_trips = []
+        all_sherpas = []
+
+        # query db
+        sherpa: fm.Sherpa = self.dbsession.get_sherpa(req.sherpa_name)
+
+        if sherpa.status.trip_id is None:
+            raise ValueError("Sherpa has no ongoing_trip")
+
+        ongoing_trip: tm.OngoingTrip = self.dbsession.get_ongoing_trip_with_trip_id(
+            sherpa.status.trip_id
+        )
+
+        if ongoing_trip is None:
+            raise ValueError("Sherpa has no ongoing_trip")
+
+        trip_analytics = self.dbsession.get_trip_analytics(ongoing_trip.trip_leg_id)
+
+        all_trip_analytics.append(trip_analytics)
+        all_ongoing_trips.append(ongoing_trip)
+        all_sherpas.append(sherpa)
+
+        # end transaction
+        self.dbsession.session.commit()
+
+        # update db
+        response = self.delete_ongoing_trip(
+            all_ongoing_trips, all_sherpas, all_trip_analytics, force_delete=True
         )
 
         return response
@@ -1204,9 +1249,7 @@ class Handlers:
 
         if reset_fleet:
             update_map_msg = f"Map files of fleet: {fleet_name} has been modified, please update the map by pressing the update_map button on the webpage header!"
-            hutils.maybe_add_alert(
-                self.dbsession, [fleet_name, sherpa.name], update_map_msg
-            )
+            hutils.maybe_add_alert(self.dbsession, [fleet_name], update_map_msg)
 
         response: rqm.VerifyFleetFilesResp = rqm.VerifyFleetFilesResp(
             fleet_name=fleet_name, files_info=map_file_info

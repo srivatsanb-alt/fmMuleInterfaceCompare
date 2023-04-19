@@ -449,10 +449,15 @@ def record_sherpa_mode_change(
 
 
 def update_sherpa_oee(dbsession: DBSession):
-    sherpa_names = dbsession.get_all_sherpa_names()
-
     today_now = datetime.datetime.now()
     today_start = today_now.replace(hour=0, minute=0, second=0, microsecond=0)
+
+    sherpa_names = dbsession.get_all_sherpa_names()
+
+    # delete all old entries sherpa mode change entries
+    dbsession.session.query(mm.SherpaModeChange).filter(
+        mm.SherpaModeChange.ended_at < today_start
+    ).delete()
 
     for sherpa_name in sherpa_names:
         sherpa_oee = dbsession.get_sherpa_oee(sherpa_name, today_start)
