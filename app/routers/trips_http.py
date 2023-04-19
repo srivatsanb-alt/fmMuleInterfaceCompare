@@ -44,6 +44,9 @@ async def force_delete_ongoing_trip(
         if sherpa.status.disabled_reason != cc.DisabledReason.STALE_HEARTBEAT:
             dpd.raise_error("This option can be used only if the sherpa is disconnected")
 
+        if sherpa.status.trip_id is None:
+            dpd.raise_error(f"{sherpa_name} has no ongoing trip")
+
     force_delete_ongoing_trip_req = rqm.ForceDeleteOngoingTripReq(sherpa_name=sherpa_name)
 
     response = await dpd.process_req_with_response(
