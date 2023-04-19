@@ -1249,9 +1249,7 @@ class Handlers:
 
         if reset_fleet:
             update_map_msg = f"Map files of fleet: {fleet_name} has been modified, please update the map by pressing the update_map button on the webpage header!"
-            hutils.maybe_add_alert(
-                self.dbsession, [fleet_name, sherpa.name], update_map_msg
-            )
+            hutils.maybe_add_alert(self.dbsession, [fleet_name], update_map_msg)
 
         response: rqm.VerifyFleetFilesResp = rqm.VerifyFleetFilesResp(
             fleet_name=fleet_name, files_info=map_file_info
