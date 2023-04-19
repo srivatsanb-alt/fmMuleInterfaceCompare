@@ -133,7 +133,7 @@ async def reader(websocket, sherpa):
         try:
             msg = await websocket.receive_json()
         except WebSocketDisconnect as e:
-            logger.info(f"websocket with {sherpa} disconnected")
+            logger.info(f"websocket connection with {sherpa} disconnected")
             raise e
 
         msg_type = msg.get("type")
@@ -185,7 +185,11 @@ async def writer(websocket, sherpa):
             if data.get("close_ws", False):
                 await websocket.close()
 
-            await websocket.send_json(data)
+            try:
+                await websocket.send_json(data)
+            except WebSocketDisconnect as e:
+                logger.error(f"websocket connection with {sherpa} disconnected")
+                raise e
 
         await asyncio.sleep(0.01)
 
