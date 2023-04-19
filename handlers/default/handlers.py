@@ -553,6 +553,7 @@ class Handlers:
         all_ongoing_trips: List[tm.OngoingTrip],
         all_sherpas: List[fm.Sherpa],
         all_trip_analytics: List[tm.TripAnalytics],
+        force_delete=False,
     ):
         for ongoing_trip, sherpa, trip_analytics in zip(
             all_ongoing_trips, all_sherpas, all_trip_analytics
@@ -566,11 +567,18 @@ class Handlers:
 
             self.end_trip(ongoing_trip, sherpa, False)
             ongoing_trip.trip.cancel()
-            terminate_trip_msg = rqm.TerminateTripReq(
-                trip_id=ongoing_trip.trip_id, trip_leg_id=ongoing_trip.trip_leg_id
-            )
 
-            _ = utils_comms.send_req_to_sherpa(self.dbsession, sherpa, terminate_trip_msg)
+            if not force_delete:
+                terminate_trip_msg = rqm.TerminateTripReq(
+                    trip_id=ongoing_trip.trip_id, trip_leg_id=ongoing_trip.trip_leg_id
+                )
+
+                _ = utils_comms.send_req_to_sherpa(
+                    self.dbsession, sherpa, terminate_trip_msg
+                )
+            else:
+                get_logger().info(f"Not sending terminate_trip request to {sherpa.name}")
+
             get_logger().info(
                 f"Deleted ongoing trip successfully trip_id: {ongoing_trip.trip.id} booking_id: {ongoing_trip.trip.booking_id}"
             )
@@ -745,6 +753,42 @@ class Handlers:
             )
         response = self.delete_ongoing_trip(
             all_ongoing_trips, all_sherpas, all_trip_analytics
+        )
+
+        return response
+
+    def handle_force_delete_ongoing_trip(self, req: rqm.ForceDeleteOngoingTripReq):
+        response = {}
+
+        all_trip_analytics = []
+        all_ongoing_trips = []
+        all_sherpas = []
+
+        # query db
+        sherpa: fm.Sherpa = self.dbsession.get_sherpa(req.sherpa_name)
+
+        if sherpa.status.trip_id is None:
+            raise ValueError("Sherpa has no ongoing_trip")
+
+        ongoing_trip: tm.OngoingTrip = self.dbsession.get_ongoing_trip_with_trip_id(
+            sherpa.status.trip_id
+        )
+
+        if ongoing_trip is None:
+            raise ValueError("Sherpa has no ongoing_trip")
+
+        trip_analytics = self.dbsession.get_trip_analytics(ongoing_trip.trip_leg_id)
+
+        all_trip_analytics.append(trip_analytics)
+        all_ongoing_trips.append(ongoing_trip)
+        all_sherpas.append(sherpa)
+
+        # end transaction
+        self.dbsession.session.commit()
+
+        # update db
+        response = self.delete_ongoing_trip(
+            all_ongoing_trips, all_sherpas, all_trip_analytics, force_delete=True
         )
 
         return response

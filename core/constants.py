@@ -17,6 +17,7 @@ class MessageType:
     FM_HEALTH_CHECK = "fm_health_check"
     SHERPA_ALERTS = "sherpa_alerts"
     MISC_PROCESS = "misc_process"
+    FORCE_DELETE_ONGOING_TRIP = "force_delete_ongoing_trip"
 
 
 OptimalDispatchInfluencers = [

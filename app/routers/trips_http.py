@@ -10,6 +10,7 @@ from models.trip_models import Trip, TripAnalytics
 from models.db_session import DBSession
 from utils.util import str_to_dt
 import utils.trip_utils as tu
+import core.constants as cc
 
 
 router = APIRouter(
@@ -25,6 +26,30 @@ router = APIRouter(
 @router.post("/book")
 async def book(booking_req: rqm.BookingReq, user_name=Depends(dpd.get_user_from_header)):
     response = await dpd.process_req_with_response(None, booking_req, user_name)
+    return response
+
+
+@router.delete("/force_delete/ongoing/{sherpa_name}")
+async def force_delete_ongoing_trip(
+    sherpa_name: str, user_name=Depends(dpd.get_user_from_header)
+):
+    response = {}
+
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    with DBSession() as dbsession:
+        sherpa = dbsession.get_sherpa(sherpa_name)
+
+        if sherpa.status.disabled_reason != cc.DisabledReason.STALE_HEARTBEAT:
+            dpd.raise_error("This option can be used only if the sherpa is disconnected")
+
+    force_delete_ongoing_trip_req = rqm.ForceDeleteOngoingTripReq(sherpa_name=sherpa_name)
+
+    response = await dpd.process_req_with_response(
+        None, force_delete_ongoing_trip_req, user_name
+    )
+
     return response
 
 

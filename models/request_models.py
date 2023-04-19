@@ -303,6 +303,11 @@ class DeleteBookedTripReq(ClientReq):
     trip_id: Optional[int] = None
 
 
+class ForceDeleteOngoingTripReq(ClientReq):
+    sherpa_name: str
+    type: str = MessageType.FORCE_DELETE_ONGOING_TRIP
+
+
 class SherpaInductReq(ClientReq):
     induct: bool
     sherpa_name: Optional[str]
