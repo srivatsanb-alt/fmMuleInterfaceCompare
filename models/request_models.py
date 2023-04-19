@@ -82,12 +82,13 @@ class VisaReq:
 
 
 class ErrInfo(BaseModel):
-    err_id: int
-    module: str
-    sub_moudle: str
+    err_code: str
+    module: Optional[str] = None
+    sub_module: Optional[str] = None
     err_msg: str
-    err_disp_msg: str
-    recovery_msg: str
+    err_disp_msg: Optional[str] = None
+    recovery_msg: Optional[str] = None
+    other_info: Optional[dict] = None
 
 
 class SherpaReq(BaseModel):
@@ -223,6 +224,11 @@ class FMHealthCheck(BaseModel):
     type: str = MessageType.FM_HEALTH_CHECK
 
 
+class MiscProcess(BaseModel):
+    source: str = "self"
+    type: str = MessageType.MISC_PROCESS
+
+
 #################################################
 # Messages from frontend
 class ClientReq(BaseModel):
@@ -269,7 +275,7 @@ class TripMsg(ClientReq):
     route: List[str]
     priority: Optional[float] = 1.0
     tasks: Optional[Dict[str, str]] = None
-    metadata: Optional[Dict[str, str]] = None
+    metadata: Optional[Dict[str, Union[str, None]]] = None
 
 
 class RoutePreview(ClientReq):
@@ -288,11 +294,13 @@ class BookingReq(ClientReq):
 class DeleteOngoingTripReq(ClientReq):
     booking_id: int
     type: str = MessageType.DELETE_ONGOING_TRIP
+    trip_id: Optional[int] = None
 
 
 class DeleteBookedTripReq(ClientReq):
     booking_id: int
     type: str = MessageType.DELETE_BOOKED_TRIP
+    trip_id: Optional[int] = None
 
 
 class SherpaInductReq(ClientReq):
@@ -341,6 +349,10 @@ class DeleteVisaAssignments(ClientReq):
 class DeleteOptimalDispatchAssignments(ClientReq):
     type: str = MessageType.DELETE_OPTIMAL_DISPATCH_ASSIGNMENTS
     fleet_name: str
+
+
+class GetFMIncidents(ClientReq):
+    sherpa_name: str
 
 
 #################################################

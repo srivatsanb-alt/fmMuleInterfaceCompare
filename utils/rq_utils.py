@@ -73,7 +73,7 @@ def enqueue(queue: Queue, func, *args, **kwargs):
 
     rq_params = Config.get_fleet_rq_params()
     if queue.name == "generic_handler":
-        job_timeout = rq_params.get("generic_handler_job_timeout", 2)
+        job_timeout = rq_params.get("generic_handler_job_timeout", 10)
     else:
         job_timeout = rq_params.get("default_job_timeout", 10)
 
@@ -89,7 +89,7 @@ def enqueue_at(queue: Queue, dt, func, *args, **kwargs):
 
     rq_params = Config.get_fleet_rq_params()
     if queue.name == "generic_handler":
-        job_timeout = rq_params.get("generic_handler_job_timeout", 2)
+        job_timeout = rq_params.get("generic_handler_job_timeout", 10)
     else:
         job_timeout = rq_params.get("default_job_timeout", 10)
 

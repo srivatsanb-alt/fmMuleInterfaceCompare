@@ -5,10 +5,12 @@ import os
 from fastapi import Depends, APIRouter
 
 from models.db_session import DBSession
+import models.fleet_models as fm
 import models.misc_models as mm
 import models.request_models as rqm
 from utils.rq_utils import Queues
 import app.routers.dependencies as dpd
+import core.constants as cc
 
 # manages all the http requests for Sherpa
 router = APIRouter(
@@ -27,16 +29,28 @@ async def check_connection():
 
 # checks connection of sherpa with fleet manager
 @router.get("/is_sherpa_version_compatible/{version}")
-async def is_sherpa_version_compatible(version: str, sherpa: str = Depends(dpd.get_sherpa)):
-
-    if not sherpa:
+async def is_sherpa_version_compatible(
+    version: str, sherpa_name: str = Depends(dpd.get_sherpa)
+):
+    allowed = True
+    if not sherpa_name:
         dpd.raise_error("Unknown requester", 401)
 
     with DBSession() as dbsession:
+        sherpa: fm.Sherpa = dbsession.get_sherpa(sherpa_name)
         software_compatability = dbsession.get_compatability_info()
         sherpa_versions = software_compatability.info.get("sherpa_versions", [])
         if version not in sherpa_versions:
-            dpd.raise_error(f"Cannot allow sherpa to connect to FM with version {version}")
+            allowed = False
+            sherpa.status.disabled = True
+            sherpa.status.disabled_reason = cc.DisabledReason.SOFTWARE_NOT_COMPATIBLE
+
+        elif sherpa.status.disabled_reason == cc.DisabledReason.SOFTWARE_NOT_COMPATIBLE:
+            sherpa.status.disabled = False
+            sherpa.status.disabled_reason = None
+
+    if not allowed:
+        dpd.raise_error(f"Cannot allow sherpa to connect to FM with version {version}")
 
     return {}
 
@@ -77,20 +91,38 @@ async def verify_fleet_files(sherpa: str = Depends(dpd.get_sherpa)):
     return rqm.VerifyFleetFilesResp.from_json(response)
 
 
-@router.post("/fatal_errors")
+@router.post("/fatal_error")
 async def fatal_errors(err_info: rqm.ErrInfo, sherpa: str = Depends(dpd.get_sherpa)):
-    response = {}
-    return response
+    if not sherpa:
+        dpd.raise_error("Unknown requester", 401)
+
+    with DBSession() as dbsession:
+        fm_incident = mm.FMIncidents(
+            type=mm.FMIncidentTypes.mule_error,
+            error_code=err_info.err_code,
+            entity_name=sherpa,
+            module=err_info.module,
+            sub_module=err_info.sub_module,
+            error_message=err_info.err_msg,
+            display_message=err_info.err_disp_msg,
+            recovery_message=err_info.recovery_msg,
+            other_info=err_info.other_info,
+        )
+        dbsession.add_to_session(fm_incident)
+
+    return {}
 
 
 @router.post("/req_ack/{req_id}")
 async def ws_ack(req: rqm.WSResp, req_id: str):
     redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
-    redis_conn.set(f"success_{req_id}", json.dumps(req.success))
     if req.success:
         if req.response is None:
             req.response = {}
         redis_conn.set(f"response_{req_id}", json.dumps(req.response))
+
+    redis_conn.set(f"success_{req_id}", json.dumps(req.success))
+
     return {}
 
 

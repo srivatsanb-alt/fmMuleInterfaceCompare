@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends
 import aioredis
 
 # ati code imports
-from utils.util import get_table_as_dict
+from utils.util import dt_to_str, get_table_as_dict
 import models.request_models as rqm
 import models.fleet_models as fm
 import models.misc_models as mm
@@ -19,7 +19,6 @@ router = APIRouter(responses={404: {"description": "Not found"}}, prefix="/api/v
 
 @router.get("/site_info")
 async def site_info(user_name=Depends(dpd.get_user_from_header)):
-
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
@@ -48,7 +47,6 @@ async def site_info(user_name=Depends(dpd.get_user_from_header)):
 async def master_data(
     master_data_info: rqm.MasterDataInfo, user_name=Depends(dpd.get_user_from_header)
 ):
-
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
@@ -178,7 +176,6 @@ async def get_sherpa_live_route(
     live_route_req: rqm.LiveRoute,
     user_name=Depends(dpd.get_user_from_header),
 ):
-
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
@@ -239,3 +236,23 @@ async def create_generic_alerts(
             mm.NotificationLevels.action_request,
             mm.NotificationModules.generic,
         )
+
+
+@router.post("/get_fm_incidents")
+async def get_fm_incidents(
+    get_fm_incident: rqm.GetFMIncidents, user_name=Depends(dpd.get_user_from_header)
+):
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    response = {}
+    with DBSession() as dbsession:
+        fm_incident = dbsession.get_recent_fm_incident(get_fm_incident.sherpa_name)
+
+        if fm_incident is not None:
+            response.update({"error_code": fm_incident.error_code})
+            response.update({"description": fm_incident.display_message})
+            response.update({"how_to_recover": fm_incident.recovery_message})
+            response.update({"reported_at": dt_to_str(fm_incident.created_at)})
+            response.update({"other_info": fm_incident.other_info})
+    return response

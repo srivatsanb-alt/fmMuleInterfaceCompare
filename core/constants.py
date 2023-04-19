@@ -4,6 +4,7 @@ class MessageType:
     PERIPHERALS = "peripherals"
     SHERPA_STATUS = "sherpa_status"
     TRIP_STATUS = "trip_status"
+    VERIFY_FLEET_FILES = "verify_fleet_files"
     BOOKING = "book"
     PASS_TO_SHERPA = "pass_to_sherpa"
     RESOURCE_ACCESS = "resource_access"
@@ -15,6 +16,7 @@ class MessageType:
     ASSIGN_NEXT_TASK = "assign_next_task"
     FM_HEALTH_CHECK = "fm_health_check"
     SHERPA_ALERTS = "sherpa_alerts"
+    MISC_PROCESS = "misc_process"
 
 
 OptimalDispatchInfluencers = [
@@ -40,3 +42,4 @@ class FleetStatus:
 class DisabledReason:
     EMERGENCY_STOP = "emergency_stop"
     STALE_HEARTBEAT = "stale_heartbeat"
+    SOFTWARE_NOT_COMPATIBLE = "software not compatible"

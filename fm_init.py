@@ -48,6 +48,7 @@ def main():
 
     with DBSession() as dbsession:
         fu.add_software_compatability(dbsession)
+        fu.add_master_fm_data_upload(dbsession)
         fu.FrontendUserUtils.delete_all_frontend_users(dbsession)
         for user_name, user_details in frontend_user_config["frontenduser"].items():
             role = user_details.get("role", "operator")
@@ -60,6 +61,9 @@ def main():
         for sherpa in all_sherpas:
             sherpa_names.append(sherpa.name)
         redis_conn.set("all_sherpas", json.dumps(sherpa_names))
+
+        all_fleet_names = dbsession.get_all_fleet_names()
+        redis_conn.set("all_fleet_names", json.dumps(all_fleet_names))
 
 
 if __name__ == "__main__":
