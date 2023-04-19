@@ -27,7 +27,7 @@ from app.routers import (
 # entire app.
 
 # setup logging
-# log_conf_path = os.path.join(os.getenv("FM_CONFIG_DIR"), "logging.conf")
+# log_conf_path = os.path.join(os.getenv("FM_MISC_DIR"), "logging.conf")
 # logging.config.fileConfig(log_conf_path)
 
 # create FastAPI object
@@ -71,7 +71,7 @@ def get_uvicorn_config():
         host="0.0.0.0",
         port=int(os.getenv("FM_PORT")),
         log_level="info",
-        log_config=os.path.join(os.getenv("FM_CONFIG_DIR"), "logging.conf"),
+        log_config=os.path.join(os.getenv("FM_MISC_DIR"), "logging.conf"),
         reload=True,
     )
     return uvi_config

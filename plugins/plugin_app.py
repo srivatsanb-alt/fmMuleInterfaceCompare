@@ -75,7 +75,7 @@ def get_uvicorn_config():
         host="0.0.0.0",
         port=int(os.getenv("PLUGIN_PORT")),
         log_level="info",
-        log_config=os.path.join(os.getenv("FM_CONFIG_DIR"), "plugin_logging.conf"),
+        log_config=os.path.join(os.getenv("FM_MISC_DIR"), "plugin_logging.conf"),
         reload=True,
     )
     return uvi_config
