@@ -89,6 +89,7 @@ class Handlers:
             get_logger().warning(f"message of type {msg.type} ignored, reason={reason}")
 
     def run_health_check(self):
+        # have not seperated queries and DB - Need to be done
         hutils.check_sherpa_status(self.dbsession)
         hutils.delete_notifications(self.dbsession)
         hutils.record_cpu_perf()
@@ -96,8 +97,8 @@ class Handlers:
         get_logger("status_updates").info("Ran a FM health check")
 
     def run_misc_processes(self):
+        # have not seperated queries and DB - Need to be done
         hutils.update_sherpa_oee(self.dbsession)
-        pass
 
     def get_sherpa_trips(self, sherpa_name):
         sherpa: fm.Sherpa = self.dbsession.get_sherpa(sherpa_name)
@@ -121,8 +122,8 @@ class Handlers:
         sherpa_status.other_info.update({"sw_date": init_response.get("sw_date")})
         sherpa_status.other_info.update({"sw_tag": init_response.get("sw_tag")})
         sherpa_status.other_info.update({"sw_id": init_response.get("sw_id")})
-        flag_modified(sherpa_status, "other_info")
 
+        flag_modified(sherpa_status, "other_info")
         get_logger("status_updates").info(
             f"updated {sherpa_status.sherpa_name} build info {sherpa_status.other_info}"
         )
