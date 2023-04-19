@@ -1,6 +1,9 @@
 from sqlalchemy import create_engine
 import os
 import time
+from sqlalchemy.ext.declarative import declarative_base
+
+Base = declarative_base()
 
 
 def init_db(name, models):

@@ -15,9 +15,8 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy import create_engine
 from sqlalchemy import Integer, String, Column, ARRAY
-from models.base_models import Base, TimestampMixin
-from typing import List, Union, Optional
 from pydantic import BaseModel
+from plugin_db import Base
 
 
 class DBSession:
