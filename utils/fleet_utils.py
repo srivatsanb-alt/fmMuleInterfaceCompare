@@ -118,6 +118,10 @@ def maybe_update_map_files(fleet_name: str) -> None:
 def maybe_create_gmaj_file(fleet_name: str) -> None:
     gmaj_path = get_map_file_path(fleet_name, "grid_map_attributes.json")
     wpsj_path = get_map_file_path(fleet_name, "waypoints.json")
+
+    if not os.path.exists(wpsj_path):
+        raise ValueError(f"Unable to fetch {wpsj_path}")
+
     rpi.maybe_update_gmaj(gmaj_path, wpsj_path, True)
     return
 
@@ -265,6 +269,10 @@ class FleetUtils:
     @classmethod
     def add_update_map_files(cls, dbsession: DBSession, fleet_name: str, map_id: int):
         map_path = get_map_path(fleet_name)
+
+        if not os.path.exists(map_path):
+            raise ValueError(f"Unable to fetch files from {map_path}")
+
         map_files = get_filenames(map_path)
         valid_map_files = []
         for map_file_name in map_files:
@@ -312,7 +320,7 @@ class FleetUtils:
         # maybe_update_map_files(fleet_name=fleet_name)
         gmaj_path = get_map_file_path(fleet_name, "grid_map_attributes.json")
         if not os.path.exists(gmaj_path):
-            raise ValueError(f"GMAJ doesn't exists for {fleet_name}")
+            raise ValueError(f"grip map attributes files doesn't exists for {fleet_name}")
 
         with open(gmaj_path) as f:
             gmas = json.load(f)
