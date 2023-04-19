@@ -121,6 +121,16 @@ if __name__ == "__main__":
         Process(target=ies_combine_trips_handler, args=[]).start()
         ies_logger.info("Starting ies combine trips handler")
 
+    if "ies_v2" in all_plugins:
+        import ies_v2.ies_v2_models as im
+        from plugin_db import init_db
+
+        ies_v2_logger = logging.getLogger("plugin_ies_v2")
+        init_db(str("plugin_ies_v2"), [im.CombinedTripsv2, im.JobIES])
+
+        Process(target=start_worker, args=("plugin_ies_v2",)).start()
+        ies_v2_logger.info("started a worker for plugin_ies_v2")
+
     if "conveyor" in all_plugins:
         import conveyor.conveyor_models as cm
 

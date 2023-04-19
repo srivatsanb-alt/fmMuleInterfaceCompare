@@ -41,12 +41,11 @@ async def ws_reader(websocket, name, handler_obj, unique_id=None, api_key=None):
         if api_key:
             msg["api_key"] = api_key
 
-        logger.debug(f"Converted msg: {msg}, count: {count}")
+        logger.info(f"Converted msg: {msg}, count: {count}")
         enqueue(plugin_q, handler_obj.handle, msg)
 
 
 async def ws_writer(websocket, name, format="json", unique_id=None):
-
     log_conf_path = os.path.join(os.getenv("FM_CONFIG_DIR"), "plugin_logging.conf")
     logging.config.fileConfig(log_conf_path)
     logger = logging.getLogger(f"plugin_{name}")
@@ -94,7 +93,6 @@ def check_response(response):
 
 
 def send_req_to_FM(plugin_name, endpoint, req_type, req_json=None, query=""):
-
     url = get_fm_url(endpoint, query)
 
     logger = logging.getLogger(plugin_name)

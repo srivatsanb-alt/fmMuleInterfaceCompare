@@ -58,6 +58,11 @@ if "ies" in all_plugins:
 
     app.include_router(ies_comms.router)
 
+if "ies_v2" in all_plugins:
+    from plugins.ies_v2 import ies_v2_comms
+
+    app.include_router(ies_v2_comms.router)
+
 if "conveyor" in all_plugins:
     from plugins.conveyor import conveyor_comms
 
