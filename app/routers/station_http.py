@@ -67,8 +67,8 @@ async def disable_station(
                 trip: tm.Trip = ongoing_trip.trip
                 stations = trip.route
                 if entity_name in stations:
-                    raise ValueError(
-                        f"Cannot disable station :{entity_name} ,ongoing trip : {trip.id} with station : {entity_name} in trip route : {trip.route}"
+                    dpd.raise_error(
+                        f"Cannot disable station :{entity_name}, there is an ongoing trip : {trip.id} with station : {entity_name} in trip route : {trip.route}"
                     )
 
         station_status: fm.StationStatus = dbsession.get_station_status(entity_name)
