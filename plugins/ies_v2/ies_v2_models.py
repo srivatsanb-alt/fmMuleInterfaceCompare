@@ -40,31 +40,30 @@ class DBSession:
         self.session.close()
 
 
-class JobIES(Base):
-    __tablename__ = "job_ies"
+class IESBookingReq(Base):
+    __tablename__ = "ies_booking_req"
     __table_args__ = {"extend_existing": True}
     ext_ref_id = Column(String, primary_key=True, index=True)
+    start_station = Column(String)
     route = Column(ARRAY(String))
     status = Column(String)
     kanban_id = Column(String, index=True)
-    other_info = Column(JSONB)
-    combined_trip_id = Column(ForeignKey("combined_trips_v2.trip_id"))
+    combined_trip_id = Column(ForeignKey("combined_trips.trip_id"))
     combined_trip = relationship(
-        "plugins.ies_v2.ies_v2_models.CombinedTripsv2",
+        "CombinedTrips",
         back_populates="trips",
         uselist=False,
     )
+    other_info = Column(JSONB)
 
 
-class CombinedTripsv2(Base):
-    __tablename__ = "combined_trips_v2"
+class CombinedTrips(Base):
+    __tablename__ = "combined_trips"
     __table_args__ = {"extend_existing": True}
     trip_id = Column(Integer, primary_key=True, index=True)
     booking_id = Column(Integer, index=True)
     combined_route = Column(ARRAY(String))
+    sherpa = Column(String)
     status = Column(String, index=True)
     next_idx_aug = Column(Integer)
-    trips = relationship(
-        "plugins.ies_v2.ies_v2_models.JobIES", back_populates="combined_trip"
-    )
-    sherpa = Column(String)
+    trips = relationship("IESBookingReq", back_populates="combined_trip")

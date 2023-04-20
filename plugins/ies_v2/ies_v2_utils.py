@@ -16,7 +16,7 @@ IES_JOB_STATUS_MAPPING = {
 }
 
 locationID_station_mapper_path = os.path.join(
-    os.getenv("FM_MAP_DIR"), "plugin_ies", "locationID_station_mapping.json"
+    os.getenv("FM_MAP_DIR"), "plugin_ies_v2", "locationID_station_mapping.json"
 )
 with open(locationID_station_mapper_path, "r") as f:
     locationID_station_mapping = json.load(f)

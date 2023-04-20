@@ -4,7 +4,7 @@ import json
 import logging
 import redis
 from models.trip_models import TripStatus
-from plugins.ies_v2.ies_v2_models import DBSession, JobIES
+from plugins.ies_v2.ies_v2_models import DBSession, IESBookingReq
 from plugins.ies_v2.ies_v2_utils import (
     IES_JOB_STATUS_MAPPING,
     JobCreate,
@@ -25,7 +25,7 @@ class IES_HANDLER:
 
     def send_msg(self, msg):
         pub = redis.from_url(os.getenv("FM_REDIS_URI"), decode_responses=True)
-        pub.publish("channel:plugin_ies", str(msg))
+        pub.publish("channel:plugin_ies_v2", str(msg))
 
     def _get_ati_stations(self, tasklist):
         self.logger.info(f"tasklist: {tasklist}")
@@ -55,7 +55,7 @@ class IES_HANDLER:
             return
 
         with DBSession() as db_session:
-            self.session = db_session
+            self.session = db_session.session
             fn_handler(msg)
         return
 
@@ -66,8 +66,8 @@ class IES_HANDLER:
             "JobCreate", msg["externalReferenceId"], "REJECTED"
         ).to_dict()
         trip_ies = (
-            self.session.session.query(JobIES)
-            .filter(JobIES.ext_ref_id == job_create.externalReferenceId)
+            self.session.query(IESBookingReq)
+            .filter(IESBookingReq.ext_ref_id == job_create.externalReferenceId)
             .one_or_none()
         )
         self.logger.info(f"query resp: {trip_ies}")
@@ -91,12 +91,13 @@ class IES_HANDLER:
         ).to_dict()
         self.send_msg(accepted_msg)
         self.logger.info(f"adding trip to db")
-        job = JobIES(
+        job = IESBookingReq(
             ext_ref_id=job_create.externalReferenceId,
+            start_station=route_stations[0],
             route=route_stations,
             status=IES_JOB_STATUS_MAPPING[TripStatus.BOOKED],
             kanban_id=msg["properties"]["kanbanId"],
         )
-        self.session.session.add(job)
+        self.session.add(job)
         self.logger.info("added job, returning")
         return

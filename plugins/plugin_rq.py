@@ -122,11 +122,11 @@ if __name__ == "__main__":
         ies_logger.info("Starting ies combine trips handler")
 
     if "ies_v2" in all_plugins:
-        import ies_v2.ies_v2_models as im
+        import plugins.ies_v2.ies_v2_models as im
         from plugin_db import init_db
 
         ies_v2_logger = logging.getLogger("plugin_ies_v2")
-        init_db(str("plugin_ies_v2"), [im.CombinedTripsv2, im.JobIES])
+        init_db(str("plugin_ies_v2"), [im.CombinedTrips, im.IESBookingReq])
 
         Process(target=start_worker, args=("plugin_ies_v2",)).start()
         ies_v2_logger.info("started a worker for plugin_ies_v2")
