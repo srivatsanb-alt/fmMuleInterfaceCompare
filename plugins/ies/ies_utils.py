@@ -51,3 +51,10 @@ class JobCreate(JsonMixin):
     taskList: list
     priority: int = 1
     jobStatus = str
+
+
+@dataclass
+class StationIES(JsonMixin):
+    messageType: str
+    ati_name: str
+    ies_name: str

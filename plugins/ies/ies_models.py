@@ -67,3 +67,12 @@ class CombinedTrips(Base):
     status = Column(String, index=True)
     next_idx_aug = Column(Integer)
     trips = relationship("IESBookingReq", back_populates="combined_trip")
+
+
+class IESStations(Base):
+    __tablename__ = "ies_stations"
+    __table_args__ = {"extend_existing": True}
+    id = Column(Integer, primary_key=True, index=True)
+    ies_name = Column(String)
+    ati_name = Column(String)
+    pose = Column(ARRAY(Float))
