@@ -49,6 +49,10 @@ def start_worker(queue_name):
 
 
 def report_failure(job, connection, fail_type, value, traceback):
+    job.meta["fail_type"] = fail_type
+    job.meta["error_value"] = value
+    job.save()
+
     logger = logging.getLogger("plugin_rq")
     logger.error(
         f"RQ job failed: error: {fail_type}, value: {value} func: {job.func_name}, args: {job.args}, kwargs: {job.kwargs}",
@@ -78,14 +82,23 @@ def enqueue(queue: Queue, func, *args, **kwargs):
 async def get_job_result(job_id):
     redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
     job = Job.fetch(job_id, connection=redis_conn)
+
+    error_detail = "Unable to process request"
     while True:
         status = job.get_status(refresh=True)
         if status == "finished":
             response = job.result
             break
         if status == "failed":
+            await asyncio.sleep(0.1)
+            job_meta = job.get_meta(refresh=True)
+            error_value = job_meta.get("error_value")
+
+            if isinstance(error_value, ValueError):
+                error_detail = str(error_value)
+
             job.cancel()
-            raise HTTPException(status_code=500, detail="Unable to process the request")
+            raise HTTPException(status_code=500, detail=error_detail)
         await asyncio.sleep(0.01)
 
     return response
@@ -102,7 +115,7 @@ if __name__ == "__main__":
         from plugin_db import init_db
 
         ies_logger = logging.getLogger("plugin_ies")
-        init_db(str("plugin_ies"), [im.CombinedTrips, im.IESBookingReq])
+        init_db(str("plugin_ies"), [im.CombinedTrips, im.IESBookingReq, im.IESStations])
 
         Process(target=start_worker, args=("plugin_ies",)).start()
         ies_logger.info("started a worker for plugin_ies")
