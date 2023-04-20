@@ -98,38 +98,14 @@ if __name__ == "__main__":
     all_plugins = get_all_plugins()
 
     if "ies" in all_plugins:
-        from ies.ies_utils import TripsIES
+        import plugins.ies.ies_models as im
         from plugin_db import init_db
 
         ies_logger = logging.getLogger("plugin_ies")
-        init_db(str("plugin_ies"), [TripsIES])
+        init_db(str("plugin_ies"), [im.CombinedTrips, im.IESBookingReq])
 
-        # # start a worker for ies plugin
         Process(target=start_worker, args=("plugin_ies",)).start()
         ies_logger.info("started a worker for plugin_ies")
-
-        from ies.ies_job_updates import check_status_and_combine_trips, send_job_updates
-
-        Process(target=send_job_updates, args=[]).start()
-        ies_logger.info("Sending continuous job updates")
-
-        def ies_combine_trips_handler():
-            return asyncio.get_event_loop().run_until_complete(
-                check_status_and_combine_trips()
-            )
-
-        Process(target=ies_combine_trips_handler, args=[]).start()
-        ies_logger.info("Starting ies combine trips handler")
-
-    if "ies_v2" in all_plugins:
-        import plugins.ies_v2.ies_v2_models as im
-        from plugin_db import init_db
-
-        ies_v2_logger = logging.getLogger("plugin_ies_v2")
-        init_db(str("plugin_ies_v2"), [im.CombinedTrips, im.IESBookingReq])
-
-        Process(target=start_worker, args=("plugin_ies_v2",)).start()
-        ies_v2_logger.info("started a worker for plugin_ies_v2")
 
     if "conveyor" in all_plugins:
         import conveyor.conveyor_models as cm

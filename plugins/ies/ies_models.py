@@ -1,17 +1,27 @@
 import os
+from sqlalchemy import (
+    ARRAY,
+    Boolean,
+    Column,
+    Enum,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    DateTime,
+)
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.orm import relationship
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy import create_engine
-from sqlalchemy import Integer, String, Column, ARRAY, Boolean
-from dataclasses import dataclass
-from models.base_models import Base, JsonMixin
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import Integer, String, Column, ARRAY
+from pydantic import BaseModel
+from plugin_db import Base
 
 
 class DBSession:
     def __init__(self):
-        engine = create_engine(
-            os.path.join(os.getenv("FM_DATABASE_URI"), "plugin_ies")
-        )
+        engine = create_engine(os.path.join(os.getenv("FM_DATABASE_URI"), "plugin_ies"))
         session_maker = sessionmaker(autocommit=False, autoflush=True, bind=engine)
         self.session: Session = session_maker()
 
@@ -29,90 +39,31 @@ class DBSession:
             self.session.commit()
         self.session.close()
 
-    def query_trip_id(self, trip_id):
-        return self.session.query(TripsIES).filter(TripsIES.trip_id == trip_id).one_or_none()
 
-
-    def query_ref_id(self, ref_id):
-        return (
-            self.session.query(TripsIES).filter(TripsIES.externalReferenceId == ref_id).one_or_none()
-        )
-
-
-class TripsIES(Base):
-    __tablename__ = "trips_ies"
+class IESBookingReq(Base):
+    __tablename__ = "ies_booking_req"
     __table_args__ = {"extend_existing": True}
-    id = Column(Integer, primary_key=True)
-    trip_id = Column(Integer, unique=True)
-    booking_id = Column(Integer, unique=True)
-    externalReferenceId = Column(String, unique=True)
+    ext_ref_id = Column(String, primary_key=True, index=True)
+    start_station = Column(String)
+    route = Column(ARRAY(String))
     status = Column(String)
-    actions = Column(ARRAY(String))
-    locations = Column(ARRAY(String))
-    combined = Column(Boolean)
-    ongoing = Column(Boolean)
-    # destination_stations = Column(ARRAY(String))
-    # ref_ids = Column(ARRAY(String))
-    combined_trip_data = Column(JSONB)
+    kanban_id = Column(String, index=True)
+    combined_trip_id = Column(ForeignKey("combined_trips.trip_id"))
+    combined_trip = relationship(
+        "CombinedTrips",
+        back_populates="trips",
+        uselist=False,
+    )
+    other_info = Column(JSONB)
 
 
-
-class PendingJobsIES(Base):
-    __tablename__ = "pending_jobs_ies"
+class CombinedTrips(Base):
+    __tablename__ = "combined_trips"
     __table_args__ = {"extend_existing": True}
-    externalReferenceId = Column(String, unique=True, primary_key = True)
-    tasklist = Column(ARRAY(JSONB))
-    priority = Column(Integer)
-
-
-@dataclass
-class AGVMsg(JsonMixin):
-    messageType: str
-    externalReferenceId: str
-    vehicleId: str
-    vehicleTypeID: str
-
-    def to_dict(self):
-        return {
-            "messageType": self.messageType,
-            "externalReferenceId": self.externalReferenceId,
-            "vehicleId": self.vehicleId,
-            "vehicleTypeID": self.vehicleTypeID,
-        }
-
-
-@dataclass
-class MsgToIES(JsonMixin):
-    messageType: str
-    externalReferenceId: str
-    jobStatus: str
-
-    def to_dict(self):
-        return {
-            "messageType": self.messageType,
-            "externalReferenceId": self.externalReferenceId,
-            "jobStatus": self.jobStatus,
-        }
-
-
-@dataclass
-class JobCreate(JsonMixin):
-    messageType: str
-    externalReferenceId: str
-    taskList: list
-    priority: int = 1
-    jobStatus = str
-
-
-@dataclass
-class JobCancel(JsonMixin):
-    messageType: str
-    externalReferenceId: str
-    jobStatus: str
-
-
-@dataclass
-class JobQuery(JsonMixin):
-    messageType: str
-    since: str
-    until: str
+    trip_id = Column(Integer, primary_key=True, index=True)
+    booking_id = Column(Integer, index=True)
+    combined_route = Column(ARRAY(String))
+    sherpa = Column(String)
+    status = Column(String, index=True)
+    next_idx_aug = Column(Integer)
+    trips = relationship("IESBookingReq", back_populates="combined_trip")
