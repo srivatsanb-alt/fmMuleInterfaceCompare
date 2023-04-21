@@ -622,7 +622,13 @@ class Handlers:
         if next_task == "no new task to assign":
             get_logger("status_updates").info(f"{sherpa.name} not assigned new task")
 
-        if done:
+        if done and sherpa_status.disabled is True:
+            get_logger("status_updates").info(
+                f"cannot assign new task to {sherpa.name}, sherpa is disabled, disabled_reason: {sherpa_status.disabled_reason}"
+            )
+            done = False
+            sherpa_status.assign_next_task = False
+        elif done:
             sherpa_status.assign_next_task = True
         else:
             sherpa_status.assign_next_task = False
