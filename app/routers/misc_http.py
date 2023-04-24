@@ -251,6 +251,7 @@ async def get_fm_incidents(
 
         if fm_incident is not None:
             response.update({"error_code": fm_incident.error_code})
+            response.update({"error_msg": fm_incident.error_message})
             response.update({"description": fm_incident.display_message})
             response.update({"how_to_recover": fm_incident.recovery_message})
             response.update({"reported_at": dt_to_str(fm_incident.created_at)})
