@@ -77,3 +77,6 @@ if __name__ == "__main__":
 
     redis_conn.set("is_fleet_manager_up", json.dumps(True))
     logging.info("Ati Fleet Manager started")
+
+    FM_TAG = os.getenv("FM_TAG")
+    logging.info(f"fm software tag: {FM_TAG}")
