@@ -1,5 +1,6 @@
 import os
 import logging
+import glob
 from fastapi import APIRouter, Depends
 
 from utils import fleet_utils as fu
@@ -148,8 +149,27 @@ async def get_all_fleet_info(user_name=Depends(dpd.get_user_from_header)):
 
 
 @router.get("/get_all_available_maps/{fleet_name}")
-async def get_all_available_maps():
-    return {}
+async def get_all_available_maps(
+    fleet_name: str, user_name=Depends(dpd.get_user_from_header)
+):
+    response = []
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    with DBSession() as dbsession:
+        all_fleets = dbsession.get_all_fleet_names()
+        new_fleet = False if fleet_name in all_fleets else True
+        if new_fleet:
+            dpd.raise_error("Add the fleet to get_all_available_maps", 401)
+
+        temp = os.path.join(os.getenv("FM_MAP_DIR"), fleet_name, "all_maps", "*")
+
+        for item in glob.glob(temp):
+            if os.path.isdir(item):
+                map_folder_name = item.rsplit("/")[-1]
+                response.append(map_folder_name)
+
+    return response
 
 
 @router.post("/add_edit_fleet/{fleet_name}")
