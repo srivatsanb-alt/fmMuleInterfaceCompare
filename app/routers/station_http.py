@@ -11,7 +11,7 @@ import app.routers.dependencies as dpd
 
 router = APIRouter(
     prefix="/api/v1/station",
-    tags=["sherpa"],
+    tags=["station"],
     # dependencies=[Depends(get_sherpa)],
     responses={404: {"description": "Not found"}},
 )

@@ -14,7 +14,9 @@ import app.routers.dependencies as dpd
 from utils.util import generate_random_job_id
 
 
-router = APIRouter(responses={404: {"description": "Not found"}}, prefix="/api/v1")
+router = APIRouter(
+    responses={404: {"description": "Not found"}}, tags=["misc"], prefix="/api/v1"
+)
 
 
 @router.get("/site_info")

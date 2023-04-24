@@ -65,6 +65,9 @@ def main():
         all_fleet_names = dbsession.get_all_fleet_names()
         redis_conn.set("all_fleet_names", json.dumps(all_fleet_names))
 
+    FM_TAG = os.getenv("FM_TAG")
+    print(f"fm software tag: {FM_TAG}")
+
 
 if __name__ == "__main__":
     main()
