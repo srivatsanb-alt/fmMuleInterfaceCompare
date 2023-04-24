@@ -2,7 +2,8 @@ from core.db import session_maker, engine
 from models.misc_models import FMVersion
 
 
-AVAILABLE_UPGRADES = ["2.2"]
+AVAILABLE_UPGRADES = ["2.2", "3.0", "3.01", "3.1"]
+NO_SCHEMA_CHANGES = ["3.0", "3.01", "3.1"]
 
 
 class DBUpgrade:
@@ -11,6 +12,10 @@ class DBUpgrade:
         with engine.connect() as conn:
             conn.execute("commit")
             conn.execute('CREATE INDEX "booking_time_index" on "trips" ("booking_time")')
+
+    def ack_no_schema_change_reqd(self, fm_version):
+        print(f"will upgrade db to version {fm_version}")
+        print(f"No db schema upgrades required for {fm_version}")
 
 
 def upgrade_db_schema():
@@ -35,13 +40,18 @@ def upgrade_db_schema():
             if float(fm_version.version) < float(version):
                 print(f"Will try to upgrade db from v_{fm_version.version} to v_{version}")
                 version_txt = version.replace(".", "_")
-                upgrade_fn = getattr(dbupgrade, f"upgrade_to_{version_txt}", None)
-                if not upgrade_fn:
-                    print(
-                        f"Invalid upgrade call, cannot upgrade from {fm_version.version} to {version}"
-                    )
-                    continue
-                upgrade_fn()
+
+                if version in NO_SCHEMA_CHANGES:
+                    dbupgrade.ack_no_schema_change_reqd(version)
+                else:
+                    upgrade_fn = getattr(dbupgrade, f"upgrade_to_{version_txt}", None)
+                    if not upgrade_fn:
+                        print(
+                            f"Invalid upgrade call, cannot upgrade from {fm_version.version} to {version}"
+                        )
+                        continue
+                    upgrade_fn()
+
+                print(f"Successfully upgraded db from {fm_version.version} to {version}")
                 fm_version.version = version
                 dbsession.commit()
-                print(f"Successfully upgraded db from {fm_version.version} to {version}")
