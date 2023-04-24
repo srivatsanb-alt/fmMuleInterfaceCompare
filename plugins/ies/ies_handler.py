@@ -23,10 +23,13 @@ class IES_HANDLER:
         pub.publish("channel:plugin_ies", str(msg))
 
     def _get_ati_stations(self, tasklist):
+        all_ies_stations = [
+            station.ies_name for station in self.session.query(im.IESStations).all()
+        ]
         self.logger.info(f"tasklist: {tasklist}")
         route_stations = [
             None
-            if task["LocationId"] not in self.locationID_station_mapping.keys()
+            if task["LocationId"] not in all_ies_stations
             else iu.get_ati_station_name(task["LocationId"])
             for task in tasklist
         ]
