@@ -336,7 +336,7 @@ class DBSession:
     def get_trip_with_booking_id(self, booking_id):
         return self.session.query(tm.Trip).filter(tm.Trip.booking_id == booking_id).all()
 
-    def get_saved_route(self, tag: str):
+    def get_saved_route(self, tag: str) -> tm.SaveRoute:
         return (
             self.session.query(tm.SaveRoute)
             .filter(tm.SaveRoute.tag == tag)

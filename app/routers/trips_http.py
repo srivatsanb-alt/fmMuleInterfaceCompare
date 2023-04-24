@@ -356,6 +356,24 @@ async def delete_saved_route(
         if saved_route:
             dbsession.session.delete(saved_route)
         else:
-            dpd.raise_error(f"route with tag:{tag} not present")
+            dpd.raise_error(f"No saved route with tag:{tag}")
 
+    return response
+
+@router.post("/save_route_metadata")
+async def save_route_metadata(
+    save_route_metadata: rqm.UpdateSavedRouteData, user_name=Depends(dpd.get_user_from_header)
+):
+    response = {}
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+    
+    with DBSession() as dbsession:
+        saved_route = dbsession.get_saved_route(save_route_metadata.tag)
+        if saved_route:
+            saved_route.other_info = save_route_metadata.metadata
+            dbsession.add_to_session(saved_route)
+        else:
+            dpd.raise_error(f"No saved route with tag:{save_route_metadata.tag}")
+    
     return response

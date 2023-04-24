@@ -478,11 +478,14 @@ class TripStatusUpdate(JsonMixin):
 class RouteWPS(JsonMixin):
     route_wps: List
 
-#################################################
-# Messages from ies
+
 
 class SaveRoute(ClientReq):
     tag: str
     route: List[str]
     other_info: Optional[Dict[str, str]] = None
     type: str = MessageType.SAVE_ROUTE
+
+class UpdateSavedRouteData(BaseModel):
+    tag:str
+    metadata: Dict[str, str]
