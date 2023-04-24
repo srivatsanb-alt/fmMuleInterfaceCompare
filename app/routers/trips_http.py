@@ -6,7 +6,7 @@ from sqlalchemy.sql import func
 # ati code imports
 import app.routers.dependencies as dpd
 import models.request_models as rqm
-from models.trip_models import Trip, TripAnalytics
+from models.trip_models import Trip, TripAnalytics, SaveRoute
 from models.db_session import DBSession
 from utils.util import str_to_dt
 import utils.trip_utils as tu
@@ -312,4 +312,68 @@ async def populate_route(
     for route in populate_routes[:num_routes]:
         response.extend(route)
 
+    return response
+
+@router.post("/save_route")
+async def save_route(
+    save_route_req: rqm.SaveRoute, user_name=Depends(dpd.get_user_from_header)
+):
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+    
+    response = await dpd.process_req_with_response(None, save_route_req, user_name)
+    return response
+    
+@router.get("/get_saved_routes")
+async def get_saved_routes(user_name=Depends(dpd.get_user_from_header)
+):
+    response = {}
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+    
+    with DBSession() as dbsession:
+        saved_routes = dbsession.get_all_saved_routes()
+
+        if len(saved_routes)>0:
+            for saved_route in saved_routes:
+                response.update({saved_route.tag: saved_route.route})
+        else:
+            dpd.raise_error(f"No saved routes are present")
+
+    return response
+
+@router.delete("/delete_saved_route/{tag}")
+async def delete_saved_route(
+    tag: str, user_name=Depends(dpd.get_user_from_header)
+):
+    response = {}
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+    
+    with DBSession() as dbsession:
+        saved_route = dbsession.get_saved_route(tag)
+
+        if saved_route:
+            dbsession.session.delete(saved_route)
+        else:
+            dpd.raise_error(f"No saved route with tag:{tag}")
+
+    return response
+
+@router.post("/save_route_metadata")
+async def save_route_metadata(
+    save_route_metadata: rqm.UpdateSavedRouteData, user_name=Depends(dpd.get_user_from_header)
+):
+    response = {}
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+    
+    with DBSession() as dbsession:
+        saved_route = dbsession.get_saved_route(save_route_metadata.tag)
+        if saved_route:
+            saved_route.other_info = save_route_metadata.metadata
+            dbsession.add_to_session(saved_route)
+        else:
+            dpd.raise_error(f"No saved route with tag:{save_route_metadata.tag}")
+    
     return response

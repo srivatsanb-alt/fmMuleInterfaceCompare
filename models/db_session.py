@@ -336,6 +336,18 @@ class DBSession:
     def get_trip_with_booking_id(self, booking_id):
         return self.session.query(tm.Trip).filter(tm.Trip.booking_id == booking_id).all()
 
+    def get_saved_route(self, tag: str) -> tm.SaveRoute:
+        return (
+            self.session.query(tm.SaveRoute)
+            .filter(tm.SaveRoute.tag == tag)
+            .one_or_none()
+        )
+    
+    def get_all_saved_routes(self) -> List[tm.SaveRoute]:
+        return (
+            self.session.query(tm.SaveRoute).all()
+        )
+
     def get_trip_ids_with_timestamp(self, booked_from, booked_till):
         temp = (
             self.session.query(tm.Trip.id)
@@ -369,7 +381,7 @@ class DBSession:
                 .filter(tm.TripLeg.id == ongoing_trip.trip_leg_id)
                 .one_or_none()
             )
-
+    
     def get_all_trip_legs(self, trip_id: int):
         temp = self.session.query(tm.TripLeg.id).filter(tm.TripLeg.trip_id == trip_id).all()
         trip_leg_ids = []
