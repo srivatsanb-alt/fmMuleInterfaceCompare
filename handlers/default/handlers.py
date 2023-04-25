@@ -1388,34 +1388,39 @@ class Handlers:
         )
         utils_comms.send_req_to_sherpa(self.dbsession, sherpa, req)
 
-    def handle_save_route(self,req):
+    def handle_save_route(self, req: rqm.SaveRouteReq):
+        reponse = {}
+
         # query db
         saved_route = self.dbsession.get_saved_route(req.tag)
+
+        stations = req.route
+        for station_name in stations:
+            try:
+                _ = self.dbsession.get_station(station_name)
+            except Exception as e:
+                get_logger().info(f"unable to find station: {station_name}, Exception: {e}")
+                raise ValueError(f"{station_name} not found in DB, cannot add {req.route}")
 
         # end transaction
         self.dbsession.session.commit()
 
-        stations = req.route
-        for station_name in stations:
-            station = self.dbsession.get_station(station_name)
-            if station:
-                continue
-            else:
-                raise ValueError(f"Not a valid station : {station_name} ")
-        
         # update db
         if saved_route:
             saved_route.route = req.route
-            self.dbsession.add_to_session(saved_route)
-            get_logger().info(f"updated the route : {req.route} , for the tag : {req.tag} ")
-        else:
-            save_route: tm.SaveRoute = tm.SaveRoute(tag=req.tag,route = req.route,other_info = req.other_info)
-            self.dbsession.add_to_session(save_route)
             get_logger().info(
-            f"Saved a Route : {req.route}, with tag : {req.tag} "
+                f"updated the route : {req.route} for the route tag : {req.tag} "
             )
 
-        return {}
+        else:
+            saved_route: tm.SaveRoute = tm.SavedRoutes(
+                tag=req.tag, route=req.route, other_info=req.other_info
+            )
+            self.dbsession.add_to_session(saved_route)
+            get_logger().info(f"Saved a new route : {req.route}, with tag : {req.tag} ")
+
+        return reponse
+
     def handle(self, msg):
         self.dbsession = None
         init_request_context(msg)
