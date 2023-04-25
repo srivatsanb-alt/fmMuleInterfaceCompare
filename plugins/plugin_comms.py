@@ -146,6 +146,9 @@ def get_fm_url(endpoint, query):
         "create_generic_alerts": os.path.join(
             "http://", fm_ip, "api/v1/create_generic_alerts/", str(query)
         ),
+        "sherpa_summary": os.path.join(
+            "http://", fm_ip, "api/v1/sherpa_summary/", str(query), str(0)
+        ),
     }
     return fm_endpoints.get(endpoint, None)
 
