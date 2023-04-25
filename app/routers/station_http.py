@@ -67,7 +67,7 @@ async def disable_station(
                 trip: tm.Trip = ongoing_trip.trip
                 stations = trip.route
                 if entity_name in stations:
-                    raise ValueError(
+                    dpd.raise_error(
                         f"Cannot disable station :{entity_name} ,ongoing trip : {trip.id} with station : {entity_name} in trip route : {trip.route}"
                     )
 
