@@ -25,7 +25,7 @@ router = APIRouter(
 
 
 @router.get("/all_sherpa_info")
-def get_all_sherpa_info(user_name=Depends(dpd.get_user_from_header)):
+async def get_all_sherpa_info(user_name=Depends(dpd.get_user_from_header)):
 
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
@@ -49,7 +49,7 @@ def get_all_sherpa_info(user_name=Depends(dpd.get_user_from_header)):
 
 
 @router.post("/add_edit_sherpa/{sherpa_name}")
-def add_edit_sherpa(
+async def add_edit_sherpa(
     add_edit_sherpa: rqm.AddEditSherpaReq,
     sherpa_name: str,
     user_name=Depends(dpd.get_user_from_header),
@@ -92,7 +92,7 @@ def add_edit_sherpa(
 
 
 @router.get("/delete_sherpa/{sherpa_name}")
-def delete_sherpa(
+async def delete_sherpa(
     sherpa_name: str,
     user_name=Depends(dpd.get_user_from_header),
 ):
@@ -122,7 +122,7 @@ def delete_sherpa(
 
 
 @router.get("/all_fleet_info")
-def get_all_fleet_info(user_name=Depends(dpd.get_user_from_header)):
+async def get_all_fleet_info(user_name=Depends(dpd.get_user_from_header)):
 
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
@@ -147,7 +147,7 @@ def get_all_fleet_info(user_name=Depends(dpd.get_user_from_header)):
 
 
 @router.post("/add_edit_fleet/{fleet_name}")
-def add_fleet(
+async def add_fleet(
     add_fleet_req: rqm.AddFleetReq,
     fleet_name: str,
     user_name=Depends(dpd.get_user_from_header),
@@ -194,7 +194,7 @@ def add_fleet(
 
 
 @router.get("/delete_fleet/{fleet_name}")
-def delete_fleet(
+async def delete_fleet(
     fleet_name: str,
     user_name=Depends(dpd.get_user_from_header),
 ):
@@ -236,7 +236,7 @@ def delete_fleet(
 
 
 @router.get("/update_map/{fleet_name}")
-def update_map(
+async def update_map(
     fleet_name: str,
     user_name=Depends(dpd.get_user_from_header),
 ):
@@ -287,7 +287,7 @@ def update_map(
 
 
 @router.get("/all_user_info")
-def all_user_info(user_name=Depends(dpd.get_user_from_header)):
+async def all_user_info(user_name=Depends(dpd.get_user_from_header)):
 
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
