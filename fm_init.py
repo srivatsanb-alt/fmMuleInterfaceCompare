@@ -10,7 +10,7 @@ import json
 from utils.upgrade_db import upgrade_db_schema
 from models.db_session import DBSession
 
-log_conf_path = os.path.join(os.getenv("FM_CONFIG_DIR"), "logging.conf")
+log_conf_path = os.path.join(os.getenv("FM_MISC_DIR"), "logging.conf")
 logging.config.fileConfig(log_conf_path)
 logger = logging.getLogger("confgure_fleet")
 
@@ -64,6 +64,9 @@ def main():
 
         all_fleet_names = dbsession.get_all_fleet_names()
         redis_conn.set("all_fleet_names", json.dumps(all_fleet_names))
+
+    FM_TAG = os.getenv("FM_TAG")
+    print(f"fm software tag: {FM_TAG}")
 
 
 if __name__ == "__main__":

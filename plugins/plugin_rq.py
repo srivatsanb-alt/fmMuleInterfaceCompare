@@ -12,7 +12,7 @@ import logging.config
 import json
 
 # setup logging
-log_conf_path = os.path.join(os.getenv("FM_CONFIG_DIR"), "plugin_logging.conf")
+log_conf_path = os.path.join(os.getenv("FM_MISC_DIR"), "plugin_logging.conf")
 logging.config.fileConfig(log_conf_path)
 logger = logging.getLogger("plugin_rq")
 

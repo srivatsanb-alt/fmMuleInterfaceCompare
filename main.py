@@ -15,6 +15,7 @@ from scripts.periodic_updates import send_periodic_updates
 from scripts.periodic_backup import backup_data
 from scripts.periodic_assigner import assign_next_task
 from scripts.periodic_fm_health_check import periodic_health_check
+from scripts.periodic_misc_processes import misc_processes
 from scripts.alerts import send_slack_alerts
 from master_fm_comms.send_updates_to_mfm import send_mfm_updates
 from master_fm_comms.send_ws_updates_to_mfm import send_ws_msgs_to_mfm
@@ -71,5 +72,11 @@ if __name__ == "__main__":
     Process(target=send_mfm_updates).start()
     Process(target=send_ws_msgs_to_mfm).start()
 
+    # start misc processes
+    Process(target=misc_processes).start()
+
     redis_conn.set("is_fleet_manager_up", json.dumps(True))
     logging.info("Ati Fleet Manager started")
+
+    FM_TAG = os.getenv("FM_TAG")
+    logging.info(f"fm software tag: {FM_TAG}")

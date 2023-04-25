@@ -12,7 +12,7 @@ from .plugin_rq import enqueue
 
 
 async def ws_reader(websocket, name, handler_obj, unique_id=None, api_key=None):
-    log_conf_path = os.path.join(os.getenv("FM_CONFIG_DIR"), "plugin_logging.conf")
+    log_conf_path = os.path.join(os.getenv("FM_MISC_DIR"), "plugin_logging.conf")
     logging.config.fileConfig(log_conf_path)
     logger = logging.getLogger(f"plugin_{name}")
 
@@ -46,7 +46,7 @@ async def ws_reader(websocket, name, handler_obj, unique_id=None, api_key=None):
 
 
 async def ws_writer(websocket, name, format="json", unique_id=None):
-    log_conf_path = os.path.join(os.getenv("FM_CONFIG_DIR"), "plugin_logging.conf")
+    log_conf_path = os.path.join(os.getenv("FM_MISC_DIR"), "plugin_logging.conf")
     logging.config.fileConfig(log_conf_path)
     logger = logging.getLogger(f"plugin_{name}")
 
@@ -132,10 +132,10 @@ def get_fm_url(endpoint, query):
         "trip_book": os.path.join("http://", fm_ip, "api/v1/trips/book/"),
         "trip_status": os.path.join("http://", fm_ip, "api/v1/trips/status/"),
         "delete_ongoing_trip": os.path.join(
-            "http://", fm_ip, "api/v1/trips/ongoing/", str(query)
+            "http://", fm_ip, "api/v1/trips/ongoing/", str(query), "-1"
         ),
         "delete_booked_trip": os.path.join(
-            "http://", fm_ip, "api/v1/trips/booking/", str(query)
+            "http://", fm_ip, "api/v1/trips/booking/", str(query), "-1"
         ),
         "station_info": os.path.join(
             "http://", fm_ip, "api/v1/station/", str(query), "info"

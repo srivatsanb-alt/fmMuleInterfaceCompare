@@ -4,14 +4,14 @@ import logging
 import logging.config
 import os
 import aioredis
-from fastapi import APIRouter, Depends, WebSocket, status
+from fastapi import APIRouter, Depends, WebSocket, status, WebSocketDisconnect
 
 
 # ati code imports
 import app.routers.dependencies as dpd
 
 # setup logging
-log_conf_path = os.path.join(os.getenv("FM_CONFIG_DIR"), "logging.conf")
+log_conf_path = os.path.join(os.getenv("FM_MISC_DIR"), "logging.conf")
 logging.config.fileConfig(log_conf_path)
 logger = logging.getLogger("uvicorn")
 
@@ -45,7 +45,11 @@ async def update_ws(websocket: WebSocket, user_name=Depends(dpd.get_user_from_qu
 
 async def reader(websocket):
     while True:
-        _ = await websocket.receive_json()
+        try:
+            _ = await websocket.receive_json()
+        except WebSocketDisconnect as e:
+            logger.info("websocket connection disconnected")
+            raise e
 
 
 async def writer(websocket):
@@ -58,4 +62,8 @@ async def writer(websocket):
         message = await psub.get_message(ignore_subscribe_messages=True, timeout=5)
         if message:
             data = ast.literal_eval(message["data"])
-            await websocket.send_json(data)
+            try:
+                await websocket.send_json(data)
+            except WebSocketDisconnect as e:
+                logger.info("websocket connection disconnected")
+                raise e

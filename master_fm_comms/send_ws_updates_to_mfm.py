@@ -38,7 +38,11 @@ async def send_ongoing_trip_status(ws, mfm_context: mu.MFMContext):
                 continue
 
             fleet_name = data.get("fleet_name")
-            time_delta = datetime.datetime.now() - last_update_dt.get(fleet_name)
+
+            temp = last_update_dt.get(fleet_name)
+            if temp is None:
+                continue
+            time_delta = datetime.datetime.now() - temp
 
             if time_delta.seconds > mfm_context.ws_update_freq:
                 await ws.send(json.dumps(data))
@@ -74,7 +78,11 @@ async def send_fleet_status(ws, mfm_context: mu.MFMContext):
                 continue
 
             fleet_name = data.get("fleet_name")
-            time_delta = datetime.datetime.now() - last_update_dt.get(fleet_name)
+
+            temp = last_update_dt.get(fleet_name)
+            if temp is None:
+                continue
+            time_delta = datetime.datetime.now() - temp
 
             if time_delta.seconds > mfm_context.ws_update_freq:
                 pruned_fleet_status = mu.prune_fleet_status(data)

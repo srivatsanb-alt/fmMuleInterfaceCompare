@@ -224,6 +224,11 @@ class FMHealthCheck(BaseModel):
     type: str = MessageType.FM_HEALTH_CHECK
 
 
+class MiscProcess(BaseModel):
+    source: str = "self"
+    type: str = MessageType.MISC_PROCESS
+
+
 #################################################
 # Messages from frontend
 class ClientReq(BaseModel):
@@ -289,11 +294,18 @@ class BookingReq(ClientReq):
 class DeleteOngoingTripReq(ClientReq):
     booking_id: int
     type: str = MessageType.DELETE_ONGOING_TRIP
+    trip_id: Optional[int] = None
 
 
 class DeleteBookedTripReq(ClientReq):
     booking_id: int
     type: str = MessageType.DELETE_BOOKED_TRIP
+    trip_id: Optional[int] = None
+
+
+class ForceDeleteOngoingTripReq(ClientReq):
+    sherpa_name: str
+    type: str = MessageType.FORCE_DELETE_ONGOING_TRIP
 
 
 class SherpaInductReq(ClientReq):
@@ -465,3 +477,15 @@ class TripStatusUpdate(JsonMixin):
 @dataclass
 class RouteWPS(JsonMixin):
     route_wps: List
+
+
+
+class SaveRoute(ClientReq):
+    tag: str
+    route: List[str]
+    other_info: Optional[Dict[str, str]] = None
+    type: str = MessageType.SAVE_ROUTE
+
+class UpdateSavedRouteData(BaseModel):
+    tag:str
+    metadata: Dict[str, str]

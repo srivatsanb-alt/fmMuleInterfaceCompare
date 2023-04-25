@@ -89,11 +89,16 @@ class Handlers:
             get_logger().warning(f"message of type {msg.type} ignored, reason={reason}")
 
     def run_health_check(self):
+        # have not seperated queries and DB - Need to be done
         hutils.check_sherpa_status(self.dbsession)
         hutils.delete_notifications(self.dbsession)
         hutils.record_cpu_perf()
         hutils.record_rq_perf()
         get_logger("status_updates").info("Ran a FM health check")
+
+    def run_misc_processes(self):
+        # have not seperated queries and DB - Need to be done
+        hutils.update_sherpa_oee(self.dbsession)
 
     def get_sherpa_trips(self, sherpa_name):
         sherpa: fm.Sherpa = self.dbsession.get_sherpa(sherpa_name)
@@ -117,8 +122,8 @@ class Handlers:
         sherpa_status.other_info.update({"sw_date": init_response.get("sw_date")})
         sherpa_status.other_info.update({"sw_tag": init_response.get("sw_tag")})
         sherpa_status.other_info.update({"sw_id": init_response.get("sw_id")})
-        flag_modified(sherpa_status, "other_info")
 
+        flag_modified(sherpa_status, "other_info")
         get_logger("status_updates").info(
             f"updated {sherpa_status.sherpa_name} build info {sherpa_status.other_info}"
         )
@@ -548,6 +553,7 @@ class Handlers:
         all_ongoing_trips: List[tm.OngoingTrip],
         all_sherpas: List[fm.Sherpa],
         all_trip_analytics: List[tm.TripAnalytics],
+        force_delete=False,
     ):
         for ongoing_trip, sherpa, trip_analytics in zip(
             all_ongoing_trips, all_sherpas, all_trip_analytics
@@ -561,11 +567,18 @@ class Handlers:
 
             self.end_trip(ongoing_trip, sherpa, False)
             ongoing_trip.trip.cancel()
-            terminate_trip_msg = rqm.TerminateTripReq(
-                trip_id=ongoing_trip.trip_id, trip_leg_id=ongoing_trip.trip_leg_id
-            )
 
-            _ = utils_comms.send_req_to_sherpa(self.dbsession, sherpa, terminate_trip_msg)
+            if not force_delete:
+                terminate_trip_msg = rqm.TerminateTripReq(
+                    trip_id=ongoing_trip.trip_id, trip_leg_id=ongoing_trip.trip_leg_id
+                )
+
+                _ = utils_comms.send_req_to_sherpa(
+                    self.dbsession, sherpa, terminate_trip_msg
+                )
+            else:
+                get_logger().info(f"Not sending terminate_trip request to {sherpa.name}")
+
             get_logger().info(
                 f"Deleted ongoing trip successfully trip_id: {ongoing_trip.trip.id} booking_id: {ongoing_trip.trip.booking_id}"
             )
@@ -609,7 +622,13 @@ class Handlers:
         if next_task == "no new task to assign":
             get_logger("status_updates").info(f"{sherpa.name} not assigned new task")
 
-        if done:
+        if done and sherpa_status.disabled is True:
+            get_logger("status_updates").info(
+                f"cannot assign new task to {sherpa.name}, sherpa is disabled, disabled_reason: {sherpa_status.disabled_reason}"
+            )
+            done = False
+            sherpa_status.assign_next_task = False
+        elif done:
             sherpa_status.assign_next_task = True
         else:
             sherpa_status.assign_next_task = False
@@ -665,7 +684,12 @@ class Handlers:
         response = {}
 
         # query db
-        trips: List[tm.Trip] = self.dbsession.get_trip_with_booking_id(req.booking_id)
+        if req.trip_id is None:
+            trips: List[tm.Trip] = self.dbsession.get_trip_with_booking_id(req.booking_id)
+        else:
+            trip: tm.Trip = self.dbsession.get_trip(req.trip_id)
+            trips: List[tm.Trip] = [trip]
+
         all_to_be_cancelled_trips: List[tm.Trip] = []
         all_pending_trips: List[tm.PendingTrip] = []
 
@@ -698,7 +722,12 @@ class Handlers:
     def handle_delete_ongoing_trip(self, req: rqm.DeleteOngoingTripReq):
 
         # query db
-        trips: List[tm.Trip] = self.dbsession.get_trip_with_booking_id(req.booking_id)
+        if req.trip_id is None:
+            trips: List[tm.Trip] = self.dbsession.get_trip_with_booking_id(req.booking_id)
+        else:
+            trip: tm.Trip = self.dbsession.get_trip(req.trip_id)
+            trips: List[tm.Trip] = [trip]
+
         all_ongoing_trips: List[tm.OngoingTrip] = []
         all_sherpas: List[fm.Sherpa] = []
         all_trip_analytics: List[tm.TripAnalytics] = []
@@ -734,11 +763,52 @@ class Handlers:
 
         return response
 
+    def handle_force_delete_ongoing_trip(self, req: rqm.ForceDeleteOngoingTripReq):
+        response = {}
+
+        all_trip_analytics = []
+        all_ongoing_trips = []
+        all_sherpas = []
+
+        # query db
+        sherpa: fm.Sherpa = self.dbsession.get_sherpa(req.sherpa_name)
+
+        if sherpa.status.trip_id is None:
+            raise ValueError("Sherpa has no ongoing_trip")
+
+        ongoing_trip: tm.OngoingTrip = self.dbsession.get_ongoing_trip_with_trip_id(
+            sherpa.status.trip_id
+        )
+
+        if ongoing_trip is None:
+            raise ValueError("Sherpa has no ongoing_trip")
+
+        trip_analytics = self.dbsession.get_trip_analytics(ongoing_trip.trip_leg_id)
+
+        all_trip_analytics.append(trip_analytics)
+        all_ongoing_trips.append(ongoing_trip)
+        all_sherpas.append(sherpa)
+
+        # end transaction
+        self.dbsession.session.commit()
+
+        # update db
+        response = self.delete_ongoing_trip(
+            all_ongoing_trips, all_sherpas, all_trip_analytics, force_delete=True
+        )
+
+        return response
+
     def handle_sherpa_status(self, req: rqm.SherpaStatusMsg):
 
         # query db
         sherpa, ongoing_trip, pending_trip = self.get_sherpa_trips(req.sherpa_name)
         status: fm.SherpaStatus = sherpa.status
+
+        if req.mode != status.mode:
+            last_sherpa_mode_change = self.dbsession.get_last_sherpa_mode_change(
+                req.sherpa_name
+            )
 
         # end transaction
         self.dbsession.session.commit()
@@ -771,6 +841,11 @@ class Handlers:
         self.update_sherpa_info(status, init_response)
 
         status.mode = req.mode
+
+        hutils.record_sherpa_mode_change(
+            self.dbsession, sherpa.name, req.mode, last_sherpa_mode_change
+        )
+
         get_logger(sherpa.name).info(f"{sherpa.name} switched to {req.mode} mode")
 
     def handle_trip_status(self, req: rqm.TripStatusMsg):
@@ -1180,9 +1255,7 @@ class Handlers:
 
         if reset_fleet:
             update_map_msg = f"Map files of fleet: {fleet_name} has been modified, please update the map by pressing the update_map button on the webpage header!"
-            hutils.maybe_add_alert(
-                self.dbsession, [fleet_name, sherpa.name], update_map_msg
-            )
+            hutils.maybe_add_alert(self.dbsession, [fleet_name], update_map_msg)
 
         response: rqm.VerifyFleetFilesResp = rqm.VerifyFleetFilesResp(
             fleet_name=fleet_name, files_info=map_file_info
@@ -1315,6 +1388,34 @@ class Handlers:
         )
         utils_comms.send_req_to_sherpa(self.dbsession, sherpa, req)
 
+    def handle_save_route(self,req):
+        # query db
+        saved_route = self.dbsession.get_saved_route(req.tag)
+
+        # end transaction
+        self.dbsession.session.commit()
+
+        stations = req.route
+        for station_name in stations:
+            station = self.dbsession.get_station(station_name)
+            if station:
+                continue
+            else:
+                raise ValueError(f"Not a valid station : {station_name} ")
+        
+        # update db
+        if saved_route:
+            saved_route.route = req.route
+            self.dbsession.add_to_session(saved_route)
+            get_logger().info(f"updated the route : {req.route} , for the tag : {req.tag} ")
+        else:
+            save_route: tm.SaveRoute = tm.SaveRoute(tag=req.tag,route = req.route,other_info = req.other_info)
+            self.dbsession.add_to_session(save_route)
+            get_logger().info(
+            f"Saved a Route : {req.route}, with tag : {req.tag} "
+            )
+
+        return {}
     def handle(self, msg):
         self.dbsession = None
         init_request_context(msg)
@@ -1324,6 +1425,10 @@ class Handlers:
 
             if msg.type == cc.MessageType.FM_HEALTH_CHECK:
                 self.run_health_check()
+                return
+
+            if msg.type == cc.MessageType.MISC_PROCESS:
+                self.run_misc_processes()
                 return
 
             # log, add msg to sherpa events

@@ -153,6 +153,7 @@ async def process_req_with_response(queue, req, user: str):
 
     redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
 
+    error_detail = "Unable to process request"
     while True:
         job = Job.fetch(job.id, connection=redis_conn)
         status = job.get_status(refresh=True)
@@ -164,8 +165,16 @@ async def process_req_with_response(queue, req, user: str):
             response = job.result
             break
         if status == "failed":
+            await asyncio.sleep(0.1)
+
+            job_meta = job.get_meta(refresh=True)
+            error_value = job_meta.get("error_value")
+
+            if isinstance(error_value, ValueError):
+                error_detail = str(error_value)
+
             job.cancel()
-            raise HTTPException(status_code=500, detail="Unable to process the request")
+            raise HTTPException(status_code=500, detail=error_detail)
 
         await asyncio.sleep(0.05)
 

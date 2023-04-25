@@ -5,16 +5,17 @@ from fastapi import APIRouter, Depends
 import aioredis
 
 # ati code imports
-from utils.util import dt_to_str, get_table_as_dict
 import models.request_models as rqm
 import models.fleet_models as fm
 import models.misc_models as mm
 from models.db_session import DBSession
 import app.routers.dependencies as dpd
-from utils.util import generate_random_job_id
+import utils.util as utils_util
 
 
-router = APIRouter(responses={404: {"description": "Not found"}}, prefix="/api/v1")
+router = APIRouter(
+    responses={404: {"description": "Not found"}}, tags=["misc"], prefix="/api/v1"
+)
 
 
 @router.get("/site_info")
@@ -113,16 +114,16 @@ async def sherpa_summary(
         recent_events = session.get_sherpa_events(sherpa_name)
         result = []
         for recent_event in recent_events:
-            temp = get_table_as_dict(fm.SherpaEvent, recent_event)
+            temp = utils_util.get_table_as_dict(fm.SherpaEvent, recent_event)
             result.append(temp)
 
         response.update({"recent_events": {"events": result}})
         sherpa: fm.Sherpa = session.get_sherpa(sherpa_name)
-        response.update({"sherpa": get_table_as_dict(fm.Sherpa, sherpa)})
+        response.update({"sherpa": utils_util.get_table_as_dict(fm.Sherpa, sherpa)})
         response.update({"fleet_name": sherpa.fleet.name})
         sherpa_status: fm.SherpaStatus = session.get_sherpa_status(sherpa_name)
         response.update(
-            {"sherpa_status": get_table_as_dict(fm.SherpaStatus, sherpa_status)}
+            {"sherpa_status": utils_util.get_table_as_dict(fm.SherpaStatus, sherpa_status)}
         )
 
     return response
@@ -151,7 +152,7 @@ async def get_route_wps(
         for station_name in route_preview_req.route:
             station = session.get_station(station_name)
             stations_poses.append(station.pose)
-        job_id = generate_random_job_id()
+        job_id = utils_util.generate_random_job_id()
         control_router_wps_job = [stations_poses, fleet_name, job_id]
         await redis_conn.set(
             f"control_router_wps_job_{job_id}", json.dumps(control_router_wps_job)
@@ -251,8 +252,10 @@ async def get_fm_incidents(
 
         if fm_incident is not None:
             response.update({"error_code": fm_incident.error_code})
+            response.update({"error_msg": fm_incident.error_message})
             response.update({"description": fm_incident.display_message})
             response.update({"how_to_recover": fm_incident.recovery_message})
-            response.update({"reported_at": dt_to_str(fm_incident.created_at)})
+            response.update({"reported_at": utils_util.dt_to_str(fm_incident.created_at)})
+            response.update({"module": fm_incident.module})
             response.update({"other_info": fm_incident.other_info})
     return response

@@ -1,5 +1,6 @@
 import os
 import logging
+import glob
 from fastapi import APIRouter, Depends
 
 from utils import fleet_utils as fu
@@ -14,18 +15,19 @@ from utils.comms import close_websocket_for_sherpa
 
 # manages the overall configuration of fleet by- deleting sherpa, fleet, map, station; update map.
 # setup logging
-log_conf_path = os.path.join(os.getenv("FM_CONFIG_DIR"), "logging.conf")
+log_conf_path = os.path.join(os.getenv("FM_MISC_DIR"), "logging.conf")
 logging.config.fileConfig(log_conf_path)
 logger = logging.getLogger("configure_fleet")
 
 router = APIRouter(
     prefix="/api/v1/configure_fleet",
+    tags=["configure_fleet"],
     responses={404: {"description": "Not found"}},
 )
 
 
 @router.get("/all_sherpa_info")
-def get_all_sherpa_info(user_name=Depends(dpd.get_user_from_header)):
+async def get_all_sherpa_info(user_name=Depends(dpd.get_user_from_header)):
 
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
@@ -49,7 +51,7 @@ def get_all_sherpa_info(user_name=Depends(dpd.get_user_from_header)):
 
 
 @router.post("/add_edit_sherpa/{sherpa_name}")
-def add_edit_sherpa(
+async def add_edit_sherpa(
     add_edit_sherpa: rqm.AddEditSherpaReq,
     sherpa_name: str,
     user_name=Depends(dpd.get_user_from_header),
@@ -64,29 +66,35 @@ def add_edit_sherpa(
         fleet = dbsession.get_fleet(add_edit_sherpa.fleet_name)
         if not fleet:
             dpd.raise_error("Unkown fleet")
-
-        fu.SherpaUtils.add_edit_sherpa(
-            dbsession,
-            sherpa_name,
-            hwid=add_edit_sherpa.hwid,
-            api_key=add_edit_sherpa.api_key,
-            fleet_id=fleet.id,
-        )
-
-        if sherpa_name not in all_sherpa_names:
-            action_request = f"New sherpa {sherpa_name} has been added to {fleet.name}, please restart FM software using restart fleet manager button in the maintenance page"
-            dbsession.add_notification(
-                [fleet.name],
-                action_request,
-                mm.NotificationLevels.action_request,
-                mm.NotificationModules.generic,
+        try:
+            fu.SherpaUtils.add_edit_sherpa(
+                dbsession,
+                sherpa_name,
+                hwid=add_edit_sherpa.hwid,
+                api_key=add_edit_sherpa.api_key,
+                fleet_id=fleet.id,
             )
+
+            if sherpa_name not in all_sherpa_names:
+                action_request = f"New sherpa {sherpa_name} has been added to {fleet.name}, please restart FM software using restart fleet manager button in the maintenance page"
+                dbsession.add_notification(
+                    [fleet.name],
+                    action_request,
+                    mm.NotificationLevels.action_request,
+                    mm.NotificationModules.generic,
+                )
+
+        except Exception as e:
+            if isinstance(e, ValueError):
+                dpd.raise_error(str(e))
+            else:
+                raise e
 
     return {}
 
 
 @router.get("/delete_sherpa/{sherpa_name}")
-def delete_sherpa(
+async def delete_sherpa(
     sherpa_name: str,
     user_name=Depends(dpd.get_user_from_header),
 ):
@@ -116,7 +124,7 @@ def delete_sherpa(
 
 
 @router.get("/all_fleet_info")
-def get_all_fleet_info(user_name=Depends(dpd.get_user_from_header)):
+async def get_all_fleet_info(user_name=Depends(dpd.get_user_from_header)):
 
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
@@ -140,47 +148,79 @@ def get_all_fleet_info(user_name=Depends(dpd.get_user_from_header)):
     return response
 
 
-@router.post("/add_edit_fleet/{fleet_name}")
-def add_fleet(
-    add_fleet_req: rqm.AddFleetReq,
-    fleet_name: str,
-    user_name=Depends(dpd.get_user_from_header),
+@router.get("/get_all_available_maps/{fleet_name}")
+async def get_all_available_maps(
+    fleet_name: str, user_name=Depends(dpd.get_user_from_header)
 ):
+    response = []
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
     with DBSession() as dbsession:
         all_fleets = dbsession.get_all_fleet_names()
-
         new_fleet = False if fleet_name in all_fleets else True
-        fu.FleetUtils.add_map(dbsession, fleet_name)
-        fu.FleetUtils.add_fleet(
-            dbsession,
-            fleet_name,
-            add_fleet_req.site,
-            add_fleet_req.location,
-            add_fleet_req.customer,
-        )
-
-        fleet: fm.Fleet = dbsession.get_fleet(fleet_name)
-        fu.FleetUtils.update_stations_in_map(dbsession, fleet.name, fleet.id)
-        fu.ExclusionZoneUtils.add_exclusion_zones(dbsession, fleet.name)
-        fu.ExclusionZoneUtils.add_linked_gates(dbsession, fleet.name)
-
         if new_fleet:
-            action_request = f"New fleet {fleet.name} has been added, please restart FM software using restart fleet manager button in the maintenance page"
-            dbsession.add_notification(
-                [fleet.name],
-                action_request,
-                mm.NotificationLevels.action_request,
-                mm.NotificationModules.generic,
+            dpd.raise_error("Add the fleet to get_all_available_maps", 401)
+
+        temp = os.path.join(os.getenv("FM_MAP_DIR"), fleet_name, "all_maps", "*")
+
+        for item in glob.glob(temp):
+            if os.path.isdir(item):
+                map_folder_name = item.rsplit("/")[-1]
+                response.append(map_folder_name)
+
+    return response
+
+
+@router.post("/add_edit_fleet/{fleet_name}")
+async def add_fleet(
+    add_fleet_req: rqm.AddFleetReq,
+    fleet_name: str,
+    user_name=Depends(dpd.get_user_from_header),
+):
+
+    response = {}
+
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    with DBSession() as dbsession:
+        all_fleets = dbsession.get_all_fleet_names()
+        new_fleet = False if fleet_name in all_fleets else True
+        try:
+            fu.FleetUtils.add_map(dbsession, fleet_name)
+            fu.FleetUtils.add_fleet(
+                dbsession,
+                fleet_name,
+                add_fleet_req.site,
+                add_fleet_req.location,
+                add_fleet_req.customer,
             )
 
-    return {}
+            fleet: fm.Fleet = dbsession.get_fleet(fleet_name)
+            fu.FleetUtils.update_stations_in_map(dbsession, fleet.name, fleet.id)
+            fu.ExclusionZoneUtils.add_exclusion_zones(dbsession, fleet.name)
+            fu.ExclusionZoneUtils.add_linked_gates(dbsession, fleet.name)
+
+            if new_fleet:
+                action_request = f"New fleet {fleet.name} has been added, please restart FM software using restart fleet manager button in the maintenance page"
+                dbsession.add_notification(
+                    [fleet.name],
+                    action_request,
+                    mm.NotificationLevels.action_request,
+                    mm.NotificationModules.generic,
+                )
+        except Exception as e:
+            if isinstance(e, ValueError):
+                dpd.raise_error(str(e))
+            else:
+                raise e
+
+    return response
 
 
 @router.get("/delete_fleet/{fleet_name}")
-def delete_fleet(
+async def delete_fleet(
     fleet_name: str,
     user_name=Depends(dpd.get_user_from_header),
 ):
@@ -222,7 +262,7 @@ def delete_fleet(
 
 
 @router.get("/update_map/{fleet_name}")
-def update_map(
+async def update_map(
     fleet_name: str,
     user_name=Depends(dpd.get_user_from_header),
 ):
@@ -240,33 +280,40 @@ def update_map(
         if len(all_ongoing_trips_fleet):
             dpd.raise_error("Cancel all the ongoing trips before updating the map")
 
-        fu.FleetUtils.add_map(dbsession, fleet_name)
-        fu.FleetUtils.update_stations_in_map(dbsession, fleet_name, fleet.id)
-        fu.ExclusionZoneUtils.delete_exclusion_zones(dbsession, fleet_name)
-        fu.ExclusionZoneUtils.add_exclusion_zones(dbsession, fleet_name)
-        fu.ExclusionZoneUtils.add_linked_gates(dbsession, fleet_name)
+        try:
+            fu.FleetUtils.add_map(dbsession, fleet_name)
+            fu.FleetUtils.update_stations_in_map(dbsession, fleet_name, fleet.id)
+            fu.ExclusionZoneUtils.delete_exclusion_zones(dbsession, fleet_name)
+            fu.ExclusionZoneUtils.add_exclusion_zones(dbsession, fleet_name)
+            fu.ExclusionZoneUtils.add_linked_gates(dbsession, fleet_name)
 
-        all_fleet_sherpas = dbsession.get_all_sherpas_in_fleet(fleet_name)
-        # close ws connection to make sure new map files are downloaded by sherpa on reconnect
-        for sherpa in all_fleet_sherpas:
-            close_websocket_for_sherpa(sherpa.name)
+            all_fleet_sherpas = dbsession.get_all_sherpas_in_fleet(fleet_name)
+            # close ws connection to make sure new map files are downloaded by sherpa on reconnect
+            for sherpa in all_fleet_sherpas:
+                close_websocket_for_sherpa(sherpa.name)
 
-        restart_fm_notification = (
-            f"Map files of fleet: {fleet_name} updated! Please restart fleet manager"
-        )
+            restart_fm_notification = (
+                f"Map files of fleet: {fleet_name} updated! Please restart fleet manager"
+            )
 
-        dbsession.add_notification(
-            [fleet_name],
-            restart_fm_notification,
-            mm.NotificationLevels.alert,
-            mm.NotificationModules.map_file_check,
-        )
+            dbsession.add_notification(
+                [fleet_name],
+                restart_fm_notification,
+                mm.NotificationLevels.alert,
+                mm.NotificationModules.map_file_check,
+            )
+
+        except Exception as e:
+            if isinstance(e, ValueError):
+                dpd.raise_error(str(e))
+            else:
+                raise e
 
     return response
 
 
 @router.get("/all_user_info")
-def all_user_info(user_name=Depends(dpd.get_user_from_header)):
+async def all_user_info(user_name=Depends(dpd.get_user_from_header)):
 
     if not user_name:
         dpd.raise_error("Unknown requester", 401)

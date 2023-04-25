@@ -15,11 +15,11 @@ from models.db_session import DBSession
 
 
 # setup logging
-log_conf_path = os.path.join(os.getenv("FM_CONFIG_DIR"), "logging.conf")
+log_conf_path = os.path.join(os.getenv("FM_MISC_DIR"), "logging.conf")
 logging.config.fileConfig(log_conf_path)
 logger = logging.getLogger("uvicorn")
 
-router = APIRouter()
+router = APIRouter(tags=["notifications"], responses={404: {"description": "Not found"}})
 
 
 @router.delete("/api/v1/notification/clear/{id}/{token}")

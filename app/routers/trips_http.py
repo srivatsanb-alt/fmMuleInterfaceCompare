@@ -6,10 +6,11 @@ from sqlalchemy.sql import func
 # ati code imports
 import app.routers.dependencies as dpd
 import models.request_models as rqm
-from models.trip_models import Trip, TripAnalytics
+from models.trip_models import Trip, TripAnalytics, SaveRoute
 from models.db_session import DBSession
 from utils.util import str_to_dt
 import utils.trip_utils as tu
+import core.constants as cc
 
 
 router = APIRouter(
@@ -28,8 +29,37 @@ async def book(booking_req: rqm.BookingReq, user_name=Depends(dpd.get_user_from_
     return response
 
 
-@router.delete("/ongoing/{booking_id}")
-async def delete_ongoing_trip(booking_id: int, user_name=Depends(dpd.get_user_from_header)):
+@router.delete("/force_delete/ongoing/{sherpa_name}")
+async def force_delete_ongoing_trip(
+    sherpa_name: str, user_name=Depends(dpd.get_user_from_header)
+):
+    response = {}
+
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    with DBSession() as dbsession:
+        sherpa = dbsession.get_sherpa(sherpa_name)
+
+        if sherpa.status.disabled_reason != cc.DisabledReason.STALE_HEARTBEAT:
+            dpd.raise_error("This option can be used only if the sherpa is disconnected")
+
+        if sherpa.status.trip_id is None:
+            dpd.raise_error(f"{sherpa_name} has no ongoing trip")
+
+    force_delete_ongoing_trip_req = rqm.ForceDeleteOngoingTripReq(sherpa_name=sherpa_name)
+
+    response = await dpd.process_req_with_response(
+        None, force_delete_ongoing_trip_req, user_name
+    )
+
+    return response
+
+
+@router.delete("/ongoing/{booking_id}/{trip_id}")
+async def delete_ongoing_trip(
+    booking_id: int, trip_id: int, user_name=Depends(dpd.get_user_from_header)
+):
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
@@ -38,16 +68,33 @@ async def delete_ongoing_trip(booking_id: int, user_name=Depends(dpd.get_user_fr
         if not trips:
             dpd.raise_error("no trip with the given booking_id")
 
-    delete_ongoing_trip_req: rqm.DeleteOngoingTripReq = rqm.DeleteOngoingTripReq(
-        booking_id=booking_id
-    )
+        if trip_id == -1:
+            delete_ongoing_trip_req: rqm.DeleteOngoingTripReq = rqm.DeleteOngoingTripReq(
+                booking_id=booking_id
+            )
+        else:
+            valid_trip_id = False
+            for trip in trips:
+                if trip_id == trip.id:
+                    valid_trip_id = True
+
+            if not valid_trip_id:
+                dpd.raise_error(
+                    f"Invalid detail, no trip (trip_id: {trip_id}) for booking_id: {booking_id}"
+                )
+            delete_ongoing_trip_req: rqm.DeleteOngoingTripReq = rqm.DeleteOngoingTripReq(
+                booking_id=booking_id, trip_id=trip_id
+            )
+
     response = await dpd.process_req_with_response(None, delete_ongoing_trip_req, user_name)
 
     return response
 
 
-@router.delete("/booking/{booking_id}")
-async def delete_pending_trip(booking_id: int, user_name=Depends(dpd.get_user_from_header)):
+@router.delete("/booking/{booking_id}/{trip_id}")
+async def delete_pending_trip(
+    booking_id: int, trip_id: int, user_name=Depends(dpd.get_user_from_header)
+):
 
     response = {}
     if not user_name:
@@ -59,9 +106,26 @@ async def delete_pending_trip(booking_id: int, user_name=Depends(dpd.get_user_fr
         if not trips:
             dpd.raise_error("no trip with the given booking_id")
 
-    delete_booked_trip_req: rqm.DeleteBookedTripReq = rqm.DeleteBookedTripReq(
-        booking_id=booking_id
-    )
+        if trip_id == -1:
+            delete_booked_trip_req: rqm.DeleteBookedTripReq = rqm.DeleteBookedTripReq(
+                booking_id=booking_id
+            )
+
+        else:
+            valid_trip_id = False
+            for trip in trips:
+                if trip_id == trip.id:
+                    valid_trip_id = True
+
+            if not valid_trip_id:
+                dpd.raise_error(
+                    f"Invalid detail, no pending trip (trip_id: {trip_id}) for booking_id: {booking_id}"
+                )
+
+            delete_booked_trip_req: rqm.DeleteBookedTripReq = rqm.DeleteBookedTripReq(
+                booking_id=booking_id, trip_id=trip_id
+            )
+
     response = await dpd.process_req_with_response(None, delete_booked_trip_req, user_name)
 
     return response
@@ -248,4 +312,68 @@ async def populate_route(
     for route in populate_routes[:num_routes]:
         response.extend(route)
 
+    return response
+
+@router.post("/save_route")
+async def save_route(
+    save_route_req: rqm.SaveRoute, user_name=Depends(dpd.get_user_from_header)
+):
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+    
+    response = await dpd.process_req_with_response(None, save_route_req, user_name)
+    return response
+    
+@router.get("/get_saved_routes")
+async def get_saved_routes(user_name=Depends(dpd.get_user_from_header)
+):
+    response = {}
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+    
+    with DBSession() as dbsession:
+        saved_routes = dbsession.get_all_saved_routes()
+
+        if len(saved_routes)>0:
+            for saved_route in saved_routes:
+                response.update({saved_route.tag: saved_route.route})
+        else:
+            dpd.raise_error(f"No saved routes are present")
+
+    return response
+
+@router.delete("/delete_saved_route/{tag}")
+async def delete_saved_route(
+    tag: str, user_name=Depends(dpd.get_user_from_header)
+):
+    response = {}
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+    
+    with DBSession() as dbsession:
+        saved_route = dbsession.get_saved_route(tag)
+
+        if saved_route:
+            dbsession.session.delete(saved_route)
+        else:
+            dpd.raise_error(f"No saved route with tag:{tag}")
+
+    return response
+
+@router.post("/save_route_metadata")
+async def save_route_metadata(
+    save_route_metadata: rqm.UpdateSavedRouteData, user_name=Depends(dpd.get_user_from_header)
+):
+    response = {}
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+    
+    with DBSession() as dbsession:
+        saved_route = dbsession.get_saved_route(save_route_metadata.tag)
+        if saved_route:
+            saved_route.other_info = save_route_metadata.metadata
+            dbsession.add_to_session(saved_route)
+        else:
+            dpd.raise_error(f"No saved route with tag:{save_route_metadata.tag}")
+    
     return response

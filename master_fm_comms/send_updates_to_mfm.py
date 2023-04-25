@@ -143,9 +143,12 @@ def update_trip_info(
     else:
         last_trip_update_dt = utils_util.str_to_dt(last_trip_update_dt)
 
+    recent_dt = datetime.datetime.now() + datetime.timedelta(hours=-24)
+
     new_trips = (
         dbsession.session.query(tm.Trip)
         .filter(tm.Trip.updated_at > last_trip_update_dt)
+        .filter(tm.Trip.updated_at > recent_dt)
         .filter(tm.Trip.status.in_(tm.COMPLETED_TRIP_STATUS))
         .all()
     )
@@ -196,9 +199,12 @@ def update_trip_analytics(
     else:
         last_trip_analytics_update_dt = utils_util.str_to_dt(last_trip_analytics_update_dt)
 
+    recent_dt = datetime.datetime.now() + datetime.timedelta(hours=-24)
+
     new_trip_analytics = (
         dbsession.session.query(tm.TripAnalytics)
         .filter(tm.TripAnalytics.updated_at > last_trip_analytics_update_dt)
+        .filter(tm.TripAnalytics.updated_at > recent_dt)
         .filter(tm.TripAnalytics.end_time is not None)
         .all()
     )

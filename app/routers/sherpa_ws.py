@@ -26,7 +26,7 @@ MSG_TS_INVALID = "msg_timestamp_invalid"
 
 
 # setup logging
-log_conf_path = os.path.join(os.getenv("FM_CONFIG_DIR"), "logging.conf")
+log_conf_path = os.path.join(os.getenv("FM_MISC_DIR"), "logging.conf")
 logging.config.fileConfig(log_conf_path)
 logger = logging.getLogger("uvicorn")
 
@@ -133,7 +133,7 @@ async def reader(websocket, sherpa):
         try:
             msg = await websocket.receive_json()
         except WebSocketDisconnect as e:
-            logger.info(f"websocket with {sherpa} disconnected")
+            logger.info(f"websocket connection with {sherpa} disconnected")
             raise e
 
         msg_type = msg.get("type")
@@ -185,7 +185,11 @@ async def writer(websocket, sherpa):
             if data.get("close_ws", False):
                 await websocket.close()
 
-            await websocket.send_json(data)
+            try:
+                await websocket.send_json(data)
+            except WebSocketDisconnect as e:
+                logger.error(f"websocket connection with {sherpa} disconnected")
+                raise e
 
         await asyncio.sleep(0.01)
 

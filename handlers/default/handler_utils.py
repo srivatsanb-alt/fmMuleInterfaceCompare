@@ -8,6 +8,8 @@ import datetime
 import psutil
 import pandas as pd
 from rq import Worker
+from sqlalchemy import func
+from sqlalchemy.orm.attributes import flag_modified
 
 
 # ati code imports
@@ -428,3 +430,64 @@ def maybe_add_alert(dbsession: DBSession, enitity_names: list, log: str):
         dbsession.add_notification(
             enitity_names, log, mm.NotificationLevels.alert, mm.NotificationModules.generic
         )
+
+
+def record_sherpa_mode_change(
+    dbsession: DBSession,
+    sherpa_name: str,
+    mode: str,
+    last_sherpa_mode_change: mm.SherpaModeChange,
+):
+
+    if last_sherpa_mode_change is not None:
+        last_sherpa_mode_change.ended_at = datetime.datetime.now()
+
+    sherpa_mode_change = mm.SherpaModeChange(
+        sherpa_name=sherpa_name, mode=mode, started_at=datetime.datetime.now()
+    )
+    dbsession.add_to_session(sherpa_mode_change)
+
+
+def update_sherpa_oee(dbsession: DBSession):
+    today_now = datetime.datetime.now()
+    today_start = today_now.replace(hour=0, minute=0, second=0, microsecond=0)
+
+    sherpa_names = dbsession.get_all_sherpa_names()
+
+    # delete all old entries sherpa mode change entries
+    dbsession.session.query(mm.SherpaModeChange).filter(
+        mm.SherpaModeChange.ended_at < today_start
+    ).delete()
+
+    for sherpa_name in sherpa_names:
+        sherpa_oee = dbsession.get_sherpa_oee(sherpa_name, today_start)
+
+        # get mode split up data only for today
+        sherpa_mode_split_up = dbsession.get_sherpa_mode_split_up(sherpa_name, today_start)
+
+        temp = (
+            dbsession.session.query(mm.SherpaModeChange)
+            .filter(mm.SherpaModeChange.sherpa_name == sherpa_name)
+            .filter(func.date(mm.SherpaModeChange.ended_at) == today_start.date())
+            .filter(func.date(mm.SherpaModeChange.started_at) != today_start.date())
+            .one_or_none()
+        )
+
+        mode_split_up = {}
+        for mode_data in sherpa_mode_split_up:
+            mode_time = float(mode_data[1])
+            mode_split_up.update({mode_data[0]: mode_time})
+
+        if temp is not None:
+            unaccounted_time = (temp.ended_at - today_start).total_seconds()
+            if temp.mode in list(mode_split_up.keys()):
+                mode_split_up[temp.mode] = mode_split_up[temp.mode] + unaccounted_time
+            else:
+                mode_split_up.update({temp.mode: unaccounted_time})
+
+        if sherpa_oee is None:
+            sherpa_oee = mm.SherpaOEE(sherpa_name=sherpa_name, dt=today_start)
+            dbsession.add_to_session(sherpa_oee)
+
+        sherpa_oee.mode_split_up = mode_split_up
+        flag_modified(sherpa_oee, "mode_split_up")

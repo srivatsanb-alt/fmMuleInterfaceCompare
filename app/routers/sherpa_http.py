@@ -42,8 +42,11 @@ async def is_sherpa_version_compatible(
         sherpa_versions = software_compatability.info.get("sherpa_versions", [])
         if version not in sherpa_versions:
             allowed = False
-            sherpa.status.disabled = True
-            sherpa.status.disabled_reason = cc.DisabledReason.SOFTWARE_NOT_COMPATIBLE
+
+            # change only if sherpa is already not disabled
+            if sherpa.status.disabled_reason != cc.DisabledReason.EMERGENCY_STOP:
+                sherpa.status.disabled = True
+                sherpa.status.disabled_reason = cc.DisabledReason.SOFTWARE_NOT_COMPATIBLE
 
         elif sherpa.status.disabled_reason == cc.DisabledReason.SOFTWARE_NOT_COMPATIBLE:
             sherpa.status.disabled = False

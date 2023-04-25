@@ -111,6 +111,10 @@ def get_mfm_context():
 
     mfm_config = toml.load(mfm_config_path)
 
+    if not mfm_config["master_fm"]["comms"].get("send_updates", False):
+        logging.getLogger("mfm_updates").info("Send updates set/default to False")
+        return
+
     mfm_context = MFMContext(
         http_scheme=mfm_config["master_fm"]["http_scheme"],
         server_ip=mfm_config["master_fm"]["mfm_ip"],
