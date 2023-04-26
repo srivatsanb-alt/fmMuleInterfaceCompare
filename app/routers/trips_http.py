@@ -359,7 +359,7 @@ async def delete_saved_route(tag: str, user_name=Depends(dpd.get_user_from_heade
     return response
 
 
-@router.post("/update_saved_route_metadata")
+@router.post("/update_saved_route_info")
 async def update_saved_route_metadata(
     update_saved_route_req: rqm.UpdateSavedRouteReq,
     user_name=Depends(dpd.get_user_from_header),
@@ -370,12 +370,15 @@ async def update_saved_route_metadata(
 
     with DBSession() as dbsession:
         saved_route = dbsession.get_saved_route(update_saved_route_req.tag)
+
         if saved_route is None:
             dpd.raise_error(f"No saved route with tag:{update_saved_route_req.tag}")
 
         if saved_route.other_info is None:
             saved_route.other_info = {}
 
-        saved_route.other_info.update(update_saved_route_req.metadata)
+        saved_route.other_info.update(update_saved_route_req.other_info)
+
+        flag_modified(saved_route, "other_info")
 
     return response

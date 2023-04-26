@@ -488,4 +488,4 @@ class SaveRouteReq(ClientReq):
 
 class UpdateSavedRouteReq(ClientReq):
     tag: str
-    metadata: Dict[str, str]
+    other_info: Dict[str, str]

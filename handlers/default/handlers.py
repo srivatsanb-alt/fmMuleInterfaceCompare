@@ -1407,12 +1407,28 @@ class Handlers:
 
         # update db
         if saved_route:
+            can_edit = saved_route.other_info.get("can_edit", "False")
+
+            if not eval(can_edit):
+                raise ValueError("Cannot edit this route tag, can_edit is set to False")
+
             saved_route.route = req.route
+
+            if req.other_info:
+                saved_route.other_info.update(req.other_info)
+                flag_modified(saved_route, "other_info")
+
             get_logger().info(
                 f"updated the route : {req.route} for the route tag : {req.tag} "
             )
 
         else:
+            if req.other_info is None:
+                req.other_info = {}
+
+            if "can_edit" not in list(req.other_info.keys()):
+                req.other_info["can_edit"] = "True"
+
             saved_route: tm.SaveRoute = tm.SavedRoutes(
                 tag=req.tag, route=req.route, other_info=req.other_info
             )
