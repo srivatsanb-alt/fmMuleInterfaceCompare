@@ -1,6 +1,6 @@
 import asyncio
 from fastapi import APIRouter, WebSocket, Depends
-from plugins.plugin_comms import ws_reader, ws_writer
+from plugins.plugin_comms import ws_reader, ws_writer,send_req_to_FM
 from .ies_handler import IES_HANDLER
 import plugins.ies.ies_request_models as irqm
 import app.routers.dependencies as dpd
@@ -46,6 +46,41 @@ async def get_all_ies_stations(user_name=Depends(dpd.get_user_from_header)):
         all_ies_stations = dbsession.query(im.IESStations).all()
         for station in all_ies_stations:
             response.update({station.ati_name: station.ies_name})
+
+    return response
+
+@router.post("/plugin/ies/enable_disable_sherpa")
+async def enable_disable_sherpa(req : irqm.EnableDisableSherpaReq, user_name=Depends(dpd.get_user_from_header)):
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    response = {}
+    plugin_name = "ies"
+    endpoint = "update_sherpa_metadata"
+    req_type="post"
+    metadata = {"enable":"true","ies":"true"}
+    req_json = {"sherpa_name":req.sherpa_name,"metadata":metadata}
+    if req.enable:
+        respone_status,response = send_req_to_FM(plugin_name,endpoint,req_type,req_json)
+        return response
+
+    return response
+
+@router.post("/plugin/ies/enable_disable_route")
+async def enable_disable_route(req : irqm.EnableDisableRouteReq, user_name=Depends(dpd.get_user_from_header)):
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    response = {}
+    plugin_name = "ies"
+    endpoint = "update_saved_route_info"
+    req_type="post"
+    other_info = {"enable":"true","ies":"true"}
+    req_json = {"tag":req.tag,"other_info":other_info}
+
+    if req.enable:
+        respone_status,response = send_req_to_FM(plugin_name,endpoint,req_type,req_json)
+        return response
 
     return response
 

@@ -150,6 +150,8 @@ def get_fm_url(endpoint, query):
         "sherpa_summary": os.path.join(
             "http://", fm_ip, "api/v1/sherpa_summary/", str(query), str(0)
         ),
+        "update_sherpa_metadata": os.path.join("http://", fm_ip, "api/v1/update_sherpa_metadata/"),
+        "update_saved_route_info": os.path.join("http://", fm_ip, "api/v1/trips/update_saved_route_info/"),
     }
     return fm_endpoints.get(endpoint, None)
 

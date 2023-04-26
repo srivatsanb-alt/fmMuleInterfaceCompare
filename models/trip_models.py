@@ -57,11 +57,6 @@ class TripAnalytics(Base, TimestampMixin):
     time_elapsed_other_stoppages = Column(Float)
     num_trip_msg = Column(Integer)
 
-class SaveRoute(Base):
-    __tablename__ = "save_route"
-    tag = Column(String, primary_key=True, index=True)
-    route = Column(ARRAY(String),unique=True)
-    other_info = Column(JSONB)
 
 
 class SavedRoutes(Base):
