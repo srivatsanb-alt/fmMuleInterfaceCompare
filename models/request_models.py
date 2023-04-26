@@ -479,13 +479,13 @@ class RouteWPS(JsonMixin):
     route_wps: List
 
 
-
-class SaveRoute(ClientReq):
+class SaveRouteReq(ClientReq):
     tag: str
     route: List[str]
     other_info: Optional[Dict[str, str]] = None
     type: str = MessageType.SAVE_ROUTE
 
-class UpdateSavedRouteData(BaseModel):
-    tag:str
-    metadata: Dict[str, str]
+
+class UpdateSavedRouteReq(ClientReq):
+    tag: str
+    other_info: Dict[str, str]

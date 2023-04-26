@@ -64,6 +64,13 @@ class SaveRoute(Base):
     other_info = Column(JSONB)
 
 
+class SavedRoutes(Base):
+    __tablename__ = "saved_routes"
+    tag = Column(String, primary_key=True, index=True)
+    route = Column(ARRAY(String))
+    other_info = Column(JSONB)
+
+
 class Trip(Base, TimestampMixin):
     __tablename__ = "trips"
 

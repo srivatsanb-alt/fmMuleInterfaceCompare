@@ -211,6 +211,13 @@ class DBSession:
             .all()
         )
 
+    def get_sherpa_metadata(self, sherpa_name: str):
+        return (
+            self.session.query(fm.SherpaMetaData)
+            .filter(fm.SherpaMetaData.sherpa_name == sherpa_name)
+            .one_or_none()
+        )
+
     def delete_stale_sherpa_events(self, sherpa_name: str):
         stale_sherpa_events = self.session.query(fm.SherpaEvent).filter(
             fm.SherpaEvent.sherpa_name == sherpa_name
@@ -336,17 +343,15 @@ class DBSession:
     def get_trip_with_booking_id(self, booking_id):
         return self.session.query(tm.Trip).filter(tm.Trip.booking_id == booking_id).all()
 
-    def get_saved_route(self, tag: str) -> tm.SaveRoute:
+    def get_saved_route(self, tag: str) -> tm.SavedRoutes:
         return (
-            self.session.query(tm.SaveRoute)
-            .filter(tm.SaveRoute.tag == tag)
+            self.session.query(tm.SavedRoutes)
+            .filter(tm.SavedRoutes.tag == tag)
             .one_or_none()
         )
-    
-    def get_all_saved_routes(self) -> List[tm.SaveRoute]:
-        return (
-            self.session.query(tm.SaveRoute).all()
-        )
+
+    def get_all_saved_routes(self) -> List[tm.SavedRoutes]:
+        return self.session.query(tm.SavedRoutes).all()
 
     def get_trip_ids_with_timestamp(self, booked_from, booked_till):
         temp = (
@@ -513,5 +518,14 @@ class DBSession:
             .filter(mm.SherpaModeChange.ended_at > today_start)
             .filter(mm.SherpaModeChange.started_at > today_start)
             .group_by(mm.SherpaModeChange.mode)
+            .all()
+        )
+
+    def get_popular_routes(self, fleet_name: str):
+        return (
+            self.session.query(tm.Trip.route)
+            .filter(tm.Trip.fleet_name == fleet_name)
+            .group_by(tm.Trip.route)
+            .order_by(func.count(tm.Trip.route).desc())
             .all()
         )
