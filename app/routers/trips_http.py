@@ -320,7 +320,7 @@ async def save_route(
     return response
 
 
-@router.post("/get_saved_routes/{fleet_name}")
+@router.get("/get_saved_routes/{fleet_name}")
 async def get_saved_routes(fleet_name: str, user_name=Depends(dpd.get_user_from_header)):
     response = {}
     if not user_name:

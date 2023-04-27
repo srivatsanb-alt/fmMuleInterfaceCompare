@@ -661,7 +661,7 @@ class Handlers:
                 if trip_msg.metadata is None:
                     trip_msg.metadata = {}
 
-                trip_msg.metadata.update({"booked_by": req.source})
+                booked_by = req.source
 
                 trip: tm.Trip = self.dbsession.create_trip(
                     trip_msg.route,
@@ -669,6 +669,7 @@ class Handlers:
                     trip_msg.metadata,
                     booking_id,
                     fleet_name,
+                    booked_by,
                 )
                 self.dbsession.create_pending_trip(trip.id)
                 response.update(
