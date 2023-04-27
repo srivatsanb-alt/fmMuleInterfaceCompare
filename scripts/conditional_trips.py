@@ -61,6 +61,7 @@ class BookConditionalTrip:
             self.dbsession.session.query(fm.SherpaStatus)
             .filter(fm.SherpaStatus.battery_status < threshold)
             .filter(fm.SherpaStatus.battery_status != -1)
+            .filter(fm.SherpaStatus.disabled is not True)
             .all()
         )
 
@@ -68,6 +69,7 @@ class BookConditionalTrip:
         temp = (
             self.dbsession.session.query(fm.SherpaStatus)
             .filter(fm.SherpaStatus.trip_id == None)
+            .filter(fm.SherpaStatus.disabled is not True)
             .all()
         )
 
