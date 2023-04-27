@@ -257,6 +257,11 @@ class AddFleetReq(ClientReq):
     map_name: str
 
 
+class UpdateMapReq(ClientReq):
+    fleet_name: str
+    map_path: str
+
+
 class FleetConfigUpdate(BaseModel):
     fleet: BasicConfig
     optimal_dispatch: OptimalDispatch

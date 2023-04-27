@@ -2,7 +2,9 @@ import os
 import logging
 import glob
 from fastapi import APIRouter, Depends
+import shutil
 
+# ati code imports
 from utils import fleet_utils as fu
 from models.db_session import DBSession
 from models.frontend_models import FrontendUser
@@ -162,10 +164,11 @@ async def get_all_available_maps(
         if new_fleet:
             dpd.raise_error("Add the fleet to get_all_available_maps", 401)
 
+        response.append("use current map")
         temp = os.path.join(os.getenv("FM_MAP_DIR"), fleet_name, "all_maps", "*")
-
         for item in glob.glob(temp):
             if os.path.isdir(item):
+                map_folder_name = item
                 map_folder_name = item.rsplit("/")[-1]
                 response.append(map_folder_name)
 
@@ -261,9 +264,9 @@ async def delete_fleet(
 # deletes fleet from FM.
 
 
-@router.get("/update_map/{fleet_name}")
+@router.post("/update_map")
 async def update_map(
-    fleet_name: str,
+    update_map_req: rqm.UpdateMapReq,
     user_name=Depends(dpd.get_user_from_header),
 ):
     response = {}
@@ -272,6 +275,25 @@ async def update_map(
         dpd.raise_error("Unknown requester", 401)
 
     with DBSession() as dbsession:
+        fleet_name = update_map_req.fleet_name
+
+        if update_map_req.map_path != "use current map":
+            new_map = os.path.join(
+                os.getenv("FM_MAP_DIR"), fleet_name, "all_maps", update_map_req.map_path
+            )
+            current_map = os.path.join(os.getenv("FM_MAP_DIR"), fleet_name, "map")
+            prev_map = os.path.join(os.getenv("FM_MAP_DIR"), fleet_name, "prev_map")
+            try:
+                shutil.copytree(current_map, prev_map)
+                shutil.rmtree(current_map)
+                shutil.copytree(new_map, current_map)
+            except Exception as e:
+                shutil.copytree(prev_map, current_map)
+                shutil.rmtree(prev_map)
+                dpd.raise_error(str(e))
+
+            shutil.rmtree(prev_map)
+
         fleet: fm.Fleet = dbsession.get_fleet(fleet_name)
         if not fleet:
             dpd.raise_error("Bad detail invalid fleet name")

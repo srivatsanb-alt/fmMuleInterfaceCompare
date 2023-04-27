@@ -31,9 +31,14 @@ class OptimalDispatch:
         self.router_utils = {}
         self.ptrip_first_station = []
 
-    def get_exclude_stations_for_sherpa(self, sherpa_name):
-        exclude_station_dict = self.config.get("exclude_stations", {})
-        return exclude_station_dict.get(sherpa_name, [])
+    def get_exclude_stations_for_sherpa(self, dbsession, sherpa_name):
+        saved_route = dbsession.get_saved_route(f"exclude_stations_{sherpa_name}")
+        if saved_route is None:
+            route = []
+        else:
+            route = saved_route.route
+
+        return route
 
     def get_last_assignment_time(self, dbsession):
         self.last_assignment_time = {}
@@ -165,7 +170,7 @@ class OptimalDispatch:
                         "pose": pose,
                         "remaining_eta": remaining_eta,
                         "exclude_stations": self.get_exclude_stations_for_sherpa(
-                            available_sherpa.name
+                            dbsession, available_sherpa.name
                         ),
                     }
                 }
