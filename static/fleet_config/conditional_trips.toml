@@ -1,0 +1,14 @@
+[conditional_trips]
+trip_types = ["battery_swap", "idling"]
+
+[conditional_trips.idling]
+book=false
+max_trips = 2
+threshold = 300
+priority = 5
+
+[conditional_trips.battery_swap]
+book=false
+max_trips = 2
+threshold = 15
+priority = 10
