@@ -1,21 +1,31 @@
 from core.db import session_maker, engine
 from models.misc_models import FMVersion
 
-
-AVAILABLE_UPGRADES = ["2.2", "3.0", "3.01", "3.1"]
+AVAILABLE_UPGRADES = ["2.2", "3.0", "3.01", "3.1", "3.2"]
 NO_SCHEMA_CHANGES = ["3.0", "3.01", "3.1"]
 
 
 class DBUpgrade:
+    def ack_no_schema_change_reqd(self, fm_version):
+        print(f"will upgrade db to version {fm_version}")
+        print(f"No db schema upgrades required for {fm_version}")
+
     def upgrade_to_2_2(self):
-        print("will upgrade db to version 2.2")
         with engine.connect() as conn:
             conn.execute("commit")
             conn.execute('CREATE INDEX "booking_time_index" on "trips" ("booking_time")')
 
-    def ack_no_schema_change_reqd(self, fm_version):
-        print(f"will upgrade db to version {fm_version}")
-        print(f"No db schema upgrades required for {fm_version}")
+    def upgrade_to_3_2(self):
+        with engine.connect() as conn:
+            conn.execute("commit")
+            result = conn.execute(
+                "SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='trips'"
+            )
+            column_names = [row[0] for row in result]
+            if "booked_by" not in column_names:
+                conn.execute('ALTER TABLE "trips" ADD COLUMN "booked_by" VARCHAR')
+            else:
+                print("booked_by column already present need not be added again")
 
 
 def upgrade_db_schema():

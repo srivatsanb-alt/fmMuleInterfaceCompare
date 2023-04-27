@@ -46,9 +46,7 @@ def get_trip_status(trip: Trip):
             "start_time": start_time,
             "end_time": end_time,
             "updated_at": updated_at,
-            "booked_by": trip.trip_metadata.get("booked_by")
-            if trip.trip_metadata is not None
-            else None,
+            "booked_by": trip.booked_by,
         }
 
         trip_status = {

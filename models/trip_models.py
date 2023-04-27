@@ -106,6 +106,8 @@ class Trip(Base, TimestampMixin):
     priority = Column(Float)
     trip_metadata = Column(JSONB)
 
+    booked_by = Column(String)
+
     # other details we may want to store about the trip
     other_info = Column(JSONB)
 
@@ -116,6 +118,7 @@ class Trip(Base, TimestampMixin):
         metadata=None,
         fleet_name=None,
         booking_id=None,
+        booked_by=None,
     ):
 
         self.fleet_name = fleet_name
@@ -127,6 +130,7 @@ class Trip(Base, TimestampMixin):
         self.scheduled = False
         self.time_period = 0
         self.trip_metadata = metadata
+        self.booked_by = booked_by
 
         # set all milkrun trip details
         if metadata:
