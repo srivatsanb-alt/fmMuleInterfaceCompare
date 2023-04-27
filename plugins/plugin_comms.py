@@ -8,7 +8,7 @@ import json
 from rq import Queue
 from app.routers.dependencies import generate_jwt_token
 import redis
-from .plugin_rq import enqueue
+from plugins.plugin_rq import enqueue
 
 
 async def ws_reader(websocket, name, handler_obj, unique_id=None, api_key=None):

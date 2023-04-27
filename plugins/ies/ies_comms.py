@@ -1,11 +1,14 @@
 import asyncio
+import logging
 from fastapi import APIRouter, WebSocket, Depends
-from plugins.plugin_comms import ws_reader, ws_writer,send_req_to_FM
+from plugins.plugin_comms import ws_reader, ws_writer, send_req_to_FM
+from utils.util import are_poses_close
 from .ies_handler import IES_HANDLER
 import plugins.ies.ies_request_models as irqm
 import app.routers.dependencies as dpd
 import plugins.ies.ies_models as im
 from plugins.plugin_rq import enqueue, get_job_result, get_redis_conn
+import plugin_comms as pcomms
 from rq import Queue
 
 router = APIRouter()
@@ -49,37 +52,79 @@ async def get_all_ies_stations(user_name=Depends(dpd.get_user_from_header)):
 
     return response
 
+
+@router.get("/plugin/ies/get_sherpas_at_start")
+async def get_sherpas_at_start(user_name=Depends(dpd.get_user_from_header)):
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    response = {}
+    ies_sherpas = ["test", "test2"]
+    start_stations = ["ECFA start", "BE-1"]
+
+    for sherpa_name in ies_sherpas:
+        status_code, sherpa_summary_response = pcomms.send_req_to_FM(
+            "plugin_ies", "sherpa_summary", req_type="get", query=sherpa_name
+        )
+        if status_code == 200:
+            sherpa_pose = sherpa_summary_response["sherpa_status"]["pose"]
+            for station in start_stations:
+                # get station pose from stn name
+                with im.DBSession().session as dbsession:
+                    ies_station = (
+                        dbsession.query(im.IESStations)
+                        .filter(im.IESStations.ati_name == station)
+                        .one_or_none()
+                    )
+                if ies_station is None:
+                    logging.info(f"given station ({station}) is not an IES station")
+                    return
+                logging.info(
+                    f"checking if stations {sherpa_pose}, {ies_station.pose} are close!"
+                )
+                sherpa_close_to_stn = are_poses_close(sherpa_pose, ies_station.pose)
+                ## check if sherpa can go to this station before adding to response!
+                if sherpa_close_to_stn:
+                    response.update({sherpa_name: ies_station.ati_name})
+    return response
+
+
 @router.post("/plugin/ies/enable_disable_sherpa")
-async def enable_disable_sherpa(req : irqm.EnableDisableSherpaReq, user_name=Depends(dpd.get_user_from_header)):
+async def enable_disable_sherpa(
+    req: irqm.EnableDisableSherpaReq, user_name=Depends(dpd.get_user_from_header)
+):
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
     response = {}
     plugin_name = "ies"
     endpoint = "update_sherpa_metadata"
-    req_type="post"
-    metadata = {"enable":"true","ies":"true"}
-    req_json = {"sherpa_name":req.sherpa_name,"metadata":metadata}
+    req_type = "post"
+    metadata = {"enable": "true", "ies": "true"}
+    req_json = {"sherpa_name": req.sherpa_name, "metadata": metadata}
     if req.enable:
-        respone_status,response = send_req_to_FM(plugin_name,endpoint,req_type,req_json)
+        respone_status, response = send_req_to_FM(plugin_name, endpoint, req_type, req_json)
         return response
 
     return response
 
+
 @router.post("/plugin/ies/enable_disable_route")
-async def enable_disable_route(req : irqm.EnableDisableRouteReq, user_name=Depends(dpd.get_user_from_header)):
+async def enable_disable_route(
+    req: irqm.EnableDisableRouteReq, user_name=Depends(dpd.get_user_from_header)
+):
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
     response = {}
     plugin_name = "ies"
     endpoint = "update_saved_route_info"
-    req_type="post"
-    other_info = {"enable":"true","ies":"true"}
-    req_json = {"tag":req.tag,"other_info":other_info}
+    req_type = "post"
+    other_info = {"enable": "true", "ies": "true"}
+    req_json = {"tag": req.tag, "other_info": other_info}
 
     if req.enable:
-        respone_status,response = send_req_to_FM(plugin_name,endpoint,req_type,req_json)
+        respone_status, response = send_req_to_FM(plugin_name, endpoint, req_type, req_json)
         return response
 
     return response
