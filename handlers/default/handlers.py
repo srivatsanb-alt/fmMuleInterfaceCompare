@@ -1406,6 +1406,8 @@ class Handlers:
         self.dbsession.session.commit()
 
         # update db
+        fleet_name = self.dbsession.get_fleet_name_from_route(req.route)
+
         if saved_route:
             can_edit = saved_route.other_info.get("can_edit", "False")
 
@@ -1413,6 +1415,7 @@ class Handlers:
                 raise ValueError("Cannot edit this route tag, can_edit is set to False")
 
             saved_route.route = req.route
+            saved_route.fleet_name = fleet_name
 
             if req.other_info:
                 saved_route.other_info.update(req.other_info)
@@ -1430,8 +1433,12 @@ class Handlers:
                 req.other_info["can_edit"] = "True"
 
             saved_route: tm.SaveRoute = tm.SavedRoutes(
-                tag=req.tag, route=req.route, other_info=req.other_info
+                tag=req.tag,
+                route=req.route,
+                fleet_name=fleet_name,
+                other_info=req.other_info,
             )
+
             self.dbsession.add_to_session(saved_route)
             get_logger().info(f"Saved a new route : {req.route}, with tag : {req.tag} ")
 

@@ -63,6 +63,7 @@ class SavedRoutes(Base):
     __tablename__ = "saved_routes"
     tag = Column(String, primary_key=True, index=True)
     route = Column(ARRAY(String))
+    fleet_name = Column(String)
     other_info = Column(JSONB)
 
 

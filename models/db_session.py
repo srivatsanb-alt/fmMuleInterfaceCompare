@@ -350,8 +350,12 @@ class DBSession:
             .one_or_none()
         )
 
-    def get_all_saved_routes(self) -> List[tm.SavedRoutes]:
-        return self.session.query(tm.SavedRoutes).all()
+    def get_saved_routes_fleet(self, fleet_name) -> List[tm.SavedRoutes]:
+        return (
+            self.session.query(tm.SavedRoutes)
+            .filter(tm.SavedRoutes.fleet_name == fleet_name)
+            .all()
+        )
 
     def get_trip_ids_with_timestamp(self, booked_from, booked_till):
         temp = (
