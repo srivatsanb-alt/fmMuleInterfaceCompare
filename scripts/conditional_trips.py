@@ -78,12 +78,8 @@ class BookConditionalTrip:
         for sherpa_status in temp:
             today_now = datetime.datetime.now()
             sherpa_name = sherpa_status.sherpa_name
-            last_trip = (
-                self.dbsession.session.query(tm.Trip)
-                .filter(tm.Trip.sherpa_name == sherpa_name)
-                .order_by(tm.Trip.end_time.desc())
-                .first()
-            )
+            last_trip = self.dbsession.last_trip(sherpa_name)
+
             if last_trip is None:
                 continue
 
