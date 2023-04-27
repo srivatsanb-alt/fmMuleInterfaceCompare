@@ -99,12 +99,11 @@ async def enable_disable_sherpa(
     response = {}
     plugin_name = "ies"
     endpoint = "update_sherpa_metadata"
-    req_type = "post"
-    metadata = {"enable": "true", "ies": "true"}
-    req_json = {"sherpa_name": req.sherpa_name, "metadata": metadata}
-    if req.enable:
-        respone_status, response = send_req_to_FM(plugin_name, endpoint, req_type, req_json)
-        return response
+    req_type="post"
+
+    metadata = {"ies":f"{req.enable}"}
+    req_json = {"sherpa_name":req.sherpa_name,"metadata":metadata}
+    respone_status,response = send_req_to_FM(plugin_name,endpoint,req_type,req_json)
 
     return response
 
@@ -119,13 +118,10 @@ async def enable_disable_route(
     response = {}
     plugin_name = "ies"
     endpoint = "update_saved_route_info"
-    req_type = "post"
-    other_info = {"enable": "true", "ies": "true"}
-    req_json = {"tag": req.tag, "other_info": other_info}
-
-    if req.enable:
-        respone_status, response = send_req_to_FM(plugin_name, endpoint, req_type, req_json)
-        return response
+    req_type="post"
+    other_info = {"ies":f"{req.enable}","can_edit":f"{not req.enable}"}
+    req_json = {"tag":req.tag,"other_info":other_info}
+    respone_status,response = send_req_to_FM(plugin_name,endpoint,req_type,req_json)
 
     return response
 
