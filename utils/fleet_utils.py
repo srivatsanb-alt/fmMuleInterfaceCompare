@@ -20,6 +20,7 @@ from models.db_session import DBSession
 import models.fleet_models as fm
 import models.visa_models as vm
 import models.misc_models as mm
+import models.trip_models as tm
 import utils.util as utils_util
 from models.frontend_models import FrontendUser
 from models.base_models import StationProperties
@@ -407,6 +408,12 @@ class FleetUtils:
             cls.delete_station(dbsession, st.name)
 
     @classmethod
+    def delete_saved_routes(cls, dbsession: DBSession, fleet_name: str):
+        dbsession.session.query(tm.SavedRoutes).filter(
+            tm.SavedRoutes.fleet_name == fleet_name
+        ).delete()
+
+    @classmethod
     def delete_fleet(cls, dbsession: DBSession, fleet_name: str):
         fleet: fm.Fleet = dbsession.get_fleet(fleet_name)
         all_station: List[fm.Station] = dbsession.get_all_stations_in_fleet(fleet_name)
@@ -426,6 +433,7 @@ class FleetUtils:
         dbsession.session.delete(fleet)
         logger.info(f"deleted fleet {fleet_name}")
         cls.delete_map(dbsession, map_ip)
+        cls.delete_saved_routes(dbsession, fleet_name)
 
 
 class SherpaUtils:
@@ -512,6 +520,13 @@ class SherpaUtils:
             )
 
     @classmethod
+    def delete_exclude_stations_route(cls, dbsession: DBSession, sherpa_name: str):
+        dbsession.session.query(tm.SavedRoutes).filter(
+            tm.SavedRoutes.tag == f"exclude_stations_{sherpa_name}"
+        ).delete()
+        logger.info(f"deleted route exclude_stations_{sherpa_name}")
+
+    @classmethod
     def delete_sherpa(cls, dbsession, sherpa_name):
         # delete sherpa status object
         sherpa_status: fm.SherpaStatus = dbsession.get_sherpa_status(sherpa_name)
@@ -537,6 +552,8 @@ class SherpaUtils:
         dbsession.session.delete(available_sherpa)
 
         logger.info(f"deleted sherpa availability entry for sherpa: {sherpa_name}")
+
+        cls.delete_exclude_stations_route(dbsession, sherpa_name)
 
 
 class ExclusionZoneUtils:
