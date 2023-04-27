@@ -46,7 +46,7 @@ class BookConditionalTrip:
 
     def book_trips(self):
         for trip_type in self.trip_types:
-            book_fn = getattr(self, f"book_{trip_type}", None)
+            book_fn = getattr(self, f"book_{trip_type}_trips", None)
 
             if book_fn is None:
                 get_logger("misc").info(f"Invalid conditional trip type {trip_type}")
@@ -54,7 +54,7 @@ class BookConditionalTrip:
 
             config = self.config.get(trip_type)
             if config["book"]:
-                book_fn(config)
+                book_fn(config, trip_type)
 
     def get_low_battery_sherpa_status(self, threshold: int):
         return (
@@ -63,6 +63,33 @@ class BookConditionalTrip:
             .filter(fm.SherpaStatus.battery_status != -1)
             .all()
         )
+
+    def get_idling_sherpa_status(self, threshold: int):
+        temp = (
+            self.dbsession.session.query(fm.SherpaStatus)
+            .filter(fm.SherpaStatus.trip_id == None)
+            .all()
+        )
+
+        idling_sherpa_status = []
+
+        for sherpa_status in temp:
+            today_now = datetime.datetime.now()
+            sherpa_name = sherpa_status.sherpa_name
+            last_trip = (
+                self.dbsession.session.query(tm.Trip)
+                .filter(tm.Trip.sherpa_name == sherpa_name)
+                .order_by(tm.Trip.end_time.desc())
+                .first()
+            )
+            if last_trip is None:
+                continue
+
+            if (today_now - last_trip.end_time).seconds > threshold:
+                get_logger("misc").warning(f"{sherpa_name} has been found idling")
+                idling_sherpa_status.append(sherpa_status)
+
+        return idling_sherpa_status
 
     def is_trip_already_booked(self, sherpa_name: str, trip_type: str):
         trips = (
@@ -82,7 +109,45 @@ class BookConditionalTrip:
         )
         return len(trips)
 
-    def book_battery_swap(self, config: dict, trip_type: str):
+    def book_idling_sherpa_trips(self, config: dict, trip_type: str):
+        idling_thresh = config["threshold"]
+        trip_priority = config["priority"]
+        max_trips = config["max_trips"]
+
+        idling_sherpa_status = self.get_idling_sherpa_status(idling_thresh)
+
+        for sherpa_status in idling_sherpa_status:
+            sherpa_name = sherpa_status.sherpa_name
+            fleet_name = sherpa_status.sherpa.fleet.name
+
+            saved_route = self.dbsession.get_saved_route(f"idling_{fleet_name}")
+
+            if saved_route is None:
+                get_logger("misc").warning(f"No idling route for {fleet_name}")
+                continue
+
+            already_booked = self.is_trip_already_booked(sherpa_name, trip_type)
+
+            if already_booked:
+                get_logger("misc").info(f"Idling trip booked already for {sherpa_name}")
+                continue
+
+            num_trips = self.get_num_booked_trips(trip_type)
+
+            if num_trips < max_trips:
+                enqueue_trip_msg(
+                    sherpa_status.sherpa_name, saved_route.route, trip_type, trip_priority
+                )
+                get_logger("misc").info(
+                    f"queued a {trip_type} trip for {sherpa_name} with route: {saved_route.route}, priority: {trip_priority}"
+                )
+
+            else:
+                get_logger("misc").info(
+                    f"can only book {max_trips} trips, num {trip_type} trips: {num_trips}"
+                )
+
+    def book_battery_swap_trips(self, config: dict, trip_type: str):
         battery_level_thresh = config["threshold"]
         trip_priority = config["priority"]
         max_trips = config["max_trips"]

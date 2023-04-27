@@ -102,6 +102,10 @@ class Handlers:
 
     def get_sherpa_trips(self, sherpa_name):
         sherpa: fm.Sherpa = self.dbsession.get_sherpa(sherpa_name)
+
+        if sherpa is None:
+            raise ValueError(f"{sherpa_name} not found in DB")
+
         ongoing_trip: tm.OngoingTrip = self.dbsession.get_ongoing_trip(sherpa.name)
         pending_trip: tm.PendingTrip = self.dbsession.get_pending_trip(sherpa.name)
         return sherpa, ongoing_trip, pending_trip
