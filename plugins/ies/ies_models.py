@@ -73,6 +73,6 @@ class IESStations(Base):
     __tablename__ = "ies_stations"
     __table_args__ = {"extend_existing": True}
     id = Column(Integer, primary_key=True, index=True)
-    ies_name = Column(String)
-    ati_name = Column(String)
+    ies_name = Column(String, unique=True, index=True)
+    ati_name = Column(String, unique=True, index=True)
     pose = Column(ARRAY(Float))
