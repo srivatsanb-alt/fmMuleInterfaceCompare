@@ -88,7 +88,7 @@ class BookConditionalTrip:
         for sherpa_status in temp:
             today_now = datetime.datetime.now()
             sherpa_name = sherpa_status.sherpa_name
-            last_trip = self.dbsession.last_trip(sherpa_name)
+            last_trip = self.dbsession.get_last_trip(sherpa_name)
 
             if last_trip is None:
                 continue
