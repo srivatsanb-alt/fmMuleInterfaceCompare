@@ -4,7 +4,6 @@ import time
 import os
 import toml
 import logging
-import logging.config
 from sqlalchemy.sql import not_
 
 # ati code imports
@@ -13,12 +12,6 @@ import models.trip_models as tm
 import models.fleet_models as fm
 import models.request_models as rqm
 import app.routers.dependencies as dpd
-
-
-# setup logging
-log_conf_path = os.path.join(os.getenv("FM_MISC_DIR"), "logging.conf")
-logging.config.fileConfig(log_conf_path)
-logger = logging.getLogger("misc")
 
 
 def get_conditional_trip_config():
@@ -58,10 +51,11 @@ class BookConditionalTrip:
             if book_fn is None:
                 logging.getLogger("misc").info(f"Invalid conditional trip type {trip_type}")
                 continue
-
             config = self.config.get(trip_type)
             if config["book"]:
                 book_fn(config, trip_type)
+            else:
+                logging.getLogger("misc").info(f"Will not book {trip_type} trips")
 
     def get_low_battery_sherpa_status(self, threshold: int):
         return (
@@ -124,6 +118,9 @@ class BookConditionalTrip:
 
         idling_sherpa_status = self.get_idling_sherpa_status(idling_thresh)
 
+        if len(idling_sherpa_status) == 0:
+            logging.getLogger("misc").warning(f"No idling sherpas")
+
         for sherpa_status in idling_sherpa_status:
             sherpa_name = sherpa_status.sherpa_name
             fleet_name = sherpa_status.sherpa.fleet.name
@@ -163,6 +160,9 @@ class BookConditionalTrip:
         max_trips = config["max_trips"]
 
         low_battery_sherpa_status = self.get_low_battery_sherpa_status(battery_level_thresh)
+
+        if len(low_battery_sherpa_status) == 0:
+            logging.getLogger("misc").warning(f"No low battery sherpas")
 
         for sherpa_status in low_battery_sherpa_status:
             sherpa_name = sherpa_status.sherpa_name
