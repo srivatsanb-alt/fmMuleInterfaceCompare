@@ -96,7 +96,11 @@ class BookConditionalTrip:
 
         return idling_sherpa_status
 
-    def is_trip_already_booked(self, sherpa_name: str, trip_type: str):
+    def is_trip_already_booked(self, sherpa_name: str, current_trip_type: str):
+        """
+        not checking current trip type
+        book only one conditional trip at a time
+        """
         all_trip_types = [f"{trip_type}_{sherpa_name}" for trip_type in self.trip_types]
         trips = (
             self.dbsession.session.query(tm.Trip)
