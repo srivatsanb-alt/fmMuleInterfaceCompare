@@ -56,6 +56,7 @@ class BookConditionalTrip:
                 book_fn(config, trip_type)
             else:
                 logging.getLogger("misc").info(f"Will not book {trip_type} trips")
+            time.slee(5)
 
     def get_low_battery_sherpa_status(self, threshold: int):
         return (
@@ -87,6 +88,9 @@ class BookConditionalTrip:
             if last_trip is None:
                 continue
 
+            if last_trip.end_time is None:
+                continue
+
             if (today_now - last_trip.end_time).seconds > threshold:
                 logging.getLogger("misc").warning(f"{sherpa_name} has been found idling")
                 idling_sherpa_status.append(sherpa_status)
@@ -94,9 +98,10 @@ class BookConditionalTrip:
         return idling_sherpa_status
 
     def is_trip_already_booked(self, sherpa_name: str, trip_type: str):
+        all_trip_types = [f"{trip_type}_{sherpa_name}" for trip_type in self.trip_types]
         trips = (
             self.dbsession.session.query(tm.Trip)
-            .filter(tm.Trip.booked_by == f"{trip_type}_{sherpa_name}")
+            .filter(tm.Trip.booked_by.in_(all_trip_types))
             .filter(not_(tm.Trip.status.in_(tm.COMPLETED_TRIP_STATUS)))
             .all()
         )
