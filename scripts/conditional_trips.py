@@ -44,19 +44,18 @@ class BookConditionalTrip:
         self.trip_types = trip_types
         self.config = config
 
-    def book_trips(self):
-        for trip_type in self.trip_types:
-            book_fn = getattr(self, f"book_{trip_type}_trips", None)
+    def book_trip(self, trip_type):
+        book_fn = getattr(self, f"book_{trip_type}_trips", None)
+        if book_fn is None:
+            logging.getLogger("misc").info(f"Invalid conditional trip type {trip_type}")
+            return
 
-            if book_fn is None:
-                logging.getLogger("misc").info(f"Invalid conditional trip type {trip_type}")
-                continue
-            config = self.config.get(trip_type)
-            if config["book"]:
-                book_fn(config, trip_type)
-            else:
-                logging.getLogger("misc").info(f"Will not book {trip_type} trips")
-            time.slee(5)
+        config = self.config.get(trip_type)
+        if config["book"]:
+            book_fn(config, trip_type)
+            time.sleep(5)
+        else:
+            logging.getLogger("misc").info(f"Will not book {trip_type} trips")
 
     def get_low_battery_sherpa_status(self, threshold: int):
         return (
@@ -217,8 +216,10 @@ def book_conditional_trips():
     trip_types = conditional_trip_config.get("trip_types", [])
 
     while True:
-        with DBSession() as dbsession:
-            bct = BookConditionalTrip(dbsession, trip_types, conditional_trip_config)
-            bct.book_trips()
+        bct = BookConditionalTrip(None, trip_types, conditional_trip_config)
+        for trip_type in bct.trip_types:
+            with DBSession() as dbsession:
+                bct.dbsession = dbsession
+                bct.book_trips(trip_type)
 
         time.sleep(60)
