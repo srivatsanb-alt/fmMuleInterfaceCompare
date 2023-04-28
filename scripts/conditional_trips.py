@@ -4,7 +4,6 @@ import time
 import os
 import toml
 import logging
-import logging.config
 from sqlalchemy.sql import not_
 
 # ati code imports
@@ -13,12 +12,6 @@ import models.trip_models as tm
 import models.fleet_models as fm
 import models.request_models as rqm
 import app.routers.dependencies as dpd
-
-
-# setup logging
-log_conf_path = os.path.join(os.getenv("FM_MISC_DIR"), "logging.conf")
-logging.config.fileConfig(log_conf_path)
-logger = logging.getLogger("misc")
 
 
 def get_conditional_trip_config():
@@ -51,24 +44,25 @@ class BookConditionalTrip:
         self.trip_types = trip_types
         self.config = config
 
-    def book_trips(self):
-        for trip_type in self.trip_types:
-            book_fn = getattr(self, f"book_{trip_type}_trips", None)
+    def book_trip(self, trip_type):
+        book_fn = getattr(self, f"book_{trip_type}_trips", None)
+        if book_fn is None:
+            logging.getLogger("misc").info(f"Invalid conditional trip type {trip_type}")
+            return
 
-            if book_fn is None:
-                logging.getLogger("misc").info(f"Invalid conditional trip type {trip_type}")
-                continue
-
-            config = self.config.get(trip_type)
-            if config["book"]:
-                book_fn(config, trip_type)
+        config = self.config.get(trip_type)
+        if config["book"]:
+            book_fn(config, trip_type)
+            time.sleep(5)
+        else:
+            logging.getLogger("misc").info(f"Will not book {trip_type} trips")
 
     def get_low_battery_sherpa_status(self, threshold: int):
         return (
             self.dbsession.session.query(fm.SherpaStatus)
             .filter(fm.SherpaStatus.battery_status < threshold)
             .filter(fm.SherpaStatus.battery_status != -1)
-            .filter(fm.SherpaStatus.disabled is not True)
+            .filter(not_(fm.SherpaStatus.disabled.is_(True)))
             .filter(fm.SherpaStatus.mode == "fleet")
             .order_by(fm.SherpaStatus.battery_status)
             .all()
@@ -78,7 +72,7 @@ class BookConditionalTrip:
         temp = (
             self.dbsession.session.query(fm.SherpaStatus)
             .filter(fm.SherpaStatus.trip_id == None)
-            .filter(fm.SherpaStatus.disabled is not True)
+            .filter(not_(fm.SherpaStatus.disabled.is_(True)))
             .filter(fm.SherpaStatus.mode == "fleet")
             .all()
         )
@@ -93,16 +87,24 @@ class BookConditionalTrip:
             if last_trip is None:
                 continue
 
+            if last_trip.end_time is None:
+                continue
+
             if (today_now - last_trip.end_time).seconds > threshold:
                 logging.getLogger("misc").warning(f"{sherpa_name} has been found idling")
                 idling_sherpa_status.append(sherpa_status)
 
         return idling_sherpa_status
 
-    def is_trip_already_booked(self, sherpa_name: str, trip_type: str):
+    def is_trip_already_booked(self, sherpa_name: str, current_trip_type: str):
+        """
+        not checking current trip type
+        book only one conditional trip at a time
+        """
+        all_trip_types = [f"{trip_type}_{sherpa_name}" for trip_type in self.trip_types]
         trips = (
             self.dbsession.session.query(tm.Trip)
-            .filter(tm.Trip.booked_by == f"{trip_type}_{sherpa_name}")
+            .filter(tm.Trip.booked_by.in_(all_trip_types))
             .filter(not_(tm.Trip.status.in_(tm.COMPLETED_TRIP_STATUS)))
             .all()
         )
@@ -124,6 +126,9 @@ class BookConditionalTrip:
 
         idling_sherpa_status = self.get_idling_sherpa_status(idling_thresh)
 
+        if len(idling_sherpa_status) == 0:
+            logging.getLogger("misc").warning(f"No idling sherpas")
+
         for sherpa_status in idling_sherpa_status:
             sherpa_name = sherpa_status.sherpa_name
             fleet_name = sherpa_status.sherpa.fleet.name
@@ -138,7 +143,7 @@ class BookConditionalTrip:
 
             if already_booked:
                 logging.getLogger("misc").info(
-                    f"Idling trip booked already for {sherpa_name}"
+                    f"conditional trip booked already for {sherpa_name}"
                 )
                 continue
 
@@ -164,6 +169,9 @@ class BookConditionalTrip:
 
         low_battery_sherpa_status = self.get_low_battery_sherpa_status(battery_level_thresh)
 
+        if len(low_battery_sherpa_status) == 0:
+            logging.getLogger("misc").warning(f"No low battery sherpas")
+
         for sherpa_status in low_battery_sherpa_status:
             sherpa_name = sherpa_status.sherpa_name
             fleet_name = sherpa_status.sherpa.fleet.name
@@ -181,7 +189,7 @@ class BookConditionalTrip:
 
             if already_booked:
                 logging.getLogger("misc").info(
-                    f"Battery swap trip booked already for {sherpa_name}"
+                    f"conditional trip booked already for {sherpa_name}"
                 )
                 continue
 
@@ -212,8 +220,10 @@ def book_conditional_trips():
     trip_types = conditional_trip_config.get("trip_types", [])
 
     while True:
-        with DBSession() as dbsession:
-            bct = BookConditionalTrip(dbsession, trip_types, conditional_trip_config)
-            bct.book_trips()
+        bct = BookConditionalTrip(None, trip_types, conditional_trip_config)
+        for trip_type in bct.trip_types:
+            with DBSession() as dbsession:
+                bct.dbsession = dbsession
+                bct.book_trip(trip_type)
 
         time.sleep(60)

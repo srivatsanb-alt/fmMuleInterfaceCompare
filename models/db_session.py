@@ -356,6 +356,7 @@ class DBSession:
         return (
             self.session.query(tm.Trip)
             .filter(tm.Trip.sherpa_name == sherpa_name)
+            .filter(tm.Trip.end_time != None)
             .order_by(tm.Trip.end_time.desc())
             .first()
         )
