@@ -107,6 +107,8 @@ def send_job_updates_summon():
                             summon_button.booking_id = None
                             summon_button.trip_id = None
                             color = "blinking green"
+                        elif trip_status == tm.TripStatus.WAITING_STATION:
+                            color = "blinking green"
                         elif trip_status not in tm.COMPLETED_TRIP_STATUS:
                             color = "rotating green"
 
