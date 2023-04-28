@@ -320,9 +320,9 @@ async def save_route(
     return response
 
 
-@router.get("/get_saved_routes/{fleet_name}/{other_routes}")
+@router.get("/get_saved_routes/{fleet_name}/{backend_usage}")
 async def get_saved_routes(
-    fleet_name: str, other_routes: bool, user_name=Depends(dpd.get_user_from_header)
+    fleet_name: str, backend_usage: bool, user_name=Depends(dpd.get_user_from_header)
 ):
     response = {}
     if not user_name:
@@ -333,15 +333,15 @@ async def get_saved_routes(
         saved_routes = dbsession.get_saved_routes_fleet(fleet_name)
 
         for saved_route in saved_routes:
-            belongs_to_other_route = False
+            used_by_backend = False
             update = False
             for _tag in _tags:
                 if _tag in saved_route.tag:
-                    belongs_to_other_route = True
+                    used_by_backend = True
 
-            if belongs_to_other_route and other_routes:
+            if used_by_backend and backend_usage:
                 update = True
-            elif not belongs_to_other_route and not other_routes:
+            elif not used_by_backend and not backend_usage:
                 update = True
 
             if update:
