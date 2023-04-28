@@ -24,7 +24,7 @@ class IES_HANDLER:
 
     def _get_ati_stations(self, tasklist):
         all_ies_stations = [
-            station.ies_name for station in self.session.query(im.IESStations).all()
+            station.ies_name for station in self.session.session.query(im.IESStations).all()
         ]
         self.logger.info(f"tasklist: {tasklist}")
         route_stations = [
@@ -42,7 +42,7 @@ class IES_HANDLER:
             "JobCreate", msg["externalReferenceId"], "REJECTED"
         ).to_dict()
         trip_ies = (
-            self.session.query(im.IESBookingReq)
+            self.session.session.query(im.IESBookingReq)
             .filter(im.IESBookingReq.ext_ref_id == job_create.externalReferenceId)
             .one_or_none()
         )
@@ -74,7 +74,7 @@ class IES_HANDLER:
             status=iu.IES_JOB_STATUS_MAPPING[TripStatus.BOOKED],
             kanban_id=msg["properties"]["kanbanId"],
         )
-        self.session.add(job)
+        self.session.session.add(job)
         self.logger.info("added job, returning")
         return
 
@@ -92,7 +92,7 @@ class IES_HANDLER:
             pose=station_info["pose"],
         )
         self.logger.info(f"adding station ({msg}) to db")
-        self.session.add(ies_station)
+        self.session.session.add(ies_station)
         return
 
     def handle(self, msg):
@@ -113,6 +113,6 @@ class IES_HANDLER:
             return
 
         with im.DBSession() as db_session:
-            self.session = db_session.session
+            self.session = db_session
             fn_handler(msg)
         return
