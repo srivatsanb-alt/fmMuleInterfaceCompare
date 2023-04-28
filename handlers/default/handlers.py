@@ -601,25 +601,32 @@ class Handlers:
             next_task = "assign_new_trip"
 
         if ongoing_trip:
-            if ongoing_trip.finished():
-                done = True
-                next_task = "end_ongoing_trip"
+            try:
+                if ongoing_trip.finished():
+                    done = True
+                    next_task = "end_ongoing_trip"
 
-            elif (
-                self.check_continue_curr_leg(ongoing_trip)
-                and ongoing_trip.check_continue()
-                and sherpa_status.continue_curr_task
-            ):
-                done = True
-                next_task = "continue_leg"
+                elif (
+                    self.check_continue_curr_leg(ongoing_trip)
+                    and ongoing_trip.check_continue()
+                    and sherpa_status.continue_curr_task
+                ):
+                    done = True
+                    next_task = "continue_leg"
 
-            elif (
-                self.check_start_new_leg(ongoing_trip)
-                and not ongoing_trip.finished_booked()
-                and ongoing_trip.check_continue()
-            ):
-                done = True
-                next_task = "start_leg"
+                elif (
+                    self.check_start_new_leg(ongoing_trip)
+                    and not ongoing_trip.finished_booked()
+                    and ongoing_trip.check_continue()
+                ):
+                    done = True
+                    next_task = "start_leg"
+
+            except Exception as e:
+                get_logger().warning(
+                    f"unable to process ongoing_trip object for {sherpa.name}, Exception: {e}"
+                )
+
         else:
             sherpa_status.continue_curr_task = False
 
