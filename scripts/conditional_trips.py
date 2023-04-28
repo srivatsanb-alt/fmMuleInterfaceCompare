@@ -220,6 +220,6 @@ def book_conditional_trips():
         for trip_type in bct.trip_types:
             with DBSession() as dbsession:
                 bct.dbsession = dbsession
-                bct.book_trips(trip_type)
+                bct.book_trip(trip_type)
 
         time.sleep(60)
