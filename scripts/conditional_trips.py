@@ -139,7 +139,7 @@ class BookConditionalTrip:
 
             if already_booked:
                 logging.getLogger("misc").info(
-                    f"Idling trip booked already for {sherpa_name}"
+                    f"conditional trip booked already for {sherpa_name}"
                 )
                 continue
 
@@ -185,7 +185,7 @@ class BookConditionalTrip:
 
             if already_booked:
                 logging.getLogger("misc").info(
-                    f"Battery swap trip booked already for {sherpa_name}"
+                    f"conditional trip booked already for {sherpa_name}"
                 )
                 continue
 
