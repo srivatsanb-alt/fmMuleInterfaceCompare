@@ -1,12 +1,15 @@
 import os
-from plugins.plugin_comms import send_req_to_FM
 import logging
 import hashlib
-from .summon_models import DBSession, SummonInfo, SummonActions
 import time
-from models.trip_models import COMPLETED_TRIP_STATUS
 import redis
 import secrets
+
+# ati code imports
+import models.trip_models as tm
+from plugins.plugin_comms import send_req_to_FM
+from .summon_models import DBSession, SummonInfo, SummonActions
+
 
 logger_name = "plugin_summon_button"
 logger = logging.getLogger(logger_name)
@@ -100,12 +103,13 @@ def send_job_updates_summon():
                         logger.info(
                             f"trip_id: {trip_id}, FM_response_status: {trip_status}"
                         )
-                        if trip_status in COMPLETED_TRIP_STATUS:
+                        if trip_status == tm.TripStatus.SUCCEEDED:
                             summon_button.booking_id = None
                             summon_button.trip_id = None
                             color = "blinking green"
-                        else:
+                        elif trip_status not in tm.COMPLETED_TRIP_STATUS:
                             color = "rotating green"
+
                 msg = {"Led": color}
                 send_msg_to_summon_button(msg, summon_button.id)
         time.sleep(30)
