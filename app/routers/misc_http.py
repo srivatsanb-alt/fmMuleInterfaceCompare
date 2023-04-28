@@ -255,11 +255,7 @@ async def get_fm_incidents(
             response.update({"error_msg": fm_incident.error_message})
             response.update({"description": fm_incident.display_message})
             response.update({"how_to_recover": fm_incident.recovery_message})
-<<<<<<< HEAD
-            response.update({"reported_at": dt_to_str(fm_incident.created_at)})
-=======
             response.update({"reported_at": utils_util.dt_to_str(fm_incident.created_at)})
->>>>>>> fm_dev
             response.update({"module": fm_incident.module})
             response.update({"other_info": fm_incident.other_info})
     return response
