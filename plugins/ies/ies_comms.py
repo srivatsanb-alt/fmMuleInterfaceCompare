@@ -46,12 +46,34 @@ async def get_all_ies_stations(user_name=Depends(dpd.get_user_from_header)):
         dpd.raise_error("Unknown requester", 401)
 
     response = {}
-    with im.DBSession().session as dbsession:
-        all_ies_stations = dbsession.query(im.IESStations).all()
+    with im.DBSession() as dbsession:
+        all_ies_stations = dbsession.session.query(im.IESStations).all()
         for station in all_ies_stations:
             response.update({station.ati_name: station.ies_name})
 
     return response
+
+
+@router.delete("/plugin/ies/delete_ies_station/{ati_station_name}")
+async def delete_ies_station(
+    ati_station_name: str, user_name=Depends(dpd.get_user_from_header)
+):
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    with im.DBSession() as dbsession:
+        ies_station = (
+            dbsession.session.query(im.IESStations)
+            .filter(im.IESStations.ati_name == ati_station_name)
+            .one_or_none()
+        )
+
+        if ies_station is None:
+            dpd.raise_error(f"{ati_station_name} is not an IES station")
+
+        logging.info(f"deleting ies station {ies_station.ati_name}")
+        dbsession.session.delete(ies_station)
+    return {}
 
 
 @router.get("/plugin/ies/get_sherpas_at_start/{fleet_name}")
@@ -75,9 +97,9 @@ async def get_sherpas_at_start(
             sherpa_pose = sherpa_summary_response["sherpa_status"]["pose"]
             for route_tag, route in all_ies_routes.items():
                 station = route[0]
-                with im.DBSession().session as dbsession:
+                with im.DBSession() as dbsession:
                     ies_station = (
-                        dbsession.query(im.IESStations)
+                        dbsession.session.query(im.IESStations)
                         .filter(im.IESStations.ati_name == station)
                         .one_or_none()
                     )
