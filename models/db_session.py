@@ -352,7 +352,7 @@ class DBSession:
     def get_trip_with_booking_id(self, booking_id):
         return self.session.query(tm.Trip).filter(tm.Trip.booking_id == booking_id).all()
 
-    def last_trip(self, sherpa_name):
+    def get_last_trip(self, sherpa_name):
         return (
             self.session.query(tm.Trip)
             .filter(tm.Trip.sherpa_name == sherpa_name)
