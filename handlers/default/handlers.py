@@ -601,6 +601,12 @@ class Handlers:
             next_task = "assign_new_trip"
 
         if ongoing_trip:
+            """
+            dbsession.session.commit() called in
+            handle_sherpa_status refreshes ongoing_trip object,
+            below code block can cause ObjectDeletedError, StaleDataError if ongoing_trip was deleted by a different rq job
+            ongoing_trip is accessed by multiple handlers, added try block to resolve this
+            """
             try:
                 if ongoing_trip.finished():
                     done = True
@@ -767,7 +773,7 @@ class Handlers:
         # update db
         if len(all_ongoing_trips) == 0:
             raise ValueError(
-                f"No ongoing trips with sherpas online to be deleted for booking_id : {req.booking_id}, reasons: {reasons}"
+                f"Couldn't delete ongoing_trips for booking_id: {req.booking_id}, reasons: {reasons}"
             )
         response = self.delete_ongoing_trip(
             all_ongoing_trips, all_sherpas, all_trip_analytics
