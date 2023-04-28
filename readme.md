@@ -11,6 +11,7 @@
 8. [Push mule docker image to local docker registry](#push-mule-docker-image-to-local-docker-registry)
 9. [Fleet maintenance](#fleet-maintenance)
 10. [Flash Summon button firmware](#flash-summon-button-firmware)
+11. [Use saved routes](#use-saved-routes)
 
 # FM Installation #
 
@@ -290,10 +291,7 @@ priority_power_factor=1.0
 
 4. For good takt time, eta power factor should be higher, for fair scheduling priority power factor should be set higher.
 
-5. Sherpas can also be restricted from running on certain routes/station by setting up exclude_stations config. The below config will stop "sample_sherpa"(sherpa_name) from getting assigned with the trips with route having any of ["Station A", "Station B"]
-```markdown
-[optimal_dispatch.exclude_stations]
-sample_sherpa=["Station A", "Station B"]
+5. Sherpas can also be restricted from running on certain routes/station by setting up exclude_stations. Check [saved route](#use-saved-routes) feature.
 ```
 
 6. To reduce computation load due to optimal dispatch, max_trips_to_consider can be lowered. For a standalone/FM on sherpa, max_trips_to_consider can be set to a value less than 5 depending on the use case. Optimal dispatch logic will be run only for the first max_trips_to_consider number of trips. Default is set to 15.
@@ -331,8 +329,8 @@ docker push <fm_ip>:443/mule:fm
 # Fleet maintenance # 
 
 ## Update map files ## 
-1. Copy all the new map files to <fm_static_directory>/<fleet_name>/map/ folder
-2. Select the fleet which needs the map update from the webpage header in the dashboard and press update_map button on the webpage header(present along with start/stop fleet , emergency_stop fleet etc.)
+1. Copy all the new map files to <fm_static_directory>/<fleet_name>/all_maps/<map_version_name>/ folder
+2. Select the fleet which needs the map update from the webpage header in the dashboard and press update_map button on the webpage header(present along with start/stop fleet , emergency_stop fleet etc.), and choose map_version from drop down
 3. Restart of FM after update map button is pressed. FM Pop up would ask for restart. 
 
 
@@ -424,3 +422,46 @@ l. Set APIKEY using api key generated in step d , save.
 X-API-Key:<api_key>
 ```
 m. Press restart device in summon button UI.
+
+# Use Saved routes #
+
+1. Enable battery swap trips:
+
+a. Set up conditional trip config
+```markdown
+[conditional_trips]
+trip_types = ["battery_swap"]
+
+[conditional_trips.battery_swap]
+book=true
+max_trips = 2 # max number of sherpas that can be sent for battery swap at the same time
+threshold = 100 # battery level
+priority = 10  # trip priority
+```
+b. Select the route you want the sherpa to do when battery level is below threshold, save it as battery_swap_<fleet_name> in book new trips page.
+
+2. Enable idling trips:
+
+a. Set up conditional trip config
+```markdown
+[conditional_trips]
+trip_types = ["idling_sherpa"]
+
+[conditional_trips.idling_sherpa]
+book=true
+max_trips = 2 # max number of sherpas that can be booked with trips when found idling at the same time 
+threshold = 100 # battery level
+priority = 1  # trip priority
+```
+b. Select the route you want the sherpa to do when is found idling, save it as idling_<fleet_name> in book new trips page.
+
+3. Disable sherpa from going to a list of stations
+
+a. Select the list of stations you want the sherpa to not go to, save it as exclude_stations_<sherpa_name> in book new trips page.
+
+
+
+
+
+
+
