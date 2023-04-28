@@ -71,21 +71,16 @@ async def get_sherpas_at_start(
         status_code, sherpa_summary_response = pcomms.send_req_to_FM(
             "plugin_ies", "sherpa_summary", req_type="get", query=sherpa_name
         )
-        logging.info(f"response from fm: {status_code}")
         if status_code == 200:
-            logging.info(f"successful resp...")
             sherpa_pose = sherpa_summary_response["sherpa_status"]["pose"]
-            logging.info(f"sherpa_pose: {sherpa_pose}")
             for route_tag, route in all_ies_routes.items():
                 station = route[0]
-                logging.info(f"first stn: {station}")
                 with im.DBSession().session as dbsession:
                     ies_station = (
                         dbsession.query(im.IESStations)
                         .filter(im.IESStations.ati_name == station)
                         .one_or_none()
                     )
-                logging.info(f"ies station: {ies_station}")
                 if ies_station is None:
                     dpd.raise_error(f"given station ({station}) is not an IES station")
                 logging.info(
