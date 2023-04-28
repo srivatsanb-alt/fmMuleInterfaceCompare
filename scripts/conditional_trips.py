@@ -62,6 +62,7 @@ class BookConditionalTrip:
             .filter(fm.SherpaStatus.battery_status < threshold)
             .filter(fm.SherpaStatus.battery_status != -1)
             .filter(fm.SherpaStatus.disabled is not True)
+            .order_by(fm.SherpaStatus.battery_status)
             .all()
         )
 
