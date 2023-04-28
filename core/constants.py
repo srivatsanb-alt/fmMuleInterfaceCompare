@@ -18,6 +18,7 @@ class MessageType:
     SHERPA_ALERTS = "sherpa_alerts"
     MISC_PROCESS = "misc_process"
     FORCE_DELETE_ONGOING_TRIP = "force_delete_ongoing_trip"
+    SAVE_ROUTE = "save_route"
 
 
 OptimalDispatchInfluencers = [

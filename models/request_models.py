@@ -257,6 +257,11 @@ class AddFleetReq(ClientReq):
     map_name: str
 
 
+class UpdateMapReq(ClientReq):
+    fleet_name: str
+    map_path: str
+
+
 class FleetConfigUpdate(BaseModel):
     fleet: BasicConfig
     optimal_dispatch: OptimalDispatch
@@ -477,3 +482,15 @@ class TripStatusUpdate(JsonMixin):
 @dataclass
 class RouteWPS(JsonMixin):
     route_wps: List
+
+
+class SaveRouteReq(ClientReq):
+    tag: str
+    route: List[str]
+    other_info: Optional[Dict[str, str]] = None
+    type: str = MessageType.SAVE_ROUTE
+
+
+class UpdateSavedRouteReq(ClientReq):
+    tag: str
+    other_info: Dict[str, str]

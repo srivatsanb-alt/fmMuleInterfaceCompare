@@ -1,12 +1,11 @@
 from typing import Union
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm.attributes import flag_modified
-from sqlalchemy.sql import func
 
 # ati code imports
 import app.routers.dependencies as dpd
 import models.request_models as rqm
-from models.trip_models import Trip, TripAnalytics
+import models.trip_models as tm
 from models.db_session import DBSession
 from utils.util import str_to_dt
 import utils.trip_utils as tu
@@ -185,7 +184,7 @@ async def trip_status(
             # dpd.raise_error("no trip id given or available in the given timeframe")
 
         for trip_id in trip_status_req.trip_ids:
-            trip: Trip = dbsession.get_trip(trip_id)
+            trip: tm.Trip = dbsession.get_trip(trip_id)
             if not trip:
                 dpd.raise_error("invalid trip id")
             response.update({trip_id: tu.get_trip_status(trip)})
@@ -239,7 +238,7 @@ async def trip_analytics(
         for trip_id in trip_analytics_req.trip_ids:
             trip_legs_id = dbsession.get_all_trip_legs(trip_id)
             for trip_leg_id in trip_legs_id:
-                trip_analytics: TripAnalytics = dbsession.get_trip_analytics(trip_leg_id)
+                trip_analytics: tm.TripAnalytics = dbsession.get_trip_analytics(trip_leg_id)
                 if not trip_analytics:
                     continue
                 response.update({trip_leg_id: tu.get_trip_analytics(trip_analytics)})
@@ -259,7 +258,7 @@ async def add_trip_metadata(
         dpd.raise_error("Unknown requester", 401)
 
     with DBSession() as dbsession:
-        trip: Trip = dbsession.get_trip(trip_id)
+        trip: tm.Trip = dbsession.get_trip(trip_id)
         if trip.trip_metadata is None:
             trip.trip_metadata = {}
 
@@ -301,15 +300,101 @@ async def populate_route(
         dpd.raise_error("Unknown requester", 401)
 
     with DBSession() as dbsession:
-        populate_routes = (
-            dbsession.session.query(Trip.route)
-            .filter(Trip.fleet_name == fleet_name)
-            .group_by(Trip.route)
-            .order_by(func.count(Trip.route).desc())
-            .all()
-        )
+        populate_routes = dbsession.get_popular_routes(fleet_name)
 
     for route in populate_routes[:num_routes]:
         response.extend(route)
+
+    return response
+
+
+@router.post("/save_route")
+async def save_route(
+    save_route_req: rqm.SaveRouteReq, user_name=Depends(dpd.get_user_from_header)
+):
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    response = await dpd.process_req_with_response(None, save_route_req, user_name)
+
+    return response
+
+
+@router.get("/get_saved_routes/{fleet_name}/{backend_usage}")
+async def get_saved_routes(
+    fleet_name: str, backend_usage: bool, user_name=Depends(dpd.get_user_from_header)
+):
+    response = {}
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    with DBSession() as dbsession:
+        _tags = ["exclude_stations", "battery_swap", "idling"]
+        saved_routes = dbsession.get_saved_routes_fleet(fleet_name)
+
+        for saved_route in saved_routes:
+            used_by_backend = False
+            update = False
+            for _tag in _tags:
+                if _tag in saved_route.tag:
+                    used_by_backend = True
+
+            if used_by_backend and backend_usage:
+                update = True
+            elif not used_by_backend and not backend_usage:
+                update = True
+
+            if update:
+                response.update(
+                    {
+                        saved_route.tag: {
+                            "route": saved_route.route,
+                            "fleet_name": saved_route.fleet_name,
+                            "other_info": saved_route.other_info,
+                        }
+                    }
+                )
+
+    return response
+
+
+@router.delete("/delete_saved_route/{tag}")
+async def delete_saved_route(tag: str, user_name=Depends(dpd.get_user_from_header)):
+    response = {}
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    with DBSession() as dbsession:
+        saved_route = dbsession.get_saved_route(tag)
+
+        if saved_route is None:
+            dpd.raise_error(f"No saved route with tag:{tag}")
+
+        dbsession.session.delete(saved_route)
+
+    return response
+
+
+@router.post("/update_saved_route_info")
+async def update_saved_route_metadata(
+    update_saved_route_req: rqm.UpdateSavedRouteReq,
+    user_name=Depends(dpd.get_user_from_header),
+):
+    response = {}
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    with DBSession() as dbsession:
+        saved_route = dbsession.get_saved_route(update_saved_route_req.tag)
+
+        if saved_route is None:
+            dpd.raise_error(f"No saved route with tag:{update_saved_route_req.tag}")
+
+        if saved_route.other_info is None:
+            saved_route.other_info = {}
+
+        saved_route.other_info.update(update_saved_route_req.other_info)
+
+        flag_modified(saved_route, "other_info")
 
     return response

@@ -1,7 +1,10 @@
 import os
 import logging
+import glob
 from fastapi import APIRouter, Depends
+import shutil
 
+# ati code imports
 from utils import fleet_utils as fu
 from models.db_session import DBSession
 from models.frontend_models import FrontendUser
@@ -20,6 +23,7 @@ logger = logging.getLogger("configure_fleet")
 
 router = APIRouter(
     prefix="/api/v1/configure_fleet",
+    tags=["configure_fleet"],
     responses={404: {"description": "Not found"}},
 )
 
@@ -146,6 +150,31 @@ async def get_all_fleet_info(user_name=Depends(dpd.get_user_from_header)):
     return response
 
 
+@router.get("/get_all_available_maps/{fleet_name}")
+async def get_all_available_maps(
+    fleet_name: str, user_name=Depends(dpd.get_user_from_header)
+):
+    response = []
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    with DBSession() as dbsession:
+        all_fleets = dbsession.get_all_fleet_names()
+        new_fleet = False if fleet_name in all_fleets else True
+        if new_fleet:
+            dpd.raise_error("Add the fleet to get_all_available_maps", 401)
+
+        response.append("use current map")
+        temp = os.path.join(os.getenv("FM_MAP_DIR"), fleet_name, "all_maps", "*")
+        for item in glob.glob(temp):
+            if os.path.isdir(item):
+                map_folder_name = item
+                map_folder_name = item.rsplit("/")[-1]
+                response.append(map_folder_name)
+
+    return response
+
+
 @router.post("/add_edit_fleet/{fleet_name}")
 async def add_fleet(
     add_fleet_req: rqm.AddFleetReq,
@@ -235,9 +264,9 @@ async def delete_fleet(
 # deletes fleet from FM.
 
 
-@router.get("/update_map/{fleet_name}")
+@router.post("/update_map")
 async def update_map(
-    fleet_name: str,
+    update_map_req: rqm.UpdateMapReq,
     user_name=Depends(dpd.get_user_from_header),
 ):
     response = {}
@@ -246,6 +275,25 @@ async def update_map(
         dpd.raise_error("Unknown requester", 401)
 
     with DBSession() as dbsession:
+        fleet_name = update_map_req.fleet_name
+
+        if update_map_req.map_path != "use current map":
+            new_map = os.path.join(
+                os.getenv("FM_MAP_DIR"), fleet_name, "all_maps", update_map_req.map_path
+            )
+            current_map = os.path.join(os.getenv("FM_MAP_DIR"), fleet_name, "map")
+            prev_map = os.path.join(os.getenv("FM_MAP_DIR"), fleet_name, "prev_map")
+            try:
+                shutil.copytree(current_map, prev_map)
+                shutil.rmtree(current_map)
+                shutil.copytree(new_map, current_map)
+            except Exception as e:
+                shutil.copytree(prev_map, current_map)
+                shutil.rmtree(prev_map)
+                dpd.raise_error(str(e))
+
+            shutil.rmtree(prev_map)
+
         fleet: fm.Fleet = dbsession.get_fleet(fleet_name)
         if not fleet:
             dpd.raise_error("Bad detail invalid fleet name")

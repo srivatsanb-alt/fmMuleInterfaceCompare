@@ -102,6 +102,10 @@ class Handlers:
 
     def get_sherpa_trips(self, sherpa_name):
         sherpa: fm.Sherpa = self.dbsession.get_sherpa(sherpa_name)
+
+        if sherpa is None:
+            raise ValueError(f"{sherpa_name} not found in DB")
+
         ongoing_trip: tm.OngoingTrip = self.dbsession.get_ongoing_trip(sherpa.name)
         pending_trip: tm.PendingTrip = self.dbsession.get_pending_trip(sherpa.name)
         return sherpa, ongoing_trip, pending_trip
@@ -597,25 +601,38 @@ class Handlers:
             next_task = "assign_new_trip"
 
         if ongoing_trip:
-            if ongoing_trip.finished():
-                done = True
-                next_task = "end_ongoing_trip"
+            """
+            dbsession.session.commit() called in
+            handle_sherpa_status refreshes ongoing_trip object,
+            below code block can cause ObjectDeletedError, StaleDataError if ongoing_trip was deleted by a different rq job
+            ongoing_trip is accessed by multiple handlers, added try block to resolve this
+            """
+            try:
+                if ongoing_trip.finished():
+                    done = True
+                    next_task = "end_ongoing_trip"
 
-            elif (
-                self.check_continue_curr_leg(ongoing_trip)
-                and ongoing_trip.check_continue()
-                and sherpa_status.continue_curr_task
-            ):
-                done = True
-                next_task = "continue_leg"
+                elif (
+                    self.check_continue_curr_leg(ongoing_trip)
+                    and ongoing_trip.check_continue()
+                    and sherpa_status.continue_curr_task
+                ):
+                    done = True
+                    next_task = "continue_leg"
 
-            elif (
-                self.check_start_new_leg(ongoing_trip)
-                and not ongoing_trip.finished_booked()
-                and ongoing_trip.check_continue()
-            ):
-                done = True
-                next_task = "start_leg"
+                elif (
+                    self.check_start_new_leg(ongoing_trip)
+                    and not ongoing_trip.finished_booked()
+                    and ongoing_trip.check_continue()
+                ):
+                    done = True
+                    next_task = "start_leg"
+
+            except Exception as e:
+                get_logger().warning(
+                    f"unable to process ongoing_trip object for {sherpa.name}, Exception: {e}"
+                )
+
         else:
             sherpa_status.continue_curr_task = False
 
@@ -661,7 +678,7 @@ class Handlers:
                 if trip_msg.metadata is None:
                     trip_msg.metadata = {}
 
-                trip_msg.metadata.update({"booked_by": req.source})
+                booked_by = req.source
 
                 trip: tm.Trip = self.dbsession.create_trip(
                     trip_msg.route,
@@ -669,6 +686,7 @@ class Handlers:
                     trip_msg.metadata,
                     booking_id,
                     fleet_name,
+                    booked_by,
                 )
                 self.dbsession.create_pending_trip(trip.id)
                 response.update(
@@ -755,7 +773,7 @@ class Handlers:
         # update db
         if len(all_ongoing_trips) == 0:
             raise ValueError(
-                f"No ongoing trips with sherpas online to be deleted for booking_id : {req.booking_id}, reasons: {reasons}"
+                f"Couldn't delete ongoing_trips for booking_id: {req.booking_id}, reasons: {reasons}"
             )
         response = self.delete_ongoing_trip(
             all_ongoing_trips, all_sherpas, all_trip_analytics
@@ -1387,6 +1405,62 @@ class Handlers:
             f"passing control request to sherpa {sherpa.name}, {req.dict()} "
         )
         utils_comms.send_req_to_sherpa(self.dbsession, sherpa, req)
+
+    def handle_save_route(self, req: rqm.SaveRouteReq):
+        reponse = {}
+
+        # query db
+        saved_route = self.dbsession.get_saved_route(req.tag)
+
+        stations = req.route
+        for station_name in stations:
+            try:
+                _ = self.dbsession.get_station(station_name)
+            except Exception as e:
+                get_logger().info(f"unable to find station: {station_name}, Exception: {e}")
+                raise ValueError(f"{station_name} not found in DB, cannot add {req.route}")
+
+        # end transaction
+        self.dbsession.session.commit()
+
+        # update db
+        fleet_name = self.dbsession.get_fleet_name_from_route(req.route)
+
+        if saved_route:
+            can_edit = saved_route.other_info.get("can_edit", "False")
+
+            if not eval(can_edit):
+                raise ValueError("Cannot edit this route tag, can_edit is set to False")
+
+            saved_route.route = req.route
+            saved_route.fleet_name = fleet_name
+
+            if req.other_info:
+                saved_route.other_info.update(req.other_info)
+                flag_modified(saved_route, "other_info")
+
+            get_logger().info(
+                f"updated the route : {req.route} for the route tag : {req.tag} "
+            )
+
+        else:
+            if req.other_info is None:
+                req.other_info = {}
+
+            if "can_edit" not in list(req.other_info.keys()):
+                req.other_info["can_edit"] = "True"
+
+            saved_route: tm.SaveRoute = tm.SavedRoutes(
+                tag=req.tag,
+                route=req.route,
+                fleet_name=fleet_name,
+                other_info=req.other_info,
+            )
+
+            self.dbsession.add_to_session(saved_route)
+            get_logger().info(f"Saved a new route : {req.route}, with tag : {req.tag} ")
+
+        return reponse
 
     def handle(self, msg):
         self.dbsession = None
