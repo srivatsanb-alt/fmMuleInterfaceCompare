@@ -3,6 +3,8 @@ import datetime
 import time
 import os
 import toml
+import logging
+import logging.config
 from sqlalchemy.sql import not_
 
 # ati code imports
@@ -11,14 +13,19 @@ import models.trip_models as tm
 import models.fleet_models as fm
 import models.request_models as rqm
 import app.routers.dependencies as dpd
-from core.logs import get_logger
+
+
+# setup logging
+log_conf_path = os.path.join(os.getenv("FM_MISC_DIR"), "logging.conf")
+logging.config.fileConfig(log_conf_path)
+logger = logging.getLogger("misc")
 
 
 def get_conditional_trip_config():
     conf_path = os.path.join(os.getenv("FM_CONFIG_DIR"), "conditional_trips.toml")
 
     if not os.path.exists(conf_path):
-        get_logger("misc").error(f"conditional trip config : {conf_path} not found")
+        logging.getLogger("misc").error(f"conditional trip config : {conf_path} not found")
         return
 
     config = toml.load(conf_path)
@@ -49,7 +56,7 @@ class BookConditionalTrip:
             book_fn = getattr(self, f"book_{trip_type}_trips", None)
 
             if book_fn is None:
-                get_logger("misc").info(f"Invalid conditional trip type {trip_type}")
+                logging.getLogger("misc").info(f"Invalid conditional trip type {trip_type}")
                 continue
 
             config = self.config.get(trip_type)
@@ -87,7 +94,7 @@ class BookConditionalTrip:
                 continue
 
             if (today_now - last_trip.end_time).seconds > threshold:
-                get_logger("misc").warning(f"{sherpa_name} has been found idling")
+                logging.getLogger("misc").warning(f"{sherpa_name} has been found idling")
                 idling_sherpa_status.append(sherpa_status)
 
         return idling_sherpa_status
@@ -124,13 +131,15 @@ class BookConditionalTrip:
             saved_route = self.dbsession.get_saved_route(f"idling_{fleet_name}")
 
             if saved_route is None:
-                get_logger("misc").warning(f"No idling route for {fleet_name}")
+                logging.getLogger("misc").warning(f"No idling route for {fleet_name}")
                 continue
 
             already_booked = self.is_trip_already_booked(sherpa_name, trip_type)
 
             if already_booked:
-                get_logger("misc").info(f"Idling trip booked already for {sherpa_name}")
+                logging.getLogger("misc").info(
+                    f"Idling trip booked already for {sherpa_name}"
+                )
                 continue
 
             num_trips = self.get_num_booked_trips(trip_type)
@@ -139,12 +148,12 @@ class BookConditionalTrip:
                 enqueue_trip_msg(
                     sherpa_status.sherpa_name, saved_route.route, trip_type, trip_priority
                 )
-                get_logger("misc").info(
+                logging.getLogger("misc").info(
                     f"queued a {trip_type} trip for {sherpa_name} with route: {saved_route.route}, priority: {trip_priority}"
                 )
 
             else:
-                get_logger("misc").info(
+                logging.getLogger("misc").info(
                     f"can only book {max_trips} trips, num {trip_type} trips: {num_trips}"
                 )
 
@@ -159,19 +168,19 @@ class BookConditionalTrip:
             sherpa_name = sherpa_status.sherpa_name
             fleet_name = sherpa_status.sherpa.fleet.name
 
-            get_logger("misc").warning(
+            logging.getLogger("misc").warning(
                 f"Battery level of {sherpa_name} below {battery_level_thresh}, {sherpa_status.battery_status}"
             )
 
             saved_route = self.dbsession.get_saved_route(f"battery_swap_{fleet_name}")
             if saved_route is None:
-                get_logger("misc").warning(f"No battery_swap route for {fleet_name}")
+                logging.getLogger("misc").warning(f"No battery_swap route for {fleet_name}")
                 continue
 
             already_booked = self.is_trip_already_booked(sherpa_name, trip_type)
 
             if already_booked:
-                get_logger("misc").info(
+                logging.getLogger("misc").info(
                     f"Battery swap trip booked already for {sherpa_name}"
                 )
                 continue
@@ -182,22 +191,22 @@ class BookConditionalTrip:
                 enqueue_trip_msg(
                     sherpa_status.sherpa_name, saved_route.route, trip_type, trip_priority
                 )
-                get_logger("misc").info(
+                logging.getLogger("misc").info(
                     f"queued a {trip_type} trip for {sherpa_name} with route: {saved_route.route}, priority: {trip_priority}"
                 )
 
             else:
-                get_logger("misc").info(
+                logging.getLogger("misc").info(
                     f"can only book {max_trips} trips, num {trip_type} trips: {num_trips}"
                 )
 
 
 def book_conditional_trips():
-    get_logger("misc").info("Started book conditional trips script")
+    logging.getLogger("misc").info("Started book conditional trips script")
 
     conditional_trip_config = get_conditional_trip_config()
     if conditional_trip_config is None:
-        get_logger("misc").error("Will not run conditional trips script config")
+        logging.getLogger("misc").error("Will not run conditional trips script config")
         return
 
     trip_types = conditional_trip_config.get("trip_types", [])
