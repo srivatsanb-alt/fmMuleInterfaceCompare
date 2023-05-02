@@ -2,12 +2,17 @@ from dataclasses import dataclass
 import json
 import os
 import logging
+import datetime
 
 from models.base_models import JsonMixin
 from models.trip_models import TripStatus
 import plugin_comms as pcomms
+import plugins.ies.ies_models as im
 
 logger = logging.getLogger("plugin_ies")
+
+TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
+IES_TIME_FORMAT = "%Y-%m-%dT%H:%M:%S.%f"
 
 IES_JOB_STATUS_MAPPING = {
     TripStatus.BOOKED: "ACCEPTED",
@@ -18,20 +23,6 @@ IES_JOB_STATUS_MAPPING = {
     TripStatus.FAILED: "FAILED",
     TripStatus.CANCELLED: "CANCELLED",
 }
-
-locationID_station_mapper_path = os.path.join(
-    os.getenv("FM_MAP_DIR"), "plugin_ies", "locationID_station_mapping.json"
-)
-with open(locationID_station_mapper_path, "r") as f:
-    locationID_station_mapping = json.load(f)
-
-
-def get_locationID_station_mapping():
-    return locationID_station_mapping
-
-
-def get_ati_station_name(bosch_station_name):
-    return locationID_station_mapping[bosch_station_name]["ati_name"]
 
 
 def get_all_ies_routes(fleet_name):
@@ -49,6 +40,22 @@ def get_all_ies_routes(fleet_name):
     return ies_routes
 
 
+def get_ies_station(dbsession, ati_station_name=None, ies_station_name=None):
+    if ati_station_name:
+        return (
+            dbsession.session.query(im.IESStations)
+            .filter(im.IESStations.ati_name == ati_station_name)
+            .one_or_none()
+        )
+    elif ies_station_name:
+        return (
+            dbsession.session.query(im.IESStations)
+            .filter(im.IESStations.ies_name == ies_station_name)
+            .one_or_none()
+        )
+    return None
+
+
 def get_exclude_stations_sherpa(sherpa_name, fleet_name):
     status_code, all_saved_routes = pcomms.send_req_to_FM(
         "plugin_ies", "get_saved_routes", "get", query=fleet_name
@@ -61,6 +68,18 @@ def get_exclude_stations_sherpa(sherpa_name, fleet_name):
         if route_tag == f"exclude_stations_{sherpa_name}":
             exclude_stations = route_info["route"]
     return exclude_stations
+
+
+def dt_to_str(dt):
+    return datetime.datetime.strftime(dt, TIME_FORMAT)
+
+
+def str_to_dt(dt_str):
+    return datetime.datetime.strptime(dt_str, TIME_FORMAT)
+
+
+def str_to_dt_UTC(dt_str):
+    return datetime.datetime.strptime(dt_str, IES_TIME_FORMAT + " %z")
 
 
 @dataclass

@@ -103,22 +103,23 @@ async def get_sherpas_at_start(
                         .filter(im.IESStations.ati_name == station)
                         .one_or_none()
                     )
-                if ies_station is None:
-                    dpd.raise_error(f"given station ({station}) is not an IES station")
-                logging.info(
-                    f"checking if stations {sherpa_pose}, {ies_station.pose} are close!"
-                )
-                sherpa_close_to_stn = are_poses_close(sherpa_pose, ies_station.pose)
-                sherpa_exclude_stations = iu.get_exclude_stations_sherpa(
-                    sherpa_name, fleet_name
-                )
-                if (
-                    sherpa_close_to_stn
-                    and len(set(sherpa_exclude_stations).intersection(set(route))) == 0
-                ):
-                    response.update(
-                        {route_tag: {"sherpa": sherpa_name, "station": route[0]}}
+                    if ies_station is None:
+                        dpd.raise_error(f"given station ({station}) is not an IES station")
+
+                    logging.info(
+                        f"checking if stations {sherpa_pose}, {ies_station.pose} are close!"
                     )
+                    sherpa_close_to_stn = are_poses_close(sherpa_pose, ies_station.pose)
+                    sherpa_exclude_stations = iu.get_exclude_stations_sherpa(
+                        sherpa_name, fleet_name
+                    )
+                    if (
+                        sherpa_close_to_stn
+                        and len(set(sherpa_exclude_stations).intersection(set(route))) == 0
+                    ):
+                        response.update(
+                            {route_tag: {"sherpa": sherpa_name, "station": route[0]}}
+                        )
         else:
             dpd.raise_error(f"fm req failed!")
     return response
@@ -145,7 +146,7 @@ async def enable_disable_sherpa(
 
 @router.post("/plugin/ies/enable_disable_route")
 async def enable_disable_route(
-    req: irqm.EnableDisableRouteReq, user_name=Depends(dpd.get_user_from_header)
+    req: irqm.EnableDisableRouteReq, fleet_name, user_name=Depends(dpd.get_user_from_header)
 ):
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
@@ -158,6 +159,44 @@ async def enable_disable_route(
     req_json = {"tag": req.tag, "other_info": other_info}
     respone_status, response = send_req_to_FM(plugin_name, endpoint, req_type, req_json)
 
+    return response
+
+
+@router.get("/plugin/ies/get_ies_routes/{fleet_name}")
+async def get_ies_routes(fleet_name, user_name=Depends(dpd.get_user_from_header)):
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    all_ies_routes = iu.get_all_ies_routes(fleet_name)
+
+    return all_ies_routes
+
+
+@router.post("/plugin/ies/consolidation_info/{fleet_name}")
+async def consolidation_info(
+    consolidation_req: irqm.ConsolidationReq,
+    fleet_name: str,
+    user_name=Depends(dpd.get_user_from_header),
+):
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    response = {}
+    with im.DBSession() as dbsession:
+        filtered_bookings = dbsession.get_consolidation_info(
+            fleet_name, consolidation_req.start_station, consolidation_req.route_tag
+        )
+        logging.getLogger("plugin_ies").info(f"filtered_bookings: {filtered_bookings}")
+        for booking in filtered_bookings:
+            logging.getLogger("plugin_ies").info(f"filtered stn: {booking.route[1]}")
+            response.update(
+                {
+                    booking.ext_ref_id: {
+                        "kanban_id": booking.kanban_id,
+                        "route": booking.route,
+                    }
+                }
+            )
     return response
 
 

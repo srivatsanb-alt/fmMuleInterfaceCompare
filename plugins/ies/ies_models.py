@@ -1,3 +1,4 @@
+import logging
 import os
 from sqlalchemy import (
     ARRAY,
@@ -17,6 +18,7 @@ from sqlalchemy import create_engine
 from sqlalchemy import Integer, String, Column, ARRAY
 from pydantic import BaseModel
 from plugin_db import Base
+import plugins.ies.ies_utils as iu
 
 
 class DBSession:
@@ -39,6 +41,32 @@ class DBSession:
             self.session.commit()
         self.session.close()
 
+    def get_ati_station_name(self, ies_station_name):
+        station = (
+            self.session.query(IESStations)
+            .filter(IESStations.ies_name == ies_station_name)
+            .one_or_none()
+        )
+        if station is None:
+            return None
+        return station.ati_name
+
+    def get_consolidation_info(self, fleet_name: str, start_station: str, route_tag: str):
+        all_ies_routes = iu.get_all_ies_routes(fleet_name)
+        if all_ies_routes != {}:
+            logging.getLogger("plugin_ies").info(
+                f"filtering bookings, route: {all_ies_routes[route_tag]}"
+            )
+            filtered_bookings = (
+                self.session.query(IESBookingReq)
+                .filter(IESBookingReq.start_station == start_station)
+                .filter(IESBookingReq.route[2].in_(all_ies_routes[route_tag]))
+                .all()
+            )
+        else:
+            raise ValueError(f"No IES routes defined")
+        return filtered_bookings
+
 
 class IESBookingReq(Base):
     __tablename__ = "ies_booking_req"
@@ -48,6 +76,7 @@ class IESBookingReq(Base):
     route = Column(ARRAY(String))
     status = Column(String)
     kanban_id = Column(String, index=True)
+    deadline = Column(String)
     combined_trip_id = Column(ForeignKey("combined_trips.trip_id"))
     combined_trip = relationship(
         "CombinedTrips",

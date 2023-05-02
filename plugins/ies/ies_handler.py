@@ -3,7 +3,10 @@ import os
 import json
 import logging
 import redis
+import pytz
+
 from models.trip_models import TripStatus
+import app.routers.dependencies as dpd
 import plugins.ies.ies_models as im
 import plugins.ies.ies_utils as iu
 import plugin_utils as pu
@@ -30,7 +33,7 @@ class IES_HANDLER:
         route_stations = [
             None
             if task["LocationId"] not in all_ies_stations
-            else iu.get_ati_station_name(task["LocationId"])
+            else self.session.get_ati_station_name(task["LocationId"])
             for task in tasklist
         ]
         return route_stations
@@ -67,12 +70,16 @@ class IES_HANDLER:
         ).to_dict()
         self.send_msg(accepted_msg)
         self.logger.info(f"adding trip to db")
+        tz = os.getenv("PGTZ")
         job = im.IESBookingReq(
             ext_ref_id=job_create.externalReferenceId,
             start_station=route_stations[0],
             route=route_stations,
             status=iu.IES_JOB_STATUS_MAPPING[TripStatus.BOOKED],
             kanban_id=msg["properties"]["kanbanId"],
+            deadline=iu.dt_to_str(
+                iu.str_to_dt_UTC(msg["deadline"] + " +0000").astimezone(pytz.timezone(tz))
+            ),
         )
         self.session.session.add(job)
         self.logger.info("added job, returning")
@@ -81,6 +88,23 @@ class IES_HANDLER:
     def handle_add_ies_station(self, msg):
         add_station = iu.StationIES.from_dict(msg)
         self.logger.info("handling add_ies_station")
+
+        ati_name_station = iu.get_ies_station(
+            self.session, ati_station_name=add_station.ati_name
+        )
+        ies_name_station = iu.get_ies_station(
+            self.session, ies_station_name=add_station.ies_name
+        )
+        # if station already exists..
+        if ati_name_station is not None and ies_name_station is None:
+            ati_name_station.ies_name = add_station.ies_name
+            self.session.session.commit()
+            return
+
+        elif ies_name_station is not None:
+            logging.info(f"ies name is not unique")
+            raise ValueError(f"IES name ({add_station.ies_name}) already exists")
+
         response_code, station_info = pu.get_station_info(
             "plugin_ies", add_station.ati_name
         )
