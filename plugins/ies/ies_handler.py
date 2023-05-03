@@ -18,7 +18,6 @@ from plugins.plugin_comms import send_req_to_FM
 class IES_HANDLER:
     def init_handler(self):
         self.redis_db = redis.from_url(os.getenv("FM_REDIS_URI"))
-        self.locationID_station_mapping = iu.get_locationID_station_mapping()
         self.plugin_name = "plugin_ies"
 
     def send_msg(self, msg):
@@ -38,17 +37,64 @@ class IES_HANDLER:
         ]
         return route_stations
 
+    def _send_trip_book_req_fm(self, booking_route):
+        # giving higher priority to IES trips
+        req_json = {"trips": [{"route": booking_route, "priority": 2}]}
+        status_code, trip_booking_response = send_req_to_FM(
+            "plugin_ies", "trip_book", req_type="post", req_json=req_json
+        )
+        return status_code, trip_booking_response
+
+    def _get_booking(self, ref_id, raise_error=True):
+        booking = (
+            self.session.session.query(im.IESBookingReq)
+            .filter(im.IESBookingReq.ext_ref_id == ref_id)
+            .one_or_none()
+        )
+        if booking is None and raise_error:
+            raise ValueError(f"no booking entry with ref id {ref_id} in db")
+        return booking
+
+    def _add_combined_trip_to_db(self, response, booking_route, ext_ref_ids):
+        for trip_id, trip_details in response.items():
+            combined_trip = im.CombinedTrips(
+                trip_id=trip_id,
+                booking_id=trip_details["booking_id"],
+                combined_route=booking_route,
+                # status=trip_details["status"],
+            )
+            self.logger.info(f"adding combined trip to db")
+            self.session.session.add(combined_trip)
+            for ref_id in ext_ref_ids:
+                booking_req = self._get_booking(ref_id)
+                booking_req.combined_trip_id = trip_id
+            self.session.session.commit()
+            # send_combined_trip_update(combined_trip)
+
+            return
+
+    def _send_scheduled_msgs(self, ext_ref_ids):
+        for ref_id in ext_ref_ids:
+            accepted_msg = iu.MsgToIES(
+                "JobUpdate", ref_id, iu.IES_JOB_STATUS_MAPPING[TripStatus.BOOKED]
+            ).to_dict()
+            accepted_msg.update({"lastCompletedTask": ""})
+            self.logger.info(f"sending accepted msg to IES, ref id {ref_id}")
+            self.send_msg(accepted_msg)
+            booking = self._get_booking(ref_id)
+            self.logger.info(f"updating booking req status in db")
+            booking.status = iu.IES_JOB_STATUS_MAPPING[TripStatus.BOOKED]
+        self.session.session.commit()
+
     def handle_JobCreate(self, msg):
         self.logger.info("handling JobCreate...")
         job_create = iu.JobCreate.from_dict(msg)
+        self.logger.info("job_create")
         rejected_msg = iu.MsgToIES(
             "JobCreate", msg["externalReferenceId"], "REJECTED"
         ).to_dict()
-        trip_ies = (
-            self.session.session.query(im.IESBookingReq)
-            .filter(im.IESBookingReq.ext_ref_id == job_create.externalReferenceId)
-            .one_or_none()
-        )
+        self.logger.info("rejected msg")
+        trip_ies = self._get_booking(job_create.externalReferenceId, raise_error=False)
         self.logger.info(f"query resp: {trip_ies}")
         if trip_ies is not None:
             self.send_msg(rejected_msg)
@@ -75,7 +121,7 @@ class IES_HANDLER:
             ext_ref_id=job_create.externalReferenceId,
             start_station=route_stations[0],
             route=route_stations,
-            status=iu.IES_JOB_STATUS_MAPPING[TripStatus.BOOKED],
+            status="PENDING",
             kanban_id=msg["properties"]["kanbanId"],
             deadline=iu.dt_to_str(
                 iu.str_to_dt_UTC(msg["deadline"] + " +0000").astimezone(pytz.timezone(tz))
@@ -117,6 +163,28 @@ class IES_HANDLER:
         )
         self.logger.info(f"adding station ({msg}) to db")
         self.session.session.add(ies_station)
+        return
+
+    def handle_book_consolidated_trip(self, msg):
+        ext_ref_ids = msg["ext_ref_ids"]
+        route_tag = msg["route_tag"]
+        unsorted_route_stations = []
+        for ref_id in ext_ref_ids:
+            ies_booking = self._get_booking(ref_id)
+            unsorted_route_stations.extend(station for station in ies_booking.route)
+        self.logger.info(f"unsorted_route_stations: {unsorted_route_stations}")
+        unique_stations = list(set(unsorted_route_stations))
+        all_ies_routes = iu.get_all_ies_routes(msg["fleet_name"])
+        if route_tag not in all_ies_routes.keys():
+            raise ValueError(
+                f"IES route ({route_tag} not found in db, can't consolidate trip)"
+            )
+        route = all_ies_routes[route_tag]
+        booking_route = [station for station in route if station in unique_stations]
+        status_code, response = self._send_trip_book_req_fm(booking_route)
+        if status_code != 200:
+            raise ValueError(f"{status_code}: consolidated trip booking req failed")
+        self._add_combined_trip_to_db(response, booking_route, ext_ref_ids)
         return
 
     def handle(self, msg):

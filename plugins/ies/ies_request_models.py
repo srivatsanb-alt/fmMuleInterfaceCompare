@@ -1,4 +1,5 @@
 from models.request_models import ClientReq
+from typing import List
 
 
 class IesStation(ClientReq):
@@ -16,7 +17,12 @@ class EnableDisableRouteReq(ClientReq):
     enable: bool
 
 
-class ConsolidationReq(ClientReq):
+class ConsolidationInfoReq(ClientReq):
     sherpa_name: str
     route_tag: str
     start_station: str
+
+
+class ConsolidateBookReq(ClientReq):
+    ext_ref_ids: List[str]
+    route_tag: str

@@ -10,6 +10,7 @@ import plugins.ies.ies_models as im
 import plugins.ies.ies_utils as iu
 from plugins.plugin_rq import enqueue, get_job_result, get_redis_conn
 import plugin_comms as pcomms
+import utils
 from rq import Queue
 
 router = APIRouter()
@@ -174,7 +175,7 @@ async def get_ies_routes(fleet_name, user_name=Depends(dpd.get_user_from_header)
 
 @router.post("/plugin/ies/consolidation_info/{fleet_name}")
 async def consolidation_info(
-    consolidation_req: irqm.ConsolidationReq,
+    consolidation_info_req: irqm.ConsolidationInfoReq,
     fleet_name: str,
     user_name=Depends(dpd.get_user_from_header),
 ):
@@ -184,11 +185,11 @@ async def consolidation_info(
     response = {}
     with im.DBSession() as dbsession:
         filtered_bookings = dbsession.get_consolidation_info(
-            fleet_name, consolidation_req.start_station, consolidation_req.route_tag
+            fleet_name,
+            consolidation_info_req.start_station,
+            consolidation_info_req.route_tag,
         )
-        logging.getLogger("plugin_ies").info(f"filtered_bookings: {filtered_bookings}")
         for booking in filtered_bookings:
-            logging.getLogger("plugin_ies").info(f"filtered stn: {booking.route[1]}")
             response.update(
                 {
                     booking.ext_ref_id: {
@@ -196,6 +197,49 @@ async def consolidation_info(
                         "route": booking.route,
                     }
                 }
+            )
+    logging.getLogger("plugin_ies").info(
+        f"sending ext ids for consolidation: {response.keys()}"
+    )
+    return response
+
+
+@router.post("/plugin/ies/consolidate_and_book_trip/{fleet_name}")
+async def consolidate_and_book_trip(
+    consolidate_book_req: irqm.ConsolidateBookReq,
+    fleet_name: str,
+    user_name=Depends(dpd.get_user_from_header),
+):
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    response = {}
+    q = Queue("plugin_ies", connection=get_redis_conn())
+    ies_handler = IES_HANDLER()
+    msg = {
+        "messageType": "book_consolidated_trip",
+        "ext_ref_ids": consolidate_book_req.ext_ref_ids,
+        "route_tag": consolidate_book_req.route_tag,
+        "fleet_name": fleet_name,
+    }
+    job = enqueue(q, ies_handler.handle, msg)
+    response = await get_job_result(job.id)
+    return {}
+
+
+@router.get("/plugin/ies/get_pending_jobs")
+async def get_pending_jobs(user_name=Depends(dpd.get_user_from_header)):
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    response = {}
+    with im.DBSession() as dbsession:
+        pending_jobs = dbsession.session.query(im.IESBookingReq).filter(
+            im.IESBookingReq.status == "PENDING"
+        )
+        for job in pending_jobs:
+            response.update(
+                {job.ext_ref_id: {"kanban_id": job.kanban_id, "route": job.route}}
             )
     return response
 
