@@ -16,8 +16,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy import create_engine
 from sqlalchemy import Integer, String, Column, ARRAY
-from pydantic import BaseModel
-from plugin_db import Base
+from models.base_models import Base, TimestampMixin
 import plugins.ies.ies_utils as iu
 
 
@@ -68,7 +67,7 @@ class DBSession:
         return filtered_bookings
 
 
-class IESBookingReq(Base):
+class IESBookingReq(Base, TimestampMixin):
     __tablename__ = "ies_booking_req"
     __table_args__ = {"extend_existing": True}
     ext_ref_id = Column(String, primary_key=True, index=True)
@@ -86,7 +85,7 @@ class IESBookingReq(Base):
     other_info = Column(JSONB)
 
 
-class CombinedTrips(Base):
+class CombinedTrips(Base, TimestampMixin):
     __tablename__ = "combined_trips"
     __table_args__ = {"extend_existing": True}
     trip_id = Column(Integer, primary_key=True, index=True)
