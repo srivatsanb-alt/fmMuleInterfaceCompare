@@ -1,8 +1,9 @@
 import json
 import os
-import time
-from fastapi import APIRouter, Depends
+import asyncio
 import aioredis
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm.attributes import flag_modified
 
 # ati code imports
 import models.request_models as rqm
@@ -23,9 +24,9 @@ async def site_info(user_name=Depends(dpd.get_user_from_header)):
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession() as session:
-        fleet_names = session.get_all_fleet_names()
-        software_compatability = session.get_compatability_info()
+    with DBSession() as dbsession:
+        fleet_names = dbsession.get_all_fleet_names()
+        software_compatability = dbsession.get_compatability_info()
         compatible_sherpa_versions = software_compatability.info.get("sherpa_versions", [])
 
     timezone = os.environ["PGTZ"]
@@ -51,14 +52,14 @@ async def master_data(
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession() as session:
-        fleet_names = session.get_all_fleet_names()
+    with DBSession() as dbsession:
+        fleet_names = dbsession.get_all_fleet_names()
 
         if master_data_info.fleet_name not in fleet_names:
             dpd.raise_error("Unknown fleet")
 
-        all_sherpas = session.get_all_sherpas_in_fleet(master_data_info.fleet_name)
-        all_stations = session.get_all_stations_in_fleet(master_data_info.fleet_name)
+        all_sherpas = dbsession.get_all_sherpas_in_fleet(master_data_info.fleet_name)
+        all_stations = dbsession.get_all_stations_in_fleet(master_data_info.fleet_name)
 
         response = {}
         sherpa_list = []
@@ -74,7 +75,7 @@ async def master_data(
         response.update({"station_list": station_list})
 
         sample_sherpa_status = {}
-        all_sherpa_status = session.get_all_sherpa_status()
+        all_sherpa_status = dbsession.get_all_sherpa_status()
         if len(all_sherpa_status) > 0:
             sample_sherpa_status.update(
                 {all_sherpa_status[0].sherpa_name: all_sherpa_status[0].__dict__}
@@ -85,7 +86,7 @@ async def master_data(
             response.update({"sample_sherpa_status": sample_sherpa_status})
 
         sample_station_status = {}
-        all_station_status = session.get_all_station_status()
+        all_station_status = dbsession.get_all_station_status()
         if len(all_station_status) > 0:
             sample_station_status.update(
                 {all_station_status[0].station_name: all_station_status[0].__dict__}
@@ -110,21 +111,72 @@ async def sherpa_summary(
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession() as session:
-        recent_events = session.get_sherpa_events(sherpa_name)
+    with DBSession() as dbsession:
+        recent_events = dbsession.get_sherpa_events(sherpa_name)
         result = []
         for recent_event in recent_events:
             temp = utils_util.get_table_as_dict(fm.SherpaEvent, recent_event)
             result.append(temp)
 
         response.update({"recent_events": {"events": result}})
-        sherpa: fm.Sherpa = session.get_sherpa(sherpa_name)
+        sherpa: fm.Sherpa = dbsession.get_sherpa(sherpa_name)
         response.update({"sherpa": utils_util.get_table_as_dict(fm.Sherpa, sherpa)})
         response.update({"fleet_name": sherpa.fleet.name})
-        sherpa_status: fm.SherpaStatus = session.get_sherpa_status(sherpa_name)
+        sherpa_status: fm.SherpaStatus = dbsession.get_sherpa_status(sherpa_name)
         response.update(
             {"sherpa_status": utils_util.get_table_as_dict(fm.SherpaStatus, sherpa_status)}
         )
+
+        # check if sherpa is at station
+        at_station = None
+        all_stations = dbsession.get_all_stations()
+        for station in all_stations:
+            if utils_util.are_poses_close(sherpa.pose, station.pose):
+                at_station = station
+                break
+        if at_station:
+            response.update({"at_station": at_station.name})
+
+    return response
+
+
+# gets the route(sequence of stations) for a trip
+@router.post("/update_sherpa_metadata")
+async def update_sherpa_metadata(
+    update_sherpa_metadata_req: rqm.UpdateSherpaMetaDataReq,
+    user_name=Depends(dpd.get_user_from_header),
+):
+    response = {}
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    with DBSession() as dbsession:
+        sherpa_name = update_sherpa_metadata_req.sherpa_name
+        sherpa_metadata = dbsession.get_sherpa_metadata(sherpa_name)
+
+        if sherpa_metadata is None:
+            dpd.raise_error(f"sherpa metadata for {sherpa_name} not found")
+
+        sherpa_metadata.info.update(update_sherpa_metadata_req.info)
+        flag_modified(sherpa_metadata, "info")
+
+    return response
+
+
+@router.get("/sherpa_metadata/{sherpa_name}")
+async def get_sherpa_metadata(
+    sherpa_name: str, user_name=Depends(dpd.get_user_from_header)
+):
+    response = {}
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    with DBSession() as dbsession:
+        sherpa_metadata = dbsession.get_sherpa_metadata(sherpa_name)
+        if not sherpa_metadata:
+            dpd.raise_error(f"sherpa metadata for {sherpa_name} not found")
+
+        response.update({"info": sherpa_metadata.info})
 
     return response
 
@@ -146,11 +198,11 @@ async def get_route_wps(
 
     response = {}
 
-    with DBSession() as session:
+    with DBSession() as dbsession:
         stations_poses = []
-        fleet_name = session.get_fleet_name_from_route(route_preview_req.route)
+        fleet_name = dbsession.get_fleet_name_from_route(route_preview_req.route)
         for station_name in route_preview_req.route:
-            station = session.get_station(station_name)
+            station = dbsession.get_station(station_name)
             stations_poses.append(station.pose)
         job_id = utils_util.generate_random_job_id()
         control_router_wps_job = [stations_poses, fleet_name, job_id]
@@ -159,7 +211,7 @@ async def get_route_wps(
         )
 
         while not await redis_conn.get(f"result_wps_job_{job_id}"):
-            time.sleep(0.005)
+            await asyncio.sleep(0.005)
 
         wps_list = json.loads(await redis_conn.get(f"result_wps_job_{job_id}"))
 
@@ -182,8 +234,8 @@ async def get_sherpa_live_route(
 
     response = {}
 
-    with DBSession() as session:
-        ongoing_trip = session.get_enroute_trip(live_route_req.sherpa_name)
+    with DBSession() as dbsession:
+        ongoing_trip = dbsession.get_enroute_trip(live_route_req.sherpa_name)
 
         if not ongoing_trip:
             dpd.raise_error(f"No ongoing trip for {live_route_req.sherpa_name}")

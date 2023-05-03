@@ -365,6 +365,23 @@ class GetFMIncidents(ClientReq):
     sherpa_name: str
 
 
+class SaveRouteReq(ClientReq):
+    tag: str
+    route: List[str]
+    other_info: Optional[Dict[str, str]] = None
+    type: str = MessageType.SAVE_ROUTE
+
+
+class UpdateSavedRouteReq(ClientReq):
+    tag: str
+    other_info: Dict[str, str]
+
+
+class UpdateSherpaMetaDataReq(ClientReq):
+    sherpa_name: str
+    info: Dict[str, str]
+
+
 #################################################
 # Messages to sherpas
 
@@ -482,15 +499,3 @@ class TripStatusUpdate(JsonMixin):
 @dataclass
 class RouteWPS(JsonMixin):
     route_wps: List
-
-
-class SaveRouteReq(ClientReq):
-    tag: str
-    route: List[str]
-    other_info: Optional[Dict[str, str]] = None
-    type: str = MessageType.SAVE_ROUTE
-
-
-class UpdateSavedRouteReq(ClientReq):
-    tag: str
-    other_info: Dict[str, str]

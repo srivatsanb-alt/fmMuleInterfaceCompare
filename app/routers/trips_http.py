@@ -370,6 +370,11 @@ async def delete_saved_route(tag: str, user_name=Depends(dpd.get_user_from_heade
         if saved_route is None:
             dpd.raise_error(f"No saved route with tag:{tag}")
 
+        can_edit = saved_route.other_info.get("can_edit", "False")
+
+        if not eval(can_edit):
+            dpd.raise_error("Cannot edit/delete this route tag, can_edit is set to False")
+
         dbsession.session.delete(saved_route)
 
     return response
