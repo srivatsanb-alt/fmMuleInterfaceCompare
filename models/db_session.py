@@ -237,6 +237,9 @@ class DBSession:
     def get_station(self, name: str) -> fm.Station:
         return self.session.query(fm.Station).filter(fm.Station.name == name).one()
 
+    def get_station_with_pose(self, pose: list) -> fm.Station:
+        return self.session.query(fm.Station).filter(fm.Station.pose == pose).one_or_none()
+
     def get_all_stations(self) -> List[fm.Station]:
         return self.session.query(fm.Station).all()
 
@@ -352,10 +355,11 @@ class DBSession:
     def get_trip_with_booking_id(self, booking_id):
         return self.session.query(tm.Trip).filter(tm.Trip.booking_id == booking_id).all()
 
-    def last_trip(self, sherpa_name):
+    def get_last_trip(self, sherpa_name):
         return (
-            self.dbsession.session.query(tm.Trip)
+            self.session.query(tm.Trip)
             .filter(tm.Trip.sherpa_name == sherpa_name)
+            .filter(tm.Trip.end_time != None)
             .order_by(tm.Trip.end_time.desc())
             .first()
         )

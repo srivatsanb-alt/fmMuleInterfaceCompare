@@ -320,25 +320,40 @@ async def save_route(
     return response
 
 
-@router.get("/get_saved_routes/{fleet_name}")
-async def get_saved_routes(fleet_name: str, user_name=Depends(dpd.get_user_from_header)):
+@router.get("/get_saved_routes/{fleet_name}/{backend_usage}")
+async def get_saved_routes(
+    fleet_name: str, backend_usage: bool, user_name=Depends(dpd.get_user_from_header)
+):
     response = {}
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
     with DBSession() as dbsession:
+        _tags = ["exclude_stations", "battery_swap", "idling"]
         saved_routes = dbsession.get_saved_routes_fleet(fleet_name)
 
         for saved_route in saved_routes:
-            response.update(
-                {
-                    saved_route.tag: {
-                        "route": saved_route.route,
-                        "fleet_name": saved_route.fleet_name,
-                        "other_info": saved_route.other_info,
+            used_by_backend = False
+            update = False
+            for _tag in _tags:
+                if _tag in saved_route.tag:
+                    used_by_backend = True
+
+            if used_by_backend and backend_usage:
+                update = True
+            elif not used_by_backend and not backend_usage:
+                update = True
+
+            if update:
+                response.update(
+                    {
+                        saved_route.tag: {
+                            "route": saved_route.route,
+                            "fleet_name": saved_route.fleet_name,
+                            "other_info": saved_route.other_info,
+                        }
                     }
-                }
-            )
+                )
 
     return response
 
@@ -354,6 +369,11 @@ async def delete_saved_route(tag: str, user_name=Depends(dpd.get_user_from_heade
 
         if saved_route is None:
             dpd.raise_error(f"No saved route with tag:{tag}")
+
+        can_edit = saved_route.other_info.get("can_edit", "False")
+
+        if not eval(can_edit):
+            dpd.raise_error("Cannot edit/delete this route tag, can_edit is set to False")
 
         dbsession.session.delete(saved_route)
 

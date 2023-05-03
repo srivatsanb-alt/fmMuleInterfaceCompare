@@ -171,6 +171,15 @@ def add_master_fm_data_upload(dbsession: DBSession):
         dbsession.add_to_session(mfm_du)
 
 
+def add_sherpa_metadata(dbsession: DBSession):
+    all_sherpas = dbsession.get_all_sherpas()
+    for sherpa in all_sherpas:
+        sherpa_metadata = dbsession.get_sherpa_metadata(sherpa.name)
+        if sherpa_metadata is None:
+            sm = fm.SherpaMetaData(sherpa_name=sherpa.name, info={"can_edit": "True"})
+            dbsession.add_to_session(sm)
+
+
 class FrontendUserUtils:
     @classmethod
     def add_update_frontend_user(
@@ -464,7 +473,7 @@ class SherpaUtils:
         if sherpa:
             sherpa.hwid = hwid
             sherpa.ip_address = None
-            sherpa.api_key = api_key
+            sherpa.hashed_api_key = hashed_api_key
             if sherpa.fleet_id != fleet_id:
                 raise ValueError(
                     "Cannot edit fleet_id for sherpa object. Delete sherpa,  add it to a different fleet"

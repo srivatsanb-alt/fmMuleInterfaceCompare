@@ -1,12 +1,15 @@
 import os
-from plugins.plugin_comms import send_req_to_FM
 import logging
 import hashlib
-from .summon_models import DBSession, SummonInfo, SummonActions
 import time
-from models.trip_models import COMPLETED_TRIP_STATUS
 import redis
 import secrets
+
+# ati code imports
+import models.trip_models as tm
+from plugins.plugin_comms import send_req_to_FM
+from .summon_models import DBSession, SummonInfo, SummonActions
+
 
 logger_name = "plugin_summon_button"
 logger = logging.getLogger(logger_name)
@@ -80,35 +83,39 @@ def send_job_updates_summon():
     while True:
         with DBSession() as dbsession:
             all_summon_buttons = dbsession.session.query(SummonInfo).all()
+            summon_button_with_trips =  dbsession.session.query(SummonInfo.trip_id).filter(SummonInfo.trip_id!=None).all()
+            trip_ids = []
+            for trip_id in summon_button_with_trips:
+                trip_ids.append(trip_id[0])
+            
+            if len(trip_ids):
+                req_json = {"trip_ids":trip_ids}
+                status_code, trip_status_response = send_req_to_FM(
+                    logger_name, "trip_status", req_type="post", req_json=req_json
+                )
             for summon_button in all_summon_buttons:
                 color = "white"
                 if summon_button.trip_id:
-                    trip_ids = [summon_button.trip_id]
-                    req_json = {"trip_ids": trip_ids}
-                    status_code, trip_status_response = send_req_to_FM(
-                        logger_name, "trip_status", req_type="post", req_json=req_json
+                    trip_details = trip_status_response.get(str(summon_button.trip_id))
+                    trip_status = trip_details["trip_details"]["status"]
+                    logger.info(
+                        f"trip_id: {trip_id}, FM_response_status: {trip_status}"
                     )
+                    if trip_status == tm.TripStatus.SUCCEEDED:
+                        summon_button.booking_id = None
+                        summon_button.trip_id = None
+                        color = "blinking green"
+                    elif trip_status == tm.TripStatus.WAITING_STATION:
+                        color = "blinking green"
+                    elif trip_status not in tm.COMPLETED_TRIP_STATUS:
+                        color = "rotating green"
+                    else:
+                        summon_button.booking_id = None
+                        summon_button.trip_id = None
 
-                    if len(trip_status_response) > 1:
-                        logger.warning(
-                            f"More than 1 trip handled by summon_button with id {summon_button.id}"
-                        )
-
-                    # only one trip atmost would be present
-                    for trip_id, trip_details in trip_status_response.items():
-                        trip_status = trip_details["trip_details"]["status"]
-                        logger.info(
-                            f"trip_id: {trip_id}, FM_response_status: {trip_status}"
-                        )
-                        if trip_status in COMPLETED_TRIP_STATUS:
-                            summon_button.booking_id = None
-                            summon_button.trip_id = None
-                            color = "blinking green"
-                        else:
-                            color = "rotating green"
                 msg = {"Led": color}
                 send_msg_to_summon_button(msg, summon_button.id)
-        time.sleep(30)
+        time.sleep(5)
 
 
 def add_edit_summon_info(

@@ -17,6 +17,7 @@ from scripts.periodic_assigner import assign_next_task
 from scripts.periodic_fm_health_check import periodic_health_check
 from scripts.periodic_misc_processes import misc_processes
 from scripts.alerts import send_slack_alerts
+from scripts.conditional_trips import book_conditional_trips
 from master_fm_comms.send_updates_to_mfm import send_mfm_updates
 from master_fm_comms.send_ws_updates_to_mfm import send_ws_msgs_to_mfm
 
@@ -74,6 +75,9 @@ if __name__ == "__main__":
 
     # start misc processes
     Process(target=misc_processes).start()
+
+    # start book conditonal trips script
+    Process(target=book_conditional_trips).start()
 
     redis_conn.set("is_fleet_manager_up", json.dumps(True))
     logging.info("Ati Fleet Manager started")

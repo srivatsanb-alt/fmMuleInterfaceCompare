@@ -27,6 +27,26 @@ async def check_connection():
     return {"uvicorn": "I am alive"}
 
 
+@router.get("/basic_info")
+async def basic_info(sherpa_name: str = Depends(dpd.get_sherpa)):
+    response = {}
+
+    if not sherpa_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    with DBSession() as dbsession:
+        sherpa: fm.Sherpa = dbsession.get_sherpa(sherpa_name)
+        response = {
+            "fleet_name": sherpa.fleet.name,
+            "TZ": os.getenv("PGTZ"),
+            "customer": sherpa.fleet.customer,
+            "site": sherpa.fleet.site,
+            "location": sherpa.fleet.location,
+        }
+
+    return response
+
+
 # checks connection of sherpa with fleet manager
 @router.get("/is_sherpa_version_compatible/{version}")
 async def is_sherpa_version_compatible(

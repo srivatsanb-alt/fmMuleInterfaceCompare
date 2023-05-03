@@ -5,7 +5,7 @@ trip_types = ["battery_swap", "idling_sherpa"]
 book=false
 max_trips = 2
 threshold = 600
-priority = 5
+priority = 1
 
 [conditional_trips.battery_swap]
 book=false

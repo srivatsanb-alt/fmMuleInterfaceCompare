@@ -601,25 +601,38 @@ class Handlers:
             next_task = "assign_new_trip"
 
         if ongoing_trip:
-            if ongoing_trip.finished():
-                done = True
-                next_task = "end_ongoing_trip"
+            """
+            dbsession.session.commit() called in
+            handle_sherpa_status refreshes ongoing_trip object,
+            below code block can cause ObjectDeletedError, StaleDataError if ongoing_trip was deleted by a different rq job
+            ongoing_trip is accessed by multiple handlers, added try block to resolve this
+            """
+            try:
+                if ongoing_trip.finished():
+                    done = True
+                    next_task = "end_ongoing_trip"
 
-            elif (
-                self.check_continue_curr_leg(ongoing_trip)
-                and ongoing_trip.check_continue()
-                and sherpa_status.continue_curr_task
-            ):
-                done = True
-                next_task = "continue_leg"
+                elif (
+                    self.check_continue_curr_leg(ongoing_trip)
+                    and ongoing_trip.check_continue()
+                    and sherpa_status.continue_curr_task
+                ):
+                    done = True
+                    next_task = "continue_leg"
 
-            elif (
-                self.check_start_new_leg(ongoing_trip)
-                and not ongoing_trip.finished_booked()
-                and ongoing_trip.check_continue()
-            ):
-                done = True
-                next_task = "start_leg"
+                elif (
+                    self.check_start_new_leg(ongoing_trip)
+                    and not ongoing_trip.finished_booked()
+                    and ongoing_trip.check_continue()
+                ):
+                    done = True
+                    next_task = "start_leg"
+
+            except Exception as e:
+                get_logger().warning(
+                    f"unable to process ongoing_trip object for {sherpa.name}, Exception: {e}"
+                )
+
         else:
             sherpa_status.continue_curr_task = False
 
@@ -760,7 +773,7 @@ class Handlers:
         # update db
         if len(all_ongoing_trips) == 0:
             raise ValueError(
-                f"No ongoing trips with sherpas online to be deleted for booking_id : {req.booking_id}, reasons: {reasons}"
+                f"Couldn't delete ongoing_trips for booking_id: {req.booking_id}, reasons: {reasons}"
             )
         response = self.delete_ongoing_trip(
             all_ongoing_trips, all_sherpas, all_trip_analytics

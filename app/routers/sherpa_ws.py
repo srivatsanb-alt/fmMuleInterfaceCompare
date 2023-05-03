@@ -162,7 +162,12 @@ async def reader(websocket, sherpa):
         elif msg_type == MessageType.SHERPA_STATUS:
             msg["source"] = sherpa
             status_msg = rqm.SherpaStatusMsg.from_dict(msg)
-            enqueue(sherpa_update_q, handle, handler_obj, status_msg, ttl=1)
+            if status_msg.sherpa_name != sherpa:
+                logger.error(
+                    f"sherpa name mismatch, sherpa name in DB: {sherpa}, sherpa_name sent by sherpa: {temp}, will not enqueue sherpa_status msg"
+                )
+            else:
+                enqueue(sherpa_update_q, handle, handler_obj, status_msg, ttl=1)
         else:
             logging.error(f"Unsupported message type {msg_type}")
 
