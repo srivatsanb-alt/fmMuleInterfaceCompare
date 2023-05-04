@@ -35,7 +35,7 @@ class SUMMON_HANDLER:
                     route=summon_info.route,
                     plugin_name="plugin_summon_button",
                 )
-                self.send_msg_to_summon_button({"Led": "rotating green"}, summon_info.id)
+                self.send_msg_to_summon_button({"Led": "rotating yellow"}, summon_info.id)
             else:
                 self.logger.info(
                     f"button pressed - cancelling trip {summon_info.booking_id}"
