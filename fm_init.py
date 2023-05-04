@@ -66,6 +66,7 @@ def main():
             DB_UP = True
         except Exception as e:
             logger.info(f"unable to create/clear data in db, \n Exception: {e}")
+            time.sleep(5)
 
     with DBSession() as dbsession:
         fu.add_software_compatability(dbsession)
