@@ -494,6 +494,7 @@ class SherpaUtils:
                 f"added sherpa {sherpa_name}, with hwid: {hwid}, api_key: {api_key}"
             )
             cls.add_sherpa_status(dbsession, sherpa.name)
+            cls.add_sherpa_metadata(dbsession, sherpa.name)
             cls.set_availability(dbsession, sherpa.name, sherpa.fleet.name)
 
     @classmethod
@@ -503,6 +504,12 @@ class SherpaUtils:
         )
         dbsession.add_to_session(sherpa_status)
         logger.info(f"added sherpa status entry for sherpa: {sherpa_name}")
+
+    @classmethod
+    def add_sherpa_metadata(cls, dbsession, sherpa_name):
+        sm = fm.SherpaMetaData(sherpa_name=sherpa_name, info={"can_edit": "True"})
+        dbsession.add_to_session(sm)
+        logger.info(f"added sherpa metadata entry for sherpa: {sherpa_name}")
 
     @classmethod
     def set_availability(cls, dbsession, sherpa_name, fleet_name, available=False):
@@ -536,6 +543,18 @@ class SherpaUtils:
         logger.info(f"deleted route exclude_stations_{sherpa_name}")
 
     @classmethod
+    def delete_sherpa_metadata(cls, dbsession: DBSession, sherpa_name: str):
+        sherpa_metadata = dbsession.get_sherpa_metadata(sherpa_name)
+
+        if sherpa_metadata is not None:
+            can_edit = sherpa_metadata.info.get("can_edit", "True")
+            if not eval(can_edit):
+                raise ValueError("Cannot delete/edit sherpa can_edit set to False")
+
+        dbsession.session.delete(sherpa_metadata)
+        logger.info(f"deleted sherpa metadata entry for sherpa: {sherpa_name}")
+
+    @classmethod
     def delete_sherpa(cls, dbsession, sherpa_name):
         # delete sherpa status object
         sherpa_status: fm.SherpaStatus = dbsession.get_sherpa_status(sherpa_name)
@@ -563,6 +582,7 @@ class SherpaUtils:
         logger.info(f"deleted sherpa availability entry for sherpa: {sherpa_name}")
 
         cls.delete_exclude_stations_route(dbsession, sherpa_name)
+        cls.delete_sherpa_metadata(dbsession, sherpa_name)
 
 
 class ExclusionZoneUtils:
