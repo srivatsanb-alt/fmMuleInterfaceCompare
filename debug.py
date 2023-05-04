@@ -35,6 +35,4 @@ if __name__ == "__main__":
         fs.initialize_sherpas()
         time.sleep(2)
         fs.book_predefined_trips()
-        # if simulate_conveyor_plugin:
-        #    fs.simulate_conveyors()
         fs.act_on_sherpa_events()
