@@ -155,8 +155,11 @@ def get_fm_url(endpoint, query):
         "update_saved_route_info": os.path.join(
             "http://", fm_ip, "api/v1/trips/update_saved_route_info/"
         ),
-        "get_saved_routes": os.path.join(
-            "http://", fm_ip, "api/v1/trips/get_saved_routes/", str(query)
+        "get_saved_routes_backend": os.path.join(
+            "http://", fm_ip, "api/v1/trips/get_saved_routes/", str(query), "true"
+        ),
+        "get_saved_route": os.path.join(
+            "http://", fm_ip, "api/v1/trips/get_saved_route/", str(query)
         ),
     }
     return fm_endpoints.get(endpoint, None)
