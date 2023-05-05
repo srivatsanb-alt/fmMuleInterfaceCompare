@@ -83,13 +83,17 @@ def send_job_updates_summon():
     while True:
         with DBSession() as dbsession:
             all_summon_buttons = dbsession.session.query(SummonInfo).all()
-            summon_button_with_trips =  dbsession.session.query(SummonInfo.trip_id).filter(SummonInfo.trip_id!=None).all()
+            summon_button_with_trips = (
+                dbsession.session.query(SummonInfo.trip_id)
+                .filter(SummonInfo.trip_id != None)
+                .all()
+            )
             trip_ids = []
             for trip_id in summon_button_with_trips:
                 trip_ids.append(trip_id[0])
-            
+
             if len(trip_ids):
-                req_json = {"trip_ids":trip_ids}
+                req_json = {"trip_ids": trip_ids}
                 status_code, trip_status_response = send_req_to_FM(
                     logger_name, "trip_status", req_type="post", req_json=req_json
                 )
@@ -98,9 +102,7 @@ def send_job_updates_summon():
                 if summon_button.trip_id:
                     trip_details = trip_status_response.get(str(summon_button.trip_id))
                     trip_status = trip_details["trip_details"]["status"]
-                    logger.info(
-                        f"trip_id: {trip_id}, FM_response_status: {trip_status}"
-                    )
+                    logger.info(f"trip_id: {trip_id}, FM_response_status: {trip_status}")
                     if trip_status == tm.TripStatus.SUCCEEDED:
                         summon_button.booking_id = None
                         summon_button.trip_id = None
