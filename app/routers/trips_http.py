@@ -355,15 +355,19 @@ async def get_saved_routes(
 
 @router.get("/get_saved_route/{route_tag}")
 async def get_saved_route(route_tag: str, user_name=Depends(dpd.get_user_from_header)):
+    response = {}
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
     with DBSession() as dbsession:
         saved_route = dbsession.get_saved_route(route_tag)
+
         if saved_route is None:
             dpd.raise_error(f"route with tag {route_tag} does not exist")
-        route_dict = utils_util.get_table_as_dict(tm.SavedRoutes, saved_route)
-        return route_dict
+
+        response = utils_util.get_table_as_dict(tm.SavedRoutes, saved_route)
+
+    return response
 
 
 @router.delete("/delete_saved_route/{tag}")

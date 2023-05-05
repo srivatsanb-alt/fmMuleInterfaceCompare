@@ -1,7 +1,5 @@
 from utils.comms import send_status_update, send_notification
 from utils.util import get_table_as_dict
-
-import utils.fleet_utils as fu
 import utils.trip_utils as tu
 import logging
 from models.db_session import DBSession
@@ -10,10 +8,10 @@ from models.misc_models import Notifications
 import time
 
 
-def get_fleet_status_msg(session, fleet):
+def get_fleet_status_msg(dbsession, fleet):
     msg = {}
-    all_station_status = session.get_all_station_status()
-    all_sherpa_status = session.get_all_sherpa_status()
+    all_station_status = dbsession.get_all_station_status()
+    all_sherpa_status = dbsession.get_all_sherpa_status()
 
     sherpa_status_update = {}
     station_status_update = {}
@@ -58,10 +56,10 @@ def get_fleet_status_msg(session, fleet):
     return msg
 
 
-def get_ongoing_trips_status(session, fleet):
+def get_ongoing_trips_status(dbsession, fleet):
     msg = {}
 
-    all_ongoing_trips_fleet = session.get_all_ongoing_trips_fleet(fleet.name)
+    all_ongoing_trips_fleet = dbsession.get_all_ongoing_trips_fleet(fleet.name)
     for ongoing_trip in all_ongoing_trips_fleet:
         msg.update({ongoing_trip.trip_id: tu.get_trip_status(ongoing_trip.trip)})
 
@@ -71,8 +69,8 @@ def get_ongoing_trips_status(session, fleet):
     return msg
 
 
-def get_visas_held_msg(session):
-    all_visas_held = session.get_all_visas_held()
+def get_visas_held_msg(dbsession):
+    all_visas_held = dbsession.get_all_visas_held()
     visa_msg = {}
     for visa_held in all_visas_held:
         sherpa_visas = visa_msg.get(visa_held.sherpa_name, {})
@@ -87,8 +85,8 @@ def get_visas_held_msg(session):
     return visa_msg
 
 
-def get_notifications(session):
-    all_notifications = session.get_notifications()
+def get_notifications(dbsession):
+    all_notifications = dbsession.get_notifications()
     notification_msg = {}
     notification_msg["type"] = "notifications"
     for notification in all_notifications:
@@ -103,22 +101,24 @@ def send_periodic_updates():
     while True:
         try:
             logging.getLogger().info("starting periodic updates script")
-            with DBSession() as session:
+            with DBSession() as dbsession:
                 while True:
-                    all_fleets = session.get_all_fleets()
+                    all_fleets = dbsession.get_all_fleets()
                     for fleet in all_fleets:
-                        session.session.refresh(fleet)
-                        fleet_status_msg = get_fleet_status_msg(session, fleet)
+                        fleet_status_msg = get_fleet_status_msg(dbsession, fleet)
                         send_status_update(fleet_status_msg)
 
-                        ongoing_trip_msg = get_ongoing_trips_status(session, fleet)
+                        ongoing_trip_msg = get_ongoing_trips_status(dbsession, fleet)
                         send_status_update(ongoing_trip_msg)
 
-                    visa_msg = get_visas_held_msg(session)
+                    visa_msg = get_visas_held_msg(dbsession)
                     send_status_update(visa_msg)
-                    notification_msg = get_notifications(session)
+                    notification_msg = get_notifications(dbsession)
 
                     send_notification(notification_msg)
+
+                    # force refresh of all objects
+                    dbsession.session.expire_all()
                     time.sleep(2)
 
         except Exception as e:

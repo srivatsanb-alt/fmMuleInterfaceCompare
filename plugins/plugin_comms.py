@@ -6,6 +6,9 @@ import logging
 import logging.config
 import json
 from rq import Queue
+from fastapi import WebSocketDisconnect
+
+# ati code imports
 from app.routers.dependencies import generate_jwt_token
 import redis
 from plugins.plugin_rq import enqueue
@@ -28,7 +31,12 @@ async def ws_reader(websocket, name, handler_obj, unique_id=None, api_key=None):
 
     logger.info(f"Started websocket reader for {name}")
     while True:
-        msg_recv = await websocket.receive_text()
+        try:
+            msg_recv = await websocket.receive_text()
+        except WebSocketDisconnect as e:
+            logger.info(f"websocket connection with {name} disconnected")
+            raise e
+
         logger.info(f"Received msg: {msg_recv}")
         msg = msg_recv.replace("'", '"')
         count = 0
@@ -74,15 +82,22 @@ async def ws_writer(websocket, name, format="json", unique_id=None):
                 # close WebSocket message
                 if data.get("close_ws", False):
                     await websocket.close()
-
-                await websocket.send_json(data)
+                try:
+                    await websocket.send_json(data)
+                except WebSocketDisconnect as e:
+                    logger.info(f"websocket connection with {name} disconnected")
+                    raise e
 
             elif format == "text":
                 if message["data"] == "close_ws":
                     logger.info(f"Got {channel_name} close message")
                     await websocket.close()
 
-                await websocket.send_text(message["data"])
+                try:
+                    await websocket.send_text(message["data"])
+                except WebSocketDisconnect as e:
+                    logger.info(f"websocket connection with {name} disconnected")
+                    raise e
 
 
 def check_response(response):
