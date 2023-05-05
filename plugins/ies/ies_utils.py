@@ -25,19 +25,12 @@ IES_JOB_STATUS_MAPPING = {
 }
 
 
-def get_all_ies_routes(fleet_name):
-    status_code, all_saved_routes = pcomms.send_req_to_FM(
-        "plugin_ies", "get_saved_routes", "get", query=fleet_name
-    )
-    if not status_code == 200:
-        logger.info(f"couldn't get saved routes for fleet {fleet_name}")
-        return {}
-    ies_routes = {}
-    for route_tag, route_info in all_saved_routes.items():
-        if "ies" in route_info["other_info"].keys():
-            if route_info["other_info"]["ies"]:
-                ies_routes.update({route_tag: route_info["route"]})
-    return ies_routes
+def populate_ies_info():
+    with im.DBSession() as dbsession:
+        info_db = dbsession.session.query(im.IESInfo).all()
+        if info_db == []:
+            info = im.IESInfo(consolidate=True, ies_version=2.0)
+            dbsession.session.add(info)
 
 
 def get_ies_station(dbsession, ati_station_name=None, ies_station_name=None):
@@ -57,16 +50,16 @@ def get_ies_station(dbsession, ati_station_name=None, ies_station_name=None):
 
 
 def get_exclude_stations_sherpa(sherpa_name, fleet_name):
+    exclude_stations = []
     status_code, all_saved_routes = pcomms.send_req_to_FM(
-        "plugin_ies", "get_saved_routes", "get", query=fleet_name
+        "plugin_ies", "get_saved_routes_backend", "get", query=fleet_name
     )
     if not status_code == 200:
         logger.info(f"couldn't get saved routes for fleet {fleet_name}")
-        return []
-    exclude_stations = []
+
     for route_tag, route_info in all_saved_routes.items():
         if route_tag == f"exclude_stations_{sherpa_name}":
-            exclude_stations = route_info["route"]
+            exclude_stations.extend(route_info["route"])
     return exclude_stations
 
 
@@ -110,3 +103,19 @@ class StationIES(JsonMixin):
     messageType: str
     ati_name: str
     ies_name: str
+
+
+@dataclass
+class AGVMsg(JsonMixin):
+    messageType: str
+    externalReferenceId: str
+    vehicleId: str
+    vehicleTypeID: str
+
+    def to_dict(self):
+        return {
+            "messageType": self.messageType,
+            "externalReferenceId": self.externalReferenceId,
+            "vehicleId": self.vehicleId,
+            "vehicleTypeID": self.vehicleTypeID,
+        }
