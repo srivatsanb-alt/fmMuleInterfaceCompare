@@ -26,12 +26,15 @@ def regenerate_config():
 
 
 def update_frontend_user_details(dbsession: DBSession):
+
+    fu.FrontendUserUtils.delete_all_frontend_users(dbsession)
+    dbsession.session.flush()
+
     frontend_user_config = toml.load(
         os.path.join(os.getenv("FM_CONFIG_DIR"), "frontend_users.toml")
     )
     logger.info(f"frontend user details in config {frontend_user_config}")
 
-    fu.FrontendUserUtils.delete_all_frontend_users(dbsession)
     for user_name, user_details in frontend_user_config["frontenduser"].items():
         role = user_details.get("role", "operator")
         fu.FrontendUserUtils.add_update_frontend_user(
