@@ -16,8 +16,10 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy import create_engine
 from sqlalchemy import Integer, String, Column, ARRAY
+from sqlalchemy.orm.attributes import flag_modified
 from models.base_models import Base, TimestampMixin
-import plugins.ies.ies_utils as iu
+import plugins.plugin_comms as pcomms
+import models.trip_models as tm
 
 
 class DBSession:
@@ -40,6 +42,11 @@ class DBSession:
             self.session.commit()
         self.session.close()
 
+    def add_to_session(self, obj):
+        self.session.add(obj)
+        self.session.flush()
+        self.session.refresh(obj)
+
     def get_ati_station_name(self, ies_station_name):
         station = (
             self.session.query(IESStations)
@@ -50,8 +57,8 @@ class DBSession:
             return None
         return station.ati_name
 
-    def get_consolidation_info(self, fleet_name: str, start_station: str, route_tag: str):
-        all_ies_routes = iu.get_all_ies_routes(fleet_name)
+    def get_consolidation_info(self, start_station: str, route_tag: str):
+        all_ies_routes = self.get_all_ies_routes()
         if all_ies_routes != {}:
             logging.getLogger("plugin_ies").info(
                 f"filtering bookings, route: {all_ies_routes[route_tag]}"
@@ -59,12 +66,74 @@ class DBSession:
             filtered_bookings = (
                 self.session.query(IESBookingReq)
                 .filter(IESBookingReq.start_station == start_station)
-                .filter(IESBookingReq.route[2].in_(all_ies_routes[route_tag]))
+                .filter(IESBookingReq.route_tag == route_tag)
+                .filter(IESBookingReq.combined_trip_id == None)
                 .all()
             )
         else:
             raise ValueError(f"No IES routes defined")
         return filtered_bookings
+
+    def get_all_ies_routes(self):
+        all_ies_routes = self.session.query(IESRoutes).all()
+        routes = {}
+        for ies_route in all_ies_routes:
+            routes.update({ies_route.route_tag: ies_route.route})
+        return routes
+
+    def get_all_ies_sherpas(self):
+        all_ies_sherpas = self.session.query(IESInfo).first()
+        return all_ies_sherpas.ies_sherpas
+
+    def modify_ies_info(self, sherpa_name, enable):
+        ies_info = self.session.query(IESInfo).first()
+        sherpas = ies_info.ies_sherpas
+        # remove from list if disable and entry exists
+        if sherpa_name in sherpas and not enable:
+            sherpas.remove(sherpa_name)
+        else:
+            sherpas.append(sherpa_name) if sherpa_name not in sherpas else sherpas
+
+        ies_info.ies_sherpas = sherpas
+        flag_modified(ies_info, "ies_sherpas")
+
+        logging.getLogger("plugin_ies").info(f"committing to db {ies_info.ies_sherpas}")
+        return
+
+    def modify_ies_routes(self, route_tag, enable):
+        ies_route = (
+            self.session.query(IESRoutes)
+            .filter(IESRoutes.route_tag == route_tag)
+            .one_or_none()
+        )
+        if ies_route is not None and not enable:
+            self.session.delete(ies_route)
+        # else get saved route from route tag, and then add it to IES db
+        else:
+            status_code, saved_route = pcomms.send_req_to_FM(
+                "plugin_ies", "get_saved_route", "get", query=route_tag
+            )
+            if status_code != 200:
+                raise ValueError(f"can't get route from FM for tag {route_tag}")
+            route = IESRoutes(route_tag=route_tag, route=saved_route["route"])
+            self.add_to_session(route)
+        return
+
+    def get_ongoing_jobs(self):
+        return (
+            self.session.query(IESBookingReq)
+            .join(CombinedTrips)
+            .filter(IESBookingReq.combined_trip_id != None)
+            .filter(CombinedTrips.status.not_in(tm.COMPLETED_TRIP_STATUS))
+        )
+
+    def get_completed_jobs(self):
+        return (
+            self.session.query(IESBookingReq)
+            .join(CombinedTrips)
+            .filter(IESBookingReq.combined_trip_id != None)
+            .filter(CombinedTrips.status.in_(tm.COMPLETED_TRIP_STATUS))
+        )
 
 
 class IESBookingReq(Base, TimestampMixin):
@@ -73,6 +142,7 @@ class IESBookingReq(Base, TimestampMixin):
     ext_ref_id = Column(String, primary_key=True, index=True)
     start_station = Column(String)
     route = Column(ARRAY(String))
+    route_tag = Column(String)
     status = Column(String)
     kanban_id = Column(String, index=True)
     deadline = Column(String)
@@ -103,4 +173,20 @@ class IESStations(Base):
     id = Column(Integer, primary_key=True, index=True)
     ies_name = Column(String, unique=True, index=True)
     ati_name = Column(String, unique=True, index=True)
-    pose = Column(ARRAY(Float))
+
+
+class IESRoutes(Base):
+    __tablename__ = "ies_routes"
+    __table_args__ = {"extend_existing": True}
+    id = Column(Integer, primary_key=True)
+    route_tag = Column(String)
+    route = Column(ARRAY(String))
+
+
+class IESInfo(Base):
+    __tablename__ = "ies_info"
+    __table_args__ = {"extend_existing": True}
+    id = Column(Integer, primary_key=True)
+    consolidate = Column(Boolean)
+    ies_version = Column(Float)
+    ies_sherpas = Column(ARRAY(String), default=[])

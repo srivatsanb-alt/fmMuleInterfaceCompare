@@ -112,11 +112,15 @@ if __name__ == "__main__":
 
     if "ies" in all_plugins:
         import plugins.ies.ies_models as im
+        import plugins.ies.ies_utils as iu
         from plugin_db import init_db
 
         ies_logger = logging.getLogger("plugin_ies")
-        init_db(str("plugin_ies"), [im.CombinedTrips, im.IESBookingReq, im.IESStations])
-
+        init_db(
+            str("plugin_ies"),
+            [im.CombinedTrips, im.IESBookingReq, im.IESStations, im.IESInfo, im.IESRoutes],
+        )
+        iu.populate_ies_info()
         Process(target=start_worker, args=("plugin_ies",)).start()
         ies_logger.info("started a worker for plugin_ies")
 
