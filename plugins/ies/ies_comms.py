@@ -10,7 +10,6 @@ import plugins.ies.ies_models as im
 import plugins.ies.ies_utils as iu
 from plugins.plugin_rq import enqueue, get_job_result, get_redis_conn
 import plugin_comms as pcomms
-import utils
 from rq import Queue
 
 router = APIRouter()
@@ -77,52 +76,38 @@ async def delete_ies_station(
     return {}
 
 
-@router.get("/plugin/ies/get_sherpas_at_start/{fleet_name}")
-async def get_sherpas_at_start(
-    fleet_name: str, user_name=Depends(dpd.get_user_from_header)
-):
+@router.get("/plugin/ies/get_sherpas_at_start")
+async def get_sherpas_at_start(user_name=Depends(dpd.get_user_from_header)):
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
     logging.info(f"getting sherpas at start...")
     response = {}
-    ies_sherpas = ["test", "test2"]
-    # get all ies_routes
-    all_ies_routes = iu.get_all_ies_routes(fleet_name)
+    with im.DBSession() as dbsession:
+        ies_sherpas = dbsession.get_all_ies_sherpas()
+        all_ies_routes = dbsession.get_all_ies_routes()
 
     for sherpa_name in ies_sherpas:
         status_code, sherpa_summary_response = pcomms.send_req_to_FM(
             "plugin_ies", "sherpa_summary", req_type="get", query=sherpa_name
         )
         if status_code == 200:
-            sherpa_pose = sherpa_summary_response["sherpa_status"]["pose"]
+            sherpa_at_station = sherpa_summary_response["at_station"]
+            fleet_name = sherpa_summary_response["fleet_name"]
             for route_tag, route in all_ies_routes.items():
-                station = route[0]
-                with im.DBSession() as dbsession:
-                    ies_station = (
-                        dbsession.session.query(im.IESStations)
-                        .filter(im.IESStations.ati_name == station)
-                        .one_or_none()
+                start_station = route[0]
+                sherpa_exclude_stations = iu.get_exclude_stations_sherpa(
+                    sherpa_name, fleet_name
+                )
+                if (
+                    sherpa_at_station == start_station
+                    and len(set(sherpa_exclude_stations).intersection(set(route))) == 0
+                ):
+                    response.update(
+                        {route_tag: {"sherpa": sherpa_name, "station": route[0]}}
                     )
-                    if ies_station is None:
-                        dpd.raise_error(f"given station ({station}) is not an IES station")
-
-                    logging.info(
-                        f"checking if stations {sherpa_pose}, {ies_station.pose} are close!"
-                    )
-                    sherpa_close_to_stn = are_poses_close(sherpa_pose, ies_station.pose)
-                    sherpa_exclude_stations = iu.get_exclude_stations_sherpa(
-                        sherpa_name, fleet_name
-                    )
-                    if (
-                        sherpa_close_to_stn
-                        and len(set(sherpa_exclude_stations).intersection(set(route))) == 0
-                    ):
-                        response.update(
-                            {route_tag: {"sherpa": sherpa_name, "station": route[0]}}
-                        )
         else:
-            dpd.raise_error(f"fm req failed!")
+            dpd.raise_error(f"sherpa status req to fm failed!")
     return response
 
 
@@ -139,15 +124,19 @@ async def enable_disable_sherpa(
     req_type = "post"
 
     metadata = {"ies": f"{req.enable}"}
-    req_json = {"sherpa_name": req.sherpa_name, "metadata": metadata}
-    respone_status, response = send_req_to_FM(plugin_name, endpoint, req_type, req_json)
+    req_json = {"sherpa_name": req.sherpa_name, "info": metadata}
+    status_code, response = send_req_to_FM(plugin_name, endpoint, req_type, req_json)
+    if status_code != 200:
+        dpd.raise_error(f"can't update sherpa metadata for sherpa {req.sherpa_name}")
+    with im.DBSession() as dbsession:
+        dbsession.modify_ies_info(req.sherpa_name, req.enable)
 
     return response
 
 
 @router.post("/plugin/ies/enable_disable_route")
 async def enable_disable_route(
-    req: irqm.EnableDisableRouteReq, fleet_name, user_name=Depends(dpd.get_user_from_header)
+    req: irqm.EnableDisableRouteReq, user_name=Depends(dpd.get_user_from_header)
 ):
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
@@ -158,25 +147,40 @@ async def enable_disable_route(
     req_type = "post"
     other_info = {"ies": f"{req.enable}", "can_edit": f"{not req.enable}"}
     req_json = {"tag": req.tag, "other_info": other_info}
-    respone_status, response = send_req_to_FM(plugin_name, endpoint, req_type, req_json)
+    status_code, response = send_req_to_FM(plugin_name, endpoint, req_type, req_json)
+    if status_code != 200:
+        dpd.raise_error(f"can't update saved route info for route {req.tag}")
+
+    with im.DBSession() as dbsession:
+        dbsession.modify_ies_routes(req.tag, req.enable)
 
     return response
 
 
-@router.get("/plugin/ies/get_ies_routes/{fleet_name}")
-async def get_ies_routes(fleet_name, user_name=Depends(dpd.get_user_from_header)):
+@router.get("/plugin/ies/get_ies_routes")
+async def get_ies_routes(user_name=Depends(dpd.get_user_from_header)):
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    all_ies_routes = iu.get_all_ies_routes(fleet_name)
+    with im.DBSession() as dbsession:
+        all_ies_routes = dbsession.get_all_ies_routes()
 
     return all_ies_routes
 
 
-@router.post("/plugin/ies/consolidation_info/{fleet_name}")
+@router.get("/plugin/ies/get_ies_sherpas")
+async def get_ies_sherpas(user_name=Depends(dpd.get_user_from_header)):
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    with im.DBSession() as dbsession:
+        all_ies_sherpas = dbsession.get_all_ies_sherpas()
+    return all_ies_sherpas
+
+
+@router.post("/plugin/ies/consolidation_info")
 async def consolidation_info(
     consolidation_info_req: irqm.ConsolidationInfoReq,
-    fleet_name: str,
     user_name=Depends(dpd.get_user_from_header),
 ):
     if not user_name:
@@ -185,7 +189,6 @@ async def consolidation_info(
     response = {}
     with im.DBSession() as dbsession:
         filtered_bookings = dbsession.get_consolidation_info(
-            fleet_name,
             consolidation_info_req.start_station,
             consolidation_info_req.route_tag,
         )
@@ -204,10 +207,9 @@ async def consolidation_info(
     return response
 
 
-@router.post("/plugin/ies/consolidate_and_book_trip/{fleet_name}")
+@router.post("/plugin/ies/consolidate_and_book_trip")
 async def consolidate_and_book_trip(
     consolidate_book_req: irqm.ConsolidateBookReq,
-    fleet_name: str,
     user_name=Depends(dpd.get_user_from_header),
 ):
     if not user_name:
@@ -220,7 +222,6 @@ async def consolidate_and_book_trip(
         "messageType": "book_consolidated_trip",
         "ext_ref_ids": consolidate_book_req.ext_ref_ids,
         "route_tag": consolidate_book_req.route_tag,
-        "fleet_name": fleet_name,
     }
     job = enqueue(q, ies_handler.handle, msg)
     response = await get_job_result(job.id)
@@ -235,11 +236,45 @@ async def get_pending_jobs(user_name=Depends(dpd.get_user_from_header)):
     response = {}
     with im.DBSession() as dbsession:
         pending_jobs = dbsession.session.query(im.IESBookingReq).filter(
-            im.IESBookingReq.status == "PENDING"
+            im.IESBookingReq.combined_trip_id == None
         )
         for job in pending_jobs:
             response.update(
-                {job.ext_ref_id: {"kanban_id": job.kanban_id, "route": job.route}}
+                {
+                    job.ext_ref_id: {
+                        "kanban_id": job.kanban_id,
+                        "route_tag": job.route_tag,
+                        "route": job.route,
+                        "requested_at": job.created_at,
+                    }
+                }
+            )
+    return response
+
+
+@router.get("/plugin/ies/get_consolidated_jobs/{active}")
+async def get_ongoing_jobs(active: bool, user_name=Depends(dpd.get_user_from_header)):
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    response = {}
+    with im.DBSession() as dbsession:
+        if active:
+            jobs = dbsession.get_ongoing_jobs()
+        else:
+            jobs = dbsession.get_completed_jobs()
+        for job in jobs:
+            response.update(
+                {
+                    job.ext_ref_id: {
+                        "kanban_id": job.kanban_id,
+                        "route_tag": job.route_tag,
+                        "route": job.route,
+                        "requested_at": job.created_at,
+                        "status": job.combined_trip.status,
+                        "trip_id": job.combined_trip_id,
+                    }
+                }
             )
     return response
 
