@@ -100,6 +100,12 @@ class SherpaStatus(TimestampMixin, Base):
     other_info = Column(JSONB)
 
 
+class SherpaMetaData(Base):
+    __tablename__ = "sherpa_metadata"
+    sherpa_name = Column(String, primary_key=True, index=True)
+    info = Column(JSONB)
+
+
 class Station(Base):
     __tablename__ = "stations"
 

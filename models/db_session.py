@@ -237,6 +237,9 @@ class DBSession:
     def get_station(self, name: str) -> fm.Station:
         return self.session.query(fm.Station).filter(fm.Station.name == name).one()
 
+    def get_station_with_pose(self, pose: list) -> fm.Station:
+        return self.session.query(fm.Station).filter(fm.Station.pose == pose).one_or_none()
+
     def get_all_stations(self) -> List[fm.Station]:
         return self.session.query(fm.Station).all()
 

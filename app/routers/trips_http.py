@@ -10,6 +10,7 @@ from models.db_session import DBSession
 from utils.util import str_to_dt
 import utils.trip_utils as tu
 import core.constants as cc
+import utils.util as utils_util
 
 
 router = APIRouter(
@@ -94,7 +95,6 @@ async def delete_ongoing_trip(
 async def delete_pending_trip(
     booking_id: int, trip_id: int, user_name=Depends(dpd.get_user_from_header)
 ):
-
     response = {}
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
@@ -138,7 +138,6 @@ async def delete_pending_trip(
 async def clear_optimal_dispatch_assignments(
     entity_name=Union[str, None], user_name=Depends(dpd.get_user_from_header)
 ):
-
     response = {}
 
     if not user_name:
@@ -217,7 +216,6 @@ async def ongoing_trip_status(user_name=Depends(dpd.get_user_from_header)):
 async def trip_analytics(
     trip_analytics_req: rqm.TripStatusReq, user_name=Depends(dpd.get_user_from_header)
 ):
-
     response = {}
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
@@ -252,7 +250,6 @@ async def add_trip_metadata(
     new_trip_metadata: rqm.TripMetaData,
     user_name=Depends(dpd.get_user_from_header),
 ):
-
     response = {}
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
@@ -272,7 +269,6 @@ async def add_trip_metadata(
 async def add_trip_description(
     trip_id: int, description: str, user_name=Depends(dpd.get_user_from_header)
 ):
-
     response = {}
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
@@ -293,7 +289,6 @@ async def populate_route(
     num_routes: int,
     user_name=Depends(dpd.get_user_from_header),
 ):
-
     response = []
 
     if not user_name:
@@ -358,6 +353,23 @@ async def get_saved_routes(
     return response
 
 
+@router.get("/get_saved_route/{route_tag}")
+async def get_saved_route(route_tag: str, user_name=Depends(dpd.get_user_from_header)):
+    response = {}
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    with DBSession() as dbsession:
+        saved_route = dbsession.get_saved_route(route_tag)
+
+        if saved_route is None:
+            dpd.raise_error(f"route with tag {route_tag} does not exist")
+
+        response = utils_util.get_table_as_dict(tm.SavedRoutes, saved_route)
+
+    return response
+
+
 @router.delete("/delete_saved_route/{tag}")
 async def delete_saved_route(tag: str, user_name=Depends(dpd.get_user_from_header)):
     response = {}
@@ -369,6 +381,11 @@ async def delete_saved_route(tag: str, user_name=Depends(dpd.get_user_from_heade
 
         if saved_route is None:
             dpd.raise_error(f"No saved route with tag:{tag}")
+
+        can_edit = saved_route.other_info.get("can_edit", "False")
+
+        if not eval(can_edit):
+            dpd.raise_error("Cannot edit/delete this route tag, can_edit is set to False")
 
         dbsession.session.delete(saved_route)
 

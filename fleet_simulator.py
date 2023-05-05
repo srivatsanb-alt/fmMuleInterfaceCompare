@@ -554,91 +554,111 @@ class FleetSimulator:
             print(f"will send a reached msg for {sherpa_name}, {reached_req}")
             enqueue(queue, handle, self.handler_obj, reached_req, ttl=1)
 
-    def response_is_needed(self, waiting_start, waiting_end, states):
+    def peripheral_response_is_needed(self, waiting_start, waiting_end, states):
         if waiting_start in states and waiting_end not in states:
             print(f"Waiting for peripherals response: {waiting_start}")
-            self.reponse_flag = True
             return True
         return False
 
     def simulate_peripherals(self, ongoing_trip):
-        self.reponse_flag = False
-        if ongoing_trip:
-            states, sherpa_name = ongoing_trip.states, ongoing_trip.sherpa_name
-            peripheral_response = SherpaPeripheralsReq(timestamp=time.time())
-            peripheral_response.source = sherpa_name
-            # check is trip state requires a peripherals response from sherpa
-            if self.response_is_needed(
-                ts.WAITING_STATION_DISPATCH_START, ts.WAITING_STATION_DISPATCH_END, states
-            ):
-                peripheral_response.dispatch_button = DispatchButtonReq(value=True)
-            if self.response_is_needed(
-                ts.WAITING_STATION_AUTO_UNHITCH_START,
-                ts.WAITING_STATION_AUTO_UNHITCH_END,
-                states,
-            ):
-                peripheral_response.auto_hitch = HitchReq(hitch=False)
-            if self.response_is_needed(
-                ts.WAITING_STATION_AUTO_HITCH_START,
-                ts.WAITING_STATION_AUTO_HITCH_END,
-                states,
-            ):
-                peripheral_response.auto_hitch = HitchReq(hitch=True)
-            if self.response_is_needed(
-                ts.WAITING_STATION_CONV_RECEIVE_START,
-                ts.WAITING_STATION_CONV_RECEIVE_END,
-                states,
-            ):
-                num_units = ongoing_trip.trip.trip_metadata.get("num_units")
-                peripheral_response.conveyor = ConveyorReq(
-                    direction=DirectionEnum.receive, num_units=0
-                )
-            if self.response_is_needed(
-                ts.WAITING_STATION_CONV_SEND_START, ts.WAITING_STATION_CONV_SEND_END, states
-            ):
-                num_units = ongoing_trip.trip.trip_metadata.get("num_units")
-                peripheral_response.conveyor = ConveyorReq(
-                    direction=DirectionEnum.send, num_units=num_units
-                )
-            if self.reponse_flag:
-                print(
-                    f"Sherpa {sherpa_name} - trip_id {ongoing_trip.trip_id}, leg {ongoing_trip.trip_leg_id} sent a peripheral msg {peripheral_response}"
-                )
-                queue = Queues.queues_dict["generic_handler"]
-                enqueue(queue, handle, self.handler_obj, peripheral_response, ttl=1)
+        if len(ongoing_trip.states) == 0:
+            return
+
+        send_peripheral_resp = False
+        states = ongoing_trip.states
+        sherpa_name = ongoing_trip.sherpa_name
+
+        peripheral_response = SherpaPeripheralsReq(timestamp=time.time())
+        peripheral_response.source = sherpa_name
+
+        # check is trip state requires a peripherals response from sherpa
+        if self.peripheral_response_is_needed(
+            ts.WAITING_STATION_DISPATCH_START, ts.WAITING_STATION_DISPATCH_END, states
+        ):
+            peripheral_response.dispatch_button = DispatchButtonReq(value=True)
+            send_peripheral_resp = True
+
+        elif self.peripheral_response_is_needed(
+            ts.WAITING_STATION_AUTO_UNHITCH_START,
+            ts.WAITING_STATION_AUTO_UNHITCH_END,
+            states,
+        ):
+            peripheral_response.auto_hitch = HitchReq(hitch=False)
+            send_peripheral_resp = True
+
+        elif self.peripheral_response_is_needed(
+            ts.WAITING_STATION_AUTO_HITCH_START,
+            ts.WAITING_STATION_AUTO_HITCH_END,
+            states,
+        ):
+            peripheral_response.auto_hitch = HitchReq(hitch=True)
+            send_peripheral_resp = True
+
+        elif self.peripheral_response_is_needed(
+            ts.WAITING_STATION_CONV_RECEIVE_START,
+            ts.WAITING_STATION_CONV_RECEIVE_END,
+            states,
+        ):
+            num_units = ongoing_trip.trip.trip_metadata.get("num_units")
+            peripheral_response.conveyor = ConveyorReq(
+                direction=DirectionEnum.receive, num_units=0
+            )
+        elif self.peripheral_response_is_needed(
+            ts.WAITING_STATION_CONV_SEND_START, ts.WAITING_STATION_CONV_SEND_END, states
+        ):
+            num_units = ongoing_trip.trip.trip_metadata.get("num_units")
+            peripheral_response.conveyor = ConveyorReq(
+                direction=DirectionEnum.send, num_units=num_units
+            )
+            send_peripheral_resp = True
+
+        if send_peripheral_resp:
+            print(
+                f"Sherpa {sherpa_name} - trip_id {ongoing_trip.trip_id}, leg {ongoing_trip.trip_leg_id} sent a peripheral msg {peripheral_response}"
+            )
+            queue = Queues.queues_dict["generic_handler"]
+            enqueue(queue, handle, self.handler_obj, peripheral_response)
 
     def act_on_sherpa_events(self):
         simulated_trip_legs = []
         active_threads = {}
         print("Will act on sherpa events")
-        with DBSession() as dbsession:
-            while True:
-                sherpas = dbsession.get_all_sherpas()
-                for sherpa in sherpas:
-                    dbsession.session.refresh(sherpa)
-                    trip_leg = dbsession.get_trip_leg(sherpa.name)
-                    ongoing_trip: OngoingTrip = dbsession.get_ongoing_trip(sherpa.name)
-                    self.simulate_peripherals(ongoing_trip)
-                    if trip_leg:
-                        if trip_leg.id not in simulated_trip_legs:
-                            print(
-                                f"starting trip simulation for sherpa {sherpa.name}, trip_leg: {trip_leg.__dict__}"
-                            )
-                            t = threading.Thread(
-                                target=self.send_trip_status, args=[sherpa.name]
-                            )
-                            t.daemon = True
-                            t.start()
-                            simulated_trip_legs.append(trip_leg.id)
-                            active_threads[sherpa.name] = t
+        try:
+            with DBSession() as dbsession:
+                while True:
+                    sherpas = dbsession.get_all_sherpas()
+                    for sherpa in sherpas:
+                        trip_leg = dbsession.get_trip_leg(sherpa.name)
+                        ongoing_trip = dbsession.get_ongoing_trip(sherpa.name)
+                        if trip_leg:
+                            if trip_leg.id not in simulated_trip_legs:
+                                print(
+                                    f"starting trip simulation for sherpa {sherpa.name}, trip_leg: {trip_leg.__dict__}"
+                                )
+                                t = threading.Thread(
+                                    target=self.send_trip_status, args=[sherpa.name]
+                                )
+                                t.daemon = True
+                                t.start()
+                                simulated_trip_legs.append(trip_leg.id)
+                                active_threads[sherpa.name] = t
+
+                            else:
+                                if ongoing_trip:
+                                    self.simulate_peripherals(ongoing_trip)
+
+                                if not active_threads.get(sherpa.name).is_alive():
+                                    self.send_sherpa_status(sherpa.name)
                         else:
-                            if not active_threads.get(sherpa.name).is_alive():
-                                self.send_sherpa_status(sherpa.name)
-                    else:
-                        # print(f"no trip_leg for {sherpa.name}")
-                        self.send_sherpa_status(sherpa.name)
+                            # print(f"no trip_leg for {sherpa.name}")
+                            self.send_sherpa_status(sherpa.name)
 
-                    if sherpa.status.disabled:
-                        print(f"{sherpa.name} disabled: {sherpa.status.disabled_reason}")
+                        if sherpa.status.disabled:
+                            print(
+                                f"{sherpa.name} disabled: {sherpa.status.disabled_reason}"
+                            )
 
-                time.sleep(1)
+                    time.sleep(1)
+                    dbsession.session.expire_all()
+        except Exception as e:
+            print(f"exception in act on sherpa events exception: {e}")
