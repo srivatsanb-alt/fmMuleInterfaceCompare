@@ -20,6 +20,7 @@ from sqlalchemy.orm.attributes import flag_modified
 from models.base_models import Base, TimestampMixin
 import plugins.plugin_comms as pcomms
 import models.trip_models as tm
+import plugins.ies.ies_utils as iu
 
 
 class DBSession:
@@ -110,30 +111,46 @@ class DBSession:
             self.session.delete(ies_route)
         # else get saved route from route tag, and then add it to IES db
         else:
-            status_code, saved_route = pcomms.send_req_to_FM(
-                "plugin_ies", "get_saved_route", "get", query=route_tag
-            )
-            if status_code != 200:
-                raise ValueError(f"can't get route from FM for tag {route_tag}")
-            route = IESRoutes(route_tag=route_tag, route=saved_route["route"])
+            route = iu.get_saved_route(route_tag)
             self.add_to_session(route)
         return
 
     def get_ongoing_jobs(self):
         return (
             self.session.query(IESBookingReq)
-            .join(CombinedTrips)
             .filter(IESBookingReq.combined_trip_id != None)
-            .filter(CombinedTrips.status.not_in(tm.COMPLETED_TRIP_STATUS))
+            .filter(IESBookingReq.status.not_in(tm.COMPLETED_TRIP_STATUS))
+            .all()
         )
 
     def get_completed_jobs(self):
         return (
             self.session.query(IESBookingReq)
-            .join(CombinedTrips)
             .filter(IESBookingReq.combined_trip_id != None)
-            .filter(CombinedTrips.status.in_(tm.COMPLETED_TRIP_STATUS))
+            .filter(IESBookingReq.status.in_(tm.COMPLETED_TRIP_STATUS))
+            .all()
         )
+
+    def get_ongoing_combined_trips(self):
+        return (
+            self.session.query(CombinedTrips)
+            .filter(CombinedTrips.status.not_in(tm.COMPLETED_TRIP_STATUS))
+            .all()
+        )
+
+    def get_active_booking_reqs_for_combined_trip(self, combined_trip):
+        return (
+            self.session.query(IESBookingReq)
+            .filter(IESBookingReq.combined_trip_id == combined_trip.trip_id)
+            .filter(IESBookingReq.status.not_in(tm.COMPLETED_TRIP_STATUS))
+            .all()
+        )
+
+    def get_ext_ref_ids_for_trip(self, combined_trip):
+        booking_reqs = combined_trip.trips
+        ext_ref_ids = []
+        for booking_req in booking_reqs:
+            ext_ref_ids.append(booking_req.ext_ref_id)
 
 
 class IESBookingReq(Base, TimestampMixin):

@@ -88,26 +88,19 @@ async def get_sherpas_at_start(user_name=Depends(dpd.get_user_from_header)):
         all_ies_routes = dbsession.get_all_ies_routes()
 
     for sherpa_name in ies_sherpas:
-        status_code, sherpa_summary_response = pcomms.send_req_to_FM(
-            "plugin_ies", "sherpa_summary", req_type="get", query=sherpa_name
-        )
-        if status_code == 200:
-            sherpa_at_station = sherpa_summary_response["at_station"]
-            fleet_name = sherpa_summary_response["fleet_name"]
-            for route_tag, route in all_ies_routes.items():
-                start_station = route[0]
-                sherpa_exclude_stations = iu.get_exclude_stations_sherpa(
-                    sherpa_name, fleet_name
-                )
-                if (
-                    sherpa_at_station == start_station
-                    and len(set(sherpa_exclude_stations).intersection(set(route))) == 0
-                ):
-                    response.update(
-                        {route_tag: {"sherpa": sherpa_name, "station": route[0]}}
-                    )
-        else:
-            dpd.raise_error(f"sherpa status req to fm failed!")
+        sherpa_summary_response = iu.get_sherpa_summary_for_sherpa(sherpa_name)
+        sherpa_at_station = sherpa_summary_response["at_station"]
+        fleet_name = sherpa_summary_response["fleet_name"]
+        for route_tag, route in all_ies_routes.items():
+            start_station = route[0]
+            sherpa_exclude_stations = iu.get_exclude_stations_sherpa(
+                sherpa_name, fleet_name
+            )
+            if (
+                sherpa_at_station == start_station
+                and len(set(sherpa_exclude_stations).intersection(set(route))) == 0
+            ):
+                response.update({route_tag: {"sherpa": sherpa_name, "station": route[0]}})
     return response
 
 
@@ -222,6 +215,7 @@ async def consolidate_and_book_trip(
         "messageType": "book_consolidated_trip",
         "ext_ref_ids": consolidate_book_req.ext_ref_ids,
         "route_tag": consolidate_book_req.route_tag,
+        "sherpa": consolidate_book_req.sherpa,
     }
     job = enqueue(q, ies_handler.handle, msg)
     response = await get_job_result(job.id)
@@ -245,7 +239,7 @@ async def get_pending_jobs(user_name=Depends(dpd.get_user_from_header)):
                         "kanban_id": job.kanban_id,
                         "route_tag": job.route_tag,
                         "route": job.route,
-                        "requested_at": job.created_at,
+                        "requested_at": iu.dt_to_str(job.created_at),
                     }
                 }
             )
@@ -270,7 +264,7 @@ async def get_ongoing_jobs(active: bool, user_name=Depends(dpd.get_user_from_hea
                         "kanban_id": job.kanban_id,
                         "route_tag": job.route_tag,
                         "route": job.route,
-                        "requested_at": job.created_at,
+                        "requested_at": iu.dt_to_str(job.created_at),
                         "status": job.combined_trip.status,
                         "trip_id": job.combined_trip_id,
                     }

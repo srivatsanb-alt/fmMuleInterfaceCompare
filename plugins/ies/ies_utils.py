@@ -3,10 +3,11 @@ import json
 import os
 import logging
 import datetime
+import redis
 
 from models.base_models import JsonMixin
 from models.trip_models import TripStatus
-import plugin_comms as pcomms
+import plugins.plugin_comms as pcomms
 import plugins.ies.ies_models as im
 
 logger = logging.getLogger("plugin_ies")
@@ -23,6 +24,11 @@ IES_JOB_STATUS_MAPPING = {
     TripStatus.FAILED: "FAILED",
     TripStatus.CANCELLED: "CANCELLED",
 }
+
+
+def send_msg_to_ies(msg):
+    pub = redis.from_url(os.getenv("FM_REDIS_URI"), decode_responses=True)
+    pub.publish("channel:plugin_ies", str(msg))
 
 
 def populate_ies_info():
@@ -61,6 +67,25 @@ def get_exclude_stations_sherpa(sherpa_name, fleet_name):
         if route_tag == f"exclude_stations_{sherpa_name}":
             exclude_stations.extend(route_info["route"])
     return exclude_stations
+
+
+def get_sherpa_summary_for_sherpa(sherpa_name):
+    status_code, sherpa_summary_response = pcomms.send_req_to_FM(
+        "plugin_ies", "sherpa_summary", req_type="get", query=sherpa_name
+    )
+    if status_code != 200:
+        raise ValueError(f"sherpa summary req. failed for sherpa {sherpa_name}")
+    return sherpa_summary_response
+
+
+def get_saved_route(route_tag):
+    status_code, saved_route = pcomms.send_req_to_FM(
+        "plugin_ies", "get_saved_route", "get", query=route_tag
+    )
+    if status_code != 200:
+        raise ValueError(f"can't get route from FM for tag {route_tag}")
+    route = im.IESRoutes(route_tag=route_tag, route=saved_route["route"])
+    return route
 
 
 def dt_to_str(dt):
