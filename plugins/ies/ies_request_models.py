@@ -26,3 +26,4 @@ class ConsolidationInfoReq(ClientReq):
 class ConsolidateBookReq(ClientReq):
     ext_ref_ids: List[str]
     route_tag: str
+    sherpa: str

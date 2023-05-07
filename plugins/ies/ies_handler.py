@@ -55,23 +55,39 @@ class IES_HANDLER:
             raise ValueError(f"no booking entry with ref id {ref_id} in db")
         return booking
 
-    def _send_combined_trip_update(self, combined_trip):
-        self.logger.info(f"combined trip booking reqs: {combined_trip.trips}")
+    def change_booking_req_status_and_update_IES(
+        self, ext_ref_ids, status, combined_trip_id
+    ):
+        for ref_id in ext_ref_ids:
+            self.logger.info(f"booking req: {ref_id}")
+            booking_req = (
+                self.dbsession.session.query(im.IESBookingReq)
+                .filter(im.IESBookingReq.ext_ref_id == ref_id)
+                .one_or_none()
+            )
+            if booking_req is None:
+                raise ValueError(f"booking req {ref_id} not found in db")
+            booking_req.status = status
+            booking_req.combined_trip_id = combined_trip_id
+            msg_to_ies = iu.MsgToIES(
+                "JobUpdate", booking_req.ext_ref_id, iu.IES_JOB_STATUS_MAPPING[status]
+            ).to_dict()
+            self.logger.info(f"msg to ies: {msg_to_ies}")
+            iu.send_msg_to_ies(msg_to_ies)
 
     def _add_combined_trip_to_db(self, response, booking_route, ext_ref_ids):
         for trip_id, trip_details in response.items():
+            status = trip_details["status"]
             combined_trip = im.CombinedTrips(
                 trip_id=trip_id,
                 booking_id=trip_details["booking_id"],
                 combined_route=booking_route,
-                status=trip_details["status"],
+                status=status,
             )
             self.logger.info(f"adding combined trip to db")
             self.dbsession.add_to_session(combined_trip)
-            for ref_id in ext_ref_ids:
-                booking_req = self._get_booking(ref_id)
-                booking_req.combined_trip_id = trip_id
-            self._send_combined_trip_update(combined_trip)
+            self.logger.info(f"change booking req and update ies...")
+            self.change_booking_req_status_and_update_IES(ext_ref_ids, status, trip_id)
             return
 
     def _send_scheduled_msgs(self, ext_ref_ids):
@@ -96,6 +112,33 @@ class IES_HANDLER:
             if len(intersection_route) == len(route_stations):
                 res_tag = ies_route.route_tag
         return res_tag
+
+    def _is_sherpa_at_start_station(self, sherpa_summary_response, route_tag):
+        ies_route = iu.get_saved_route(route_tag)
+        start_station = ies_route.route[0]
+        sherpa_at_station = sherpa_summary_response["at_station"]
+        return sherpa_at_station == start_station
+
+    def _is_sherpa_ready_for_trip(self, sherpa_summary_response):
+        sherpa_status = sherpa_summary_response["sherpa_status"]
+        is_sherpa_idle = sherpa_status["idle"]
+        is_sherpa_inducted = sherpa_status["inducted"]
+        is_sherpa_disabled = sherpa_status["disabled"]
+        sherpa_mode = sherpa_status["mode"]
+        checks = [
+            is_sherpa_idle is not False,
+            is_sherpa_inducted is True,
+            not is_sherpa_disabled,
+            sherpa_mode == "fleet",
+        ]
+        error_msgs = [
+            "not idle",
+            "not inducted",
+            "disconnected from FM",
+            "not in fleet mode",
+        ]
+        false_idxs = [i for i, check in enumerate(checks) if check == False]
+        return all(checks), [msg for i, msg in enumerate(error_msgs) if i in false_idxs]
 
     def handle_JobCreate(self, msg):
         self.logger.info("handling JobCreate...")
@@ -141,7 +184,8 @@ class IES_HANDLER:
         self.dbsession.add_to_session(job)
         self.logger.info(f"added booking req {job_create.externalReferenceId}")
         ies_info = self.dbsession.session.query(im.IESInfo).first()
-        if not ies_info.consolidate:
+        are_route_stations_unique = len(set(route_stations)) == len(route_stations)
+        if not ies_info.consolidate or not are_route_stations_unique:
             self.logger.info(f"colsolidation is off, booking individual trip")
             req_msg = {
                 "ext_ref_ids": [job_create.externalReferenceId],
@@ -180,6 +224,7 @@ class IES_HANDLER:
     def handle_book_consolidated_trip(self, msg):
         ext_ref_ids = msg["ext_ref_ids"]
         route_tag = msg["route_tag"]
+        sherpa = msg["sherpa"]
         unsorted_route_stations = []
         for ref_id in ext_ref_ids:
             ies_booking = self._get_booking(ref_id)
@@ -193,9 +238,20 @@ class IES_HANDLER:
             )
         route = all_ies_routes[route_tag]
         booking_route = [station for station in route if station in unique_stations]
+        sherpa_summary_response = iu.get_sherpa_summary_for_sherpa(sherpa)
+        if not self._is_sherpa_at_start_station(sherpa_summary_response, route_tag):
+            raise ValueError(
+                f"sherpa {sherpa} moved away from start station on route {route_tag}, can't consolidate trip"
+            )
+        is_sherpa_ready, reasons = self._is_sherpa_ready_for_trip(sherpa_summary_response)
+        if not is_sherpa_ready:
+            raise ValueError(
+                f"sherpa is {', '.join(reason for reason in reasons)}, can't consolidate trip"
+            )
         status_code, response = self._send_trip_book_req_fm(booking_route)
         if status_code != 200:
             raise ValueError(f"{status_code}: consolidated trip booking req failed")
+        self.logger.info(f"trip booked: {response.keys()}")
         self._add_combined_trip_to_db(response, booking_route, ext_ref_ids)
         return
 
