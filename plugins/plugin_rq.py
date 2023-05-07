@@ -124,6 +124,11 @@ if __name__ == "__main__":
         Process(target=start_worker, args=("plugin_ies",)).start()
         ies_logger.info("started a worker for plugin_ies")
 
+        from ies.ies_job_updates import send_job_updates
+
+        Process(target=send_job_updates, args=[]).start()
+        ies_logger.info("Sending continuous job updates")
+
     if "conveyor" in all_plugins:
         import conveyor.conveyor_models as cm
 
