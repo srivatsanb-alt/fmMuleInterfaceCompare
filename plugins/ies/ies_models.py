@@ -123,11 +123,13 @@ class DBSession:
             .all()
         )
 
-    def get_completed_jobs(self):
+    def get_completed_jobs(self, booked_from, booked_till):
         return (
             self.session.query(IESBookingReq)
             .filter(IESBookingReq.combined_trip_id != None)
             .filter(IESBookingReq.status.in_(tm.COMPLETED_TRIP_STATUS))
+            .filter(IESBookingReq.created_at > booked_from)
+            .filter(IESBookingReq.created_at < booked_till)
             .all()
         )
 
@@ -152,18 +154,26 @@ class DBSession:
         for booking_req in booking_reqs:
             ext_ref_ids.append(booking_req.ext_ref_id)
 
+    def delete_old_bookings_and_combined_trips(self, datetime):
+        self.session.query(CombinedTrips).filter(
+            CombinedTrips.updated_at < datetime
+        ).delete()
+        self.session.query(IESBookingReq).filter(
+            IESBookingReq.updated_at < datetime
+        ).delete()
+
 
 class IESBookingReq(Base, TimestampMixin):
     __tablename__ = "ies_booking_req"
     __table_args__ = {"extend_existing": True}
     ext_ref_id = Column(String, primary_key=True, index=True)
-    start_station = Column(String)
-    route = Column(ARRAY(String))
-    route_tag = Column(String)
-    status = Column(String)
+    start_station = Column(String, index=True)
+    route = Column(ARRAY(String), index=True)
+    route_tag = Column(String, index=True)
+    status = Column(String, index=True)
     kanban_id = Column(String, index=True)
-    deadline = Column(String)
-    combined_trip_id = Column(ForeignKey("combined_trips.trip_id"))
+    deadline = Column(String, index=True)
+    combined_trip_id = Column(ForeignKey("combined_trips.trip_id"), index=True)
     combined_trip = relationship(
         "CombinedTrips",
         back_populates="trips",
@@ -178,7 +188,7 @@ class CombinedTrips(Base, TimestampMixin):
     trip_id = Column(Integer, primary_key=True, index=True)
     booking_id = Column(Integer, index=True)
     combined_route = Column(ARRAY(String))
-    sherpa = Column(String)
+    sherpa = Column(String, index=True)
     status = Column(String, index=True)
     next_idx_aug = Column(Integer)
     trips = relationship("IESBookingReq", back_populates="combined_trip")
@@ -207,3 +217,5 @@ class IESInfo(Base):
     consolidate = Column(Boolean)
     ies_version = Column(Float)
     ies_sherpas = Column(ARRAY(String), default=[])
+    backup_days = Column(Integer, default=30)
+    max_bookings = Column(Integer, default=36)

@@ -89,7 +89,7 @@ def send_job_updates():
                     )
                     combined_trip.status = trip_status_from_FM
                     combined_trip.next_idx_aug = next_idx_aug_from_FM
-        time.sleep(30)
+        time.sleep(10)
 
 
 def _send_JobUpdate_msgs(
