@@ -1,3 +1,4 @@
+import datetime
 import os
 import logging
 import redis
@@ -44,10 +45,18 @@ def send_agv_update_and_fault(sherpa_name, externalReferenceId):
     return
 
 
+def delete_old_data_from_db(dbsession):
+    ies_info = dbsession.session.query(im.IESInfo).first()
+    backup_days = ies_info.backup_days
+    dt = datetime.datetime.now() + datetime.timedelta(days=-backup_days)
+    dbsession.delete_old_bookings_and_combined_trips(dt)
+
+
 # read status from periodic messages, for those trips in DB, send periodic msgs to IES.
 def send_job_updates():
     while True:
         with im.DBSession() as dbsession:
+            delete_old_data_from_db(dbsession)
             all_active_combined_trips = dbsession.get_ongoing_combined_trips()
             status_code, trip_status_response = _get_trip_status_response(
                 all_active_combined_trips
@@ -114,9 +123,7 @@ def _send_JobUpdate_msgs(
             msg_to_ies = iu.MsgToIES(
                 "JobUpdate", ext_ref_id, iu.IES_JOB_STATUS_MAPPING[TripStatus.SUCCEEDED]
             ).to_dict()
-            msg_to_ies.update({"lastCompletedTask": lastCompletedTaskMsg})
             booking_req.status = TripStatus.SUCCEEDED
-        logger.info(f"Pub msg on redis: {msg_to_ies}")
         iu.send_msg_to_ies(msg_to_ies)
 
     return
