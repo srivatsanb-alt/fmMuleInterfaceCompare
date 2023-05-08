@@ -4,7 +4,10 @@ RUN mkdir /var/wwww
 
 COPY ./misc/nginx.conf /etc/nginx/nginx.conf
 COPY ./misc/nginx.htpasswd /etc/nginx/conf.d/nginx.htpasswd
-COPY ./dashboard/ /etc/nginx/html
 
-RUN mkdir /var/wwww/map_editor
-COPY ./map_editor_dashboard /var/www/map_editor/
+RUN mkdir -p /var/www/fm/html
+COPY ./dashboard/ /var/www/fm/html
+COPY ./misc/fm.conf /etc/nginx/sites-available/fm.conf
+
+RUN mkdir -p /var/wwww/map_editor/html/map_editor
+COPY ./map_editor_dashboard/ /var/www/map_editor/html/map_editor
