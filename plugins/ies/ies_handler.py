@@ -37,9 +37,17 @@ class IES_HANDLER:
         ]
         return route_stations
 
-    def _send_trip_book_req_fm(self, booking_route):
+    def _send_trip_book_req_fm(self, booking_route, sherpa_name):
         # giving higher priority to IES trips
-        req_json = {"trips": [{"route": booking_route, "priority": 2}]}
+        req_json = {
+            "trips": [
+                {
+                    "route": booking_route,
+                    "priority": 2,
+                    "metadata": {"sherpa_name": sherpa_name},
+                }
+            ]
+        }
         status_code, trip_booking_response = send_req_to_FM(
             "plugin_ies", "trip_book", req_type="post", req_json=req_json
         )
@@ -74,8 +82,15 @@ class IES_HANDLER:
             ).to_dict()
             self.logger.info(f"msg to ies: {msg_to_ies}")
             iu.send_msg_to_ies(msg_to_ies)
+            # scheduled_msg_to_ies = iu.MsgToIES(
+            #     "JobUpdate",
+            #     booking_req.ext_ref_id,
+            #     iu.IES_JOB_STATUS_MAPPING[TripStatus.ASSIGNED],
+            # ).to_dict()
+            # self.logger.info(f"scheduled msg to ies: {scheduled_msg_to_ies}")
+            # iu.send_msg_to_ies(scheduled_msg_to_ies)
 
-    def _add_combined_trip_to_db(self, response, booking_route, ext_ref_ids):
+    def _add_combined_trip_to_db(self, response, booking_route, ext_ref_ids, sherpa_name):
         for trip_id, trip_details in response.items():
             status = trip_details["status"]
             combined_trip = im.CombinedTrips(
@@ -83,6 +98,7 @@ class IES_HANDLER:
                 booking_id=trip_details["booking_id"],
                 combined_route=booking_route,
                 status=status,
+                sherpa=sherpa_name,
             )
             self.logger.info(f"adding combined trip to db")
             self.dbsession.add_to_session(combined_trip)
@@ -223,8 +239,14 @@ class IES_HANDLER:
 
     def handle_book_consolidated_trip(self, msg):
         ext_ref_ids = msg["ext_ref_ids"]
+        ies_info = self.dbsession.session.query(im.IESInfo).first()
+        max_bookings = ies_info.max_bookings
+        if not len(ext_ref_ids) < max_bookings:
+            raise ValueError(
+                f"Please select less than {max_bookings} requests to consolidate."
+            )
         route_tag = msg["route_tag"]
-        sherpa = msg["sherpa"]
+        sherpa_name = msg["sherpa"]
         unsorted_route_stations = []
         for ref_id in ext_ref_ids:
             ies_booking = self._get_booking(ref_id)
@@ -238,21 +260,21 @@ class IES_HANDLER:
             )
         route = all_ies_routes[route_tag]
         booking_route = [station for station in route if station in unique_stations]
-        sherpa_summary_response = iu.get_sherpa_summary_for_sherpa(sherpa)
+        sherpa_summary_response = iu.get_sherpa_summary_for_sherpa(sherpa_name)
         if not self._is_sherpa_at_start_station(sherpa_summary_response, route_tag):
             raise ValueError(
-                f"sherpa {sherpa} moved away from start station on route {route_tag}, can't consolidate trip"
+                f"sherpa {sherpa_name} moved away from start station on route {route_tag}, can't consolidate trip"
             )
         is_sherpa_ready, reasons = self._is_sherpa_ready_for_trip(sherpa_summary_response)
         if not is_sherpa_ready:
             raise ValueError(
                 f"sherpa is {', '.join(reason for reason in reasons)}, can't consolidate trip"
             )
-        status_code, response = self._send_trip_book_req_fm(booking_route)
+        status_code, response = self._send_trip_book_req_fm(booking_route, sherpa_name)
         if status_code != 200:
             raise ValueError(f"{status_code}: consolidated trip booking req failed")
         self.logger.info(f"trip booked: {response.keys()}")
-        self._add_combined_trip_to_db(response, booking_route, ext_ref_ids)
+        self._add_combined_trip_to_db(response, booking_route, ext_ref_ids, sherpa_name)
         return
 
     def handle(self, msg):
