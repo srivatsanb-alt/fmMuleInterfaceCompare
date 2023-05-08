@@ -1,4 +1,5 @@
 import asyncio
+import datetime
 import logging
 from fastapi import APIRouter, WebSocket, Depends
 from plugins.plugin_comms import ws_reader, ws_writer, send_req_to_FM
@@ -89,7 +90,7 @@ async def get_sherpas_at_start(user_name=Depends(dpd.get_user_from_header)):
 
     for sherpa_name in ies_sherpas:
         sherpa_summary_response = iu.get_sherpa_summary_for_sherpa(sherpa_name)
-        sherpa_at_station = sherpa_summary_response["at_station"]
+        sherpa_at_station = sherpa_summary_response.get("at_station")
         fleet_name = sherpa_summary_response["fleet_name"]
         for route_tag, route in all_ies_routes.items():
             start_station = route[0]
@@ -247,7 +248,12 @@ async def get_pending_jobs(user_name=Depends(dpd.get_user_from_header)):
 
 
 @router.get("/plugin/ies/get_consolidated_jobs/{active}")
-async def get_ongoing_jobs(active: bool, user_name=Depends(dpd.get_user_from_header)):
+async def get_consolidated_jobs(active: bool, user_name=Depends(dpd.get_user_from_header)):
+    booked_till = datetime.datetime.now()
+    booked_from = booked_till - datetime.timedelta(days=1)
+    logging.getLogger("plugin_ies").info(
+        f"from: {iu.dt_to_str(booked_from)}, till: {iu.dt_to_str(booked_till)}"
+    )
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
@@ -256,7 +262,8 @@ async def get_ongoing_jobs(active: bool, user_name=Depends(dpd.get_user_from_hea
         if active:
             jobs = dbsession.get_ongoing_jobs()
         else:
-            jobs = dbsession.get_completed_jobs()
+            jobs = dbsession.get_completed_jobs(booked_from, booked_till)
+            logging.getLogger("plugin_ies").info(f"len of resp. {len(jobs)}")
         for job in jobs:
             response.update(
                 {
@@ -265,7 +272,7 @@ async def get_ongoing_jobs(active: bool, user_name=Depends(dpd.get_user_from_hea
                         "route_tag": job.route_tag,
                         "route": job.route,
                         "requested_at": iu.dt_to_str(job.created_at),
-                        "status": job.combined_trip.status,
+                        "status": job.status,
                         "trip_id": job.combined_trip_id,
                     }
                 }
