@@ -17,6 +17,7 @@ IES_TIME_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 IES_TIME_FORMAT_QUERY = "%Y-%m-%dT%H:%M:%S.%f"
 
 IES_JOB_STATUS_MAPPING = {
+    "pending": "WAITING_FOR_CONSOLIDATION",
     TripStatus.BOOKED: "ACCEPTED",
     TripStatus.ASSIGNED: "SCHEDULED",
     TripStatus.EN_ROUTE: "IN_PROGRESS",
@@ -89,6 +90,26 @@ def get_saved_route(route_tag):
     return route
 
 
+def get_last_completed_task_msg(last_completed_task):
+    return {
+        "ActionName": "",
+        "LocationId": str(last_completed_task),
+    }
+
+
+def compose_and_send_job_update_msg(ext_ref_id, status, route, next_idx_aug):
+    logger.info(f"sending JobUpdates...{ext_ref_id}")
+    msg_to_ies = MsgToIES("JobUpdate", ext_ref_id, IES_JOB_STATUS_MAPPING[status]).to_dict()
+    last_completed_task = None if next_idx_aug == 0 else route[next_idx_aug - 1]
+    msg_to_ies.update(
+        {
+            "ActionName": "",
+            "LocationId": str(last_completed_task),
+        }
+    )
+    send_msg_to_ies(msg_to_ies)
+
+
 def dt_to_str(dt):
     return datetime.datetime.strftime(dt, TIME_FORMAT)
 
@@ -124,6 +145,19 @@ class JobCreate(JsonMixin):
     taskList: list
     priority: int = 1
     jobStatus = str
+
+
+@dataclass
+class JobQuery(JsonMixin):
+    messageType: str
+    since: str
+    until: str
+
+
+@dataclass
+class JobCancel(JsonMixin):
+    messageType: str
+    externalReferenceId: str
 
 
 @dataclass
