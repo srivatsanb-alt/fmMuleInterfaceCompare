@@ -179,6 +179,10 @@ class IES_HANDLER:
             )
             return
         route_tag = self._get_route_tag(route_stations)
+        if route_tag is None:
+            self.send_msg(rejected_msg)
+            self.logger.info(f"Can't identify route_tag for route: {route_stations}")
+            return
         self.logger.info(f"route stations: {route_stations}")
 
         accepted_msg = iu.MsgToIES(
@@ -192,6 +196,7 @@ class IES_HANDLER:
             start_station=route_stations[0],
             route=route_stations,
             route_tag=route_tag,
+            status="pending",
             kanban_id=msg["properties"]["kanbanId"],
             deadline=iu.dt_to_str(
                 iu.str_to_dt_UTC(msg["deadline"] + " +0000").astimezone(pytz.timezone(tz))
@@ -202,12 +207,63 @@ class IES_HANDLER:
         ies_info = self.dbsession.session.query(im.IESInfo).first()
         are_route_stations_unique = len(set(route_stations)) == len(route_stations)
         if not ies_info.consolidate or not are_route_stations_unique:
-            self.logger.info(f"colsolidation is off, booking individual trip")
+            self.logger.info(f"consolidation is off, booking individual trip")
             req_msg = {
                 "ext_ref_ids": [job_create.externalReferenceId],
                 "route_tag": route_tag,
             }
             self.handle_book_consolidated_trip(req_msg)
+        return
+
+    def handle_JobQuery(self, msg):
+        self.logger.info("handling JobQuery...")
+        job_query = iu.JobQuery.from_dict(msg)
+        tz = os.getenv("PGTZ")
+        jobs_from = iu.str_to_dt_UTC(
+            job_query.since[:-2] + " +0000", query=True
+        ).astimezone(pytz.timezone(tz))
+        jobs_till = iu.str_to_dt_UTC(
+            job_query.until[:-2] + " +0000", query=True
+        ).astimezone(pytz.timezone(tz))
+        self.logger.info(f"from: {jobs_from}; till: {jobs_till}")
+        jobs = self.dbsession.get_jobs_between_time(jobs_from, jobs_till)
+        self.logger.info(f"jobs: {jobs}")
+        for job in jobs:
+            iu.compose_and_send_job_update_msg(
+                job.ext_ref_id,
+                job.status,
+                job.combined_trip.combined_route if job.combined_trip else "None",
+                job.combined_trip.next_idx_aug if job.combined_trip else 0,
+            )
+        return
+
+    def handle_JobCancel(self, msg):
+        self.logger.info("handling JobCancel...")
+        job_cancel = iu.JobCancel.from_dict(msg)
+        ext_ref_id = job_cancel.externalReferenceId
+        rejected_msg = iu.MsgToIES("JobCancel", ext_ref_id, "REJECTED").to_dict()
+        booking_req = (
+            self.dbsession.session.query(im.IESBookingReq)
+            .filter(im.IESBookingReq.ext_ref_id == ext_ref_id)
+            .one_or_none()
+        )
+        if booking_req == None:
+            self.send_msg(rejected_msg)
+            self.logger.info(
+                f"can't find job with ref id: {ext_ref_id}, rejecting JobCancel"
+            )
+            return
+        job_status = booking_req.status
+        if job_status != "pending":
+            self.send_msg(rejected_msg)
+            self.logger.info(
+                f"can't cancel consolidated booking with ref id: {ext_ref_id}, rejecting JobCancel"
+            )
+            return
+        cancelled_msg = iu.MsgToIES("JobCancel", ext_ref_id, "CANCELLED").to_dict()
+        booking_req.status = TripStatus.CANCELLED
+        self.logger.info(f"cancelling job with ref id: {ext_ref_id}")
+        self.send_msg(cancelled_msg)
         return
 
     def handle_add_ies_station(self, msg):
@@ -282,7 +338,7 @@ class IES_HANDLER:
         self.logger.info(f"got a message {msg}")
         self.init_handler()
         msg_type = msg.get("messageType")
-        invalid_msg_types = ["JobCancel", "JobQuery"]
+        invalid_msg_types = []
 
         if msg_type in invalid_msg_types:
             self.logger.info(f"invalid message type, {msg}")
