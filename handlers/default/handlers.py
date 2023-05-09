@@ -186,6 +186,7 @@ class Handlers:
                 new_metadata,
                 pending_trip.trip.booking_id,
                 pending_trip.trip.fleet_name,
+                pending_trip.trip.booked_by,
             )
             self.dbsession.create_pending_trip(new_trip.id)
         else:
