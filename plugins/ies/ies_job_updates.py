@@ -101,9 +101,7 @@ def _send_JobUpdate_msgs(
     last_completed_task = (
         None if next_idx_aug_from_FM == 0 else route[next_idx_aug_from_FM - 1]
     )
-    lastCompletedTaskMsg = _get_last_completed_task_msg(
-        last_completed_task, next_idx_aug_from_FM
-    )
+    lastCompletedTaskMsg = iu.get_last_completed_task_msg(last_completed_task)
     # send messages for all ext_ref_ids with approproate status
     active_booking_reqs = dbsession.get_active_booking_reqs_for_combined_trip(combined_trip)
     for booking_req in active_booking_reqs:
@@ -127,14 +125,6 @@ def _send_JobUpdate_msgs(
         iu.send_msg_to_ies(msg_to_ies)
 
     return
-
-
-def _get_last_completed_task_msg(last_completed_task, next_idx_aug):
-    logger.info(f"next_idx_aug: {next_idx_aug}")
-    return {
-        "ActionName": "",
-        "LocationId": str(last_completed_task),
-    }
 
 
 def _get_trip_status_response(combined_trips):

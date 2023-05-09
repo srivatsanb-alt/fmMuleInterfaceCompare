@@ -115,19 +115,28 @@ class DBSession:
             self.add_to_session(route)
         return
 
-    def get_ongoing_jobs(self):
+    def get_ongoing_jobs(self, booked_from, booked_till):
         return (
             self.session.query(IESBookingReq)
             .filter(IESBookingReq.combined_trip_id != None)
             .filter(IESBookingReq.status.not_in(tm.COMPLETED_TRIP_STATUS))
+            .filter(IESBookingReq.created_at > booked_from)
+            .filter(IESBookingReq.created_at < booked_till)
             .all()
         )
 
     def get_completed_jobs(self, booked_from, booked_till):
         return (
             self.session.query(IESBookingReq)
-            .filter(IESBookingReq.combined_trip_id != None)
             .filter(IESBookingReq.status.in_(tm.COMPLETED_TRIP_STATUS))
+            .filter(IESBookingReq.created_at > booked_from)
+            .filter(IESBookingReq.created_at < booked_till)
+            .all()
+        )
+
+    def get_jobs_between_time(self, booked_from, booked_till):
+        return (
+            self.session.query(IESBookingReq)
             .filter(IESBookingReq.created_at > booked_from)
             .filter(IESBookingReq.created_at < booked_till)
             .all()
