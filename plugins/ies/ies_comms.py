@@ -231,7 +231,7 @@ async def get_pending_jobs(user_name=Depends(dpd.get_user_from_header)):
     response = {}
     with im.DBSession() as dbsession:
         pending_jobs = dbsession.session.query(im.IESBookingReq).filter(
-            im.IESBookingReq.combined_trip_id == None
+            im.IESBookingReq.status == "pending"
         )
         for job in pending_jobs:
             response.update(
@@ -260,7 +260,7 @@ async def get_consolidated_jobs(active: bool, user_name=Depends(dpd.get_user_fro
     response = {}
     with im.DBSession() as dbsession:
         if active:
-            jobs = dbsession.get_ongoing_jobs()
+            jobs = dbsession.get_ongoing_jobs(booked_from, booked_till)
         else:
             jobs = dbsession.get_completed_jobs(booked_from, booked_till)
             logging.getLogger("plugin_ies").info(f"len of resp. {len(jobs)}")
