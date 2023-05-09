@@ -13,7 +13,8 @@ import plugins.ies.ies_models as im
 logger = logging.getLogger("plugin_ies")
 
 TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
-IES_TIME_FORMAT = "%Y-%m-%dT%H:%M:%S.%f"
+IES_TIME_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
+IES_TIME_FORMAT_QUERY = "%Y-%m-%dT%H:%M:%S.%f"
 
 IES_JOB_STATUS_MAPPING = {
     TripStatus.BOOKED: "ACCEPTED",
@@ -96,8 +97,10 @@ def str_to_dt(dt_str):
     return datetime.datetime.strptime(dt_str, TIME_FORMAT)
 
 
-def str_to_dt_UTC(dt_str):
-    return datetime.datetime.strptime(dt_str, IES_TIME_FORMAT + " %z")
+def str_to_dt_UTC(dt_str, query: bool = False):
+    if not query:
+        return datetime.datetime.strptime(dt_str, IES_TIME_FORMAT + " %z")
+    return datetime.datetime.strptime(dt_str, IES_TIME_FORMAT_QUERY + " %z")
 
 
 @dataclass
