@@ -392,6 +392,7 @@ class FleetSimulator:
             rm = self.router_modules[sherpa.fleet.name]
 
             if to_pose == from_pose:
+                time.sleep(5)
                 self.send_reached_msg(sherpa_name)
                 print(f"ending trip leg {from_station}, {to_station}")
                 return
@@ -410,7 +411,6 @@ class FleetSimulator:
             blocked_for_visa = False
             while i < len(x_vals):
                 sherpa: Sherpa = session.get_sherpa(sherpa_name)
-                session.session.refresh(sherpa)
                 if not sherpa.status.trip_id:
                     print(
                         f"ending trip leg {from_station}, {to_station}, seems like trip was deleted"
@@ -419,24 +419,23 @@ class FleetSimulator:
 
                 stoppage_type = ""
                 local_obstacle = [-999.0, -999.0]
-                curr_pose = [x_vals[i], y_vals[i], t_vals[i]]
                 steps = find_next_pose_index(traj, i, self.avg_velocity * sleep_time)
                 if i + steps >= len(x_vals):
                     break
+                i += steps
+
+                print(f"num_steps to jump: {steps}")
+                curr_pose = [x_vals[i], y_vals[i], t_vals[i]]
+
                 if (
                     len(self.visa_needed[sherpa_name]) == 0
                     or len(self.visas_held[sherpa_name]) > 0
                 ):
-                    i += steps
                     blocked_for_visa = False
                 else:
                     print(f"Sherpa {sherpa_name} is waiting for a visa")
                     stoppage_type = "Waiting for visa"
                     blocked_for_visa = True
-                # obst_random = np.random.rand(1)[0]
-                # if obst_random < 0.07:
-                #    stoppage_type = "Stopped due to detected obstacle"
-                #    local_obstacle = [0.1, 1]
 
                 if self.visa_handling[sherpa.fleet.name]:
                     ez = self.exclusion_zones[sherpa.fleet.name]
@@ -530,6 +529,7 @@ class FleetSimulator:
                     ttl=1,
                 )
                 time.sleep(sleep_time)
+                session.session.expire_all()
 
             dest_pose = [x_vals[-1], y_vals[-1], t_vals[-1]]
             self.send_sherpa_status(sherpa.name, mode="fleet", pose=dest_pose)
@@ -552,7 +552,7 @@ class FleetSimulator:
             )
             reached_req.source = sherpa_name
             print(f"will send a reached msg for {sherpa_name}, {reached_req}")
-            enqueue(queue, handle, self.handler_obj, reached_req, ttl=1)
+            enqueue(queue, handle, self.handler_obj, reached_req)
 
     def peripheral_response_is_needed(self, waiting_start, waiting_end, states):
         if waiting_start in states and waiting_end not in states:
@@ -642,15 +642,15 @@ class FleetSimulator:
                                 t.start()
                                 simulated_trip_legs.append(trip_leg.id)
                                 active_threads[sherpa.name] = t
-
                             else:
                                 if ongoing_trip:
                                     self.simulate_peripherals(ongoing_trip)
-
-                                if not active_threads.get(sherpa.name).is_alive():
+                                t = active_threads.get(sherpa.name, None)
+                                if t is None:
+                                    self.send_sherpa_status(sherpa.name)
+                                elif not t.is_alive():
                                     self.send_sherpa_status(sherpa.name)
                         else:
-                            # print(f"no trip_leg for {sherpa.name}")
                             self.send_sherpa_status(sherpa.name)
 
                         if sherpa.status.disabled:
