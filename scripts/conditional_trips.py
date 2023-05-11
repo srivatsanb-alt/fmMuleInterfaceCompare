@@ -110,6 +110,22 @@ class BookConditionalTrip:
         )
         return True if len(trips) != 0 else False
 
+    def was_last_trip_an_idling_trip(self, sherpa_name: str):
+        was_idling_trip = False
+        last_trip = (
+            self.dbsession.session.query(tm.Trip)
+            .filter(tm.Trip.sherpa_name == sherpa_name)
+            .order_by(tm.Trip.id.desc())
+            .frist()
+        )
+
+        if last_trip is None:
+            pass
+        elif last_trip.booked_by == f"idling_sherpa_{sherpa_name}":
+            was_idling_trip = True
+
+        return was_idling_trip
+
     def get_num_booked_trips(self, trip_type):
         trips = (
             self.dbsession.session.query(tm.Trip)
@@ -131,7 +147,7 @@ class BookConditionalTrip:
 
         for sherpa_status in idling_sherpa_status:
             sherpa_name = sherpa_status.sherpa_name
-            fleet_name = sherpa_status.sherpa.fleet.name
+            # fleet_name = sherpa_status.sherpa.fleet.name
 
             saved_route = self.dbsession.get_saved_route(f"parking_{sherpa_name}")
 
@@ -144,6 +160,13 @@ class BookConditionalTrip:
             if already_booked:
                 logging.getLogger("misc").info(
                     f"conditional trip booked already for {sherpa_name}"
+                )
+                continue
+
+            was_idling_trip = self.was_last_trip_an_idling_trip(sherpa_name)
+            if was_idling_trip:
+                logging.getLogger("misc").info(
+                    f"last trip was a conditional trip of type {trip_type}, need not book again"
                 )
                 continue
 
