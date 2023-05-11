@@ -133,10 +133,10 @@ class BookConditionalTrip:
             sherpa_name = sherpa_status.sherpa_name
             fleet_name = sherpa_status.sherpa.fleet.name
 
-            saved_route = self.dbsession.get_saved_route(f"idling_{fleet_name}")
+            saved_route = self.dbsession.get_saved_route(f"parking_{sherpa_name}")
 
             if saved_route is None:
-                logging.getLogger("misc").warning(f"No idling route for {fleet_name}")
+                logging.getLogger("misc").warning(f"No idling route for {sherpa_name}")
                 continue
 
             already_booked = self.is_trip_already_booked(sherpa_name, trip_type)
