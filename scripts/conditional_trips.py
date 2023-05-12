@@ -116,7 +116,9 @@ class BookConditionalTrip:
         last_trip = (
             self.dbsession.session.query(tm.Trip)
             .filter(tm.Trip.sherpa_name == sherpa_name)
-            .order_by(tm.Trip.id.desc())
+            .filter(tm.Trip.status.in_(tm.COMPLETED_TRIP_STATUS))
+            .filter(tm.Trip.start_time != None)
+            .order_by(tm.Trip.start_time.desc())
             .first()
         )
 

@@ -164,6 +164,7 @@ async def process_req_with_response(queue, req, user: str):
         if status == "finished":
             response = job.result
             break
+
         if status == "failed":
             await asyncio.sleep(0.1)
 
@@ -176,7 +177,7 @@ async def process_req_with_response(queue, req, user: str):
             job.cancel()
             raise HTTPException(status_code=500, detail=error_detail)
 
-        await asyncio.sleep(0.05)
+        await asyncio.sleep(0.005)
 
     return response
 

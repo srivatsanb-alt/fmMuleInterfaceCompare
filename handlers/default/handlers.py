@@ -657,45 +657,49 @@ class Handlers:
         response = {}
         for trip_msg in req.trips:
             booking_id = self.dbsession.get_new_booking_id()
-            fleet_name = self.dbsession.get_fleet_name_from_route(trip_msg.route)
-            if fleet_name:
-                # need priority for optimal dispatch logic, default is 1
-                if not trip_msg.priority:
-                    trip_msg.priority = 1.0
-
-                all_stations: List[fm.Station] = []
-
-                for station_name in trip_msg.route:
+            all_stations: List[fm.Station] = []
+            for station_name in trip_msg.route:
+                try:
                     station = self.dbsession.get_station(station_name)
-                    if station.status.disabled:
-                        raise ValueError(
-                            f"Cannot execute {trip_msg.route} , {station_name} is disabled"
-                        )
-                    all_stations.append(station)
+                except Exception as e:
+                    invalid_station_error = f"Cannot accept the booking, invalid station ({station_name}) in the route"
+                    invalid_station_error_e = invalid_station_error + f", expception: {e}"
+                    get_logger().error(invalid_station_error_e)
+                    raise ValueError(invalid_station_error)
 
-                self.check_if_booking_is_valid(trip_msg, all_stations)
+                if station.status.disabled:
+                    raise ValueError(
+                        f"Cannot execute {trip_msg.route} , {station_name} is disabled"
+                    )
+                all_stations.append(station)
 
-                # add source of booking
-                if trip_msg.metadata is None:
-                    trip_msg.metadata = {}
+            fleet_name = self.dbsession.get_fleet_name_from_route(trip_msg.route)
+            self.check_if_booking_is_valid(trip_msg, all_stations)
 
-                booked_by = req.source
+            if not trip_msg.priority:
+                trip_msg.priority = 1.0
 
-                trip: tm.Trip = self.dbsession.create_trip(
-                    trip_msg.route,
-                    trip_msg.priority,
-                    trip_msg.metadata,
-                    booking_id,
-                    fleet_name,
-                    booked_by,
-                )
-                self.dbsession.create_pending_trip(trip.id)
-                response.update(
-                    {trip.id: {"booking_id": trip.booking_id, "status": trip.status}}
-                )
-                get_logger().info(
-                    f"Created a pending trip : trip_id: {trip.id}, booking_id: {trip.booking_id}"
-                )
+            # add source of booking
+            if trip_msg.metadata is None:
+                trip_msg.metadata = {}
+
+            booked_by = req.source
+
+            trip: tm.Trip = self.dbsession.create_trip(
+                trip_msg.route,
+                trip_msg.priority,
+                trip_msg.metadata,
+                booking_id,
+                fleet_name,
+                booked_by,
+            )
+            self.dbsession.create_pending_trip(trip.id)
+            response.update(
+                {trip.id: {"booking_id": trip.booking_id, "status": trip.status}}
+            )
+            get_logger().info(
+                f"Created a pending trip : trip_id: {trip.id}, booking_id: {trip.booking_id}"
+            )
 
         return response
 
