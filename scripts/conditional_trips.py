@@ -74,6 +74,7 @@ class BookConditionalTrip:
             .filter(fm.SherpaStatus.trip_id == None)
             .filter(not_(fm.SherpaStatus.disabled.is_(True)))
             .filter(fm.SherpaStatus.mode == "fleet")
+            .filter(fm.SherpaStatus.inducted.is_(True))
             .all()
         )
 
@@ -116,7 +117,7 @@ class BookConditionalTrip:
             self.dbsession.session.query(tm.Trip)
             .filter(tm.Trip.sherpa_name == sherpa_name)
             .order_by(tm.Trip.id.desc())
-            .frist()
+            .first()
         )
 
         if last_trip is None:
