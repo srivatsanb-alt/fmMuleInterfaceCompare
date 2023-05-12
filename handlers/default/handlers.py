@@ -969,8 +969,17 @@ class Handlers:
         all_stations: List[fm.Station] = []
         if pending_trip:
             for station_name in pending_trip.trip.augmented_route:
-                station: fm.Station = self.dbsession.get_station(station_name)
-                all_stations.append(station)
+                try:
+                    station: fm.Station = self.dbsession.get_station(station_name)
+                    all_stations.append(station)
+                except Exception as e:
+                    trip_error_msg = f"Cancel the trip: {pending_trip.trip_id}, unable to get details of {station_name}"
+                    trip_error_msg_e = trip_error_msg + f"exception: {e}"
+                    get_logger().warning(trip_error_msg_e)
+                    hutils.maybe_add_alert(
+                        self.dbsession, [sherpa.fleet.name], trip_error_msg
+                    )
+                    return
 
         if ongoing_trip:
             from_station = None
@@ -1315,6 +1324,11 @@ class Handlers:
         self.dbsession.session.commit()
 
         # update db
+
+        if not sherpa.status.inducted:
+            granted = False
+            reason = "sherpa disabled for trips"
+
         if granted:
             for ezone in set(reqd_ezones):
                 utils_visa.lock_exclusion_zone(ezone, sherpa)
