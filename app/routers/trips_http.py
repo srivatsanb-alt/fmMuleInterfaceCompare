@@ -274,7 +274,7 @@ async def add_trip_description(
         dpd.raise_error("Unknown requester", 401)
 
     with DBSession() as dbsession:
-        trip: Trip = dbsession.get_trip(trip_id)
+        trip: tm.Trip = dbsession.get_trip(trip_id)
         if trip.trip_metadata is None:
             trip.trip_metadata = {}
         trip.trip_metadata.update({"description": description})
