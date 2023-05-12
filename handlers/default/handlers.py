@@ -973,8 +973,8 @@ class Handlers:
                     station: fm.Station = self.dbsession.get_station(station_name)
                     all_stations.append(station)
                 except Exception as e:
-                    trip_error_msg = f"Cancel the trip: {pending_trip.trip_id}, unable to get details of {station_name}"
-                    trip_error_msg_e = trip_error_msg + f"exception: {e}"
+                    trip_error_msg = f"Cancel the trip: {pending_trip.trip_id}, invalid station ({station_name}) in trip route"
+                    trip_error_msg_e = trip_error_msg + f", exception: {e}"
                     get_logger().warning(trip_error_msg_e)
                     hutils.maybe_add_alert(
                         self.dbsession, [sherpa.fleet.name], trip_error_msg
