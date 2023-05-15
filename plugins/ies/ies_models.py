@@ -122,6 +122,7 @@ class DBSession:
             .filter(IESBookingReq.status.not_in(tm.COMPLETED_TRIP_STATUS))
             .filter(IESBookingReq.created_at > booked_from)
             .filter(IESBookingReq.created_at < booked_till)
+            .order_by(IESBookingReq.created_at.desc())
             .all()
         )
 
@@ -131,6 +132,17 @@ class DBSession:
             .filter(IESBookingReq.status.in_(tm.COMPLETED_TRIP_STATUS))
             .filter(IESBookingReq.created_at > booked_from)
             .filter(IESBookingReq.created_at < booked_till)
+            .order_by(IESBookingReq.created_at.desc())
+            .all()
+        )
+
+    def get_pending_jobs(self, booked_from, booked_till):
+        return (
+            self.session.query(IESBookingReq)
+            .filter(IESBookingReq.status == "pending")
+            .filter(IESBookingReq.created_at > booked_from)
+            .filter(IESBookingReq.created_at < booked_till)
+            .order_by(IESBookingReq.created_at.desc())
             .all()
         )
 
