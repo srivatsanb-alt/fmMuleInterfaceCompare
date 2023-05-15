@@ -27,3 +27,12 @@ class ConsolidateBookReq(ClientReq):
     ext_ref_ids: List[str]
     route_tag: str
     sherpa: str
+
+
+class CancelPendingReq(ClientReq):
+    externalReferenceId: str
+
+
+class JobsReq(ClientReq):
+    booked_from: str
+    booked_till: str
