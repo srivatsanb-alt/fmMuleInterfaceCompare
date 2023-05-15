@@ -138,8 +138,8 @@ async def sherpa_summary(
                     at_station = station
                     break
 
-        if at_station:
-            response.update({"at_station": at_station.name})
+            if at_station:
+                response.update({"at_station": at_station.name})
 
     return response
 
