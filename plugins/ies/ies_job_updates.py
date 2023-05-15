@@ -1,8 +1,6 @@
 import datetime
 import os
 import logging
-import redis
-import aioredis
 import time
 import ast
 from dataclasses import dataclass
@@ -89,7 +87,7 @@ def send_job_updates():
                     )
                     combined_trip.status = trip_status_from_FM
                     combined_trip.next_idx_aug = next_idx_aug_from_FM
-        time.sleep(10)
+        time.sleep(30)
 
 
 def _send_JobUpdate_msgs(
