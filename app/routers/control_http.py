@@ -343,6 +343,9 @@ async def induct_sherpa(
     with DBSession() as dbsession:
         sherpa = dbsession.get_sherpa(sherpa_name)
 
+        if sherpa is None:
+            dpd.raise_error(f"Invalid sherpa name: {sherpa_name}")
+
         if not sherpa.ip_address:
             dpd.raise_error("Sherpa not yet connected to the fleet manager")
 
