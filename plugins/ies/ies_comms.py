@@ -91,6 +91,8 @@ async def get_sherpas_at_start(user_name=Depends(dpd.get_user_from_header)):
     for sherpa_name in ies_sherpas:
         sherpa_summary_response = iu.get_sherpa_summary_for_sherpa(sherpa_name)
         sherpa_at_station = sherpa_summary_response.get("at_station")
+        if sherpa_at_station == None:
+            continue
         fleet_name = sherpa_summary_response["fleet_name"]
         for route_tag, route in all_ies_routes.items():
             start_station = route[0]
@@ -223,16 +225,18 @@ async def consolidate_and_book_trip(
     return {}
 
 
-@router.get("/plugin/ies/get_pending_jobs")
-async def get_pending_jobs(user_name=Depends(dpd.get_user_from_header)):
+@router.post("/plugin/ies/get_pending_jobs")
+async def get_pending_jobs(
+    pending_jobs_req: irqm.JobsReq, user_name=Depends(dpd.get_user_from_header)
+):
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
+    booked_till = iu.str_to_dt(pending_jobs_req.booked_till)
+    booked_from = iu.str_to_dt(pending_jobs_req.booked_from)
     response = {}
     with im.DBSession() as dbsession:
-        pending_jobs = dbsession.session.query(im.IESBookingReq).filter(
-            im.IESBookingReq.status == "pending"
-        )
+        pending_jobs = dbsession.get_pending_jobs(booked_from, booked_till)
         for job in pending_jobs:
             response.update(
                 {
@@ -247,10 +251,14 @@ async def get_pending_jobs(user_name=Depends(dpd.get_user_from_header)):
     return response
 
 
-@router.get("/plugin/ies/get_consolidated_jobs/{active}")
-async def get_consolidated_jobs(active: bool, user_name=Depends(dpd.get_user_from_header)):
-    booked_till = datetime.datetime.now()
-    booked_from = booked_till - datetime.timedelta(days=1)
+@router.post("/plugin/ies/get_consolidated_jobs/{active}")
+async def get_consolidated_jobs(
+    active: bool,
+    consolidated_jobs_req: irqm.JobsReq,
+    user_name=Depends(dpd.get_user_from_header),
+):
+    booked_till = iu.str_to_dt(consolidated_jobs_req.booked_till)
+    booked_from = iu.str_to_dt(consolidated_jobs_req.booked_from)
     logging.getLogger("plugin_ies").info(
         f"from: {iu.dt_to_str(booked_from)}, till: {iu.dt_to_str(booked_till)}"
     )
@@ -278,6 +286,24 @@ async def get_consolidated_jobs(active: bool, user_name=Depends(dpd.get_user_fro
                 }
             )
     return response
+
+
+@router.post("/plugin/ies/cancel_pending_job")
+async def cancel_pending_job(
+    CancelPendingReq: irqm.CancelPendingReq, user_name=Depends(dpd.get_user_from_header)
+):
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    q = Queue("plugin_ies", connection=get_redis_conn())
+    ies_handler = IES_HANDLER()
+    msg = {
+        "messageType": "JobCancel",
+        "externalReferenceId": CancelPendingReq.externalReferenceId,
+    }
+    job = enqueue(q, ies_handler.handle, msg)
+    response = await get_job_result(job.id)
+    return {}
 
 
 @router.websocket(
