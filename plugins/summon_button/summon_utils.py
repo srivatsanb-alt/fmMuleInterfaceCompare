@@ -103,16 +103,24 @@ def send_job_updates_summon():
                     trip_details = trip_status_response.get(str(summon_button.trip_id))
                     trip_status = trip_details["trip_details"]["status"]
                     logger.info(f"trip_id: {trip_id}, FM_response_status: {trip_status}")
+
+                    # SUCCEEDED
                     if trip_status == tm.TripStatus.SUCCEEDED:
                         summon_button.booking_id = None
                         summon_button.trip_id = None
                         color = "blinking green"
-                    elif trip_status == tm.TripStatus.WAITING_STATION:
-                        color = "blinking green"
+
+                    # yet to start
                     elif trip_status in tm.YET_TO_START_TRIP_STATUS:
                         color = "rotating yellow"
+
+                    # enroute trips
+                    elif trip_status == tm.TripStatus.WAITING_STATION:
+                        color = "blinking green"
                     elif trip_status == tm.TripStatus.EN_ROUTE:
                         color = "rotating green"
+
+                    # cancelled or failed
                     else:
                         summon_button.booking_id = None
                         summon_button.trip_id = None
