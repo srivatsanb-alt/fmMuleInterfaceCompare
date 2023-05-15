@@ -148,7 +148,7 @@ class Trip(Base, TimestampMixin):
                     raise ValueError("trip time period should be greater than zero")
 
         self.augmented_route = route
-        self.aug_idxs_booked = list(range(len(self.augmented_route)))
+        self.aug_idxs_booked = list(range(len(self.route)))
 
     def assign_sherpa(self, sherpa_name: str):
         self.sherpa_name = sherpa_name

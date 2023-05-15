@@ -129,11 +129,14 @@ async def sherpa_summary(
 
         # check if sherpa is at station
         at_station = None
+        response.update({"at_station": at_station})
+
         all_stations = dbsession.get_all_stations()
         for station in all_stations:
             if utils_util.are_poses_close(sherpa_status.pose, station.pose):
                 at_station = station
                 break
+
         if at_station:
             response.update({"at_station": at_station.name})
 
