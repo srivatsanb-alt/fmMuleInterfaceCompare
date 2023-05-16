@@ -4,6 +4,8 @@ from utils import util
 from utils.util import get_table_as_dict
 
 # utils for trips
+# Donot modofiy - has other dependencies like Master FM Comms
+# Master FM update_trip_inforequest model has to be in sync with this
 
 
 def get_trip_status(trip: Trip):

@@ -438,7 +438,7 @@ max_trips = 2 # max number of sherpas that can be sent for battery swap at the s
 threshold = 100 # battery level
 priority = 10  # trip priority
 ```
-b. Select the route you want the sherpa to do when battery level is below threshold, save it as battery_swap_<fleet_name> in book new trips page.
+b. Go to route ops(maintenance) page, select the route you want the sherpa to do when battery level is below threshold, press save and tag it as battery_swap route.
 
 2. Enable idling trips:
 
@@ -453,13 +453,11 @@ max_trips = 2 # max number of sherpas that can be booked with trips when found i
 threshold = 100 # battery level
 priority = 1  # trip priority
 ```
-b. Select the route you want the sherpa to do when is found idling, save it as idling_<fleet_name> in book new trips page.
+b. Go to route ops(maintenance) page, select the route you want the sherpa is found idling beyond threshold seconds, press save, select sherpa from dropdown and tag it as parking route.
 
 3. Disable sherpa from going to a list of stations
 
-a. Select the list of stations you want the sherpa to not go to, save it as exclude_stations_<sherpa_name> in book new trips page.
-
-
+a. Go to route ops(maintenance) page, select the stations that sherpa shouldn't go to, press save, select sherpa from dropdown and tag it as exclude_stations route.
 
 
 
