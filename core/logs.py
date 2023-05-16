@@ -2,7 +2,7 @@ import logging
 import logging.handlers
 import os
 
-from .db import session_maker
+from core.db import get_session
 from models.fleet_models import Fleet, Sherpa
 
 logging.basicConfig(level=logging.INFO)
@@ -17,7 +17,7 @@ def init_logging():
     except FileExistsError:
         pass
     setup_root_logger(logdir)
-    with session_maker() as db:
+    with get_session(os.getenv("FM_DATABASE_URI")) as db:
         db_fleets = db.query(Fleet).all()
     for fleet in db_fleets:
         init_logging_for_fleet(fleet, logdir)
@@ -41,7 +41,7 @@ def init_logging_for_fleet(fleet: Fleet, logdir):
     # set up fleet-level logger.
     setup_logger_for_fleet(fleet_name, logdir)
 
-    with session_maker() as db:
+    with get_session(os.getenv("FM_DATABASE_URI")) as db:
         db_sherpas = db.query(Sherpa).filter(Sherpa.fleet_id == fleet_id).all()
         for sherpa in db_sherpas:
             # set up sherpa-level logger.

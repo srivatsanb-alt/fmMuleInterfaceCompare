@@ -1,4 +1,5 @@
-from core.db import session_maker, engine
+import os
+from core.db import get_session, get_engine
 from models.misc_models import FMVersion
 
 AVAILABLE_UPGRADES = ["2.2", "3.0", "3.01", "3.1", "3.2"]
@@ -11,12 +12,12 @@ class DBUpgrade:
         print(f"No db schema upgrades required for {fm_version}")
 
     def upgrade_to_2_2(self):
-        with engine.connect() as conn:
+        with get_engine(os.getenv("FM_DATABASE_URI")).connect() as conn:
             conn.execute("commit")
             conn.execute('CREATE INDEX "booking_time_index" on "trips" ("booking_time")')
 
     def upgrade_to_3_2(self):
-        with engine.connect() as conn:
+        with get_engine(os.getenv("FM_DATABASE_URI")).connect() as conn:
             conn.execute("commit")
             result = conn.execute(
                 "SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='trips'"
@@ -31,13 +32,13 @@ class DBUpgrade:
 def upgrade_db_schema():
 
     # fm version records available only after v2.1
-    with session_maker() as dbsession:
-        fm_version = dbsession.query(FMVersion).one_or_none()
+    with get_session(os.getenv("FM_DATABASE_URI")) as session:
+        fm_version = session.query(FMVersion).one_or_none()
         if not fm_version:
             fm_version = FMVersion(version="2.1")
-            dbsession.add(fm_version)
-            dbsession.flush()
-            dbsession.commit()
+            session.add(fm_version)
+            session.flush()
+            session.commit()
 
         dbupgrade = DBUpgrade()
 
@@ -45,8 +46,8 @@ def upgrade_db_schema():
 
     sorted_upgrades = sorted(AVAILABLE_UPGRADES, key=float)
     for version in sorted_upgrades:
-        with session_maker() as dbsession:
-            fm_version = dbsession.query(FMVersion).one_or_none()
+        with get_session(os.getenv("FM_DATABASE_URI")) as session:
+            fm_version = session.query(FMVersion).one_or_none()
             if float(fm_version.version) < float(version):
                 print(f"Will try to upgrade db from v_{fm_version.version} to v_{version}")
                 version_txt = version.replace(".", "_")
@@ -64,4 +65,4 @@ def upgrade_db_schema():
 
                 print(f"Successfully upgraded db from {fm_version.version} to {version}")
                 fm_version.version = version
-                dbsession.commit()
+                session.commit()

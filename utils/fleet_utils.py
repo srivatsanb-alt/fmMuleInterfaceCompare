@@ -9,7 +9,7 @@ import glob
 import importlib
 import datetime
 from typing import List, Dict
-from core.db import engine
+from core.db import get_engine
 from core.constants import FleetStatus
 
 from sqlalchemy import inspect as sql_inspect
@@ -53,7 +53,7 @@ def create_all_tables() -> None:
         print(f"looking for models in module: {module}")
         try:
             models = importlib.import_module(module)
-            models.Base.metadata.create_all(bind=engine)
+            models.Base.metadata.create_all(bind=get_engine(os.getenv("FM_DATABASE_URI")))
             print(f"created tables from {module}")
         except Exception as e:
             print(f"failed to create tables from {module}, {e}")
@@ -61,12 +61,12 @@ def create_all_tables() -> None:
 
 
 def create_table(model) -> None:
-    model.__table__.metadata(bind=engine)
+    model.__table__.metadata(bind=get_engine(os.getenv("FM_DATABASE_URI")))
     return
 
 
 def get_all_table_names():
-    inspector = sql_inspect(engine)
+    inspector = sql_inspect(get_engine(os.getenv("FM_DATABASE_URI")))
     all_table_names = inspector.get_table_names("public")
     return all_table_names
 
