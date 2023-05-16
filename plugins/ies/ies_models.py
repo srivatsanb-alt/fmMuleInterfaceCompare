@@ -58,7 +58,9 @@ class DBSession:
             return None
         return station.ati_name
 
-    def get_consolidation_info(self, start_station: str, route_tag: str):
+    def get_consolidation_info(
+        self, start_station: str, route_tag: str, booked_from, booked_till
+    ):
         all_ies_routes = self.get_all_ies_routes()
         if all_ies_routes != {}:
             logging.getLogger("plugin_ies").info(
@@ -69,6 +71,9 @@ class DBSession:
                 .filter(IESBookingReq.start_station == start_station)
                 .filter(IESBookingReq.route_tag == route_tag)
                 .filter(IESBookingReq.combined_trip_id == None)
+                .filter(IESBookingReq.created_at > booked_from)
+                .filter(IESBookingReq.created_at < booked_till)
+                .order_by(IESBookingReq.created_at.desc())
                 .all()
             )
         else:

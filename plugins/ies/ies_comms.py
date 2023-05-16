@@ -183,10 +183,14 @@ async def consolidation_info(
         dpd.raise_error("Unknown requester", 401)
 
     response = {}
+    booked_till = iu.str_to_dt(consolidation_info_req.booked_till)
+    booked_from = iu.str_to_dt(consolidation_info_req.booked_from)
     with im.DBSession() as dbsession:
         filtered_bookings = dbsession.get_consolidation_info(
             consolidation_info_req.start_station,
             consolidation_info_req.route_tag,
+            booked_from,
+            booked_till,
         )
         for booking in filtered_bookings:
             response.update(
@@ -194,6 +198,7 @@ async def consolidation_info(
                     booking.ext_ref_id: {
                         "kanban_id": booking.kanban_id,
                         "route": booking.route,
+                        "requested_at": booking.created_at,
                     }
                 }
             )

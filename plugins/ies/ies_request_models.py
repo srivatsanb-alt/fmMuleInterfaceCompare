@@ -21,6 +21,8 @@ class ConsolidationInfoReq(ClientReq):
     sherpa_name: str
     route_tag: str
     start_station: str
+    booked_from: str
+    booked_till: str
 
 
 class ConsolidateBookReq(ClientReq):
