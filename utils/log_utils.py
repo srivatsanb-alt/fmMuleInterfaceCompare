@@ -34,7 +34,7 @@ def add_log_formatter(log_config):
 
 
 def add_logger(log_name: str, log_config: dict, propagate=0):
-    LOG_LEVEL = "DEBUG"
+    LOG_LEVEL = "INFO"
     handler_name = log_name
     new_logger = {
         "qualname": log_name,
