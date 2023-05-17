@@ -198,7 +198,7 @@ async def consolidation_info(
                     booking.ext_ref_id: {
                         "kanban_id": booking.kanban_id,
                         "route": booking.route,
-                        "requested_at": booking.created_at,
+                        "requested_at": iu.dt_to_str(booking.created_at),
                     }
                 }
             )
