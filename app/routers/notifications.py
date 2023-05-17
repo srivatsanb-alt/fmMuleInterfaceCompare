@@ -10,14 +10,15 @@ from sqlalchemy.orm.attributes import flag_modified
 # ati code imports
 import app.routers.dependencies as dpd
 from models.db_session import DBSession
+import utils.log_utils as lu
 
 # module regarding the http and websocket notifications(read, write, delete)
 
 
-# setup logging
-log_conf_path = os.path.join(os.getenv("FM_MISC_DIR"), "logging.conf")
-logging.config.fileConfig(log_conf_path)
+# get  logging
+logging.config.dictConfig(lu.get_log_config_dict())
 logger = logging.getLogger("uvicorn")
+
 
 router = APIRouter(tags=["notifications"], responses={404: {"description": "Not found"}})
 

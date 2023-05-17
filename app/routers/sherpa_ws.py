@@ -16,9 +16,9 @@ from core.config import Config
 from core.constants import MessageType
 from models.db_session import DBSession
 import models.request_models as rqm
-from utils.rq_utils import Queues, enqueue
 import app.routers.dependencies as dpd
-
+import utils.log_utils as lu
+from utils.rq_utils import Queues, enqueue
 
 MSG_INVALID = "msg_invalid"
 MSG_TYPE_REPEATED = "msg_type_repeated_within_time_window"
@@ -26,8 +26,7 @@ MSG_TS_INVALID = "msg_timestamp_invalid"
 
 
 # setup logging
-log_conf_path = os.path.join(os.getenv("FM_MISC_DIR"), "logging.conf")
-logging.config.fileConfig(log_conf_path)
+logging.config.dictConfig(lu.get_log_config_dict())
 logger = logging.getLogger("uvicorn")
 
 

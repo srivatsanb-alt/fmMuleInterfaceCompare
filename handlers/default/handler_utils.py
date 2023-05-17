@@ -1,3 +1,5 @@
+import logging
+import logging.config
 import json
 import redis
 import os
@@ -13,7 +15,6 @@ from sqlalchemy.orm.attributes import flag_modified
 
 
 # ati code imports
-from core.logs import get_logger
 from core.config import Config
 import core.constants as cc
 from models.db_session import DBSession
@@ -24,6 +25,11 @@ import models.misc_models as mm
 import utils.util as utils_util
 from utils.create_certs import generate_certs_for_sherpa
 from utils.fleet_utils import compute_sha1_hash
+import utils.log_utils as lu
+
+
+# get log config
+logging.config.dictConfig(lu.get_log_config_dict())
 
 
 # Trip hutils
@@ -33,7 +39,7 @@ def assign_sherpa(dbsession: DBSession, trip: tm.Trip, sherpa: fm.Sherpa):
     sherpa_status: fm.SherpaStatus = sherpa.status
     sherpa_status.idle = False
     sherpa_status.trip_id = trip.id
-    get_logger(sherpa.name).info(
+    logging.getLogger(sherpa.name).info(
         f"{sherpa.name} assigned trip {trip.id} with route {trip.route}"
     )
     return ongoing_trip
@@ -67,14 +73,14 @@ def start_trip(
         route_length = json.loads(redis_conn.get(f"result_{job_id}"))
         redis_conn.delete(f"result_{job_id}")
 
-        get_logger(ongoing_trip.sherpa_name).info(
+        logging.getLogger(ongoing_trip.sherpa_name).info(
             f"route_length {control_router_rl_job}- {route_length}"
         )
 
         if route_length == np.inf:
             reason = f"no route from {start_pose} to {end_pose}"
             trip_failed_log = f"trip {ongoing_trip.trip_id} failed, sherpa_name: {ongoing_trip.sherpa_name} , reason: {reason}"
-            get_logger(ongoing_trip.sherpa_name).warning(trip_failed_log)
+            logging.getLogger(ongoing_trip.sherpa_name).warning(trip_failed_log)
 
             dbsession.add_notification(
                 [sherpa.name, sherpa.fleet.name],
@@ -92,7 +98,7 @@ def start_trip(
     ongoing_trip.trip.etas = ongoing_trip.trip.etas_at_start
 
     ongoing_trip.trip.start()
-    get_logger(ongoing_trip.sherpa_name).info(f"trip {ongoing_trip.trip_id} started")
+    logging.getLogger(ongoing_trip.sherpa_name).info(f"trip {ongoing_trip.trip_id} started")
 
 
 def end_trip(
@@ -327,7 +333,7 @@ def check_sherpa_status(dbsession: DBSession):
             stale_sherpa_status.disabled = True
             stale_sherpa_status.disabled_reason = cc.DisabledReason.STALE_HEARTBEAT
 
-        get_logger("status_updates").warning(
+        logging.getLogger("status_updates").warning(
             f"stale heartbeat from sherpa {stale_sherpa_status.sherpa_name} last_update_at: {stale_sherpa_status.updated_at} mule_heartbeat_interval: {MULE_HEARTBEAT_INTERVAL}"
         )
 
@@ -351,7 +357,7 @@ def add_sherpa_event(dbsession: DBSession, sherpa_name, msg_type, context):
 
 # miscellaneous
 def get_conveyor_ops_info(trip_metadata):
-    get_logger().info(
+    logging.getLogger().info(
         f"will parse trip metadata for conveyor ops, Trip metadata: {trip_metadata}"
     )
     num_units = None
@@ -375,7 +381,7 @@ def update_map_file_info_with_certs(
     ]
 
     if not all([os.path.exists(filename) for filename in files_to_process]) or ip_changed:
-        get_logger().info(
+        logging.getLogger().info(
             f"will generate new cert files, HOSTNAME {sherpa_hostname}, ip_address: {sherpa_ip_address}, ip_changed: {ip_changed}"
         )
         generate_certs_for_sherpa(sherpa_hostname, sherpa_ip_address, save_path)
@@ -404,7 +410,7 @@ def is_reset_fleet_required(fleet_name, map_files):
             if filehash != mf.file_hash:
                 return True
         except Exception as e:
-            get_logger().info(
+            logging.getLogger().info(
                 f"Unable to find the shasum of file {file_path}, exception: {e}"
             )
             return True

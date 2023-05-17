@@ -1,6 +1,8 @@
 import time
 import uvicorn
 import os
+import logging
+import logging.config
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -21,6 +23,10 @@ from app.routers import (
     configure_fleet,
     version_control,
 )
+import utils.log_utils as lu
+
+# get log config
+logging.config.dictConfig(lu.get_log_config_dict())
 
 # for easy maintainance and usability of the app, we use routers
 # each functionality can be separately implemented on router rather than modifying the
@@ -71,7 +77,7 @@ def get_uvicorn_config():
         host="0.0.0.0",
         port=int(os.getenv("FM_PORT")),
         log_level="info",
-        log_config=os.path.join(os.getenv("FM_MISC_DIR"), "logging.conf"),
+        log_config=logging.config.dictConfig(lu.get_log_config_dict()),
         reload=True,
     )
     return uvi_config

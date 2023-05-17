@@ -24,11 +24,11 @@ import models.trip_models as tm
 import utils.util as utils_util
 from models.frontend_models import FrontendUser
 from models.base_models import StationProperties
+import utils.log_utils as lu
 
 
 # setup logging
-log_conf_path = os.path.join(os.getenv("FM_MISC_DIR"), "logging.conf")
-logging.config.fileConfig(log_conf_path)
+logging.config.dictConfig(lu.get_log_config_dict())
 logger = logging.getLogger("configure_fleet")
 
 logging.getLogger().level == logging.ERROR
