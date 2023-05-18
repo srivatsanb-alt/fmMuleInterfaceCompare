@@ -1,8 +1,11 @@
 import os
+
+# ati code imports
 from core.db import get_session, get_engine
 from models.misc_models import FMVersion
 
-AVAILABLE_UPGRADES = ["2.2", "3.0", "3.01", "3.1", "3.2"]
+
+AVAILABLE_UPGRADES = ["2.2", "3.0", "3.01", "3.1", "3.2", "3.3"]
 NO_SCHEMA_CHANGES = ["3.0", "3.01", "3.1"]
 
 
@@ -25,8 +28,27 @@ class DBUpgrade:
             column_names = [row[0] for row in result]
             if "booked_by" not in column_names:
                 conn.execute('ALTER TABLE "trips" ADD COLUMN "booked_by" VARCHAR')
+                print("boooked_by column added trips table")
             else:
                 print("booked_by column already present need not be added again")
+
+    def upgrade_to_3_3(self):
+        with get_engine(os.getenv("FM_DATABASE_URI")).connect() as conn:
+            conn.execute("commit")
+            result = conn.execute(
+                "SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='trip_legs'"
+            )
+            column_names = [row[0] for row in result]
+            if "status" not in column_names:
+                conn.execute('ALTER TABLE "trip_legs" ADD COLUMN "status" VARCHAR')
+                print("status column added trip_legs table")
+            else:
+                print("status column already present need not be added again")
+            if "stoppage_reason" not in column_names:
+                conn.execute('ALTER TABLE "trip_legs" ADD COLUMN "stoppage_reason" VARCHAR')
+                print("stoppage_reason column added trip_legs table")
+            else:
+                print("stoppage_reason column already present need not be added again")
 
 
 def upgrade_db_schema():
