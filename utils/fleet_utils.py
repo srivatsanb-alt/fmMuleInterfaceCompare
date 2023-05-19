@@ -33,12 +33,6 @@ logger = logging.getLogger("configure_fleet")
 
 logging.getLogger().level == logging.ERROR
 sys.path.append(os.environ["MULE_ROOT"])
-import mule.ati.tools.gmaj_creator as gmac
-import mule.ati.control.bridge.router_planner_interface as rpi
-import mule.ati.control.dynamic_router.graph_builder_utils as gbu
-
-# utils are collection of functions and classes which have common patterns.
-# this module contains frequently used functions by fleet.
 
 
 def gen_api_key(hwid: str) -> str:
@@ -117,6 +111,9 @@ def maybe_update_map_files(fleet_name: str) -> None:
 
 
 def maybe_create_gmaj_file(fleet_name: str) -> None:
+    # importing inside func call - initializes glob vars
+    import mule.ati.control.bridge.router_planner_interface as rpi
+
     gmaj_path = get_map_file_path(fleet_name, "grid_map_attributes.json")
     wpsj_path = get_map_file_path(fleet_name, "waypoints.json")
 
@@ -128,6 +125,10 @@ def maybe_create_gmaj_file(fleet_name: str) -> None:
 
 
 def maybe_create_graph_object(fleet_name: str) -> None:
+    # importing inside func call - initializes glob vars
+    import mule.ati.control.bridge.router_planner_interface as rpi
+    import mule.ati.control.dynamic_router.graph_builder_utils as gbu
+
     graph_object_path = get_map_file_path(fleet_name, "graph_object.json")
     gmaj_path = get_map_file_path(fleet_name, "grid_map_attributes.json")
 
@@ -213,9 +214,7 @@ class FrontendUserUtils:
         )
         if user:
             dbsession.session.delete(user)
-            logger.info(
-                f"deleted FrontendUser {user_name}, with role: {role}, hashed_password: {hashed_password}"
-            )
+            logger.info(f"deleted FrontendUser {user_name}")
         else:
             raise ValueError(f"FrontendUser {user_name} not found")
 
