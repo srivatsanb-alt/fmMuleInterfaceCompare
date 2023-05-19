@@ -923,10 +923,14 @@ class Handlers:
         if req.stoppages.type != "":
             ongoing_trip.trip_leg.status = tm.TripLegStatus.STOPPED
             ongoing_trip.trip_leg.stoppage_reason = req.stoppages.type
+
         elif req.stoppages.extra_info.velocity_speed_factor < 0.9:
             ongoing_trip.trip_leg.status = tm.TripLegStatus.MOVING_SLOW
+            ongoing_trip.trip_leg.stoppage_reason = None
+
         else:
             ongoing_trip.trip_leg.status = tm.TripLegStatus.MOVING
+            ongoing_trip.trip_leg.stoppage_reason = None
 
         if trip_analytics:
             trip_analytics.cte = req.trip_info.cte

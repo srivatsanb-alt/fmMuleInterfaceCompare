@@ -219,6 +219,7 @@ class TripLeg(Base, TimestampMixin):
     def end(self):
         self.end_time = datetime.datetime.now()
         self.status = TripLegStatus.ENDED
+        self.stoppage_reason = None
 
     def finished(self):
         return True if self.end_time else False
