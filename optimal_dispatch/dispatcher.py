@@ -1,17 +1,25 @@
 import numpy as np
-from core.logs import get_logger
-from models.fleet_models import Fleet, AvailableSherpas, OptimalDispatchState
-from models.trip_models import Trip, PendingTrip, TripStatus
+import logging
+import logging.config
+import redis
+import time
+import json
 from typing import List
 from sqlalchemy.sql import or_
 import os
 import datetime
-from optimal_dispatch.hungarian import hungarian_assignment
 import pandas as pd
+
+# ati code imports
+import utils.log_utils as lu
+from models.fleet_models import Fleet, AvailableSherpas, OptimalDispatchState
+from models.trip_models import Trip, PendingTrip, TripStatus
+from optimal_dispatch.hungarian import hungarian_assignment
 from utils.util import generate_random_job_id
-import redis
-import time
-import json
+
+# get log config
+logging.config.dictConfig(lu.get_log_config_dict())
+
 
 # as per the bookings of trips, and their priorities, optimal dispatch will assign trips to the sherpas
 # while ensuring the bookings and trips are valid(eg.start time of the trip should be greater than
@@ -342,7 +350,7 @@ class OptimalDispatch:
 
     def run(self, dbsession):
         self.fleet_names = dbsession.get_all_fleet_names()
-        self.logger = get_logger("optimal_dispatch")
+        self.logger = logging.getLogger("optimal_dispatch")
         self.logger.info("will run optimal dispatch logic")
 
         self.fleets = []

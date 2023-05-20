@@ -1,3 +1,5 @@
+import logging
+import logging.config
 import os
 import time
 from typing import Dict
@@ -8,15 +10,20 @@ import threading
 import json
 from enum import Enum
 from rq.job import Job
-import utils.util as utils_util
 from pydantic import BaseModel
-from core.logs import get_logger
+import asyncio
+
+# ati code imports
+import utils.log_utils as lu
+import utils.util as utils_util
 import core.constants as cc
 from models.fleet_models import SherpaEvent
 from models.fleet_models import Sherpa, Station
 from models.request_models import FMReq, MoveReq
 from models.trip_models import OngoingTrip
-import asyncio
+
+
+logging.config.dictConfig(lu.get_log_config_dict())
 
 
 def convert_to_dict(msg):
@@ -57,7 +64,7 @@ def send_req_to_sherpa(dbsession, sherpa: Sherpa, msg: FMReq) -> Dict:
     if sherpa.status.disabled_reason == cc.DisabledReason.STALE_HEARTBEAT:
         raise ValueError("Sherpa disconnected, cannot send req to sherpa")
 
-    get_logger().info(f"Sending req: {body} to {sherpa.name}")
+    logging.getLogger().info(f"Sending req: {body} to {sherpa.name}")
 
     sherpa_event: SherpaEvent = SherpaEvent(
         sherpa_name=sherpa.name,
@@ -76,7 +83,7 @@ def send_req_to_sherpa(dbsession, sherpa: Sherpa, msg: FMReq) -> Dict:
     if success:
         response = json.loads(redis_conn.get(f"response_{req_id}"))
         redis_conn.delete(f"success_{req_id}")
-        get_logger().info(f"Response from sherpa {response}")
+        logging.getLogger().info(f"Response from sherpa {response}")
         return response
     else:
         raise Exception(f"req id {req_id} failed, req sent: {body}")
@@ -100,7 +107,7 @@ async def send_async_req_to_sherpa(dbsession, sherpa: Sherpa, msg: FMReq) -> Dic
     if sherpa.status.disabled_reason == cc.DisabledReason.STALE_HEARTBEAT:
         raise ValueError("Sherpa disconnected, cannot send req to sherpa")
 
-    get_logger().info(f"Sending req: {body} to {sherpa.name}")
+    logging.getLogger().info(f"Sending req: {body} to {sherpa.name}")
 
     send_ws_msg_to_sherpa(body, sherpa)
     await asyncio.sleep(0.005)
@@ -112,7 +119,7 @@ async def send_async_req_to_sherpa(dbsession, sherpa: Sherpa, msg: FMReq) -> Dic
     if success:
         response = json.loads(redis_conn.get(f"response_{req_id}"))
         redis_conn.delete(f"success_{req_id}")
-        get_logger().info(f"Response from sherpa {response}")
+        logging.getLogger().info(f"Response from sherpa {response}")
         return response
     else:
         raise Exception(f"req id {req_id} failed, req sent: {body}")
@@ -167,7 +174,7 @@ def cancel_jobs_from_user(user, event):
             jobs_source = []
 
         for job_id in jobs_source:
-            get_logger().info(f"Will cancel job(id:{job_id} from {user})")
+            logging.getLogger().info(f"Will cancel job(id:{job_id} from {user})")
             job = Job.fetch(job_id, connection=redis_conn)
             job.cancel()
 

@@ -1,8 +1,12 @@
 import datetime
+import os
 from typing import List
-from core.db import session_maker
 from sqlalchemy import func, or_, and_, extract
 from sqlalchemy.orm import Session
+
+
+# ati code imports
+from core.db import get_session
 import models.frontend_models as fem
 import models.misc_models as mm
 import models.fleet_models as fm
@@ -13,7 +17,7 @@ from utils.util import check_if_timestamp_has_passed
 
 class DBSession:
     def __init__(self):
-        self.session: Session = session_maker()
+        self.session: Session = get_session(os.getenv("FM_DATABASE_URI"))
 
     def __enter__(self):
         return self

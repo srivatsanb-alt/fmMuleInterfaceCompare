@@ -2,15 +2,13 @@ import logging
 import os
 from logging import WARNING
 from multiprocessing import Process
-
 import json
 import redis
 from rq import Connection, Worker
 
+# ati code imports
 from core.config import Config
-from core.logs import init_logging
 from utils.rq_utils import Queues
-
 from scripts.periodic_updates import send_periodic_updates
 from scripts.periodic_backup import backup_data
 from scripts.periodic_assigner import assign_next_task
@@ -23,7 +21,6 @@ from master_fm_comms.send_ws_updates_to_mfm import send_ws_msgs_to_mfm
 
 
 def init_fleet_manager(config):
-    init_logging()
     if Config.get_fleet_mode() == "flipkart":
         # TODO: load globals
         pass

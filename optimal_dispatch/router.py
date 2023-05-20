@@ -5,15 +5,21 @@ import os
 import logging
 import sys
 import numpy as np
+import logging
+import logging.config
 
+# ati code imports
+import utils.log_utils as lu
 from models.db_session import DBSession
-
 
 # to avoid mule router module logs
 logging.getLogger().level == logging.ERROR
 
+# get log config
+logging.config.dictConfig(lu.get_log_config_dict())
+
+
 sys.path.append("/app")
-from core.logs import get_seperate_logger
 from utils.util import are_poses_close
 from utils.router_utils import AllRouterModules
 
@@ -26,7 +32,7 @@ def start_router_module():
     all_router_modules = AllRouterModules(fleet_names)
     redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
 
-    logger = get_seperate_logger("control_module_router")
+    logger = logging.getLogger("control_module_router")
 
     while True:
         for key in redis_conn.keys("control_router_rl_job_*"):
