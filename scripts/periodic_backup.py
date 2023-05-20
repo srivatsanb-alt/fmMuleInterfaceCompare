@@ -5,12 +5,14 @@ from sqlalchemy import inspect
 from sqlalchemy import create_engine
 from sqlalchemy import MetaData
 from sqlalchemy.orm import sessionmaker
-from core.db import engine
 import pandas as pd
 import datetime
 import shutil
 import redis
 import json
+
+# ati code imports
+from core.db import get_engine
 
 
 def backup_data():
@@ -49,7 +51,9 @@ def backup_data():
     # get all databases
     all_databases = [
         datnames[0]
-        for datnames in engine.execute("SELECT datname FROM pg_database;").fetchall()
+        for datnames in get_engine(os.getenv("FM_DATABASE_URI"))
+        .execute("SELECT datname FROM pg_database;")
+        .fetchall()
     ]
 
     valid_dbs = []

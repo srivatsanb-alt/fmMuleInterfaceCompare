@@ -13,12 +13,11 @@ import models.misc_models as mm
 import models.request_models as rqm
 import app.routers.dependencies as dpd
 from utils.comms import close_websocket_for_sherpa
-
+import utils.log_utils as lu
 
 # manages the overall configuration of fleet by- deleting sherpa, fleet, map, station; update map.
-# setup logging
-log_conf_path = os.path.join(os.getenv("FM_MISC_DIR"), "logging.conf")
-logging.config.fileConfig(log_conf_path)
+# get log config
+logging.config.dictConfig(lu.get_log_config_dict())
 logger = logging.getLogger("configure_fleet")
 
 router = APIRouter(

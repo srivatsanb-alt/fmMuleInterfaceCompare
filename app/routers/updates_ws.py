@@ -9,10 +9,10 @@ from fastapi import APIRouter, Depends, WebSocket, status, WebSocketDisconnect
 
 # ati code imports
 import app.routers.dependencies as dpd
+import utils.log_utils as lu
 
 # setup logging
-log_conf_path = os.path.join(os.getenv("FM_MISC_DIR"), "logging.conf")
-logging.config.fileConfig(log_conf_path)
+logging.config.dictConfig(lu.get_log_config_dict())
 logger = logging.getLogger("uvicorn")
 
 router = APIRouter()

@@ -9,7 +9,7 @@ import glob
 import importlib
 import datetime
 from typing import List, Dict
-from core.db import engine
+from core.db import get_engine
 from core.constants import FleetStatus
 
 from sqlalchemy import inspect as sql_inspect
@@ -24,21 +24,15 @@ import models.trip_models as tm
 import utils.util as utils_util
 from models.frontend_models import FrontendUser
 from models.base_models import StationProperties
+import utils.log_utils as lu
 
 
 # setup logging
-log_conf_path = os.path.join(os.getenv("FM_MISC_DIR"), "logging.conf")
-logging.config.fileConfig(log_conf_path)
+logging.config.dictConfig(lu.get_log_config_dict())
 logger = logging.getLogger("configure_fleet")
 
 logging.getLogger().level == logging.ERROR
 sys.path.append(os.environ["MULE_ROOT"])
-import mule.ati.tools.gmaj_creator as gmac
-import mule.ati.control.bridge.router_planner_interface as rpi
-import mule.ati.control.dynamic_router.graph_builder_utils as gbu
-
-# utils are collection of functions and classes which have common patterns.
-# this module contains frequently used functions by fleet.
 
 
 def gen_api_key(hwid: str) -> str:
@@ -53,7 +47,7 @@ def create_all_tables() -> None:
         print(f"looking for models in module: {module}")
         try:
             models = importlib.import_module(module)
-            models.Base.metadata.create_all(bind=engine)
+            models.Base.metadata.create_all(bind=get_engine(os.getenv("FM_DATABASE_URI")))
             print(f"created tables from {module}")
         except Exception as e:
             print(f"failed to create tables from {module}, {e}")
@@ -61,12 +55,12 @@ def create_all_tables() -> None:
 
 
 def create_table(model) -> None:
-    model.__table__.metadata(bind=engine)
+    model.__table__.metadata(bind=get_engine(os.getenv("FM_DATABASE_URI")))
     return
 
 
 def get_all_table_names():
-    inspector = sql_inspect(engine)
+    inspector = sql_inspect(get_engine(os.getenv("FM_DATABASE_URI")))
     all_table_names = inspector.get_table_names("public")
     return all_table_names
 
@@ -117,6 +111,9 @@ def maybe_update_map_files(fleet_name: str) -> None:
 
 
 def maybe_create_gmaj_file(fleet_name: str) -> None:
+    # importing inside func call - initializes glob vars
+    import mule.ati.control.bridge.router_planner_interface as rpi
+
     gmaj_path = get_map_file_path(fleet_name, "grid_map_attributes.json")
     wpsj_path = get_map_file_path(fleet_name, "waypoints.json")
 
@@ -128,6 +125,10 @@ def maybe_create_gmaj_file(fleet_name: str) -> None:
 
 
 def maybe_create_graph_object(fleet_name: str) -> None:
+    # importing inside func call - initializes glob vars
+    import mule.ati.control.bridge.router_planner_interface as rpi
+    import mule.ati.control.dynamic_router.graph_builder_utils as gbu
+
     graph_object_path = get_map_file_path(fleet_name, "graph_object.json")
     gmaj_path = get_map_file_path(fleet_name, "grid_map_attributes.json")
 
@@ -213,9 +214,7 @@ class FrontendUserUtils:
         )
         if user:
             dbsession.session.delete(user)
-            logger.info(
-                f"deleted FrontendUser {user_name}, with role: {role}, hashed_password: {hashed_password}"
-            )
+            logger.info(f"deleted FrontendUser {user_name}")
         else:
             raise ValueError(f"FrontendUser {user_name} not found")
 

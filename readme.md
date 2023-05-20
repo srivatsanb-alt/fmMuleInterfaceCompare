@@ -322,7 +322,7 @@ sudo cp <fm_static_dir>/certs/fm_rev_proxy_cert.pem /etc/docker/certs.d/<fm_ip>:
 4. Push mule docker image to FM local registry 
 ```markdown
 # auth has been added to docker registry
-docker login -u ati_sherpa -p atiCode112  <fm_ip>:443/mule:fm
+docker login -u ati_sherpa -p atiCode112  <fm_ip>:443
 docker push <fm_ip>:443/mule:fm
 ```
 

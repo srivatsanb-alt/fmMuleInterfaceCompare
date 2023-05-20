@@ -2,18 +2,19 @@ import sys
 import time
 import toml
 import os
-import utils.fleet_utils as fu
 import logging
 import logging.config
 import redis
 import json
+
+# ati code imports
+import utils.log_utils as lu
+import utils.fleet_utils as fu
 from utils.upgrade_db import upgrade_db_schema
 from models.db_session import DBSession
 
-log_conf_path = os.path.join(os.getenv("FM_MISC_DIR"), "logging.conf")
-logging.config.fileConfig(log_conf_path)
-logger = logging.getLogger("confgure_fleet")
-
+# get log config
+logging.config.dictConfig(lu.get_log_config_dict())
 
 sys.path.append("/app/mule")
 from mule.ati.common.config import load_mule_config
@@ -33,7 +34,7 @@ def update_frontend_user_details(dbsession: DBSession):
     frontend_user_config = toml.load(
         os.path.join(os.getenv("FM_CONFIG_DIR"), "frontend_users.toml")
     )
-    logger.info(f"frontend user details in config {frontend_user_config}")
+    logging.getLogger().info(f"frontend user details in config {frontend_user_config}")
 
     for user_name, user_details in frontend_user_config["frontenduser"].items():
         role = user_details.get("role", "operator")
@@ -53,12 +54,15 @@ def populate_redis_with_basic_info(dbsession: DBSession):
     all_fleet_names = dbsession.get_all_fleet_names()
     redis_conn.set("all_fleet_names", json.dumps(all_fleet_names))
 
+    # set seperate loggers for all sherpas
+    lu.set_log_config_dict(sherpa_names)
+
 
 def main():
     # regenerate_mule_config for routing
     regenerate_config()
     config_path = os.environ["ATI_CONFIG"]
-    logger.info(f"will use {config_path} as ATI_CONFIG")
+    logging.getLogger().info(f"will use {config_path} as ATI_CONFIG")
     time.sleep(5)
 
     DB_UP = False
@@ -68,7 +72,9 @@ def main():
             upgrade_db_schema()
             DB_UP = True
         except Exception as e:
-            logger.info(f"unable to create/clear data in db, \n Exception: {e}")
+            logging.getLogger().info(
+                f"unable to create/clear data in db, \n Exception: {e}"
+            )
             time.sleep(5)
 
     with DBSession() as dbsession:

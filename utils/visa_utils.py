@@ -1,8 +1,16 @@
+import logging
+import logging.config
+
+# ati code imports
 import models.fleet_models as fm
 import models.request_models as rqm
 import models.visa_models as vm
 from models.db_session import DBSession
-from core.logs import get_logger
+
+import utils.log_utils as lu
+
+# get log config
+logging.config.dictConfig(lu.get_log_config_dict())
 
 
 def get_reqd_zone_types(visa_type):
@@ -52,35 +60,35 @@ def can_lock_exclusion_zone(
     reason = None
     if ezone is None:
         reason = f"Unable to get a ezone with zone_id: {zone_id}"
-        get_logger("visa").error(reason)
+        logging.getLogger("visa").error(reason)
         return False, reason
 
-    get_logger("visa").info(
+    logging.getLogger("visa").info(
         f"{ezone.zone_id} access held by {[s.name for s in ezone.sherpas]}"
     )
 
     if len(ezone.sherpas) == 0:
         reason = f"{sherpa.name} can be granted lock for {zone_id} exclusive={exclusive}"
-        get_logger("visa").info(reason)
+        logging.getLogger("visa").info(reason)
         return True, reason
 
     if sherpa in ezone.sherpas and len(ezone.sherpas) == 1:
         reason = f"{sherpa.name} already has {zone_id} exclusive={exclusive}"
-        get_logger("visa").info(reason)
+        logging.getLogger("visa").info(reason)
         return True, reason
 
     if ezone.exclusivity:
         reason = f"{sherpa.name} cannot be granted {zone_id} exclusive access held by {[s.name for s in ezone.sherpas]}"
-        get_logger("visa").info(reason)
+        logging.getLogger("visa").info(reason)
         return False, reason
 
     elif not exclusive:
         reason = f"{sherpa.name} can be granted {zone_id} without exclusivity, ezone held by sherpas {[s.name for s in ezone.sherpas]}"
-        get_logger("visa").info(reason)
+        logging.getLogger("visa").info(reason)
         return True, reason
     else:
         reason = f"exlusive access to {zone_id} can't be granted already held by sherpas {[s.name for s in ezone.sherpas]}"
-        get_logger("visa").info(reason)
+        logging.getLogger("visa").info(reason)
         return False, reason
 
 
@@ -89,12 +97,12 @@ def unlock_exclusion_zone(dbsession: DBSession, ezone: vm.ExclusionZone, sherpa:
     reason = None
     if ezone is None:
         reason = f"Unable to get a ezone but will still accept release request"
-        get_logger("visa").error(reason)
+        logging.getLogger("visa").error(reason)
         return False, reason
 
     if sherpa not in ezone.sherpas:
         reason = f"{sherpa.name} doesn't hold {ezone.zone_id} but will still accept release request"
-        get_logger("visa").warning(reason)
+        logging.getLogger("visa").warning(reason)
         return False, reason
 
     ezone.sherpas.remove(sherpa)
@@ -102,7 +110,7 @@ def unlock_exclusion_zone(dbsession: DBSession, ezone: vm.ExclusionZone, sherpa:
         ezone.exclusivity = None
 
     reason = f"{sherpa.name} doesn't hold {ezone.zone_id} anymore, visa release done"
-    get_logger("visa").info(reason)
+    logging.getLogger("visa").info(reason)
     return True, reason
 
 

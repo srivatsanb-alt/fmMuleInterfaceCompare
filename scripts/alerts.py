@@ -2,17 +2,19 @@ import time
 import os
 import logging
 import logging.config
+import logging
+import logging.config
 from slack_sdk.webhook import WebhookClient
 
-
+# ati code imports
+import utils.log_utils as lu
 from core.config import Config
 from models.db_session import DBSession
 from models.fleet_models import SherpaStatus
 
 
 # setup logging
-log_conf_path = os.path.join(os.getenv("FM_MISC_DIR"), "logging.conf")
-logging.config.fileConfig(log_conf_path)
+logging.config.dictConfig(lu.get_log_config_dict())
 logger = logging.getLogger("misc")
 
 
