@@ -919,18 +919,19 @@ class Handlers:
         # update db
         ongoing_trip.trip.update_etas(float(req.trip_info.eta), ongoing_trip.next_idx_aug)
 
+        # COMMENTING OUT, NEEDS CHANGES IN DASHBOARD
         # set trip_leg_status
-        if req.stoppages.type != "":
-            ongoing_trip.trip_leg.status = tm.TripLegStatus.STOPPED
-            ongoing_trip.trip_leg.stoppage_reason = req.stoppages.type
-
-        elif req.stoppages.extra_info.velocity_speed_factor < 0.9:
-            ongoing_trip.trip_leg.status = tm.TripLegStatus.MOVING_SLOW
-            ongoing_trip.trip_leg.stoppage_reason = None
-
-        else:
-            ongoing_trip.trip_leg.status = tm.TripLegStatus.MOVING
-            ongoing_trip.trip_leg.stoppage_reason = None
+        # if req.stoppages.type != "":
+        #     ongoing_trip.trip_leg.status = tm.TripLegStatus.STOPPED
+        #     ongoing_trip.trip_leg.stoppage_reason = req.stoppages.type
+        #
+        # elif req.stoppages.extra_info.velocity_speed_factor < 0.9:
+        #     ongoing_trip.trip_leg.status = tm.TripLegStatus.MOVING_SLOW
+        #     ongoing_trip.trip_leg.stoppage_reason = None
+        #
+        # else:
+        #     ongoing_trip.trip_leg.status = tm.TripLegStatus.MOVING
+        #     ongoing_trip.trip_leg.stoppage_reason = None
 
         if trip_analytics:
             trip_analytics.cte = req.trip_info.cte
@@ -969,6 +970,22 @@ class Handlers:
             logging.getLogger("status_updates").info(
                 f"added TripAnalytics entry for trip_leg_id: {ongoing_trip.trip_leg_id}"
             )
+
+        trip_status_update = {}
+        # send to frontend
+        trip_status_update.update(
+            {
+                "type": "trip_status",
+                "sherpa_name": sherpa.name,
+                "fleet_name": sherpa.fleet.name,
+            }
+        )
+
+        trip_status_update.update(
+            utils_util.get_table_as_dict(tm.TripAnalytics, trip_analytics)
+        )
+        trip_status_update.update({"stoppages": {"type": req.stoppages.type}})
+        utils_comms.send_status_update(trip_status_update)
 
     def handle_assign_next_task(self, req: rqm.AssignNextTask):
 

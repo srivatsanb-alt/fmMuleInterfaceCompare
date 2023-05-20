@@ -206,20 +206,21 @@ class TripLeg(Base, TimestampMixin):
     from_station = Column(String)
     to_station = Column(String)
 
-    status = Column(String, index=True)
-    stoppage_reason = Column(String)
+    # commenting out - NEEDS dashboard changes
+    # status = Column(String, index=True)
+    # stoppage_reason = Column(String)
 
     def __init__(self, trip_id, from_station, to_station):
         self.trip_id = trip_id
         self.start_time = datetime.datetime.now()
         self.to_station = to_station
         self.from_station = from_station
-        self.status = TripLegStatus.STARTED
+        # self.status = TripLegStatus.STARTED
 
     def end(self):
         self.end_time = datetime.datetime.now()
-        self.status = TripLegStatus.ENDED
-        self.stoppage_reason = None
+        # self.status = TripLegStatus.ENDED
+        # self.stoppage_reason = None
 
     def finished(self):
         return True if self.end_time else False

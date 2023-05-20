@@ -53,20 +53,20 @@ def get_trip_status(trip: Trip):
 
         # all clients need to change for duplicated trip leg details to be removed from trip_details
         # all_clients - summon button, sanjaya, conveyor, ies
-        trip_leg_details = {
-            "id": trip_leg.id if trip_leg else None,
-            "status": trip_leg.status if trip_leg else None,
-            "from_station": trip_leg.from_station if trip_leg else None,
-            "to_station": trip_leg.to_station if trip_leg else None,
-            "stoppage_reason": trip_leg.stoppage_reason if trip_leg else None,
-        }
+        # trip_leg_details = {
+        #     "id": trip_leg.id if trip_leg else None,
+        #     "status": trip_leg.status if trip_leg else None,
+        #     "from_station": trip_leg.from_station if trip_leg else None,
+        #     "to_station": trip_leg.to_station if trip_leg else None,
+        #     "stoppage_reason": trip_leg.stoppage_reason if trip_leg else None,
+        # }
 
         trip_status = {
             "trip_id": trip.id,
             "sherpa_name": trip.sherpa_name,
             "fleet_name": trip.fleet_name,
             "trip_details": trip_details,
-            "trip_leg_details": trip_leg_details,
+            # "trip_leg_details": trip_leg_details,
         }
 
     return trip_status
