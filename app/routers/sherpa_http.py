@@ -2,6 +2,7 @@ import time
 import redis
 import json
 import os
+import datetime
 from fastapi import Depends, APIRouter
 
 from models.db_session import DBSession
@@ -144,7 +145,11 @@ async def ws_ack(req: rqm.WSResp, req_id: str):
             req.response = {}
         redis_conn.set(f"response_{req_id}", json.dumps(req.response))
 
-    redis_conn.set(f"success_{req_id}", json.dumps(req.success))
+    redis_conn.setex(
+        f"success_{req_id}",
+        int(redis_conn.get("default_job_timeout_ms").decode()),
+        json.dumps(req.success),
+    )
 
     return {}
 

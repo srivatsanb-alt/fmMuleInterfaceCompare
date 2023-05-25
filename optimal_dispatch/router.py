@@ -2,11 +2,11 @@ import redis
 import json
 import time
 import os
-import logging
 import sys
 import numpy as np
 import logging
 import logging.config
+import datetime
 
 # ati code imports
 import utils.log_utils as lu
@@ -25,12 +25,11 @@ from utils.router_utils import AllRouterModules
 
 
 def start_router_module():
-
+    redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
     with DBSession() as dbsession:
         fleet_names = dbsession.get_all_fleet_names()
 
     all_router_modules = AllRouterModules(fleet_names)
-    redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
 
     logger = logging.getLogger("control_module_router")
 
@@ -55,7 +54,12 @@ def start_router_module():
                     )
                     route_length = json.dumps(np.inf)
 
-            redis_conn.set(f"result_{job_id}", route_length)
+            redis_conn.setex(
+                f"result_{job_id}",
+                int(redis_conn.get("default_job_timeout_ms").decode()),
+                route_length,
+            )
+
             logger.info(f"Result : {control_router_rl_job} - {route_length}")
             redis_conn.delete(key)
 
@@ -81,7 +85,11 @@ def start_router_module():
                 )
                 wps_list = []
 
-            redis_conn.set(f"result_wps_job_{job_id}", json.dumps(wps_list))
+            redis_conn.setex(
+                f"result_wps_job_{job_id}",
+                int(redis_conn.get("default_job_timeout_ms").decode()),
+                json.dumps(wps_list),
+            )
 
         time.sleep(0.2)
 

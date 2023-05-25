@@ -290,8 +290,10 @@ class OptimalDispatch:
                 else:
                     job_id = generate_random_job_id()
                     control_router_rl_job = [pose_1, pose_2, fleet_name, job_id]
-                    redis_conn.set(
-                        f"control_router_rl_job_{job_id}", json.dumps(control_router_rl_job)
+                    redis_conn.setex(
+                        f"control_router_rl_job_{job_id}",
+                        int(redis_conn.get("default_job_timeout_ms").decode()),
+                        json.dumps(control_router_rl_job),
                     )
                     while not redis_conn.get(f"result_{job_id}"):
                         time.sleep(0.005)

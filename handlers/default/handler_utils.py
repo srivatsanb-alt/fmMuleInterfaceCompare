@@ -54,7 +54,6 @@ def start_trip(
     sherpa: fm.Sherpa,
     all_stations: List[fm.Station],
 ):
-
     redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
     sherpa_status: fm.SherpaStatus = sherpa.status
     start_pose = sherpa_status.pose
@@ -65,8 +64,12 @@ def start_trip(
         job_id = utils_util.generate_random_job_id()
         end_pose = station.pose
         control_router_rl_job = [start_pose, end_pose, fleet_name, job_id]
-        redis_conn.set(f"control_router_rl_job_{job_id}", json.dumps(control_router_rl_job))
 
+        redis_conn.setex(
+            f"control_router_rl_job_{job_id}",
+            int(redis_conn.get("default_job_timeout_ms").decode()),
+            json.dumps(control_router_rl_job),
+        )
         while not redis_conn.get(f"result_{job_id}"):
             time.sleep(0.005)
 
@@ -192,18 +195,21 @@ def record_rq_perf():
         "worker_pid",
         "worker_state",
         "worker_queues",
+        "num_jobs",
         "successful_job_count",
         "failed_job_count",
         "total_working_time",
     ]
 
     for worker in workers:
+        wqs = worker.queues
         worker_data = [
             utils_util.dt_to_str(datetime.datetime.now()),
             worker.name,
             worker.pid,
             worker.state,
-            worker.queues,
+            wqs,
+            [len(wq) for wq in wqs],
             worker.successful_job_count,
             worker.failed_job_count,
             worker.total_working_time,
@@ -329,10 +335,15 @@ def check_sherpa_status(dbsession: DBSession):
     )
 
     for stale_sherpa_status in stale_sherpas_status:
+        mode = "disconnected"
+        sherpa_name = stale_sherpa_status.sherpa_name
+        last_sherpa_mode_change = dbsession.get_last_sherpa_mode_change(sherpa_name)
+
         if not stale_sherpa_status.disabled:
             stale_sherpa_status.disabled = True
             stale_sherpa_status.disabled_reason = cc.DisabledReason.STALE_HEARTBEAT
 
+        stale_sherpa_status.mode = mode
         logging.getLogger("status_updates").warning(
             f"stale heartbeat from sherpa {stale_sherpa_status.sherpa_name} last_update_at: {stale_sherpa_status.updated_at} mule_heartbeat_interval: {MULE_HEARTBEAT_INTERVAL}"
         )
@@ -343,6 +354,8 @@ def check_sherpa_status(dbsession: DBSession):
                 [stale_sherpa_status.sherpa_name],
                 f"Lost connection to {stale_sherpa_status.sherpa_name}, sherpa doing trip: {stale_sherpa_status.trip_id}",
             )
+
+        record_sherpa_mode_change(dbsession, sherpa_name, mode, last_sherpa_mode_change)
 
 
 def add_sherpa_event(dbsession: DBSession, sherpa_name, msg_type, context):
