@@ -335,7 +335,6 @@ def check_sherpa_status(dbsession: DBSession):
     )
 
     for stale_sherpa_status in stale_sherpas_status:
-        mode = "disconnected"
         sherpa_name = stale_sherpa_status.sherpa_name
         last_sherpa_mode_change = dbsession.get_last_sherpa_mode_change(sherpa_name)
 
@@ -343,7 +342,6 @@ def check_sherpa_status(dbsession: DBSession):
             stale_sherpa_status.disabled = True
             stale_sherpa_status.disabled_reason = cc.DisabledReason.STALE_HEARTBEAT
 
-        stale_sherpa_status.mode = mode
         logging.getLogger("status_updates").warning(
             f"stale heartbeat from sherpa {stale_sherpa_status.sherpa_name} last_update_at: {stale_sherpa_status.updated_at} mule_heartbeat_interval: {MULE_HEARTBEAT_INTERVAL}"
         )
@@ -355,7 +353,12 @@ def check_sherpa_status(dbsession: DBSession):
                 f"Lost connection to {stale_sherpa_status.sherpa_name}, sherpa doing trip: {stale_sherpa_status.trip_id}",
             )
 
-        record_sherpa_mode_change(dbsession, sherpa_name, mode, last_sherpa_mode_change)
+        # set mode change - reflects in sherpa_oee
+        disconnected = "disconnected"
+        if stale_sherpa_status.mode != disconnected:
+            mode = "disconnected"
+            stale_sherpa_status.mode = mode
+            record_sherpa_mode_change(dbsession, sherpa_name, mode, last_sherpa_mode_change)
 
 
 def add_sherpa_event(dbsession: DBSession, sherpa_name, msg_type, context):
