@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm.attributes import flag_modified
 
 # ati code imports
+import models.visa_models as vm
 import models.request_models as rqm
 import models.fleet_models as fm
 import models.misc_models as mm
@@ -314,4 +315,20 @@ async def get_fm_incidents(
             response.update({"reported_at": utils_util.dt_to_str(fm_incident.created_at)})
             response.update({"module": fm_incident.module})
             response.update({"other_info": fm_incident.other_info})
+    return response
+
+
+@router.get("/get_visa_assignments")
+async def get_visa_assignments(user_name=Depends(dpd.get_user_from_header)):
+    response = []
+
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    with DBSession() as dbsession:
+        all_visa_assignments = dbsession.session.query(vm.VisaAssignment).all()
+        for visa_assignment in all_visa_assignments:
+            temp = utils_util.get_table_as_dict(vm.VisaAssignment, visa_assignment)
+            response.append(temp)
+
     return response
