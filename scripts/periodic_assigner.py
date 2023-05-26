@@ -32,8 +32,6 @@ def enqueue_scheduled_trips(db_session: DBSession, schdeuled_job_id):
 
 
 # assigns next task to the sherpa.
-
-
 def assign_next_task():
     while True:
         schdeuled_job_id = []
@@ -56,8 +54,7 @@ def assign_next_task():
                         assign_next_task_req = AssignNextTask(
                             sherpa_name=sherpa_status.sherpa_name
                         )
-
-                        process_req(None, assign_next_task_req, "self")
+                        process_req(None, assign_next_task_req, "self", ttl=3)
 
                     schdeuled_job_id = enqueue_scheduled_trips(db_session, schdeuled_job_id)
                     time.sleep(2)
