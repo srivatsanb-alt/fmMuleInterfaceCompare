@@ -5,7 +5,7 @@ from core.db import get_session, get_engine
 from models.misc_models import FMVersion
 
 
-AVAILABLE_UPGRADES = ["2.2", "3.0", "3.01", "3.1", "3.2"]
+AVAILABLE_UPGRADES = ["2.2", "3.0", "3.01", "3.1", "3.2", "3.3"]
 NO_SCHEMA_CHANGES = ["3.0", "3.01", "3.1"]
 
 
