@@ -382,6 +382,11 @@ class UpdateSherpaMetaDataReq(ClientReq):
     info: Dict[str, str]
 
 
+class GenericFromToTimeReq(ClientReq):
+    from_dt: str
+    to_dt: str
+
+
 #################################################
 # Messages to sherpas
 
