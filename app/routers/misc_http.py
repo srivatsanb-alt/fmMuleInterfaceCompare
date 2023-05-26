@@ -332,3 +332,38 @@ async def get_visa_assignments(user_name=Depends(dpd.get_user_from_header)):
             response.append(temp)
 
     return response
+
+
+@router.post("/get_sherpa_oee/{sherpa_name}")
+async def get_sherpa_oee(
+    generic_time_req: rqm.GenericFromToTimeReq,
+    sherpa_name: str,
+    user_name=Depends(dpd.get_user_from_header),
+):
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    with DBSession() as dbsession:
+        from_dt = utils_util.str_to_dt(generic_time_req.from_dt)
+        to_dt = utils_util.str_to_dt(generic_time_req.to_dt)
+
+        from_dt_start = from_dt.replace(hour=0, minute=0, second=0, microsecond=0)
+        to_dt_start = to_dt.replace(hour=0, minute=0, second=0, microsecond=0)
+
+        sherpa_oee_data = (
+            dbsession.session.query(mm.SherpaOEE)
+            .filter(mm.SherpaOEE.sherpa_name == sherpa_name)
+            .filter(mm.SherpaOEE.dt >= from_dt_start)
+            .filter(mm.SherpaOEE.dt <= to_dt_start)
+            .all()
+        )
+
+        response = {}
+        for sherpa_oee in sherpa_oee_data:
+            for key, val in sherpa_oee.mode_split_up.items():
+                if key in response:
+                    response[key] += val
+                else:
+                    response[key] = val
+
+    return response
