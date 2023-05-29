@@ -32,7 +32,7 @@ class ConsolidateBookReq(ClientReq):
 
 
 class CancelPendingReq(ClientReq):
-    externalReferenceId: str
+    externalReferenceIds: List[str]
 
 
 class JobsReq(ClientReq):

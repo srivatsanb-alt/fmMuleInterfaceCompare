@@ -302,12 +302,13 @@ async def cancel_pending_job(
 
     q = Queue("plugin_ies", connection=get_redis_conn())
     ies_handler = IES_HANDLER()
-    msg = {
-        "messageType": "JobCancel",
-        "externalReferenceId": CancelPendingReq.externalReferenceId,
-    }
-    job = enqueue(q, ies_handler.handle, msg)
-    response = await get_job_result(job.id)
+    for ref_id in CancelPendingReq.externalReferenceIds:
+        msg = {
+            "messageType": "JobCancel",
+            "externalReferenceId": ref_id,
+        }
+        job = enqueue(q, ies_handler.handle, msg)
+
     return {}
 
 
