@@ -127,5 +127,5 @@ def cleanup_data(db_keep_size = 1000):
     data_backup_size = get_directory_size(fm_backup_path)
     lst = os.listdir(fm_backup_path) 
     number_files = len(lst)
-    if len(number_files)>2:
+    if number_files > 2:
         sort_and_remove_directories(fm_backup_path,data_backup_size-db_keep_size)
