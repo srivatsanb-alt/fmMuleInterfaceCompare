@@ -22,7 +22,11 @@ RUN python3.8 -m pip install poetry==1.3.0
 
 COPY pyproject.toml poetry.lock /app/
 RUN poetry install
+
+# DONOT ADD pksg with poetry run pip install, use pyproject.toml and poetry.lock 
 RUN poetry run pip install dlib
+# DONOT ADD pksg with poetry run pip install, use pyproject.toml and poetry.lock
+
 
 RUN apt-get update &&  apt-get install -y tzdata
 
