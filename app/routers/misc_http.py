@@ -367,3 +367,47 @@ async def get_sherpa_oee(
                     response[key] = val
 
     return response
+
+
+@router.get("/fm_health")
+async def fm_health(
+    user_name=Depends(dpd.get_user_from_header),
+):
+    response = {}
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    # rq perf
+    column_names, rq_perf_data = utils_util.rq_perf()
+    all_rq_perf = []
+
+    # queue wise data
+    valid_rq_perf_cols_names = ["worker_queues", "num_jobs"]
+    for data in rq_perf_data:
+        rq_perf_dict = {}
+        for col, val in zip(column_names, data):
+            if col in valid_rq_perf_cols_names:
+                rq_perf_dict[col] = val
+        all_rq_perf.append(rq_perf_dict)
+
+    # sys perf
+    column_names, sys_perf_data = utils_util.sys_perf()
+
+    valid_sys_perf_cols_names = [
+        "cpu_count",
+        "load_avg_1",
+        "mem_used_gb",
+        "mem_available_gb",
+        "swap_used_gb",
+    ]
+
+    sys_perf_dict = {}
+    for col, val in zip(column_names, sys_perf_data):
+        if col in valid_sys_perf_cols_names:
+            sys_perf_dict[col] = val
+        sys_perf_dict[col] = val
+
+    response["rq_perf"] = all_rq_perf
+    response["sys_perf"] = sys_perf_dict
+
+    return response
