@@ -16,6 +16,12 @@ def datetime_to_str(dt, time_format):
     return dt.strftime(time_format)
 
 
+def get_random_int(n):
+    range_start = 10 ** (n - 1)
+    range_end = (10**n) - 1
+    return random.randint(range_start, range_end)
+
+
 async def simulate_bookings(ip, id=0, num_req=1000, type="JobCreate", cancel_id=0):
     ies_time_format = "%Y-%m-%dT%H:%M:%SZ"
     ies_time_format_query = "%Y-%m-%dT%H:%M:%S.%f"
@@ -51,7 +57,6 @@ async def simulate_bookings(ip, id=0, num_req=1000, type="JobCreate", cancel_id=
                     print(f"creating JobCreate msg req: id = {id}, stn_id = {stn_id}")
                     deadline_time = datetime.datetime.now() + datetime.timedelta(hours=2)
                     deadline_time_str = datetime_to_str(deadline_time, ies_time_format)
-                    print(f"deadline: {deadline_time_str}")
 
                     JobCreate_msg = {
                         "messageType": "JobCreate",
@@ -66,10 +71,14 @@ async def simulate_bookings(ip, id=0, num_req=1000, type="JobCreate", cancel_id=
                         "deadline": deadline_time_str,
                         "priority": 0,
                         "properties": {
-                            "materialNo": "string",
+                            "materialNo": str(get_random_int(4))
+                            + "."
+                            + str(get_random_int(3))
+                            + "."
+                            + str(get_random_int(3)),
                             "materialDescription": "string",
-                            "quantity": "string",
-                            "kanbanId": "kanban:" + str(id),
+                            "quantity": get_random_int(2),
+                            "kanbanId": get_random_int(10),
                             "productionOrderId": "string",
                             "source": "string",
                             "destination": "string",
@@ -108,6 +117,6 @@ async def simulate_bookings(ip, id=0, num_req=1000, type="JobCreate", cancel_id=
                     await websocket.send(msg_json)
                     id += 1
                     count += 1
-                await asyncio.sleep(0.5)
+                await asyncio.sleep(0.005)
     except websockets.ConnectionClosed as e:
         print(f"connection closed, trying again (exception: {e})")
