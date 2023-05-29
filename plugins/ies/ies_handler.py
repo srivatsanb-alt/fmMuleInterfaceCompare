@@ -201,6 +201,10 @@ class IES_HANDLER:
             deadline=iu.dt_to_str(
                 iu.str_to_dt_UTC(msg["deadline"] + " +0000").astimezone(pytz.timezone(tz))
             ),
+            other_info={
+                "material_no": msg["properties"]["materialNo"],
+                "quantity": msg["properties"]["quantity"],
+            },
         )
         self.dbsession.add_to_session(job)
         self.logger.info(f"added booking req {job_create.externalReferenceId}")

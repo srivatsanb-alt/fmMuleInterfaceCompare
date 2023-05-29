@@ -199,6 +199,8 @@ async def consolidation_info(
                         "kanban_id": booking.kanban_id,
                         "route": booking.route,
                         "requested_at": iu.dt_to_str(booking.created_at),
+                        "material_no": booking.other_info["material_no"],
+                        "quantity": booking.other_info["quantity"],
                     }
                 }
             )
@@ -250,6 +252,8 @@ async def get_pending_jobs(
                         "route_tag": job.route_tag,
                         "route": job.route,
                         "requested_at": iu.dt_to_str(job.created_at),
+                        "material_no": job.other_info["material_no"],
+                        "quantity": job.other_info["quantity"],
                     }
                 }
             )
@@ -287,13 +291,15 @@ async def get_consolidated_jobs(
                         "requested_at": iu.dt_to_str(job.created_at),
                         "status": job.status,
                         "trip_id": job.combined_trip_id,
+                        "material_no": job.other_info["material_no"],
+                        "quantity": job.other_info["quantity"],
                     }
                 }
             )
     return response
 
 
-@router.post("/plugin/ies/cancel_pending_job")
+@router.post("/plugin/ies/cancel_pending_jobs")
 async def cancel_pending_job(
     CancelPendingReq: irqm.CancelPendingReq, user_name=Depends(dpd.get_user_from_header)
 ):
