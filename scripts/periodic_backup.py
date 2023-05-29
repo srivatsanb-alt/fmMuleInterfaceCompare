@@ -97,4 +97,36 @@ def backup_data():
 
         shutil.copytree(os.getenv("FM_LOG_DIR"), logs_save_path)
         logging.getLogger("status_updates").info("Backed up data")
+        cleanup_data()
         time.sleep(120)
+
+def get_directory_size(directory):
+    total_size = 0
+    for path, dirs, files in os.walk(directory):
+        for file in files:
+            file_path = os.path.join(path, file)
+            total_size += os.path.getsize(file_path)
+
+    total_size_mb = total_size / (1024 * 1024)
+    return total_size_mb
+
+def sort_and_remove_directories(directory, target_size):
+    directories = [os.path.join(directory, name) for name in os.listdir(directory)]
+    directories.sort()
+
+    current_size = 0
+    for dir_path in directories:
+        dir_size = get_directory_size(dir_path)
+        if current_size + dir_size <= target_size:
+            shutil.rmtree(dir_path)
+            current_size += dir_size
+        else:
+            break
+
+def cleanup_data(db_keep_size = 1000):
+    fm_backup_path = os.path.join(os.getenv("FM_MAP_DIR"), "data_backup")
+    data_backup_size = get_directory_size(fm_backup_path)
+    lst = os.listdir(fm_backup_path) 
+    number_files = len(lst)
+    if number_files > 1:
+        sort_and_remove_directories(fm_backup_path,data_backup_size-db_keep_size)

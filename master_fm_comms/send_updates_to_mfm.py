@@ -6,6 +6,7 @@ from sqlalchemy.orm.attributes import flag_modified
 
 # ati code imports
 import models.trip_models as tm
+import models.misc_models as mm
 import master_fm_comms.mfm_utils as mu
 import utils.trip_utils as tu
 import utils.util as utils_util
@@ -278,6 +279,91 @@ def update_fm_version_info(mfm_context: mu.MFMContext):
                 )
                 time.sleep(10)
 
+def update_fm_incidents(
+    mfm_context: mu.MFMContext,
+    dbsession: DBSession,
+    last_fm_incidents_update_dt,
+):
+    success = False
+    if last_fm_incidents_update_dt is None:
+        last_fm_incidents_update_dt = datetime.datetime.now()
+    else:
+        last_fm_incidents_update_dt = utils_util.str_to_dt(last_fm_incidents_update_dt)
+
+    fm_incidents = (
+        dbsession.session.query(mm.FMIncidents)
+        .filter(mm.FMIncidents.created_at >= last_fm_incidents_update_dt)
+        .all()
+    )
+    all_fm_incidents = []
+    for fm_incident in fm_incidents:
+        fm_incident_dict = utils_util.get_table_as_dict(fm_incident)
+        all_fm_incidents.append(fm_incident_dict)
+
+    req_json = {"all_fm_incident": all_fm_incidents}
+
+    endpoint = "update_fm_incidents"
+    req_type = "post"
+
+    response_status_code, response_json = mu.send_http_req_to_mfm(
+        mfm_context, endpoint, req_type, req_json
+    )
+
+    if response_status_code == 200:
+        logging.getLogger("mfm_updates").info(
+            f"sent fm_incidents to mfm successfully, details: {req_json}"
+        )
+        success = True
+    else:
+        logging.getLogger("mfm_updates").info(
+            f"unable to send fm_incidents to mfm,  status_code {response_status_code}"
+        )
+    return success
+
+
+def update_sherpa_oee(
+    mfm_context: mu.MFMContext,
+    dbsession: DBSession,
+    last_sherpa_oee_update_dt,
+):
+
+    success = False
+    if last_sherpa_oee_update_dt is None:
+        last_sherpa_oee_update_dt = datetime.datetime.now()
+    else:
+        last_sherpa_oee_update_dt = utils_util.str_to_dt(last_sherpa_oee_update_dt)
+
+    sherpa_oees = (
+        dbsession.session.query(mm.SherpaOEE)
+        .filter(mm.SherpaOEE.dt >= last_sherpa_oee_update_dt)
+        .all()
+    )
+    all_sherpa_oees = []
+    for sherpa_oee in sherpa_oees:
+        sherpa_oee_dict = utils_util.get_table_as_dict(sherpa_oee)
+        all_sherpa_oees.append(sherpa_oee_dict)
+
+
+
+    req_json = {"all_sherpa_oee": all_sherpa_oees}
+    
+    endpoint = "update_sherpa_oee"
+    req_type = "post"
+
+    response_status_code, response_json = mu.send_http_req_to_mfm(
+        mfm_context, endpoint, req_type, req_json
+    )
+
+    if response_status_code == 200:
+        logging.getLogger("mfm_updates").info(
+            f"sent sherpa oee to mfm successfully, details: {req_json}"
+        )
+        success = True
+    else:
+        logging.getLogger("mfm_updates").info(
+            f"unable to send sherpa oee to mfm,  status_code {response_status_code}"
+        )
+    return success
 
 def send_mfm_updates():
     logging.getLogger().info("starting send_updates_to_mfm script")
@@ -324,12 +410,44 @@ def send_mfm_updates():
                         )
                         any_updates_sent = True
 
+                    #send sherpa oees
+                    last_sherpa_oee_update_dt: str = (
+                        master_fm_data_upload_info.info.get(
+                            "last_sherpa_oee_update_dt", None
+                        )
+                    )
+                    last_sherpa_oee_sent = update_sherpa_oee(
+                        mfm_context, dbsession, last_sherpa_oee_update_dt
+                    )
+                    if last_sherpa_oee_sent:
+                        last_sherpa_oee_update_dt = utils_util.dt_to_str(
+                            datetime.datetime.now()
+                        )
+                        any_updates_sent = True
+
+                    # send fm incidents 
+                    last_fm_incidents_update_dt: str = (
+                        master_fm_data_upload_info.info.get(
+                            "last_fm_incidents_update_dt", None
+                        )
+                    )
+                    last_fm_incidents_sent = update_fm_incidents(
+                        mfm_context, dbsession, last_fm_incidents_update_dt
+                    )
+                    if last_fm_incidents_sent:
+                        last_fm_incidents_update_dt = utils_util.dt_to_str(
+                            datetime.datetime.now()
+                        )
+                        any_updates_sent = True
+                    
                     # commit last update time to db
                     if any_updates_sent:
                         master_fm_data_upload_info.info.update(
                             {
                                 "last_trip_analytics_update_dt": last_trip_analytics_update_dt,
                                 "last_trip_update_dt": last_trip_update_dt,
+                                "last_sherpa_oee_update_dt":last_sherpa_oee_update_dt,
+                                "last_fm_incidents_update_dt":last_fm_incidents_update_dt,
                             }
                         )
                         flag_modified(master_fm_data_upload_info, "info")
