@@ -5,6 +5,9 @@ import secrets
 import string
 import toml
 import os
+import psutil
+import redis
+from rq import Worker
 
 
 TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
@@ -85,3 +88,90 @@ def get_all_map_names():
         map_names.append(line[:-1])
 
     return map_names
+
+
+def sys_perf():
+    ONE_GB = 1024**3
+
+    cpu = psutil.cpu_times_percent()
+    mem = psutil.virtual_memory()
+    swap = psutil.swap_memory()
+    net = psutil.net_io_counters()
+    cpu_count = psutil.cpu_count()
+    load_avg = psutil.getloadavg()
+    cpu_freq = psutil.cpu_freq()
+
+    column_names = [
+        "datetime",
+        "cpu_user",
+        "cpu_system",
+        "cpu_idle",
+        "cpu_count",
+        "cpu_freq",
+        "mem_available_gb",
+        "mem_used_gb",
+        "swap_used_gb",
+        "load_avg_1",
+        "load_avg_5",
+        "load_avg_15",
+        "net_packets_sent",
+        "net_packets_recv",
+        "net_errin",
+        "net_errout",
+    ]
+
+    data = [
+        dt_to_str(datetime.datetime.now()),
+        cpu.user,
+        cpu.system,
+        cpu.idle,
+        cpu_count,
+        cpu_freq.current,
+        np.round(mem.available / ONE_GB, 3),
+        np.round(mem.used / ONE_GB, 3),
+        np.round(swap.used / ONE_GB, 3),
+        load_avg[0],
+        load_avg[1],
+        load_avg[2],
+        net.packets_sent,
+        net.packets_recv,
+        net.errin,
+        net.errout,
+    ]
+
+    return column_names, data
+
+
+def rq_perf():
+    redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
+    data = []
+    workers = Worker.all(connection=redis_conn)
+
+    column_names = [
+        "datetime",
+        "worker_name",
+        "worker_pid",
+        "worker_state",
+        "worker_queues",
+        "num_jobs",
+        "successful_job_count",
+        "failed_job_count",
+        "total_working_time",
+    ]
+
+    for worker in workers:
+        wqs = worker.queues
+        worker_data = [
+            dt_to_str(datetime.datetime.now()),
+            worker.name,
+            worker.pid,
+            worker.state,
+            [wq.name for wq in wqs],
+            [len(wq) for wq in wqs],
+            worker.successful_job_count,
+            worker.failed_job_count,
+            worker.total_working_time,
+        ]
+        data.append(worker_data)
+
+    return column_names, data
