@@ -100,6 +100,7 @@ def backup_data():
         cleanup_data()
         time.sleep(120)
 
+
 def get_directory_size(directory):
     total_size = 0
     for path, dirs, files in os.walk(directory):
@@ -109,6 +110,7 @@ def get_directory_size(directory):
 
     total_size_mb = total_size / (1024 * 1024)
     return total_size_mb
+
 
 def sort_and_remove_directories(directory, target_size):
     directories = [os.path.join(directory, name) for name in os.listdir(directory)]
@@ -123,10 +125,11 @@ def sort_and_remove_directories(directory, target_size):
         else:
             break
 
-def cleanup_data(db_keep_size = 1000):
+
+def cleanup_data(db_keep_size=1000):
     fm_backup_path = os.path.join(os.getenv("FM_STATIC_DIR"), "data_backup")
     data_backup_size = get_directory_size(fm_backup_path)
-    lst = os.listdir(fm_backup_path) 
+    lst = os.listdir(fm_backup_path)
     number_files = len(lst)
     if number_files > 1:
-        sort_and_remove_directories(fm_backup_path,data_backup_size-db_keep_size)
+        sort_and_remove_directories(fm_backup_path, data_backup_size - db_keep_size)
