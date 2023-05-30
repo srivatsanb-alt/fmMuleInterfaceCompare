@@ -164,7 +164,7 @@ async def get_all_available_maps(
             dpd.raise_error("Add the fleet to get_all_available_maps", 401)
 
         response.append("use current map")
-        temp = os.path.join(os.getenv("FM_MAP_DIR"), fleet_name, "all_maps", "*")
+        temp = os.path.join(os.getenv("FM_STATIC_DIR"), fleet_name, "all_maps", "*")
         for item in glob.glob(temp):
             if os.path.isdir(item):
                 map_folder_name = item
@@ -243,11 +243,12 @@ async def delete_fleet(
         # close ws connection to make sure new map files are downloaded by sherpa on reconnect
         for sherpa in all_fleet_sherpas:
             close_websocket_for_sherpa(sherpa.name)
-            if sherpa.status.trip_id:
+            if sherpa.status.trip_id is not None:
                 trip = dbsession.get_trip(sherpa.status.trip_id)
                 dpd.raise_error(
                     f"delete the ongoing trip with booking_id: {trip.booking_id} and disable {sherpa.name} for trips to delete the sherpa and fleet"
                 )
+
             if sherpa.status.inducted:
                 dpd.raise_error(
                     f"disable {sherpa.name} for trips to delete the sherpa and fleet"
@@ -278,10 +279,10 @@ async def update_map(
 
         if update_map_req.map_path != "use current map":
             new_map = os.path.join(
-                os.getenv("FM_MAP_DIR"), fleet_name, "all_maps", update_map_req.map_path
+                os.getenv("FM_STATIC_DIR"), fleet_name, "all_maps", update_map_req.map_path
             )
-            current_map = os.path.join(os.getenv("FM_MAP_DIR"), fleet_name, "map")
-            prev_map = os.path.join(os.getenv("FM_MAP_DIR"), fleet_name, "prev_map")
+            current_map = os.path.join(os.getenv("FM_STATIC_DIR"), fleet_name, "map")
+            prev_map = os.path.join(os.getenv("FM_STATIC_DIR"), fleet_name, "prev_map")
             try:
                 shutil.copytree(current_map, prev_map)
                 shutil.rmtree(current_map)

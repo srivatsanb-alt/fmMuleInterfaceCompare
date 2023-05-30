@@ -180,7 +180,7 @@ def is_sherpa_available_for_new_trip(sherpa_status):
 # FM HEALTH CHECK #
 def record_rq_perf():
     redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
-    fm_backup_path = os.path.join(os.getenv("FM_MAP_DIR"), "data_backup")
+    fm_backup_path = os.path.join(os.getenv("FM_STATIC_DIR"), "data_backup")
     current_data = redis_conn.get("current_data_folder").decode()
     csv_save_path = os.path.join(fm_backup_path, current_data, "rq_perf.csv")
     column_names, data = utils_util.rq_perf()
@@ -193,7 +193,7 @@ def record_rq_perf():
 def record_cpu_perf():
 
     redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
-    fm_backup_path = os.path.join(os.getenv("FM_MAP_DIR"), "data_backup")
+    fm_backup_path = os.path.join(os.getenv("FM_STATIC_DIR"), "data_backup")
     current_data = redis_conn.get("current_data_folder").decode()
     csv_save_path = os.path.join(fm_backup_path, current_data, "sys_perf.csv")
 
@@ -311,7 +311,7 @@ def get_conveyor_ops_info(trip_metadata):
 def update_map_file_info_with_certs(
     map_file_info, sherpa_hostname, sherpa_ip_address, ip_changed
 ):
-    save_path = os.path.join(os.getenv("FM_MAP_DIR"), "certs")
+    save_path = os.path.join(os.getenv("FM_STATIC_DIR"), "certs")
 
     files_to_process = [
         os.path.join(save_path, filename)
@@ -340,7 +340,7 @@ def update_map_file_info_with_certs(
 
 
 def is_reset_fleet_required(fleet_name, map_files):
-    fleet_path = os.path.join(os.environ["FM_MAP_DIR"], f"{fleet_name}/map")
+    fleet_path = os.path.join(os.environ["FM_STATIC_DIR"], f"{fleet_name}/map")
     for mf in map_files:
         file_path = f"{fleet_path}/{mf.filename}"
         try:

@@ -217,7 +217,7 @@ class FleetSimulator:
         self.avg_velocity = self.simulator_config.get("average_velocity", 0.8)
         self.initialize_sherpas_at = self.simulator_config.get("initialize_sherpas_at")
         for fleet_name in self.fleet_names:
-            map_path = os.path.join(os.environ["FM_MAP_DIR"], f"{fleet_name}/map")
+            map_path = os.path.join(os.environ["FM_STATIC_DIR"], f"{fleet_name}/map")
             ez_path = os.path.join(map_path, "ez.json")
             try:
                 self.exclusion_zones.update({fleet_name: read_ez_files(ez_path)})

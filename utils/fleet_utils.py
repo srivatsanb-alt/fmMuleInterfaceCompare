@@ -79,12 +79,12 @@ def compute_sha1_hash(fpath: str) -> str:
 
 def get_map_file_path(fleet_name: str, file_name: str) -> str:
     return os.path.join(
-        f"{os.environ['FM_MAP_DIR']}", f"{fleet_name}", "map", f"{file_name}"
+        f"{os.environ['FM_STATIC_DIR']}", f"{fleet_name}", "map", f"{file_name}"
     )
 
 
 def get_map_path(fleet_name: str) -> str:
-    return os.path.join(f"{os.environ['FM_MAP_DIR']}", f"{fleet_name}", "map")
+    return os.path.join(f"{os.environ['FM_STATIC_DIR']}", f"{fleet_name}", "map")
 
 
 def get_filenames(directory: str) -> List:

@@ -81,9 +81,9 @@ def generate_random_job_id():
 def get_all_map_names():
     map_names = []
     _ = os.system(
-        "find $FM_MAP_DIR -name 'map' -printf '%h\n' | awk -'F/' '{ print $NF }' > /app/static/map_names.txt"
+        "find $FM_STATIC_DIR -name 'map' -printf '%h\n' | awk -'F/' '{ print $NF }' > /app/static/map_names.txt"
     )
-    map_names_file = open(os.path.join(os.getenv("FM_MAP_DIR"), "map_names.txt"), "r")
+    map_names_file = open(os.path.join(os.getenv("FM_STATIC_DIR"), "map_names.txt"), "r")
     for line in map_names_file.readlines():
         map_names.append(line[:-1])
 

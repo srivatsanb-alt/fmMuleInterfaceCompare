@@ -21,7 +21,7 @@ def upload_map_files(mfm_context: mu.MFMContext):
             map_files_uploaded = [False] * len(all_fleets)
             i = 0
             for fleet in all_fleets:
-                map_path = os.path.join(os.environ["FM_MAP_DIR"], f"{fleet.name}/map/")
+                map_path = os.path.join(os.environ["FM_STATIC_DIR"], f"{fleet.name}/map/")
                 all_map_files = os.listdir(map_path)
                 files = []
                 for file_name in all_map_files:
