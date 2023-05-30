@@ -292,13 +292,25 @@ def update_fm_incidents(
 
     fm_incidents = (
         dbsession.session.query(mm.FMIncidents)
-        .filter(mm.FMIncidents.created_at >= last_fm_incidents_update_dt)
+        .filter(mm.FMIncidents.created_at > last_fm_incidents_update_dt)
         .all()
     )
+
     all_fm_incidents = []
     for fm_incident in fm_incidents:
-        fm_incident_dict = utils_util.get_table_as_dict(fm_incident)
-        all_fm_incidents.append(fm_incident_dict)
+        fm_incident_dict = utils_util.get_table_as_dict(mm.FMIncidents,fm_incident)
+        del fm_incident_dict['created_at']
+        fm_incident_dict_copy = fm_incident_dict.copy()
+
+        for key, value in fm_incident_dict.items():
+            if value is None:
+                del fm_incident_dict_copy[key]
+        
+        all_fm_incidents.append(fm_incident_dict_copy)
+
+    if len(all_fm_incidents) == 0:
+        logging.getLogger("mfm_updates").info("no new fm incidents to be updated")
+        return success
 
     req_json = {"all_fm_incident": all_fm_incidents}
 
@@ -335,15 +347,18 @@ def update_sherpa_oee(
 
     sherpa_oees = (
         dbsession.session.query(mm.SherpaOEE)
-        .filter(mm.SherpaOEE.dt >= last_sherpa_oee_update_dt)
+        .filter(mm.SherpaOEE.dt > last_sherpa_oee_update_dt)
         .all()
     )
+
     all_sherpa_oees = []
     for sherpa_oee in sherpa_oees:
-        sherpa_oee_dict = utils_util.get_table_as_dict(sherpa_oee)
+        sherpa_oee_dict = utils_util.get_table_as_dict(mm.SherpaOEE,sherpa_oee)
         all_sherpa_oees.append(sherpa_oee_dict)
 
-
+    if len(all_sherpa_oees) == 0:
+        logging.getLogger("mfm_updates").info("no new sherpa oee to be updated")
+        return success
 
     req_json = {"all_sherpa_oee": all_sherpa_oees}
     
