@@ -2,9 +2,11 @@ import time
 import redis
 import json
 import os
-import datetime
-from fastapi import Depends, APIRouter
+import logging
+from typing import List
+from fastapi import Depends, APIRouter, File, UploadFile
 
+# ati code imports
 from models.db_session import DBSession
 import models.fleet_models as fm
 import models.misc_models as mm
@@ -194,3 +196,40 @@ async def sherpa_alerts(
             mm.NotificationLevels.action_request,
             mm.NotificationModules.generic,
         )
+
+
+@router.post("/upload_files/{type}")
+async def upload_files(
+    type: str,
+    uploaded_files: List[UploadFile] = File(...),
+    sherpa_name: str = Depends(dpd.get_sherpa),
+):
+
+    response = {}
+    if not sherpa_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    with DBSession() as dbsession:
+        sherpa = dbsession.get_sherpa(sherpa_name)
+        fleet_name = sherpa.fleet.name
+
+        dir_to_save = os.path.join(os.getenv("FM_STATIC_DIR"), fleet_name, type)
+
+        if not os.path.exists(dir_to_save):
+            os.makedirs(dir_to_save)
+
+        for file in uploaded_files:
+            file_path = os.path.join(dir_to_save, file.filename)
+
+            try:
+                with open(file_path, "wb") as f:
+                    f.write(await file.read())
+                logging.getLogger("uvicorn").info(f"Uploaded file:{file_path} successfully")
+
+            except Exception as e:
+                dpd.raise_error(f"Couldn't upload file: {file_path}, exception: {e}")
+
+            finally:
+                file.file.close()
+
+    return response
