@@ -219,8 +219,10 @@ async def upload_files(
             os.makedirs(dir_to_save)
 
         for file in uploaded_files:
-            file_path = os.path.join(dir_to_save, file.filename)
-
+            # add sherpa name to the end of filename
+            file_name, ext = file.filename.rsplit(".", 1)
+            new_file_name = file_name + f"_{sherpa_name}" + f".{ext}"
+            file_path = os.path.join(dir_to_save, new_file_name)
             try:
                 with open(file_path, "wb") as f:
                     f.write(await file.read())
