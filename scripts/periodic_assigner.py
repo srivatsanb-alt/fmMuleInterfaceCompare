@@ -1,11 +1,15 @@
+import time
+import logging
+
+# ati code imports
+from core.config import Config
 from models.db_session import DBSession
 from models.request_models import AssignNextTask
 from models.fleet_models import SherpaStatus
 from app.routers.dependencies import process_req
 from models.trip_models import PendingTrip
 from utils.util import check_if_timestamp_has_passed
-import time
-import logging
+
 
 # adds scheduled trips to the job queue.
 
@@ -33,6 +37,9 @@ def enqueue_scheduled_trips(db_session: DBSession, schdeuled_job_id):
 
 # assigns next task to the sherpa.
 def assign_next_task():
+    rq_params = Config.get_fleet_rq_params()
+    job_timeout = rq_params.get("generic_handler_job_timeout", 10)
+
     while True:
         schdeuled_job_id = []
         sleep_time = 20
@@ -54,7 +61,11 @@ def assign_next_task():
                         assign_next_task_req = AssignNextTask(
                             sherpa_name=sherpa_status.sherpa_name
                         )
-                        process_req(None, assign_next_task_req, "self", ttl=3)
+
+                        # should not clog the generic handler
+                        process_req(
+                            None, assign_next_task_req, "self", ttl=int(0.5 * job_timeout)
+                        )
 
                     schdeuled_job_id = enqueue_scheduled_trips(db_session, schdeuled_job_id)
                     time.sleep(2)
