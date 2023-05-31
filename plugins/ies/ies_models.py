@@ -69,6 +69,7 @@ class DBSession:
             filtered_bookings = (
                 self.session.query(IESBookingReq)
                 .filter(IESBookingReq.start_station == start_station)
+                .filter(IESBookingReq.status == "pending")
                 .filter(IESBookingReq.route_tag == route_tag)
                 .filter(IESBookingReq.combined_trip_id == None)
                 .filter(IESBookingReq.created_at > booked_from)
