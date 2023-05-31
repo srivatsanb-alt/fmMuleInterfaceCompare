@@ -107,7 +107,6 @@ async def simulate_bookings(ip, id=0, num_req=1000, type="JobCreate", cancel_id=
                         "externalReferenceId": f"ref_id_{cancel_id}",
                     }
                     print(f"sending msg {type}_msg ...")
-                    print(JobQuery_msg)
                     if type == "JobCreate":
                         msg_json = json.dumps(JobCreate_msg)
                     elif type == "JobCancel":
