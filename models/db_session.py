@@ -12,7 +12,7 @@ import models.misc_models as mm
 import models.fleet_models as fm
 import models.trip_models as tm
 import models.visa_models as vm
-from utils.util import check_if_timestamp_has_passed
+from utils.util import check_if_timestamp_has_passed, str_to_dt
 
 
 class DBSession:
@@ -296,7 +296,9 @@ class DBSession:
 
         for pending_trip in pending_trips:
             if pending_trip.trip.scheduled:
-                if not check_if_timestamp_has_passed(pending_trip.trip.start_time):
+                trip_metadata = pending_trip.trip.trip_metadata
+                scheduled_start_time = str_to_dt(trip_metadata["scheduled_start_time"])
+                if not check_if_timestamp_has_passed(scheduled_start_time):
                     continue
             return pending_trip
         return None

@@ -169,13 +169,16 @@ class Handlers:
             raise ValueError(f"{reason}")
 
     def should_recreate_scheduled_trip(self, pending_trip: tm.PendingTrip):
-        if not utils_util.check_if_timestamp_has_passed(pending_trip.trip.end_time):
+        trip_metadata = pending_trip.trip.trip_metadata
+        scheduled_end_time = utils_util.str_to_dt(trip_metadata["scheduled_end_time"])
+
+        if not utils_util.check_if_timestamp_has_passed(scheduled_end_time):
             new_metadata = pending_trip.trip.trip_metadata
             time_period = new_metadata["scheduled_time_period"]
             new_start_time = datetime.datetime.now() + datetime.timedelta(
                 seconds=int(time_period)
             )
-            if new_start_time > pending_trip.trip.end_time:
+            if new_start_time > scheduled_end_time:
                 logging.getLogger().info(
                     f"will not recreate trip {pending_trip.trip.id}, new trip start_time past scheduled_end_time"
                 )

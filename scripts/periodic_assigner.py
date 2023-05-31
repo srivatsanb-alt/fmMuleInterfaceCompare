@@ -8,7 +8,7 @@ from models.request_models import AssignNextTask
 from models.fleet_models import SherpaStatus
 from app.routers.dependencies import process_req
 from models.trip_models import PendingTrip
-from utils.util import check_if_timestamp_has_passed
+from utils.util import check_if_timestamp_has_passed, str_to_dt
 
 
 # adds scheduled trips to the job queue.
@@ -18,18 +18,18 @@ def enqueue_scheduled_trips(db_session: DBSession, schdeuled_job_id):
     pending_trips = db_session.session.query(PendingTrip).all()
     for pending_trip in pending_trips:
         if pending_trip.trip.scheduled:
+            trip_metadata = pending_trip.trip.trip_metadata
+            scheduled_start_time = str_to_dt(trip_metadata["scheduled_start_time"])
             if (
-                not check_if_timestamp_has_passed(pending_trip.trip.start_time)
+                not check_if_timestamp_has_passed(scheduled_start_time)
                 and pending_trip.trip_id not in schdeuled_job_id
             ):
                 assign_next_task_req = AssignNextTask()
                 logging.getLogger().info(
-                    f"will enqueue a job at {pending_trip.trip.start_time} for pending_trip with trip_id: {pending_trip.trip_id}"
+                    f"will enqueue a job at {scheduled_start_time} for pending_trip with trip_id: {pending_trip.trip_id}"
                 )
 
-                process_req(
-                    None, assign_next_task_req, "self", dt=pending_trip.trip.start_time
-                )
+                process_req(None, assign_next_task_req, "self", dt=scheduled_start_time)
                 schdeuled_job_id.append(pending_trip.trip_id)
 
     return schdeuled_job_id

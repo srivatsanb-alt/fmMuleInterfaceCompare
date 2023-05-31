@@ -144,10 +144,10 @@ class Trip(Base, TimestampMixin):
             scheduled = metadata.get("scheduled", "False")
             if eval(scheduled):
                 self.scheduled = True
-                self.start_time = str_to_dt(metadata["scheduled_start_time"])
-                self.end_time = str_to_dt(metadata["scheduled_end_time"])
+                start_time = str_to_dt(metadata["scheduled_start_time"])
+                end_time = str_to_dt(metadata["scheduled_end_time"])
 
-                if self.end_time < self.start_time:
+                if end_time < start_time:
                     raise ValueError("trip end time less than start time")
 
                 self.time_period = int(metadata["scheduled_time_period"])

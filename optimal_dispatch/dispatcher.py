@@ -12,6 +12,7 @@ import pandas as pd
 
 # ati code imports
 import utils.log_utils as lu
+import utils.util as utils_util
 from models.fleet_models import Fleet, AvailableSherpas, OptimalDispatchState
 from models.trip_models import Trip, PendingTrip, TripStatus
 from optimal_dispatch.hungarian import hungarian_assignment
@@ -130,7 +131,11 @@ class OptimalDispatch:
             wait_time_dt = datetime.datetime.now() - pending_trip.trip.booking_time
 
             if pending_trip.trip.scheduled:
-                wait_time_dt = datetime.datetime.now() - pending_trip.trip.start_time
+                trip_metadata = pending_trip.trip.trip_metadata
+                scheduled_start_time = utils_util.str_to_dt(
+                    trip_metadata["scheduled_start_time"]
+                )
+                wait_time_dt = datetime.datetime.now() - scheduled_start_time
 
             waiting_times.append(wait_time_dt.seconds)
 
@@ -188,7 +193,11 @@ class OptimalDispatch:
         valid_pending_trips = []
         for pending_trip in pending_trips:
             if pending_trip.trip.scheduled:
-                if pending_trip.trip.start_time > datetime.datetime.now():
+                trip_metadata = pending_trip.trip.trip_metadata
+                scheduled_start_time = utils_util.str_to_dt(
+                    trip_metadata["scheduled_start_time"]
+                )
+                if scheduled_start_time > datetime.datetime.now():
                     continue
             valid_pending_trips.append(pending_trip)
 
