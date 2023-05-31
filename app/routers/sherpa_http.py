@@ -213,7 +213,9 @@ async def upload_files(
         sherpa = dbsession.get_sherpa(sherpa_name)
         fleet_name = sherpa.fleet.name
 
-        dir_to_save = os.path.join(os.getenv("FM_STATIC_DIR"), fleet_name, type)
+        dir_to_save = os.path.join(
+            os.getenv("FM_STATIC_DIR"), "sherpa_uploads", fleet_name, type
+        )
 
         if not os.path.exists(dir_to_save):
             os.makedirs(dir_to_save)
