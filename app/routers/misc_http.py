@@ -372,7 +372,7 @@ async def get_sherpa_oee(
 
 
 @router.get("/fm_health_stats")
-async def fm_health(
+async def fm_health_stats(
     user_name=Depends(dpd.get_user_from_header),
 ):
     response = {}
