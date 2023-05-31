@@ -320,7 +320,7 @@ class IES_HANDLER:
         ext_ref_ids = msg["ext_ref_ids"]
         ies_info = self.dbsession.session.query(im.IESInfo).first()
         max_bookings = ies_info.max_bookings
-        if not len(ext_ref_ids) < max_bookings:
+        if not len(ext_ref_ids) <= max_bookings:
             raise ValueError(
                 f"Please select less than {max_bookings} requests to consolidate."
             )
