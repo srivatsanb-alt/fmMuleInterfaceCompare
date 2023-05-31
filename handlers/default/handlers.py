@@ -919,7 +919,7 @@ class Handlers:
         # update db
         ongoing_trip.trip.update_etas(float(req.trip_info.eta), ongoing_trip.next_idx_aug)
 
-        if req.stoppages.extra_info.velocity_speed_factor == 0:
+        if req.stoppages.extra_info.velocity_speed_factor < 0.1:
             ongoing_trip.trip_leg.status = tm.TripLegStatus.STOPPED
             ongoing_trip.trip_leg.stoppage_reason = req.stoppages.type
 
