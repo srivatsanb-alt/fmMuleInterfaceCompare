@@ -241,6 +241,25 @@ class IES_HANDLER:
             )
         return
 
+    def handle_JobCancelFromUser(self, msg):
+        self.logger.info("handling JobCancel...")
+        job_cancel = iu.JobCancelFromUser.from_dict(msg)
+        pending_bookings_to_cancel = (
+            self.dbsession.session.query(im.IESBookingReq)
+            .filter(im.IESBookingReq.status == "pending")
+            .filter(im.IESBookingReq.ext_ref_id.in_(job_cancel.externalReferenceIds))
+            .all()
+        )
+        self.logger.info(f"pending bookings: {len(pending_bookings_to_cancel)}")
+        for booking in pending_bookings_to_cancel:
+            cancelled_msg = iu.MsgToIES(
+                "JobCancel", booking.ext_ref_id, "CANCELLED"
+            ).to_dict()
+            booking.status = TripStatus.CANCELLED
+            self.logger.info(f"cancelling job with ref id: {booking.ext_ref_id}")
+            self.send_msg(cancelled_msg)
+        return
+
     def handle_JobCancel(self, msg):
         self.logger.info("handling JobCancel...")
         job_cancel = iu.JobCancel.from_dict(msg)

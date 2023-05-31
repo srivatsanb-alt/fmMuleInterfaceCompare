@@ -3,6 +3,7 @@ import json
 import os
 import logging
 import datetime
+from typing import List
 import redis
 
 from models.base_models import JsonMixin
@@ -158,6 +159,12 @@ class JobQuery(JsonMixin):
 class JobCancel(JsonMixin):
     messageType: str
     externalReferenceId: str
+
+
+@dataclass
+class JobCancelFromUser(JsonMixin):
+    messageType: str
+    externalReferenceIds: List[str]
 
 
 @dataclass

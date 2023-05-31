@@ -204,9 +204,6 @@ async def consolidation_info(
                     }
                 }
             )
-    logging.getLogger("plugin_ies").info(
-        f"sending ext ids for consolidation: {response.keys()}"
-    )
     return response
 
 
@@ -266,14 +263,13 @@ async def get_consolidated_jobs(
     consolidated_jobs_req: irqm.JobsReq,
     user_name=Depends(dpd.get_user_from_header),
 ):
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
     booked_till = iu.str_to_dt(consolidated_jobs_req.booked_till)
     booked_from = iu.str_to_dt(consolidated_jobs_req.booked_from)
     logging.getLogger("plugin_ies").info(
         f"from: {iu.dt_to_str(booked_from)}, till: {iu.dt_to_str(booked_till)}"
     )
-    if not user_name:
-        dpd.raise_error("Unknown requester", 401)
-
     response = {}
     with im.DBSession() as dbsession:
         if active:
@@ -300,7 +296,7 @@ async def get_consolidated_jobs(
 
 
 @router.post("/plugin/ies/cancel_pending_jobs")
-async def cancel_pending_job(
+async def cancel_pending_jobs(
     CancelPendingReq: irqm.CancelPendingReq, user_name=Depends(dpd.get_user_from_header)
 ):
     if not user_name:
@@ -308,12 +304,12 @@ async def cancel_pending_job(
 
     q = Queue("plugin_ies", connection=get_redis_conn())
     ies_handler = IES_HANDLER()
-    for ref_id in CancelPendingReq.externalReferenceIds:
-        msg = {
-            "messageType": "JobCancel",
-            "externalReferenceId": ref_id,
-        }
-        job = enqueue(q, ies_handler.handle, msg)
+    msg = {
+        "messageType": "JobCancelFromUser",
+        "externalReferenceIds": CancelPendingReq.externalReferenceIds,
+    }
+    job = enqueue(q, ies_handler.handle, msg)
+    res = get_job_result(job.id)
 
     return {}
 
