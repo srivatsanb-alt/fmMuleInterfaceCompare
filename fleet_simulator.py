@@ -1,8 +1,10 @@
 import time
 from utils.rq_utils import Queues, enqueue
+from utils.util import generate_random_job_id
 from core.config import Config
 import requests
 import ast
+import datetime
 import redis
 from models.request_models import (
     SherpaStatusMsg,
@@ -16,7 +18,6 @@ from models.request_models import (
     VisaReq,
     ResourceReq,
 )
-from utils.router_utils import RouterModule, get_dense_path
 from models.trip_models import OngoingTrip
 from models.trip_models import TripState as ts
 from typing import List
@@ -206,7 +207,6 @@ class FleetSimulator:
         self.simulator_config = Config.get_simulator_config()
         self.should_book_trips = self.simulator_config.get("book_trips", False)
         self.conveyor_capacity = self.simulator_config.get("conveyor_capacity", 6)
-        self.router_modules = {}
         self.exclusion_zones = {}
         self.visas_held = {}
         self.visa_needed = {}
@@ -227,7 +227,6 @@ class FleetSimulator:
             print(
                 f"Visa handling {self.visa_handling} Exclusion zones... {self.exclusion_zones}"
             )
-            self.router_modules.update({fleet_name: RouterModule(map_path)})
 
     def initialize_sherpas(self):
 
@@ -262,13 +261,11 @@ class FleetSimulator:
                         print("Randomizing the start station")
                     self.send_sherpa_status(sherpa.name, mode="fleet", pose=st.pose)
 
-    def book_trip(self, route, freq):
+    def book_trip(self, route, trip_metadata={}):
         generic_q = Queues.queues_dict["generic_handler"]
-        trip_msg = TripMsg(route=route)
+        trip_msg = TripMsg(route=route, metadata=trip_metadata)
         book_req = BookingReq(trips=[trip_msg], source="simulator")
-        while True:
-            enqueue(generic_q, handle, self.handler_obj, book_req)
-            time.sleep(freq)
+        enqueue(generic_q, handle, self.handler_obj, book_req)
 
     def book_predefined_trips(self):
         all_route_details = self.simulator_config.get("routes", {})
@@ -276,10 +273,24 @@ class FleetSimulator:
             for route_name, route_detail in all_route_details.items():
                 route = route_detail[0]
                 freq = route_detail[1][0]
+                start_time = route_detail[1][1]
+                end_time = route_detail[1][2]
+
+                if freq == "-1":
+                    self.book_trip(route)
+                else:
+                    trip_metadata = {
+                        "scheduled": "True",
+                        "scheduled_time_period": freq,
+                        "scheduled_start_time": start_time,
+                        "scheduled_end_time": end_time,
+                    }
+                    self.book_trip(route, trip_metadata)
+
                 print(f"will book trip with route {route} every {freq} seconds")
-                t = threading.Thread(target=self.book_trip, args=[route, freq])
-                t.daemon = True
-                t.start()
+                # t = threading.Thread(target=self.book_trip, args=[route, freq])
+                # t.daemon = True
+                # t.start()
 
     def populate_conveyor_with_totes(self, conveyor):
         while True:
@@ -375,6 +386,9 @@ class FleetSimulator:
                 enqueue(sherpa_update_q, handle, self.handler_obj, msg, ttl=1)
 
     def send_trip_status(self, sherpa_name):
+        from utils.router_utils import get_dense_path
+
+        redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
 
         with DBSession() as session:
             sherpa_trip_q = Queues.queues_dict[f"{sherpa_name}_trip_update_handler"]
@@ -389,7 +403,6 @@ class FleetSimulator:
                 from_pose = sherpa.status.pose
 
             to_pose = session.get_station(to_station).pose
-            rm = self.router_modules[sherpa.fleet.name]
 
             if to_pose == from_pose:
                 time.sleep(5)
@@ -397,9 +410,21 @@ class FleetSimulator:
                 print(f"ending trip leg {from_station}, {to_station}")
                 return
 
-            final_route, _, route_length = rm.get_route(from_pose, to_pose)
-            eta_at_start = rm.get_route_length(from_pose, to_pose)
-            x_vals, y_vals, t_vals, _ = get_dense_path(final_route)
+            job_id = generate_random_job_id()
+            control_router_get_route_job = [from_pose, to_pose, sherpa.fleet.name, job_id]
+            redis_conn.setex(
+                f"control_router_dp_rl_job_{job_id}",
+                int(redis_conn.get("default_job_timeout_ms").decode()),
+                json.dumps(control_router_get_route_job),
+            )
+            while not redis_conn.get(f"result_dp_rl_job_{job_id}"):
+                time.sleep(0.005)
+
+            x_vals, y_vals, t_vals, route_length = json.loads(
+                redis_conn.get(f"result_dp_rl_job_{job_id}")
+            )
+            eta_at_start = route_length
+
             traj = x_vals, y_vals, t_vals
             # sleep_time = 1
             steps = 1000
