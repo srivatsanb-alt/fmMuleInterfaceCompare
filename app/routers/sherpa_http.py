@@ -205,7 +205,7 @@ async def upload_files(
     sherpa_name: str = Depends(dpd.get_sherpa),
 ):
 
-    response = {}
+    response = []
     if not sherpa_name:
         dpd.raise_error("Unknown requester", 401)
 
@@ -244,5 +244,7 @@ async def upload_files(
 
             finally:
                 file.file.close()
+
+            response.append(file_path)
 
     return response
