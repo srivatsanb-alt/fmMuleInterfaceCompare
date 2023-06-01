@@ -382,7 +382,6 @@ async def fm_health_stats(
     # rq perf
     column_names, rq_perf_data = utils_util.rq_perf()
     all_rq_perf = []
-
     # queue wise data
     valid_rq_perf_cols_names = ["worker_queues", "num_jobs"]
     for data in rq_perf_data:
@@ -394,7 +393,6 @@ async def fm_health_stats(
 
     # sys perf
     column_names, sys_perf_data = utils_util.sys_perf()
-
     valid_sys_perf_cols_names = [
         "cpu_count",
         "load_avg_1",
@@ -411,23 +409,26 @@ async def fm_health_stats(
     response["rq_perf"] = all_rq_perf
     response["sys_perf"] = sys_perf_dict
 
+    # GET DISK USAGE
     total_disk_usage = []
     static_disk_usage = subprocess.check_output("du /app/static/ -d 1 -h ", shell=True)
-    static_disk_usage = static_disk_usage.decode()
-    static_disk_usage = static_disk_usage.split("\n")
-
-    for item in static_disk_usage:
-        total_disk_usage.append(item.split("\t"))
+    if static_disk_usage is not None:
+        static_disk_usage = static_disk_usage.decode()
+        static_disk_usage = static_disk_usage.split("\n")
+        for item in static_disk_usage:
+            total_disk_usage.append(item.split("\t"))
 
     logs_disk_usage = subprocess.check_output("du /app/logs/ -d 1 -h ", shell=True)
-    logs_disk_usage = logs_disk_usage.decode()
-    logs_disk_usage = logs_disk_usage.split("\n")
+    if logs_disk_usage is not None:
+        logs_disk_usage = logs_disk_usage.decode()
+        logs_disk_usage = logs_disk_usage.split("\n")
 
-    for item in logs_disk_usage:
-        total_disk_usage.append(item.split("\t"))
+        for item in logs_disk_usage:
+            total_disk_usage.append(item.split("\t"))
 
-    response["disk_usage"] = total_disk_usage
+        response["disk_usage"] = total_disk_usage
 
+    # get current folder
     redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
     fm_backup_path = os.path.join(os.getenv("FM_STATIC_DIR"), "data_backup")
     current_data = redis_conn.get("current_data_folder").decode()
