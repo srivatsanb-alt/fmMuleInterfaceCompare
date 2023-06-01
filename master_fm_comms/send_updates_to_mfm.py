@@ -279,6 +279,7 @@ def update_fm_version_info(mfm_context: mu.MFMContext):
                 )
                 time.sleep(10)
 
+
 def update_fm_incidents(
     mfm_context: mu.MFMContext,
     dbsession: DBSession,
@@ -298,14 +299,14 @@ def update_fm_incidents(
 
     all_fm_incidents = []
     for fm_incident in fm_incidents:
-        fm_incident_dict = utils_util.get_table_as_dict(mm.FMIncidents,fm_incident)
-        del fm_incident_dict['created_at']
+        fm_incident_dict = utils_util.get_table_as_dict(mm.FMIncidents, fm_incident)
+        del fm_incident_dict["created_at"]
         fm_incident_dict_copy = fm_incident_dict.copy()
 
         for key, value in fm_incident_dict.items():
             if value is None:
                 del fm_incident_dict_copy[key]
-        
+
         all_fm_incidents.append(fm_incident_dict_copy)
 
     if len(all_fm_incidents) == 0:
@@ -353,7 +354,7 @@ def update_sherpa_oee(
 
     all_sherpa_oees = []
     for sherpa_oee in sherpa_oees:
-        sherpa_oee_dict = utils_util.get_table_as_dict(mm.SherpaOEE,sherpa_oee)
+        sherpa_oee_dict = utils_util.get_table_as_dict(mm.SherpaOEE, sherpa_oee)
         all_sherpa_oees.append(sherpa_oee_dict)
 
     if len(all_sherpa_oees) == 0:
@@ -361,7 +362,7 @@ def update_sherpa_oee(
         return success
 
     req_json = {"all_sherpa_oee": all_sherpa_oees}
-    
+
     endpoint = "update_sherpa_oee"
     req_type = "post"
 
@@ -379,6 +380,7 @@ def update_sherpa_oee(
             f"unable to send sherpa oee to mfm,  status_code {response_status_code}"
         )
     return success
+
 
 def send_mfm_updates():
     logging.getLogger().info("starting send_updates_to_mfm script")
@@ -425,11 +427,9 @@ def send_mfm_updates():
                         )
                         any_updates_sent = True
 
-                    #send sherpa oees
-                    last_sherpa_oee_update_dt: str = (
-                        master_fm_data_upload_info.info.get(
-                            "last_sherpa_oee_update_dt", None
-                        )
+                    # send sherpa oees
+                    last_sherpa_oee_update_dt: str = master_fm_data_upload_info.info.get(
+                        "last_sherpa_oee_update_dt", None
                     )
                     last_sherpa_oee_sent = update_sherpa_oee(
                         mfm_context, dbsession, last_sherpa_oee_update_dt
@@ -440,11 +440,9 @@ def send_mfm_updates():
                         )
                         any_updates_sent = True
 
-                    # send fm incidents 
-                    last_fm_incidents_update_dt: str = (
-                        master_fm_data_upload_info.info.get(
-                            "last_fm_incidents_update_dt", None
-                        )
+                    # send fm incidents
+                    last_fm_incidents_update_dt: str = master_fm_data_upload_info.info.get(
+                        "last_fm_incidents_update_dt", None
                     )
                     last_fm_incidents_sent = update_fm_incidents(
                         mfm_context, dbsession, last_fm_incidents_update_dt
@@ -454,15 +452,15 @@ def send_mfm_updates():
                             datetime.datetime.now()
                         )
                         any_updates_sent = True
-                    
+
                     # commit last update time to db
                     if any_updates_sent:
                         master_fm_data_upload_info.info.update(
                             {
                                 "last_trip_analytics_update_dt": last_trip_analytics_update_dt,
                                 "last_trip_update_dt": last_trip_update_dt,
-                                "last_sherpa_oee_update_dt":last_sherpa_oee_update_dt,
-                                "last_fm_incidents_update_dt":last_fm_incidents_update_dt,
+                                "last_sherpa_oee_update_dt": last_sherpa_oee_update_dt,
+                                "last_fm_incidents_update_dt": last_fm_incidents_update_dt,
                             }
                         )
                         flag_modified(master_fm_data_upload_info, "info")
