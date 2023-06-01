@@ -209,6 +209,12 @@ async def upload_files(
     if not sherpa_name:
         dpd.raise_error("Unknown requester", 401)
 
+    augment_filename = False
+    # error data filenames will be unique
+    # all config files will be consolidated.toml needs to be augmented with sherpa_name
+    if type in ["configs"]:
+        augment_filename = True
+
     with DBSession() as dbsession:
         sherpa = dbsession.get_sherpa(sherpa_name)
         fleet_name = sherpa.fleet.name
@@ -221,9 +227,12 @@ async def upload_files(
             os.makedirs(dir_to_save)
 
         for file in uploaded_files:
-            # add sherpa name to the end of filename
-            file_name, ext = file.filename.rsplit(".", 1)
-            new_file_name = file_name + f"_{sherpa_name}" + f".{ext}"
+            new_file_name = file.filename
+
+            if augment_filename:
+                file_name, ext = file.filename.rsplit(".", 1)
+                new_file_name = file_name + f"_{sherpa_name}" + f".{ext}"
+
             file_path = os.path.join(dir_to_save, new_file_name)
             try:
                 with open(file_path, "wb") as f:
