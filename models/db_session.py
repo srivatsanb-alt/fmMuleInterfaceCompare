@@ -399,6 +399,24 @@ class DBSession:
 
         return trip_ids
 
+    def get_trip_ids_with_timestamp_and_status(
+        self, booked_from, booked_till, valid_status
+    ):
+        temp = (
+            self.session.query(tm.Trip.id)
+            .filter(tm.Trip.booking_time > booked_from)
+            .filter(tm.Trip.booking_time < booked_till)
+            .filter(tm.Trip.status.in_(valid_status))
+            .order_by(tm.Trip.id.desc())
+            .all()
+        )
+        trip_ids = []
+
+        for vals in temp:
+            trip_ids.append(vals[0])
+
+        return trip_ids
+
     def get_trip_analytics(self, trip_leg_id):
         return (
             self.session.query(tm.TripAnalytics)

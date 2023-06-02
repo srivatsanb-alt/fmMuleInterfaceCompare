@@ -160,6 +160,49 @@ async def clear_optimal_dispatch_assignments(
 # returns trip status, i.e. the time slot of the trip booking and the trip status with timestamp.
 
 
+@router.post("/status/{type}")
+async def trip_status(
+    type: str,
+    trip_status_req: rqm.TripStatusReq,
+    user_name=Depends(dpd.get_user_from_header),
+):
+    response = {}
+
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    valid_status = []
+    if type == "yet_to_start":
+        valid_status = tm.YET_TO_START_TRIP_STATUS
+    elif type == "completed":
+        valid_status = tm.COMPLETED_TRIP_STATUS
+    elif type == "ongoing":
+        valid_status = tm.ONGOING_TRIP_STATUS
+    else:
+        dpd.raise_error("Query sent for an invalid trip type")
+
+    with DBSession() as dbsession:
+        if trip_status_req.booked_from and trip_status_req.booked_till:
+            trip_status_req.booked_from = str_to_dt(trip_status_req.booked_from)
+            trip_status_req.booked_till = str_to_dt(trip_status_req.booked_till)
+
+            trip_status_req.trip_ids = dbsession.get_trip_ids_with_timestamp_and_status(
+                trip_status_req.booked_from, trip_status_req.booked_till, valid_status
+            )
+
+        if not trip_status_req.trip_ids:
+            return response
+            # dpd.raise_error("no trip id given or available in the given timeframe")
+
+        for trip_id in trip_status_req.trip_ids:
+            trip: tm.Trip = dbsession.get_trip(trip_id)
+            if not trip:
+                dpd.raise_error("invalid trip id")
+            response.update({trip_id: tu.get_trip_status(trip)})
+
+    return response
+
+
 @router.post("/status")
 async def trip_status(
     trip_status_req: rqm.TripStatusReq, user_name=Depends(dpd.get_user_from_header)
