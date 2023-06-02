@@ -161,7 +161,7 @@ async def clear_optimal_dispatch_assignments(
 
 
 @router.post("/status/{type}")
-async def trip_status(
+async def trip_status_with_type(
     type: str,
     trip_status_req: rqm.TripStatusReq,
     user_name=Depends(dpd.get_user_from_header),
