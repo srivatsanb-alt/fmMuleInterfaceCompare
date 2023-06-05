@@ -417,6 +417,21 @@ class DBSession:
 
         return trip_ids
 
+    def get_trip_time_with_timestamp(self, start_time, end_time):
+        temp = (
+            self.session.query(tm.Trip.id)
+            .filter(tm.Trip.start_time > start_time)
+            .filter(tm.Trip.end_time < start_time)
+            .order_by(tm.Trip.id.desc())
+            .all()
+        )
+        trip_ids = []
+
+        for vals in temp:
+            trip_ids.append(vals[0])
+
+        return trip_ids
+
     def get_trip_analytics(self, trip_leg_id):
         return (
             self.session.query(tm.TripAnalytics)
@@ -569,6 +584,30 @@ class DBSession:
             .group_by(mm.SherpaModeChange.mode)
             .all()
         )
+
+    def get_sherpa_trip_time_with_timestamp(self, sherpa_name, start_time, end_time):
+        trip_time = (
+            self.session.query(
+                func.sum(
+                    extract(
+                        "seconds",
+                        func.age(tm.Trip.end_time, tm.Trip.start_time),
+                    )
+                ),
+            )
+            .filter(tm.Trip.sherpa_name == sherpa_name)
+            .filter(tm.Trip.start_time > start_time)
+            .filter(tm.Trip.end_time < end_time)
+            .all()
+        )
+
+        for item in trip_time:
+            try:
+                return float(item[0])
+            except:
+                pass
+
+        return None
 
     def get_popular_routes(self, fleet_name: str):
         return (

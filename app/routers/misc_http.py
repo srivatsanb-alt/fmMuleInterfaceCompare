@@ -350,23 +350,58 @@ async def get_sherpa_oee(
         to_dt = utils_util.str_to_dt(generic_time_req.to_dt)
 
         from_dt_start = from_dt.replace(hour=0, minute=0, second=0, microsecond=0)
-        to_dt_start = to_dt.replace(hour=0, minute=0, second=0, microsecond=0)
+        to_dt_end = to_dt.replace(hour=23, minute=59, second=59, microsecond=0)
 
         sherpa_oee_data = (
             dbsession.session.query(mm.SherpaOEE)
             .filter(mm.SherpaOEE.sherpa_name == sherpa_name)
             .filter(mm.SherpaOEE.dt >= from_dt_start)
-            .filter(mm.SherpaOEE.dt <= to_dt_start)
+            .filter(mm.SherpaOEE.dt <= to_dt_end)
             .all()
         )
-
         response = {}
+        response["mode_split_up"] = {}
         for sherpa_oee in sherpa_oee_data:
             for key, val in sherpa_oee.mode_split_up.items():
-                if key in response:
-                    response[key] += val
+                if key in response["mode_split_up"]:
+                    response["mode_split_up"][key] += round(val, 2)
                 else:
-                    response[key] = val
+                    response["mode_split_up"][key] = round(val, 2)
+
+        total_time = sum(response["mode_split_up"].values())
+        for key, val in response["mode_split_up"].items():
+            temp = response["mode_split_up"][key] / total_time
+            temp = round(temp * 100, 2)
+            response["mode_split_up"][key] = temp
+
+        response["uptime"] = 0
+        if response["mode_split_up"].get("fleet", 0):
+            fleet_time = response["mode_split_up"].get("fleet", 0)
+            error_time = response["mode_split_up"].get("error", 0)
+            oee = (fleet_time * 100) / (fleet_time + error_time)
+            response["uptime"] = round(oee, 2)
+
+        response[
+            "msg"
+        ] = f"Data considered from {utils_util.dt_to_str(from_dt_start)} to {utils_util.dt_to_str(to_dt_end)}"
+
+        # #response["utilisation"] = 0
+        # # percentage of time spent in fleet mode
+        # if response["mode_split_up"].get("fleet", 0):
+        #     oee = (response["mode_split_up"].get("fleet", 0) * 100) / sum(
+        #         response["mode_split_up"].values()
+        #     )
+        #     response["OEE"] = round(oee, 2)
+        #
+        #     # time in seconds spent doing trips
+        #     trip_time = dbsession.get_sherpa_trip_time_with_timestamp(
+        #         sherpa_name, from_dt_start, to_dt_end
+        #     )
+        #     if trip_time is not None:
+        #         trip_time = round(trip_time, 2)
+        #         response["utilisation"] = (trip_time * 100) / sum(
+        #             response["mode_split_up"].values()
+        #         )
 
     return response
 
