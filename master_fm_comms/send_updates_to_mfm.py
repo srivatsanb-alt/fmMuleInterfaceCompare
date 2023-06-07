@@ -287,7 +287,9 @@ def update_fm_incidents(
 ):
     success = False
     if last_fm_incidents_update_dt is None:
-        last_fm_incidents_update_dt = datetime.datetime.now()
+        last_fm_incidents_update_dt = datetime.datetime.now() + datetime.timedelta(
+            hours=-24
+        )
     else:
         last_fm_incidents_update_dt = utils_util.str_to_dt(last_fm_incidents_update_dt)
 
@@ -342,7 +344,9 @@ def update_sherpa_oee(
 
     success = False
     if last_sherpa_oee_update_dt is None:
-        last_sherpa_oee_update_dt = datetime.datetime.now()
+        last_sherpa_oee_update_dt = datetime.datetime.now() + datetime.timedelta(
+            hours=-24
+        )
     else:
         last_sherpa_oee_update_dt = utils_util.str_to_dt(last_sherpa_oee_update_dt)
 
