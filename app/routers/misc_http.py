@@ -307,16 +307,26 @@ async def get_fm_incidents(
 
     response = {}
     with DBSession() as dbsession:
-        fm_incident = dbsession.get_recent_fm_incident(get_fm_incident.sherpa_name)
+        fm_incidents = dbsession.get_recent_fm_incident(
+            get_fm_incident.sherpa_name, n=get_fm_incident.num_of_incidents
+        )
 
-        if fm_incident is not None:
-            response.update({"error_code": fm_incident.error_code})
-            response.update({"error_msg": fm_incident.error_message})
-            response.update({"description": fm_incident.display_message})
-            response.update({"how_to_recover": fm_incident.recovery_message})
-            response.update({"reported_at": utils_util.dt_to_str(fm_incident.created_at)})
-            response.update({"module": fm_incident.module})
-            response.update({"other_info": fm_incident.other_info})
+        if fm_incidents is None:
+            return {0: "No errors"}
+
+        for fm_incident in fm_incidents:
+            uid = fm_incident.id
+            response[uid] = {}
+            response[uid].update({"error_code": fm_incident.error_code})
+            response[uid].update({"error_msg": fm_incident.error_message})
+            response[uid].update({"description": fm_incident.display_message})
+            response[uid].update({"how_to_recover": fm_incident.recovery_message})
+            response[uid].update(
+                {"reported_at": utils_util.dt_to_str(fm_incident.created_at)}
+            )
+            response[uid].update({"module": fm_incident.module})
+            response[uid].update({"other_info": fm_incident.other_info})
+            logging.info(f"response dict end: {response}")
     return response
 
 

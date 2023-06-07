@@ -363,6 +363,7 @@ class DeleteOptimalDispatchAssignments(ClientReq):
 
 class GetFMIncidents(ClientReq):
     sherpa_name: str
+    num_of_incidents: int = 1
 
 
 class SaveRouteReq(ClientReq):

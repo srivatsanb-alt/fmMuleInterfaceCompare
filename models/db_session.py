@@ -541,12 +541,13 @@ class DBSession:
                 ).all()
             )
 
-    def get_recent_fm_incident(self, entity_name):
+    def get_recent_fm_incident(self, entity_name, n=1):
         return (
             self.session.query(mm.FMIncidents)
             .filter(mm.FMIncidents.entity_name == entity_name)
             .order_by(mm.FMIncidents.created_at.desc())
-            .first()
+            .limit(n)
+            .all()
         )
 
     def get_last_sherpa_mode_change(self, sherpa_name):
