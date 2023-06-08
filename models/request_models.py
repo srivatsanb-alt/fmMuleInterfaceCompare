@@ -83,6 +83,7 @@ class VisaReq:
 
 class ErrInfo(BaseModel):
     err_code: str
+    unique_id: str
     module: Optional[str] = None
     sub_module: Optional[str] = None
     err_msg: str

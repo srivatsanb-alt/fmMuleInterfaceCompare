@@ -125,13 +125,15 @@ async def fatal_errors(err_info: rqm.ErrInfo, sherpa: str = Depends(dpd.get_sher
     with DBSession() as dbsession:
         fm_incident = mm.FMIncidents(
             type=mm.FMIncidentTypes.mule_error,
-            error_code=err_info.err_code,
+            code=err_info.err_code,
+            unique_id=err_info.unique_id,
             entity_name=sherpa,
             module=err_info.module,
             sub_module=err_info.sub_module,
-            error_message=err_info.err_msg,
+            message=err_info.err_msg,
             display_message=err_info.err_disp_msg,
             recovery_message=err_info.recovery_msg,
+            data_upload_status="in_progress",
             other_info=err_info.other_info,
         )
         dbsession.add_to_session(fm_incident)

@@ -67,14 +67,16 @@ class MasterFMDataUpload(Base):
 class FMIncidents(TimestampMixin, Base):
     __tablename__ = "fm_incidents"
     id = Column(Integer, primary_key=True)
+    unique_id = Column(String, unique=True, index=True)
     type = Column(String, nullable=False)
-    error_code = Column(String, nullable=False)
+    code = Column(String, nullable=False)
     entity_name = Column(String)
     module = Column(String)
     sub_module = Column(String)
-    error_message = Column(String, nullable=False)
+    message = Column(String, nullable=False)
     display_message = Column(String)
     recovery_message = Column(String)
+    data_upload_status = Column(String)
     other_info = Column(JSONB)
 
 
