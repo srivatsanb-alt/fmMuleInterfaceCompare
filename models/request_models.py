@@ -92,6 +92,12 @@ class ErrInfo(BaseModel):
     other_info: Optional[dict] = None
 
 
+class ErrDataInfo(BaseModel):
+    unique_id: str
+    data_path: str
+    data_upload_status: str
+
+
 class SherpaReq(BaseModel):
     source: Union[str, None] = None
     type: str

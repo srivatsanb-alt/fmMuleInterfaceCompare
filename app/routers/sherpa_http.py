@@ -141,6 +141,30 @@ async def fatal_errors(err_info: rqm.ErrInfo, sherpa: str = Depends(dpd.get_sher
     return {}
 
 
+@router.post("/add_path_to_fatal_error")
+async def add_path_to_fatal_error(
+    err_data_info: rqm.ErrDataInfo, sherpa: str = Depends(dpd.get_sherpa)
+):
+    if not sherpa:
+        dpd.raise_error("Unknown requester", 401)
+
+    with DBSession() as dbsession:
+        fm_incident = (
+            dbsession.session.query(mm.FMIncidents)
+            .filter(mm.FMIncidents.unique_id == err_data_info.unique_id)
+            .one_or_none()
+        )
+        if fm_incident is None:
+            raise ValueError(
+                f"no fm incident found with unique id: {err_data_info.unique_id}"
+            )
+        other_info = {}
+        other_info["error_data_path"] = err_data_info.data_path
+        fm_incident.other_info = other_info
+        fm_incident.data_upload_status = err_data_info.data_upload_status
+    return {}
+
+
 @router.post("/req_ack/{req_id}")
 async def ws_ack(req: rqm.WSResp, req_id: str):
     redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
@@ -206,7 +230,6 @@ async def upload_files(
     uploaded_files: List[UploadFile] = File(...),
     sherpa_name: str = Depends(dpd.get_sherpa),
 ):
-
     response = []
     if not sherpa_name:
         dpd.raise_error("Unknown requester", 401)
