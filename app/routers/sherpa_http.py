@@ -5,6 +5,7 @@ import os
 import logging
 from typing import List
 from fastapi import Depends, APIRouter, File, UploadFile
+from sqlalchemy.orm.attributes import flag_modified
 
 # ati code imports
 from models.db_session import DBSession
@@ -158,9 +159,13 @@ async def add_path_to_fatal_error(
             raise ValueError(
                 f"no fm incident found with unique id: {err_data_info.unique_id}"
             )
-        other_info = {}
-        other_info["error_data_path"] = err_data_info.data_path
-        fm_incident.other_info = other_info
+
+        if fm_incident.other_info is None:
+            fm_incident.other_info = {}
+        fm_incident.other_info.update({"error_data_path": err_data_info.data_path})
+
+        flag_modified(fm_incident, "other_info")
+
         fm_incident.data_upload_status = err_data_info.data_upload_status
     return {}
 
