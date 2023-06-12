@@ -2,6 +2,7 @@ import time
 import logging
 import os
 import datetime
+from sqlalchemy import or_
 from sqlalchemy.orm.attributes import flag_modified
 
 # ati code imports
@@ -295,7 +296,12 @@ def update_fm_incidents(
 
     fm_incidents = (
         dbsession.session.query(mm.FMIncidents)
-        .filter(mm.FMIncidents.created_at > last_fm_incidents_update_dt)
+        .filter(
+            or_(
+                mm.FMIncidents.created_at > last_fm_incidents_update_dt,
+                mm.FMIncidents.updated_at > last_fm_incidents_update_dt,
+            )
+        )
         .all()
     )
 
