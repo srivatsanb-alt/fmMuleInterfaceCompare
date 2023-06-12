@@ -10,7 +10,7 @@ import json
 # ati code imports
 import utils.log_utils as lu
 import utils.fleet_utils as fu
-from utils.upgrade_db import upgrade_db_schema
+from utils.upgrade_db import upgrade_db_schema, maybe_drop_tables
 from models.db_session import DBSession
 
 # get log config
@@ -80,6 +80,7 @@ def main():
     DB_UP = False
     while not DB_UP:
         try:
+            # maybe_drop_tables()
             fu.create_all_tables()
             upgrade_db_schema()
             DB_UP = True
