@@ -118,58 +118,6 @@ async def verify_fleet_files(sherpa: str = Depends(dpd.get_sherpa)):
     return rqm.VerifyFleetFilesResp.from_json(response)
 
 
-@router.post("/fatal_error")
-async def fatal_errors(err_info: rqm.ErrInfo, sherpa: str = Depends(dpd.get_sherpa)):
-    if not sherpa:
-        dpd.raise_error("Unknown requester", 401)
-
-    with DBSession() as dbsession:
-        fm_incident = mm.FMIncidents(
-            type=mm.FMIncidentTypes.mule_error,
-            code=err_info.err_code,
-            unique_id=err_info.unique_id,
-            entity_name=sherpa,
-            module=err_info.module,
-            sub_module=err_info.sub_module,
-            message=err_info.err_msg,
-            display_message=err_info.err_disp_msg,
-            recovery_message=err_info.recovery_msg,
-            data_upload_status="in_progress",
-            other_info=err_info.other_info,
-        )
-        dbsession.add_to_session(fm_incident)
-
-    return {}
-
-
-@router.post("/add_path_to_fatal_error")
-async def add_path_to_fatal_error(
-    err_data_info: rqm.ErrDataInfo, sherpa: str = Depends(dpd.get_sherpa)
-):
-    if not sherpa:
-        dpd.raise_error("Unknown requester", 401)
-
-    with DBSession() as dbsession:
-        fm_incident = (
-            dbsession.session.query(mm.FMIncidents)
-            .filter(mm.FMIncidents.unique_id == err_data_info.unique_id)
-            .one_or_none()
-        )
-        if fm_incident is None:
-            raise ValueError(
-                f"no fm incident found with unique id: {err_data_info.unique_id}"
-            )
-
-        if fm_incident.other_info is None:
-            fm_incident.other_info = {}
-        fm_incident.other_info.update({"error_data_path": err_data_info.data_path})
-
-        flag_modified(fm_incident, "other_info")
-
-        fm_incident.data_upload_status = err_data_info.data_upload_status
-    return {}
-
-
 @router.post("/req_ack/{req_id}")
 async def ws_ack(req: rqm.WSResp, req_id: str):
     redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
@@ -229,52 +177,127 @@ async def sherpa_alerts(
         )
 
 
-@router.post("/upload_files/{type}")
-async def upload_files(
-    type: str,
-    uploaded_files: List[UploadFile] = File(...),
+@router.post("/upload_file")
+async def upload_file(
+    file_upload_req: rqm.FileUploadReq = Depends(),
+    uploaded_file: UploadFile = File(...),
     sherpa_name: str = Depends(dpd.get_sherpa),
 ):
+
+    logging.getLogger("uvicorn").info(f"{file_upload_req}")
+
     response = []
     if not sherpa_name:
         dpd.raise_error("Unknown requester", 401)
-
-    augment_filename = False
-    # error data filenames will be unique
-    # all config files will be consolidated.toml needs to be augmented with sherpa_name
-    if type in ["configs"]:
-        augment_filename = True
 
     with DBSession() as dbsession:
         sherpa = dbsession.get_sherpa(sherpa_name)
         fleet_name = sherpa.fleet.name
 
-        dir_to_save = os.path.join(
-            os.getenv("FM_STATIC_DIR"), "sherpa_uploads", fleet_name, type
-        )
+        dir_to_save = os.path.join(os.getenv("FM_STATIC_DIR"), "sherpa_uploads", fleet_name)
 
         if not os.path.exists(dir_to_save):
             os.makedirs(dir_to_save)
 
-        for file in uploaded_files:
-            new_file_name = file.filename
+        new_file_name = file_upload_req.filename
+        file_path = os.path.join(dir_to_save, new_file_name)
+        try:
+            with open(file_path, "wb") as f:
+                f.write(await uploaded_file.read())
 
-            if augment_filename:
-                file_name, ext = file.filename.rsplit(".", 1)
-                new_file_name = file_name + f"_{sherpa_name}" + f".{ext}"
+            logging.getLogger("uvicorn").info(f"Uploaded file:{file_path} successfully")
 
-            file_path = os.path.join(dir_to_save, new_file_name)
-            try:
-                with open(file_path, "wb") as f:
-                    f.write(await file.read())
-                logging.getLogger("uvicorn").info(f"Uploaded file:{file_path} successfully")
+            file_upload = dbsession.get_file_upload(new_file_name)
 
-            except Exception as e:
-                dpd.raise_error(f"Couldn't upload file: {file_path}, exception: {e}")
+            if file_upload:
+                file_upload.path = file_path
+                file_upload.type = file_upload_req.type
+                file_upload.fm_incident_id = file_upload_req.fm_incident_id
+            else:
+                file_upload = mm.FileUploads(
+                    filename=new_file_name,
+                    path=file_path,
+                    type=file_upload_req.type,
+                    fm_incident_id=file_upload_req.fm_incident_id,
+                )
+                dbsession.add_to_session(file_upload)
 
-            finally:
-                file.file.close()
+        except Exception as e:
+            dpd.raise_error(f"Couldn't upload file: {file_path}, exception: {e}")
 
-            response.append(file_path)
+        finally:
+            uploaded_file.file.close()
+
+        response.append(file_path)
+
+    return response
+
+
+@router.post("/add_fm_incidents")
+async def add_fm_incident(
+    add_fm_incident_req: rqm.AddFMIncidentReq, sherpa: str = Depends(dpd.get_sherpa)
+):
+    response = {}
+    if not sherpa:
+        dpd.raise_error("Unknown requester", 401)
+
+    with DBSession() as dbsession:
+
+        if add_fm_incident_req.type not in mm.FMIncidentTypes:
+            dpd.raise_error(
+                f"Will only accept incidents of type {mm.FMIncidentTypes}requester"
+            )
+
+        fm_incident = mm.FMIncidents(
+            type=add_fm_incident_req.type,
+            code=add_fm_incident_req.code,
+            incident_id=add_fm_incident_req.incident_id,
+            entity_name=sherpa,
+            module=add_fm_incident_req.module,
+            sub_module=add_fm_incident_req.sub_module,
+            message=add_fm_incident_req.message,
+            display_message=add_fm_incident_req.display_message,
+            recovery_message=add_fm_incident_req.recovery_message,
+            data_uploaded=add_fm_incident_req.data_uploaded,
+            data_path=add_fm_incident_req.data_path,
+            other_info=add_fm_incident_req.other_info,
+        )
+        dbsession.add_to_session(fm_incident)
+
+    return response
+
+
+@router.post("/update_fm_incident_data_details")
+async def update_fm_incident_data_details(
+    update_incident_data_details_req: rqm.UpdateIncidentDataDetailsReq,
+    sherpa: str = Depends(dpd.get_sherpa),
+):
+
+    response = {}
+
+    if not sherpa:
+        dpd.raise_error("Unknown requester", 401)
+
+    with DBSession() as dbsession:
+        fm_incident = dbsession.get_fm_incident(
+            update_incident_data_details_req.incident_id
+        )
+
+        if fm_incident is None:
+            dpd.raise_error(
+                f"no fm incident found with unique id: {update_incident_data_details_req.incident_id}"
+            )
+
+        # update other info
+        if update_incident_data_details_req.other_info:
+
+            if fm_incident.other_info is None:
+                fm_incident.other_info = {}
+
+            fm_incident.other_info.update(update_incident_data_details_req.other_info)
+            flag_modified(fm_incident, "other_info")
+
+        fm_incident.data_uploaded = update_incident_data_details_req.data_uploaded
+        fm_incident.data_path = update_incident_data_details_req.data_path
 
     return response

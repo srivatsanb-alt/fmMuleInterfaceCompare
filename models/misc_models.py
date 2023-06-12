@@ -1,7 +1,9 @@
 from models.base_models import Base, TimestampMixin
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy import Column, Integer, String, ARRAY, Boolean, DateTime
-from typing import Optional
+
+# FM incident types
+FMIncidentTypes = ["mule_error", "fm_error"]
 
 
 class NotificationModules:
@@ -20,11 +22,6 @@ class NotificationLevels:
     stale_alert_or_action = "stale_alert_or_action"
     action_request = "action_request"
     stale_alert_or_action = "stale_alert_or_action"
-
-
-class FMIncidentTypes:
-    mule_error = "mule_error"
-    fm_error = "fm_error"
 
 
 NotificationTimeout = {
@@ -67,16 +64,27 @@ class MasterFMDataUpload(Base):
 class FMIncidents(TimestampMixin, Base):
     __tablename__ = "fm_incidents"
     id = Column(Integer, primary_key=True)
-    unique_id = Column(String, unique=True, index=True)
     type = Column(String, nullable=False)
+
+    # incident code
     code = Column(String, nullable=False)
+
+    # sherpa name, module name
     entity_name = Column(String)
+
+    # unqiue incident id
+    incident_id = Column(String, unique=True, index=True)
+
+    # data details
+    data_uploaded = Column(Boolean)
+    data_path = Column(String)
+
+    # extra info
     module = Column(String)
     sub_module = Column(String)
     message = Column(String, nullable=False)
     display_message = Column(String)
     recovery_message = Column(String)
-    data_upload_status = Column(String)
     other_info = Column(JSONB)
 
 
@@ -95,3 +103,12 @@ class SherpaOEE(Base):
     sherpa_name = Column(String, nullable=False, index=True)
     dt = Column(DateTime, nullable=False, index=True)
     mode_split_up = Column(JSONB)
+
+
+class FileUploads(Base):
+    __tablename__ = "file_uploads"
+    filename = Column(String, primary_key=True)
+    type = Column(String, index=True)
+    path = Column(String, index=True)
+    fm_incident_id = Column(String, index=True)
+    other_info = Column(JSONB)

@@ -312,21 +312,21 @@ async def get_fm_incidents(
         )
 
         if fm_incidents is None:
-            return {0: "No errors"}
+            return response
 
         for fm_incident in fm_incidents:
-            uid = fm_incident.id
-            response[uid] = {}
-            response[uid].update({"error_code": fm_incident.error_code})
-            response[uid].update({"error_msg": fm_incident.error_message})
-            response[uid].update({"description": fm_incident.display_message})
-            response[uid].update({"how_to_recover": fm_incident.recovery_message})
-            response[uid].update(
+            incident_id = fm_incident.incident_id
+            response[incident_id] = {}
+            response[incident_id].update({"code": fm_incident.code})
+            response[incident_id].update({"message": fm_incident.message})
+            response[incident_id].update({"description": fm_incident.display_message})
+            response[incident_id].update({"how_to_recover": fm_incident.recovery_message})
+            response[incident_id].update(
                 {"reported_at": utils_util.dt_to_str(fm_incident.created_at)}
             )
-            response[uid].update({"module": fm_incident.module})
-            response[uid].update({"other_info": fm_incident.other_info})
-            logging.info(f"response dict end: {response}")
+            response[incident_id].update({"module": fm_incident.module})
+            response[incident_id].update({"other_info": fm_incident.other_info})
+
     return response
 
 

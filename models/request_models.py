@@ -81,21 +81,25 @@ class VisaReq:
 # Messages from sherpas
 
 
-class ErrInfo(BaseModel):
-    err_code: str
-    unique_id: str
+class AddFMIncidentReq(BaseModel):
+    type: str
+    code: str
+    incident_id: str
+    message: str
+    data_uploaded: bool
+    data_path: Optional[str] = None
     module: Optional[str] = None
     sub_module: Optional[str] = None
-    err_msg: str
-    err_disp_msg: Optional[str] = None
-    recovery_msg: Optional[str] = None
+    display_message: Optional[str] = None
+    recovery_message: Optional[str] = None
     other_info: Optional[dict] = None
 
 
-class ErrDataInfo(BaseModel):
-    unique_id: str
-    data_path: str
-    data_upload_status: str
+class UpdateIncidentDataDetailsReq(BaseModel):
+    incident_id: str
+    data_uploaded: bool
+    data_path: Optional[str]
+    other_info: Optional[Dict[str, str]] = None
 
 
 class SherpaReq(BaseModel):
@@ -155,6 +159,12 @@ class ResourceReq(SherpaReq):
     charging_bay: str = None
     access_type: AccessType = None
     type = MessageType.RESOURCE_ACCESS
+
+
+class FileUploadReq(BaseModel):
+    filename: str
+    type: str
+    fm_incident_id: Optional[str]
 
 
 #################################################

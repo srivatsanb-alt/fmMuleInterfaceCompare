@@ -541,6 +541,13 @@ class DBSession:
                 ).all()
             )
 
+    def get_fm_incident(self, incident_id: str):
+        return (
+            self.session.query(mm.FMIncidents)
+            .filter(mm.FMIncidents.incident_id == incident_id)
+            .one_or_none()
+        )
+
     def get_recent_fm_incident(self, entity_name, n=1):
         return (
             self.session.query(mm.FMIncidents)
@@ -617,4 +624,11 @@ class DBSession:
             .group_by(tm.Trip.route)
             .order_by(func.count(tm.Trip.route).desc())
             .all()
+        )
+
+    def get_file_upload(self, filename: str):
+        return (
+            self.session.query(mm.FileUploads)
+            .filter(mm.FileUploads.filename == filename)
+            .one_or_none()
         )
