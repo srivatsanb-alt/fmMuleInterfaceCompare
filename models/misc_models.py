@@ -110,5 +110,6 @@ class FileUploads(Base):
     filename = Column(String, primary_key=True)
     type = Column(String, index=True)
     path = Column(String, index=True)
+    uploaded_by = Column(String, nullable=False, index=True)
     fm_incident_id = Column(String, index=True)
     other_info = Column(JSONB)

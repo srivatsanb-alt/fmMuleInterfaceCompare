@@ -214,12 +214,14 @@ async def upload_file(
                 file_upload.path = file_path
                 file_upload.type = file_upload_req.type
                 file_upload.fm_incident_id = file_upload_req.fm_incident_id
+                file_upload.uploaded_by = sherpa_name
             else:
                 file_upload = mm.FileUploads(
                     filename=new_file_name,
                     path=file_path,
                     type=file_upload_req.type,
                     fm_incident_id=file_upload_req.fm_incident_id,
+                    uploaded_by=sherpa_name,
                 )
                 dbsession.add_to_session(file_upload)
 
