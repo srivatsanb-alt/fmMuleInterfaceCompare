@@ -302,14 +302,7 @@ def update_fm_incidents(
     all_fm_incidents = []
     for fm_incident in fm_incidents:
         fm_incident_dict = utils_util.get_table_as_dict(mm.FMIncidents, fm_incident)
-        del fm_incident_dict["created_at"]
-        fm_incident_dict_copy = fm_incident_dict.copy()
-
-        for key, value in fm_incident_dict.items():
-            if value is None:
-                del fm_incident_dict_copy[key]
-
-        all_fm_incidents.append(fm_incident_dict_copy)
+        all_fm_incidents.append(fm_incident_dict)
 
     if len(all_fm_incidents) == 0:
         logging.getLogger("mfm_updates").info("no new fm incidents to be updated")
@@ -344,9 +337,7 @@ def update_sherpa_oee(
 
     success = False
     if last_sherpa_oee_update_dt is None:
-        last_sherpa_oee_update_dt = datetime.datetime.now() + datetime.timedelta(
-            hours=-24
-        )
+        last_sherpa_oee_update_dt = datetime.datetime.now() + datetime.timedelta(hours=-24)
     else:
         last_sherpa_oee_update_dt = utils_util.str_to_dt(last_sherpa_oee_update_dt)
 
