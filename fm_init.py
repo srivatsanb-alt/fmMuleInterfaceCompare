@@ -80,7 +80,7 @@ def main():
     DB_UP = False
     while not DB_UP:
         try:
-            # maybe_drop_tables()
+            maybe_drop_tables()
             fu.create_all_tables()
             upgrade_db_schema()
             DB_UP = True

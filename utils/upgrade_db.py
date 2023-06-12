@@ -106,6 +106,6 @@ def maybe_drop_tables():
                     # data_path was added post release FM_v3.2.1
                     if "data_path" not in column_names:
                         conn.execute('DROP TABLE "fm_incidents"')
-                    print("dropped table fm_incidents")
+                        print("dropped table fm_incidents")
         else:
             print("No fm_version entry in DB, cannot drop tables based on fm_version")
