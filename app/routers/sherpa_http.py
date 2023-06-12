@@ -3,7 +3,6 @@ import redis
 import json
 import os
 import logging
-from typing import List
 from fastapi import Depends, APIRouter, File, UploadFile
 from sqlalchemy.orm.attributes import flag_modified
 
@@ -194,7 +193,9 @@ async def upload_file(
         sherpa = dbsession.get_sherpa(sherpa_name)
         fleet_name = sherpa.fleet.name
 
-        dir_to_save = os.path.join(os.getenv("FM_STATIC_DIR"), "sherpa_uploads", fleet_name)
+        dir_to_save = os.path.join(
+            os.getenv("FM_STATIC_DIR"), "sherpa_uploads", fleet_name, file_upload_req.type
+        )
 
         if not os.path.exists(dir_to_save):
             os.makedirs(dir_to_save)
