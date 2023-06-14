@@ -4,6 +4,7 @@ from sqlalchemy import Column, Integer, String, ARRAY, Boolean, DateTime
 
 # FM incident types
 FMIncidentTypes = ["mule_error", "fm_error"]
+ConditionalTripTags = ["exclude_stations", "battery_swap", "parking"]
 
 
 class NotificationModules:

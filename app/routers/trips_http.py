@@ -6,6 +6,7 @@ from sqlalchemy.orm.attributes import flag_modified
 import app.routers.dependencies as dpd
 import models.request_models as rqm
 import models.trip_models as tm
+import models.misc_models as mm
 from models.db_session import DBSession
 from utils.util import str_to_dt
 import utils.trip_utils as tu
@@ -367,13 +368,14 @@ async def get_saved_routes(
         dpd.raise_error("Unknown requester", 401)
 
     with DBSession() as dbsession:
-        _tags = ["exclude_stations", "battery_swap", "parking"]
+
         saved_routes = dbsession.get_saved_routes_fleet(fleet_name)
 
         for saved_route in saved_routes:
             used_by_backend = False
             update = False
-            for _tag in _tags:
+
+            for _tag in mm.ConditionalTripTags:
                 if _tag in saved_route.tag:
                     used_by_backend = True
 
