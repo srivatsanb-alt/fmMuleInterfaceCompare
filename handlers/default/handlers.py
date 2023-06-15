@@ -1444,24 +1444,15 @@ class Handlers:
         saved_route = self.dbsession.get_saved_route(req.tag)
 
         stations = req.route
-        last_station = None
+
         for station_name in stations:
             try:
-                station = self.dbsession.get_station(station_name)
-                last_station = station
+                _ = self.dbsession.get_station(station_name)
             except Exception as e:
                 logging.getLogger().info(
                     f"unable to find station: {station_name}, Exception: {e}"
                 )
                 raise ValueError(f"{station_name} not found in DB, cannot add {req.route}")
-
-        if (
-            StationProperties.DISPATCH_NOT_REQD in last_station.properties
-            and "battery_swap" in req.tag
-        ):
-            raise ValueError(
-                f"Last station({last_station.name}) of battery swap route cannot have the property {StationProperties.DISPATCH_NOT_REQD}"
-            )
 
         # end transaction
         self.dbsession.session.commit()
