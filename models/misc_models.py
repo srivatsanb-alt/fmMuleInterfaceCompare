@@ -106,7 +106,7 @@ class SherpaOEE(Base):
     mode_split_up = Column(JSONB)
 
 
-class FileUploads(Base):
+class FileUploads(Base, TimestampMixin):
     __tablename__ = "file_uploads"
     filename = Column(String, primary_key=True)
     type = Column(String, index=True)
