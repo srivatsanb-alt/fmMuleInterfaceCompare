@@ -309,13 +309,14 @@ def update_fm_incidents(
     all_fm_incidents = []
     for fm_incident in fm_incidents:
         fm_incident_dict = utils_util.get_table_as_dict(mm.FMIncidents, fm_incident)
+        del fm_incident_dict["id"]
         all_fm_incidents.append(fm_incident_dict)
 
     if len(all_fm_incidents) == 0:
         logging.getLogger("mfm_updates").info("no new fm incidents to be updated")
         return success
 
-    req_json = {"all_fm_incident": all_fm_incidents}
+    req_json = {"all_fm_incidents": all_fm_incidents}
 
     endpoint = "update_fm_incidents"
     req_type = "post"

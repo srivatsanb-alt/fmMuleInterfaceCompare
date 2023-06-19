@@ -57,7 +57,7 @@ def get_mfm_url(mfm_context: MFMContext, endpoint, query=""):
             mfm_url, "api/v1/master_fm/fm_client/update_fm_version_info"
         ),
         "update_fm_incidents": os.path.join(
-            mfm_url, "api/v1/master_fm/fm_client/record_fm_incidents"
+            mfm_url, "api/v1/master_fm/fm_client/add_fm_incidents"
         ),
         "update_sherpa_oee": os.path.join(
             mfm_url, "api/v1/master_fm/fm_client/update_sherpa_oee"
