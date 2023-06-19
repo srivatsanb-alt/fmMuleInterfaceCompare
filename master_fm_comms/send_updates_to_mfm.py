@@ -343,15 +343,18 @@ def update_sherpa_oee(
     last_sherpa_oee_update_dt,
 ):
 
+    recent_hours = -24
     success = False
     if last_sherpa_oee_update_dt is None:
-        last_sherpa_oee_update_dt = datetime.datetime.now() + datetime.timedelta(hours=-24)
+        last_sherpa_oee_update_dt = datetime.datetime.now() + datetime.timedelta(
+            hours=recent_hours
+        )
     else:
         last_sherpa_oee_update_dt = utils_util.str_to_dt(last_sherpa_oee_update_dt)
 
     sherpa_oees = (
         dbsession.session.query(mm.SherpaOEE)
-        .filter(mm.SherpaOEE.dt > last_sherpa_oee_update_dt)
+        .filter(func.date(mm.SherpaOEE.dt) >= func.date(last_sherpa_oee_update_dt))
         .all()
     )
 
@@ -380,7 +383,7 @@ def update_sherpa_oee(
         success = True
     else:
         logging.getLogger("mfm_updates").info(
-            f"unable to send sherpa oee to mfm,  status_code {response_status_code}"
+            f"unable to send sherpa oee to mfm,  status_code: {response_status_code}"
         )
     return success
 
