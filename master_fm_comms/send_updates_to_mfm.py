@@ -448,10 +448,7 @@ def upload_important_files(
             )
             break
 
-    if success:
-        last_file_upload_dt = temp_last_file_update_dt
-
-    return success
+    return success, temp_last_file_update_dt
 
 
 def send_mfm_updates():
@@ -529,13 +526,16 @@ def send_mfm_updates():
                     last_file_upload_dt: str = master_fm_data_upload_info.info.get(
                         "last_file_upload_dt", None
                     )
-                    last_file_uplaod_success = upload_important_files(
-                        mfm_context, dbsession, last_file_upload_dt
-                    )
+
+                    (
+                        last_file_uplaod_success,
+                        temp_last_file_update_dt,
+                    ) = upload_important_files(mfm_context, dbsession, last_file_upload_dt)
 
                     # need not set last_file_upload_dt
                     if last_file_uplaod_success:
                         any_updates_sent = True
+                        last_file_upload_dt = temp_last_file_update_dt
 
                     # commit last update time to db
                     if any_updates_sent:
