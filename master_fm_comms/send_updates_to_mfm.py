@@ -535,7 +535,7 @@ def send_mfm_updates():
                     # need not set last_file_upload_dt
                     if last_file_uplaod_success:
                         any_updates_sent = True
-                        last_file_upload_dt = temp_last_file_update_dt
+                        last_file_upload_dt = utils_util.dt_to_str(temp_last_file_update_dt)
 
                     # commit last update time to db
                     if any_updates_sent:
