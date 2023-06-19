@@ -13,9 +13,12 @@ import json
 
 # ati code imports
 from core.db import get_engine
+from core.config import Config
 
 
 def backup_data():
+    backup_config = Config.get_backup_config()
+
     logging.getLogger().info("Starting periodic data_backup")
     fm_backup_path = os.path.join(os.getenv("FM_STATIC_DIR"), "data_backup")
     start_time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
@@ -99,7 +102,10 @@ def backup_data():
         logging.getLogger("misc").info(f"Backed up data")
 
         try:
-            cleanup_data()
+            # default keep size is 1000MB
+            keep_size_mb = backup_config.get("keep_size_mb", 1000)
+            cleanup_data(keep_size_mb)
+
         except Exception as e:
             logging.getLogger("misc").error(
                 f"couldn't cleanup old backed up data, exception: {e}"
@@ -112,6 +118,8 @@ def get_directory_size(directory):
     for path, dirs, files in os.walk(directory):
         for file in files:
             file_path = os.path.join(path, file)
+
+            # returns size in bytes
             total_size += os.path.getsize(file_path)
 
     total_size_mb = total_size / (1024 * 1024)
@@ -134,14 +142,14 @@ def sort_and_remove_directories(directory, target_size):
             logging.getLogger("misc").warning(f"Deleted {dir_path}")
 
 
-def cleanup_data(keep_size=1000):
+def cleanup_data(keep_size_mb=1000):
     fm_backup_path = os.path.join(os.getenv("FM_STATIC_DIR"), "data_backup")
     data_backup_size = get_directory_size(fm_backup_path)
 
     # delete if data_backup size greater than keep_size
-    if data_backup_size > keep_size:
+    if data_backup_size > keep_size_mb:
         logging.getLogger("misc").warning(
-            f"data_backup folder size ({data_backup_size} mb) greater than {keep_size} mb"
+            f"data_backup folder size ({data_backup_size} mb) greater than {keep_size_mb} mb"
         )
         lst = os.listdir(fm_backup_path)
         number_files = len(lst)
@@ -149,6 +157,6 @@ def cleanup_data(keep_size=1000):
             logging.getLogger("misc").info(
                 "will check if some old backed up data can be deleted"
             )
-            sort_and_remove_directories(fm_backup_path, data_backup_size - keep_size)
+            sort_and_remove_directories(fm_backup_path, data_backup_size - keep_size_mb)
         else:
             logging.getLogger("misc").warning("no older backed up data to delete")

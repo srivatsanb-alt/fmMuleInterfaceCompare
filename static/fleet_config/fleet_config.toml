@@ -6,6 +6,9 @@ notifications=true
 slack_webhook_url="https://hooks.slack.com/services/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"
 time_interval=20
 
+[fleet.backup]
+keep_size_mb=1000
+
 [fleet.rq]
 default_job_timeout = 15
 generic_handler_job_timeout = 10
