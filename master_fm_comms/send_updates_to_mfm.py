@@ -2,7 +2,7 @@ import time
 import logging
 import os
 import datetime
-from sqlalchemy import or_
+from sqlalchemy import or_, func
 from sqlalchemy.orm.attributes import flag_modified
 
 # ati code imports
@@ -392,14 +392,15 @@ def upload_important_files(
     success = False
 
     # upload files that are recent
+
     if last_file_upload_dt:
-        last_file_upload_dt = utils_util.str_to_dt(last_file_upload_dt)
-        last_file_upload_dt = max(
-            last_file_upload_dt,
+        temp_last_file_update_dt = utils_util.str_to_dt(last_file_upload_dt)
+        temp_last_file_update_dt = max(
+            temp_last_file_update_dt,
             (datetime.datetime.now() + datetime.timedelta(hours=recent_hours)),
         )
     else:
-        last_file_upload_dt = datetime.datetime.now() + datetime.timedelta(
+        temp_last_file_update_dt = datetime.datetime.now() + datetime.timedelta(
             hours=recent_hours
         )
 
@@ -407,10 +408,11 @@ def upload_important_files(
         dbsession.session.query(mm.FileUploads)
         .filter(
             or_(
-                mm.FileUploads.updated_at > last_file_upload_dt,
-                mm.FileUploads.created_at > last_file_upload_dt,
+                mm.FileUploads.updated_at > temp_last_file_update_dt,
+                mm.FileUploads.created_at > temp_last_file_update_dt,
             ),
         )
+        .order_by(func.least(mm.FileUploads.updated_at, mm.FileUploads.created_at))
         .all()
     )
 
@@ -434,18 +436,19 @@ def upload_important_files(
                 f"Successfully uploaded files with params: {params}"
             )
             success = True
+            temp_last_file_update_dt = file_upload.created_at
             if file_upload.updated_at:
-                last_file_upload_dt = max(file_upload.updated_at, file_upload.created_at)
-            else:
-                last_file_upload_dt = file_upload.created_at
-
+                temp_last_file_update_dt = file_upload.updated_at
         else:
             logging.getLogger("mfm_updates").info(
                 f"unable to upload files with params {params}"
             )
             break
 
-    return success, last_file_upload_dt
+    if success:
+        last_file_upload_dt = temp_last_file_update_dt
+
+    return success
 
 
 def send_mfm_updates():
@@ -519,10 +522,11 @@ def send_mfm_updates():
                         )
                         any_updates_sent = True
 
+                    # upload important files
                     last_file_upload_dt: str = master_fm_data_upload_info.info.get(
                         "last_file_upload_dt", None
                     )
-                    last_file_uplaod_success, last_file_upload_dt = upload_important_files(
+                    last_file_uplaod_success = upload_important_files(
                         mfm_context, dbsession, last_file_upload_dt
                     )
                     if last_file_uplaod_success:
