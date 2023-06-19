@@ -388,10 +388,8 @@ def upload_important_files(
     mfm_context: mu.MFMContext, dbsession: DBSession, last_file_upload_dt
 ):
 
-    recent_hours = -5
+    recent_hours = -24
     success = False
-
-    # upload files that are recent
 
     if last_file_upload_dt:
         temp_last_file_update_dt = utils_util.str_to_dt(last_file_upload_dt)
@@ -404,6 +402,7 @@ def upload_important_files(
             hours=recent_hours
         )
 
+    # upload files that are recent
     file_uploads = (
         dbsession.session.query(mm.FileUploads)
         .filter(
