@@ -441,7 +441,7 @@ def upload_important_files(
                 temp_last_file_update_dt = file_upload.updated_at
         else:
             logging.getLogger("mfm_updates").info(
-                f"unable to upload files with params {params}"
+                f"unable to upload files with params {params}, status_code: {response_status_code}"
             )
             break
 
