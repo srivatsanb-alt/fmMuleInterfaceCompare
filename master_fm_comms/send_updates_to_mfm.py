@@ -402,9 +402,9 @@ def upload_important_files(
             (datetime.datetime.now() + datetime.timedelta(hours=recent_hours)),
         )
     else:
-        temp_last_file_update_dt = datetime.datetime.now() + datetime.timedelta(
-            hours=recent_hours
-        )
+        temp_last_file_update_dt = datetime.datetime.now()
+
+    recent_dt = temp_last_file_update_dt + datetime.timedelta(hours=recent_hours)
 
     # upload files that are recent
     file_uploads = (
@@ -414,6 +414,11 @@ def upload_important_files(
                 mm.FileUploads.updated_at > temp_last_file_update_dt,
                 mm.FileUploads.created_at > temp_last_file_update_dt,
             ),
+        )
+        .filter(
+            or_(
+                mm.FileUploads.created_at > recent_dt, mm.FileUploads.updated_at > recent_dt
+            )
         )
         .order_by(func.least(mm.FileUploads.updated_at, mm.FileUploads.created_at))
         .all()
