@@ -62,6 +62,7 @@ def get_mfm_url(mfm_context: MFMContext, endpoint, query=""):
         "update_sherpa_oee": os.path.join(
             mfm_url, "api/v1/master_fm/fm_client/update_sherpa_oee"
         ),
+        "upload_file": os.path.join(mfm_url, "api/v1/master_fm/fm_client/upload_file"),
     }
     return fm_endpoints.get(endpoint, None)
 
@@ -74,7 +75,7 @@ def check_response(response):
 
 
 def send_http_req_to_mfm(
-    mfm_context, endpoint, req_type, req_json=None, files=None, query=""
+    mfm_context, endpoint, req_type, req_json=None, files=None, params=None, query=""
 ):
     response_json = None
     url = get_mfm_url(mfm_context, endpoint, query)
@@ -88,6 +89,9 @@ def send_http_req_to_mfm(
 
     if files:
         kwargs.update({"files": files})
+
+    if params:
+        kwargs.update({"params": params})
 
     if mfm_context.http_scheme == "https":
         kwargs.update({"verify": mfm_context.cert_file})

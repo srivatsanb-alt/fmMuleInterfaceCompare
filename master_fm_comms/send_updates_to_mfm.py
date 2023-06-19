@@ -37,6 +37,7 @@ def upload_map_files(mfm_context: mu.MFMContext):
                     "post",
                     req_json=None,
                     files=files,
+                    params=None,
                     query=fleet.name,
                 )
 
@@ -383,6 +384,70 @@ def update_sherpa_oee(
     return success
 
 
+def upload_important_files(
+    mfm_context: mu.MFMContext, dbsession: DBSession, last_file_upload_dt
+):
+
+    recent_hours = -5
+    success = False
+
+    # upload files that are recent
+    if last_file_upload_dt:
+        last_file_upload_dt = utils_util.str_to_dt(last_file_upload_dt)
+        last_file_upload_dt = max(
+            last_file_upload_dt,
+            (datetime.datetime.now() + datetime.timedelta(hours=recent_hours)),
+        )
+    else:
+        last_file_upload_dt = datetime.datetime.now() + datetime.timedelta(
+            hours=recent_hours
+        )
+
+    file_uploads = (
+        dbsession.session.query(mm.FileUploads)
+        .filter(
+            or_(
+                mm.FileUploads.updated_at > last_file_upload_dt,
+                mm.FileUploads.created_at > last_file_upload_dt,
+            ),
+        )
+        .all()
+    )
+
+    endpoint = "upload_file"
+    req_type = "post"
+
+    for file_upload in file_uploads:
+        params = {
+            "filename": file_upload.filename,
+            "uploaded_by": file_upload.uploaded_by,
+            "type": file_upload.type,
+            "fm_incident_id": file_upload.fm_incident_id,
+        }
+
+        file_to_upload = ("uploaded_file", open(file_upload.path, "rb"))
+        response_status_code, response_json = mu.send_http_req_to_mfm(
+            mfm_context, endpoint, req_type, files=[file_to_upload], params=params
+        )
+        if response_status_code == 200:
+            logging.getLogger("mfm_updates").info(
+                f"Successfully uploaded files with params: {params}"
+            )
+            success = True
+            if file_upload.updated_at:
+                last_file_upload_dt = max(file_upload.updated_at, file_upload.created_at)
+            else:
+                last_file_upload_dt = file_upload.created_at
+
+        else:
+            logging.getLogger("mfm_updates").info(
+                f"unable to upload files with params {params}"
+            )
+            break
+
+    return success, last_file_upload_dt
+
+
 def send_mfm_updates():
     logging.getLogger().info("starting send_updates_to_mfm script")
 
@@ -454,6 +519,15 @@ def send_mfm_updates():
                         )
                         any_updates_sent = True
 
+                    last_file_upload_dt: str = master_fm_data_upload_info.info.get(
+                        "last_file_upload_dt", None
+                    )
+                    last_file_uplaod_success, last_file_upload_dt = upload_important_files(
+                        mfm_context, dbsession, last_file_upload_dt
+                    )
+                    if last_file_uplaod_success:
+                        any_updates_sent = True
+
                     # commit last update time to db
                     if any_updates_sent:
                         master_fm_data_upload_info.info.update(
@@ -462,6 +536,7 @@ def send_mfm_updates():
                                 "last_trip_update_dt": last_trip_update_dt,
                                 "last_sherpa_oee_update_dt": last_sherpa_oee_update_dt,
                                 "last_fm_incidents_update_dt": last_fm_incidents_update_dt,
+                                "last_file_upload_dt": last_file_upload_dt,
                             }
                         )
                         flag_modified(master_fm_data_upload_info, "info")

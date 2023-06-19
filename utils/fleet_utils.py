@@ -168,7 +168,10 @@ def add_master_fm_data_upload(dbsession: DBSession):
                     datetime.datetime.now()
                 ),
                 "last_sherpa_oee_update_dt": utils_util.dt_to_str(datetime.datetime.now()),
-                "last_fm_incidents_update_dt": utils_util.dt_to_str(datetime.datetime.now()),
+                "last_fm_incidents_update_dt": utils_util.dt_to_str(
+                    datetime.datetime.now()
+                ),
+                "last_file_upload_dt": utils_util.dt_to_str(datetime.datetime.now()),
             }
         )
         dbsession.add_to_session(mfm_du)
