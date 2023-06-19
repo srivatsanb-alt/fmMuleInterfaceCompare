@@ -529,6 +529,8 @@ def send_mfm_updates():
                     last_file_uplaod_success = upload_important_files(
                         mfm_context, dbsession, last_file_upload_dt
                     )
+
+                    # need not set last_file_upload_dt
                     if last_file_uplaod_success:
                         any_updates_sent = True
 
