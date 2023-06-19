@@ -92,20 +92,23 @@ def upgrade_db_schema():
 
 def maybe_drop_tables():
     with get_session(os.getenv("FM_DATABASE_URI")) as session:
-        fm_version = session.query(FMVersion).one_or_none()
-        if fm_version:
-            # many schema changes ,false positives in fm_incidents data - dropping the table with old data
-            if float(fm_version.version) <= 3.3:
-                with get_engine(os.getenv("FM_DATABASE_URI")).connect() as conn:
-                    conn.execute("commit")
-                    result = conn.execute(
-                        "SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='fm_incidents'"
-                    )
-                    column_names = [row[0] for row in result]
+        try:
+            fm_version = session.query(FMVersion).one_or_none()
+            if fm_version:
+                # many schema changes ,false positives in fm_incidents data - dropping the table with old data
+                if float(fm_version.version) <= 3.3:
+                    with get_engine(os.getenv("FM_DATABASE_URI")).connect() as conn:
+                        conn.execute("commit")
+                        result = conn.execute(
+                            "SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='fm_incidents'"
+                        )
+                        column_names = [row[0] for row in result]
 
-                    # data_path was added post release FM_v3.2.1
-                    if "data_path" not in column_names:
-                        conn.execute('DROP TABLE "fm_incidents"')
-                        print("dropped table fm_incidents")
-        else:
-            print("No fm_version entry in DB, cannot drop tables based on fm_version")
+                        # data_path was added post release FM_v3.2.1
+                        if "data_path" not in column_names:
+                            conn.execute('DROP TABLE "fm_incidents"')
+                            print("dropped table fm_incidents")
+        except Exception as e:
+            print(
+                f"Unable tom fetch fm version from DB, cannot drop tables based on fm_version, exception: {e}"
+            )
