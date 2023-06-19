@@ -411,8 +411,10 @@ def upload_important_files(
         dbsession.session.query(mm.FileUploads)
         .filter(
             or_(
-                mm.FileUploads.updated_at > temp_last_file_update_dt,
-                mm.FileUploads.created_at > temp_last_file_update_dt,
+                func.date_trunc("seconds", mm.FileUploads.updated_at)
+                > temp_last_file_update_dt,
+                func.date_trunc("seconds", mm.FileUploads.created_at)
+                > temp_last_file_update_dt,
             ),
         )
         .filter(
