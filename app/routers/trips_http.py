@@ -1,6 +1,7 @@
 from typing import Union
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm.attributes import flag_modified
+import asyncio
 
 # ati code imports
 import app.routers.dependencies as dpd
@@ -195,11 +196,19 @@ async def trip_status_with_type(
             return response
             # dpd.raise_error("no trip id given or available in the given timeframe")
 
+        count = 0
         for trip_id in trip_status_req.trip_ids:
             trip: tm.Trip = dbsession.get_trip(trip_id)
+
             if not trip:
                 dpd.raise_error("invalid trip id")
+
             response.update({trip_id: tu.get_trip_status(trip)})
+
+            # introducing sleep to allow other endpoints to work simultaneously
+            count = count + 1
+            if count % 50 == 0:
+                await asyncio.sleep(50e-3)
 
     return response
 
@@ -226,11 +235,17 @@ async def trip_status(
             return response
             # dpd.raise_error("no trip id given or available in the given timeframe")
 
+        count = 0
         for trip_id in trip_status_req.trip_ids:
             trip: tm.Trip = dbsession.get_trip(trip_id)
             if not trip:
                 dpd.raise_error("invalid trip id")
             response.update({trip_id: tu.get_trip_status(trip)})
+            count = count + 1
+
+            # introducing sleep to allow other endpoints to work simultaneously
+            if count % 50 == 0:
+                await asyncio.sleep(50e-3)
 
     return response
 
@@ -277,13 +292,20 @@ async def trip_analytics(
             return response
             # dpd.raise_error("no trip id given or available in the given timeframe")
 
+        count = 0
         for trip_id in trip_analytics_req.trip_ids:
             trip_legs_id = dbsession.get_all_trip_legs(trip_id)
             for trip_leg_id in trip_legs_id:
                 trip_analytics: tm.TripAnalytics = dbsession.get_trip_analytics(trip_leg_id)
                 if not trip_analytics:
                     continue
+
                 response.update({trip_leg_id: tu.get_trip_analytics(trip_analytics)})
+
+                # introducing sleep to allow other endpoints to work simultaneously
+                count = count + 1
+                if count % 50 == 0:
+                    await asyncio.sleep(50e-3)
 
     return response
 
