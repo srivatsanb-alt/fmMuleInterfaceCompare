@@ -48,7 +48,12 @@ def start_router_module():
             route_length = 0
             if not are_poses_close(pose_1, pose_2):
                 try:
-                    route_length = rm.get_route_length(pose_1, pose_2)
+                    route_length = redis_conn.get(f"rl_{str(pose_1)}_{str(pose_2)}")
+                    if route_length is None:
+                        route_length = rm.get_route_length(pose_1, pose_2)
+                        redis_conn.set(f"rl_{str(pose_1)}_{str(pose_2)}", route_length)
+                    else:
+                        route_length = float(route_length)
                 except Exception as e:
                     logger.info(
                         f"unable to find route length between {pose_1} and {pose_2} of {fleet_name} \n Exception {e}"

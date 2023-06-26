@@ -171,7 +171,7 @@ async def sherpa_alerts(
         dbsession.add_notification(
             [sherpa_obj.name, sherpa_obj.fleet.name],
             alert,
-            mm.NotificationLevels.action_request,
+            mm.NotificationLevels.alert,
             mm.NotificationModules.generic,
         )
 

@@ -1532,7 +1532,13 @@ class Handlers:
 
         # run optimal dispatch if needs be - need not be coupled with handler
         try:
+            run_opt_d = False
             if msg.type in cc.OptimalDispatchInfluencers:
+                run_opt_d = True
+                if msg.type == cc.MessageType.PASS_TO_SHERPA:
+                    if not isinstance(msg, rqm.ResetPoseReq):
+                        run_opt_d = False
+            if run_opt_d:
                 with DBSession() as dbsession:
                     self.dbsession = dbsession
                     self.run_optimal_dispatch()
