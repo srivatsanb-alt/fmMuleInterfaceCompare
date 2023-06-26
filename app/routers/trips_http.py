@@ -188,22 +188,22 @@ async def trip_status_with_type(
             trip_status_req.booked_from = str_to_dt(trip_status_req.booked_from)
             trip_status_req.booked_till = str_to_dt(trip_status_req.booked_till)
 
-            trip_status_req.trip_ids = dbsession.get_trip_ids_with_timestamp_and_status(
+            all_trips = dbsession.get_trips_with_timestamp_and_status(
                 trip_status_req.booked_from, trip_status_req.booked_till, valid_status
             )
 
-        if not trip_status_req.trip_ids:
-            return response
+        else:
+            if not trip_status_req.trip_ids:
+                return response
+
+            all_trips = dbsession.get_trips_with_ids_and_status(
+                trip_status_req.trip_ids, valid_status
+            )
             # dpd.raise_error("no trip id given or available in the given timeframe")
 
         count = 0
-        for trip_id in trip_status_req.trip_ids:
-            trip: tm.Trip = dbsession.get_trip(trip_id)
-
-            if not trip:
-                dpd.raise_error("invalid trip id")
-
-            response.update({trip_id: tu.get_trip_status(trip)})
+        for trip in all_trips:
+            response.update({trip.id: tu.get_trip_status(trip)})
 
             # introducing sleep to allow other endpoints to work simultaneously
             count = count + 1
@@ -223,24 +223,22 @@ async def trip_status(
         dpd.raise_error("Unknown requester", 401)
 
     with DBSession() as dbsession:
+        all_trips = None
         if trip_status_req.booked_from and trip_status_req.booked_till:
             trip_status_req.booked_from = str_to_dt(trip_status_req.booked_from)
             trip_status_req.booked_till = str_to_dt(trip_status_req.booked_till)
-
-            trip_status_req.trip_ids = dbsession.get_trip_ids_with_timestamp(
+            all_trips = dbsession.get_trips_with_timestamp(
                 trip_status_req.booked_from, trip_status_req.booked_till
             )
 
-        if not trip_status_req.trip_ids:
-            return response
-            # dpd.raise_error("no trip id given or available in the given timeframe")
+        else:
+            if not trip_status_req.trip_ids:
+                return response
+            all_trips = dbsession.get_trips_with_ids(trip_status_req.trip_ids)
 
         count = 0
-        for trip_id in trip_status_req.trip_ids:
-            trip: tm.Trip = dbsession.get_trip(trip_id)
-            if not trip:
-                dpd.raise_error("invalid trip id")
-            response.update({trip_id: tu.get_trip_status(trip)})
+        for trip in all_trips:
+            response.update({trip.id: tu.get_trip_status(trip)})
             count = count + 1
 
             # introducing sleep to allow other endpoints to work simultaneously
@@ -273,7 +271,11 @@ async def ongoing_trip_status(user_name=Depends(dpd.get_user_from_header)):
 
 @router.post("/analytics_pg")
 async def trip_analytics_pg(
-    trip_analytics_req: rqm.TripStatusReq, sherpa_name: str, page: int = 0, limit: int = 50, user_name=Depends(dpd.get_user_from_header)
+    trip_analytics_req: rqm.TripStatusReq,
+    sherpa_name: str,
+    page: int = 0,
+    limit: int = 50,
+    user_name=Depends(dpd.get_user_from_header),
 ):
     response = {}
     if not user_name:
@@ -284,9 +286,16 @@ async def trip_analytics_pg(
             trip_analytics_req.booked_from = str_to_dt(trip_analytics_req.booked_from)
             trip_analytics_req.booked_till = str_to_dt(trip_analytics_req.booked_till)
 
-        trip_analytics = dbsession.get_trip_analytics_with_ts(trip_analytics_req.booked_from, trip_analytics_req.booked_till, sherpa_name, page, limit)
-        response =trip_analytics
+        trip_analytics = dbsession.get_trip_analytics_with_ts(
+            trip_analytics_req.booked_from,
+            trip_analytics_req.booked_till,
+            sherpa_name,
+            page,
+            limit,
+        )
+        response = trip_analytics
     return response
+
 
 @router.post("/analytics")
 async def trip_analytics(
@@ -301,30 +310,31 @@ async def trip_analytics(
             trip_analytics_req.booked_from = str_to_dt(trip_analytics_req.booked_from)
             trip_analytics_req.booked_till = str_to_dt(trip_analytics_req.booked_till)
 
-            trip_analytics_req.trip_ids = dbsession.get_trip_ids_with_timestamp(
+            all_trip_analytics = dbsession.get_trip_analytics_with_timestamp(
                 trip_analytics_req.booked_from, trip_analytics_req.booked_till
             )
 
-        if not trip_analytics_req.trip_ids:
-            return response
+        else:
+            if not trip_analytics_req.trip_ids:
+                return response
+                all_trip_analytics = dbsession.get_trip_analytics_with_trip_ids(
+                    trip_analytics_req.trip_ids
+                )
             # dpd.raise_error("no trip id given or available in the given timeframe")
 
         count = 0
-        for trip_id in trip_analytics_req.trip_ids:
-            trip_legs_id = dbsession.get_all_trip_legs(trip_id)
-            for trip_leg_id in trip_legs_id:
-                trip_analytics: tm.TripAnalytics = dbsession.get_trip_analytics(trip_leg_id)
-                if not trip_analytics:
-                    continue
+        for trip_analytics in all_trip_analytics:
+            response.update(
+                {trip_analytics.trip_leg_id: tu.get_trip_analytics(trip_analytics)}
+            )
 
-                response.update({trip_leg_id: tu.get_trip_analytics(trip_analytics)})
-
-                # introducing sleep to allow other endpoints to work simultaneously
-                count = count + 1
-                if count % 50 == 0:
-                    await asyncio.sleep(50e-3)
+            # introducing sleep to allow other endpoints to work simultaneously
+            count = count + 1
+            if count % 50 == 0:
+                await asyncio.sleep(50e-3)
 
     return response
+
 
 @router.post("/{trip_id}/add_trip_metadata")
 async def add_trip_metadata(
