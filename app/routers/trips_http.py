@@ -271,6 +271,23 @@ async def ongoing_trip_status(user_name=Depends(dpd.get_user_from_header)):
 # performs analysis for every trip leg and also for the overall trip.
 
 
+@router.post("/analytics_pg")
+async def trip_analytics_pg(
+    trip_analytics_req: rqm.TripStatusReq, sherpa_name: str, page: int = 0, limit: int = 50, user_name=Depends(dpd.get_user_from_header)
+):
+    response = {}
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    with DBSession() as dbsession:
+        if trip_analytics_req.booked_from and trip_analytics_req.booked_till:
+            trip_analytics_req.booked_from = str_to_dt(trip_analytics_req.booked_from)
+            trip_analytics_req.booked_till = str_to_dt(trip_analytics_req.booked_till)
+
+        trip_analytics = dbsession.get_trip_analytics_with_ts(trip_analytics_req.booked_from, trip_analytics_req.booked_till, sherpa_name, page, limit)
+        response =trip_analytics
+    return response
+
 @router.post("/analytics")
 async def trip_analytics(
     trip_analytics_req: rqm.TripStatusReq, user_name=Depends(dpd.get_user_from_header)
@@ -308,7 +325,6 @@ async def trip_analytics(
                     await asyncio.sleep(50e-3)
 
     return response
-
 
 @router.post("/{trip_id}/add_trip_metadata")
 async def add_trip_metadata(

@@ -3,7 +3,7 @@ import os
 from typing import List
 from sqlalchemy import func, or_, and_, extract
 from sqlalchemy.orm import Session
-
+from fastapi.encoders import jsonable_encoder
 
 # ati code imports
 from core.db import get_session
@@ -431,6 +431,14 @@ class DBSession:
             trip_ids.append(vals[0])
 
         return trip_ids
+
+    def get_trip_analytics_with_ts(self, booked_from , booked_till,sherpa_name, page= 0, limit= 50):
+        trips = self.session.query(tm.TripAnalytics).filter(tm.TripAnalytics.start_time> booked_from).filter(tm.Trip.start_time < booked_till).filter(tm.TripAnalytics.sherpa_name==sherpa_name).offset(page).limit(limit).all()
+        trips= jsonable_encoder(trips)
+        count =  self.session.query(tm.TripAnalytics).filter(tm.TripAnalytics.start_time> booked_from).filter(tm.Trip.start_time < booked_till).filter(tm.TripAnalytics.sherpa_name==sherpa_name).count()
+        
+        trips = {"trips":[trips], "count":count}
+        return trips
 
     def get_trip_analytics(self, trip_leg_id):
         return (
