@@ -384,64 +384,52 @@ class DBSession:
             .all()
         )
 
-    def get_trip_ids_with_timestamp(self, booked_from, booked_till):
-        temp = (
-            self.session.query(tm.Trip.id)
-            .filter(tm.Trip.booking_time > booked_from)
-            .filter(tm.Trip.booking_time < booked_till)
-            .order_by(tm.Trip.id.desc())
-            .all()
-        )
-        trip_ids = []
-
-        for vals in temp:
-            trip_ids.append(vals[0])
-
-        return trip_ids
-
-    def get_trip_ids_with_timestamp_and_status(
-        self, booked_from, booked_till, valid_status
-    ):
-        temp = (
-            self.session.query(tm.Trip.id)
+    def get_trips_with_timestamp_and_status(self, booked_from, booked_till, valid_status):
+        return (
+            self.session.query(tm.Trip)
             .filter(tm.Trip.booking_time > booked_from)
             .filter(tm.Trip.booking_time < booked_till)
             .filter(tm.Trip.status.in_(valid_status))
             .order_by(tm.Trip.id.desc())
             .all()
         )
-        trip_ids = []
 
-        for vals in temp:
-            trip_ids.append(vals[0])
-
-        return trip_ids
-
-    def get_trip_time_with_timestamp(self, start_time, end_time):
-        temp = (
-            self.session.query(tm.Trip.id)
-            .filter(tm.Trip.start_time > start_time)
-            .filter(tm.Trip.end_time < start_time)
+    def get_trips_with_ids_and_status(self, trip_ids, valid_status):
+        return (
+            self.session.query(tm.Trip)
+            .filter(tm.Trip.id.in_(trip_ids))
+            .filter(tm.Trip.status.in_(valid_status))
             .order_by(tm.Trip.id.desc())
             .all()
         )
-        trip_ids = []
+
+    def get_trips_with_timestamp(self, booked_from, booked_till):
+        return (
+            self.session.query(tm.Trip)
+            .filter(tm.Trip.booking_time > booked_from)
+            .filter(tm.Trip.booking_time < booked_till)
+            .order_by(tm.Trip.id.desc())
+            .all()
+        )
+
+    def get_trips_with_ids(self, trip_ids):
+        return (
+            self.session.query(tm.Trip)
+            .filter(tm.Trip.id.in_(trip_ids))
+            .order_by(tm.Trip.id.desc())
+            .all()
+        )
 
         for vals in temp:
             trip_ids.append(vals[0])
 
         return trip_ids
 
-    def get_trip_analytics_with_ts(self, booked_from , booked_till,sherpa_names, page= 0, limit= 50):
-        trips = {}
-        count = 0
-        if(sherpa_names):
-            trips = self.session.query(tm.TripAnalytics).filter(tm.TripAnalytics.start_time> booked_from).filter(tm.Trip.start_time < booked_till).filter(tm.TripAnalytics.sherpa_name.in_(sherpa_names)).offset(page).limit(limit).all()
-            count =  self.session.query(tm.TripAnalytics).filter(tm.TripAnalytics.start_time> booked_from).filter(tm.Trip.start_time < booked_till).filter(tm.TripAnalytics.sherpa_name.in_(sherpa_names)).count()
-        else:
-            trips = self.session.query(tm.TripAnalytics).filter(tm.TripAnalytics.start_time> booked_from).filter(tm.Trip.start_time < booked_till).offset(page).limit(limit).all()
-            count =  self.session.query(tm.TripAnalytics).filter(tm.TripAnalytics.start_time> booked_from).filter(tm.Trip.start_time < booked_till).count()
+    def get_trip_analytics_with_ts(self, booked_from , booked_till,sherpa_name, page= 0, limit= 50):
+        trips = self.session.query(tm.TripAnalytics).filter(tm.TripAnalytics.start_time> booked_from).filter(tm.Trip.start_time < booked_till).filter(tm.TripAnalytics.sherpa_name==sherpa_name).offset(page).limit(limit).all()
         trips= jsonable_encoder(trips)
+        count =  self.session.query(tm.TripAnalytics).filter(tm.TripAnalytics.start_time> booked_from).filter(tm.Trip.start_time < booked_till).filter(tm.TripAnalytics.sherpa_name==sherpa_name).count()
+        
         trips = {"trips":[trips], "count":count}
         return trips
 
