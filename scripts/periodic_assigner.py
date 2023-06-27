@@ -4,7 +4,7 @@ import logging
 # ati code imports
 from core.config import Config
 from models.db_session import DBSession
-from models.request_models import AssignNextTask
+import models.request_models as rqm
 from models.fleet_models import SherpaStatus
 from app.routers.dependencies import process_req
 from models.trip_models import PendingTrip
@@ -24,12 +24,16 @@ def enqueue_scheduled_trips(db_session: DBSession, schdeuled_job_id):
                 not check_if_timestamp_has_passed(scheduled_start_time)
                 and pending_trip.trip_id not in schdeuled_job_id
             ):
-                assign_next_task_req = AssignNextTask()
+                trigger_optimal_dispatch_req = rqm.TriggerOptimalDispatch(
+                    fleet_name=pending_trip.trip.fleet_name
+                )
                 logging.getLogger().info(
                     f"will enqueue a job at {scheduled_start_time} for pending_trip with trip_id: {pending_trip.trip_id}"
                 )
 
-                process_req(None, assign_next_task_req, "self", dt=scheduled_start_time)
+                process_req(
+                    None, trigger_optimal_dispatch_req, "self", dt=scheduled_start_time
+                )
                 schdeuled_job_id.append(pending_trip.trip_id)
 
     return schdeuled_job_id
@@ -58,7 +62,7 @@ def assign_next_task():
                         logging.getLogger("status_updates").info(
                             f"will send assign task request for {sherpa_status.sherpa_name}"
                         )
-                        assign_next_task_req = AssignNextTask(
+                        assign_next_task_req = rqm.AssignNextTask(
                             sherpa_name=sherpa_status.sherpa_name
                         )
 

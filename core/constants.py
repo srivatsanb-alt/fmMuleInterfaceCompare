@@ -19,6 +19,7 @@ class MessageType:
     MISC_PROCESS = "misc_process"
     FORCE_DELETE_ONGOING_TRIP = "force_delete_ongoing_trip"
     SAVE_ROUTE = "save_route"
+    TRIGGER_OPTIMAL_DISPATCH = "trigger_optimal_dispatch"
 
 
 OptimalDispatchInfluencers = [

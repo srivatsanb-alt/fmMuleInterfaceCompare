@@ -7,6 +7,8 @@ import toml
 import os
 import psutil
 import redis
+import json
+import time
 from rq import Worker
 
 
@@ -175,3 +177,25 @@ def rq_perf():
         data.append(worker_data)
 
     return column_names, data
+
+
+def get_route_length(pose_1, pose_2, fleet_name):
+    job_id = generate_random_job_id()
+    redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
+    route_length = redis_conn.get(f"rl_{str(pose_1)}_{str(pose_2)}")
+    if route_length is None:
+        control_router_rl_job = [pose_1, pose_2, fleet_name, job_id]
+        redis_conn.setex(
+            f"control_router_rl_job_{job_id}",
+            int(redis_conn.get("default_job_timeout_ms").decode()),
+            json.dumps(control_router_rl_job),
+        )
+        while not redis_conn.get(f"result_{job_id}"):
+            time.sleep(0.005)
+
+        route_length = json.loads(redis_conn.get(f"result_{job_id}"))
+        redis_conn.delete(f"result_{job_id}")
+    else:
+        route_length = float(route_length)
+
+    return route_length

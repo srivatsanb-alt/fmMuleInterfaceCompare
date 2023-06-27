@@ -230,6 +230,12 @@ class TripStatusMsg(SherpaMsg, JsonMixin):
 
 #################################################
 # internal messsages FM to FM
+class TriggerOptimalDispatch(BaseModel):
+    source: str = "self"
+    fleet_name: str
+    type: str = MessageType.TRIGGER_OPTIMAL_DISPATCH
+
+
 class AssignNextTask(BaseModel):
     source: str = "self"
     sherpa_name: str = None

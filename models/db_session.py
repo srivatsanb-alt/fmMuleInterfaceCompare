@@ -439,29 +439,32 @@ class DBSession:
             .all()
         )
 
-    def get_trip_analytics_with_ts(
+    def get_trip_analytics_with_pagination(
         self, booked_from, booked_till, sherpa_name, page=0, limit=50
     ):
-        trips = (
+        trip_analytics = (
             self.session.query(tm.TripAnalytics)
-            .filter(tm.TripAnalytics.start_time > booked_from)
-            .filter(tm.Trip.start_time < booked_till)
+            .join(tm.Trip, (tm.TripAnalytics.trip_id == tm.Trip.id))
+            .filter(tm.Trip.booking_time > booked_from)
+            .filter(tm.Trip.booking_time < booked_till)
             .filter(tm.TripAnalytics.sherpa_name == sherpa_name)
             .offset(page)
             .limit(limit)
             .all()
         )
-        trips = jsonable_encoder(trips)
+        trip_analytics = jsonable_encoder(trip_analytics)
+
         count = (
             self.session.query(tm.TripAnalytics)
-            .filter(tm.TripAnalytics.start_time > booked_from)
-            .filter(tm.Trip.start_time < booked_till)
+            .join(tm.Trip, (tm.TripAnalytics.trip_id == tm.Trip.id))
+            .filter(tm.Trip.booking_time > booked_from)
+            .filter(tm.Trip.booking_time < booked_till)
             .filter(tm.TripAnalytics.sherpa_name == sherpa_name)
             .count()
         )
 
-        trips = {"trips": [trips], "count": count}
-        return trips
+        trip_analytics = {"trips_analytics": [trip_analytics], "count": count}
+        return trip_analytics
 
     def get_trip_analytics(self, trip_leg_id):
         return (

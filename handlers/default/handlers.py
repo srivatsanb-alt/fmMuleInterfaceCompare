@@ -33,6 +33,7 @@ logging.config.dictConfig(lu.get_log_config_dict())
 class RequestContext:
     msg_type: str
     sherpa_name: str
+    fleet_names: List[str]
 
 
 req_ctxt = RequestContext()
@@ -41,6 +42,7 @@ req_ctxt = RequestContext()
 def init_request_context(req):
     req_ctxt.msg_type = req.type
     req_ctxt.source = req.source
+    req_ctxt.fleet_names = []
     if isinstance(req, rqm.SherpaReq) or isinstance(req, rqm.SherpaMsg):
         req_ctxt.sherpa_name = req.source
         req_ctxt.source = req.source
@@ -56,6 +58,9 @@ class Handlers:
 
         sherpa: fm.Sherpa = self.dbsession.get_sherpa(sherpa_name)
         fleet: fm.Fleet = sherpa.fleet
+
+        if fleet.name not in req_ctxt.fleet_names:
+            req_ctxt.fleet_names.append(sherpa.fleet.name)
 
         if fleet.status == cc.FleetStatus.PAUSED and msg.type not in [
             cc.MessageType.SHERPA_STATUS,
@@ -360,10 +365,11 @@ class Handlers:
         )
 
     # run optimal_dispatch
-    def run_optimal_dispatch(self):
+    def run_optimal_dispatch(self, fleet_names):
         optimal_dispatch_config = Config.get_optimal_dispatch_config()
         optimal_dispatch = OptimalDispatch(optimal_dispatch_config)
-        optimal_dispatch.run(self.dbsession)
+
+        optimal_dispatch.run(self.dbsession, fleet_names)
 
     def do_pre_actions(self, ongoing_trip: tm.OngoingTrip):
         curr_station = ongoing_trip.curr_station()
@@ -586,6 +592,12 @@ class Handlers:
                 trip_analytics.end_time = datetime.datetime.now()
 
             self.end_trip(ongoing_trip, sherpa, False)
+
+            # add fleet_names to req_ctxt - this is for optimal_dispatch
+            fleet_name = ongoing_trip.trip.fleet_name
+            if fleet_name not in req_ctxt.fleet_names:
+                req_ctxt.fleet_names.append(fleet_name)
+
             ongoing_trip.trip.cancel()
 
             if not force_delete:
@@ -691,6 +703,11 @@ class Handlers:
                 all_stations.append(station)
 
             fleet_name = self.dbsession.get_fleet_name_from_route(trip_msg.route)
+
+            # add fleet_names to req_ctxt - this is for optimal_dispatch
+            if fleet_name not in req_ctxt.fleet_names:
+                req_ctxt.fleet_names.append(fleet_name)
+
             self.check_if_booking_is_valid(trip_msg, all_stations)
 
             if not trip_msg.priority:
@@ -738,6 +755,12 @@ class Handlers:
                 pending_trip: tm.PendingTrip = self.dbsession.get_pending_trip_with_trip_id(
                     trip.id
                 )
+
+                # add fleet_names to req_ctxt - this is for optimal_dispatch
+                fleet_name = trip.fleet_name
+                if fleet_name not in req_ctxt.fleet_names:
+                    req_ctxt.fleet_names.append(fleet_name)
+
                 all_pending_trips.append(pending_trip)
                 all_to_be_cancelled_trips.append(trip)
 
@@ -972,12 +995,16 @@ class Handlers:
                 f"added TripAnalytics entry for trip_leg_id: {ongoing_trip.trip_leg_id}"
             )
 
-    def handle_assign_next_task(self, req: rqm.AssignNextTask):
+    def handle_trigger_optimal_dispatch(self, req: rqm.TriggerOptimalDispatch):
 
-        # Run optimal dispatch for scheduled trips
-        if req.sherpa_name is None:
-            self.run_optimal_dispatch()
-            return
+        fleet_name = req.fleet_name
+        # add fleet_names to req_ctxt - this is for optimal_dispatch
+        if fleet_name not in req_ctxt.fleet_names:
+            req_ctxt.fleet_names.append(fleet_name)
+
+        self.run_optimal_dispatch(req_ctxt.fleet_names)
+
+    def handle_assign_next_task(self, req: rqm.AssignNextTask):
 
         # query db
         sherpa, ongoing_trip, pending_trip = self.get_sherpa_trips(req.sherpa_name)
@@ -1030,7 +1057,13 @@ class Handlers:
 
             if next_task == "end_ongoing_trip":
                 self.end_trip(ongoing_trip, sherpa, True)
-                self.run_optimal_dispatch()
+
+                fleet_name = ongoing_trip.trip.fleet_name
+                # add fleet_names to req_ctxt - this is for optimal_dispatch
+                if fleet_name not in req_ctxt.fleet_names:
+                    req_ctxt.fleet_names.append(fleet_name)
+
+                self.run_optimal_dispatch(req_ctxt.fleet_names)
 
             if next_task == "continue_leg":
                 logging.getLogger(sherpa.name).info(f"{sherpa.name} continuing leg")
@@ -1095,6 +1128,11 @@ class Handlers:
         else:
             reset_visas_held_req = rqm.ResetVisasHeldReq()
             _ = utils_comms.send_req_to_sherpa(self.dbsession, sherpa, reset_visas_held_req)
+
+        fleet_name = sherpa.fleet.name
+        # add fleet_names to req_ctxt - this is for optimal_dispatch
+        if fleet_name not in req_ctxt.fleet_names:
+            req_ctxt.fleet_names.append(fleet_name)
 
         sherpa.status.inducted = req.induct
         sherpa_availability.available = req.induct
@@ -1432,6 +1470,12 @@ class Handlers:
 
     def handle_pass_to_sherpa(self, req):
         sherpa: fm.Sherpa = self.dbsession.get_sherpa(req.sherpa_name)
+
+        # add fleet_names to req_ctxt - this is for optimal_dispatch
+        fleet_name = sherpa.fleet.name
+        if fleet_name not in req_ctxt.fleet_names:
+            req_ctxt.fleet_names.append(fleet_name)
+
         logging.getLogger(sherpa.name).info(
             f"passing control request to sherpa {sherpa.name}, {req.dict()} "
         )
@@ -1541,7 +1585,7 @@ class Handlers:
             if run_opt_d:
                 with DBSession() as dbsession:
                     self.dbsession = dbsession
-                    self.run_optimal_dispatch()
+                    self.run_optimal_dispatch(req_ctxt.fleet_names)
         except Exception as e:
             logging.getLogger().error(f"couldn't run optimal dispatch, {e}")
 

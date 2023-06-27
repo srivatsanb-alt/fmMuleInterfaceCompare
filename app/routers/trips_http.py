@@ -286,7 +286,7 @@ async def trip_analytics_pg(
             trip_analytics_req.booked_from = str_to_dt(trip_analytics_req.booked_from)
             trip_analytics_req.booked_till = str_to_dt(trip_analytics_req.booked_till)
 
-        trip_analytics = dbsession.get_trip_analytics_with_ts(
+        trip_analytics = dbsession.get_trip_analytics_with_pagination(
             trip_analytics_req.booked_from,
             trip_analytics_req.booked_till,
             sherpa_name,

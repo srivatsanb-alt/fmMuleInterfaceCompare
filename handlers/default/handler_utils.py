@@ -52,32 +52,14 @@ def start_trip(
     sherpa: fm.Sherpa,
     all_stations: List[fm.Station],
 ):
-    redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
     sherpa_status: fm.SherpaStatus = sherpa.status
     start_pose = sherpa_status.pose
     fleet_name = ongoing_trip.trip.fleet_name
 
     etas_at_start = []
     for station in all_stations:
-        job_id = utils_util.generate_random_job_id()
         end_pose = station.pose
-        control_router_rl_job = [start_pose, end_pose, fleet_name, job_id]
-
-        redis_conn.setex(
-            f"control_router_rl_job_{job_id}",
-            int(redis_conn.get("default_job_timeout_ms").decode()),
-            json.dumps(control_router_rl_job),
-        )
-        while not redis_conn.get(f"result_{job_id}"):
-            time.sleep(0.005)
-
-        route_length = json.loads(redis_conn.get(f"result_{job_id}"))
-        redis_conn.delete(f"result_{job_id}")
-
-        logging.getLogger(ongoing_trip.sherpa_name).info(
-            f"route_length {control_router_rl_job}- {route_length}"
-        )
-
+        route_length = utils_util.get_route_length(start_pose, end_pose, fleet_name)
         if route_length == np.inf:
             reason = f"no route from {start_pose} to {end_pose}"
             trip_failed_log = f"trip {ongoing_trip.trip_id} failed, sherpa_name: {ongoing_trip.sherpa_name} , reason: {reason}"

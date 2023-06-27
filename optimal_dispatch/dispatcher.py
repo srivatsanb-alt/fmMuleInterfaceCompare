@@ -2,8 +2,6 @@ import numpy as np
 import logging
 import logging.config
 import redis
-import time
-import json
 from typing import List
 from sqlalchemy.sql import or_
 import os
@@ -16,7 +14,6 @@ import utils.util as utils_util
 from models.fleet_models import Fleet, AvailableSherpas, OptimalDispatchState
 from models.trip_models import Trip, PendingTrip, TripStatus
 from optimal_dispatch.hungarian import hungarian_assignment
-from utils.util import generate_random_job_id
 
 # get log config
 logging.config.dictConfig(lu.get_log_config_dict())
@@ -257,7 +254,6 @@ class OptimalDispatch:
             count += 1
 
     def assemble_cost_matrix(self, fleet_name):
-        redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
         w1 = self.config["eta_power_factor"]
         w2 = self.config["priority_power_factor"]
         max_trips_to_consider = self.config.get("max_trips_to_consider", 15)
@@ -297,25 +293,13 @@ class OptimalDispatch:
                     )
                     total_eta = np.inf
                 else:
-                    job_id = generate_random_job_id()
-                    control_router_rl_job = [pose_1, pose_2, fleet_name, job_id]
-                    redis_conn.setex(
-                        f"control_router_rl_job_{job_id}",
-                        int(redis_conn.get("default_job_timeout_ms").decode()),
-                        json.dumps(control_router_rl_job),
-                    )
-                    while not redis_conn.get(f"result_{job_id}"):
-                        time.sleep(0.005)
-
-                    route_length = json.loads(redis_conn.get(f"result_{job_id}"))
-                    redis_conn.delete(f"result_{job_id}")
+                    route_length = utils_util.get_route_length(pose_1, pose_2, fleet_name)
                     total_eta = route_length + sherpa_q_val["remaining_eta"]
 
                 # to handle w1 == 0  and eta == np.inf case
                 weighted_total_eta = (
                     (total_eta**w1) if (total_eta != np.inf) else total_eta
                 )
-
                 weighted_pickup_priority = (
                     (pickup_priority**w2)
                     if (pickup_priority != np.inf)
@@ -359,11 +343,12 @@ class OptimalDispatch:
         cost_matrix_df = pd.DataFrame(cost_matrix, index=index, columns=columns)
         self.logger.info(f"{text}:\n{cost_matrix_df.to_markdown()}\n")
 
-    def run(self, dbsession):
-        self.fleet_names = dbsession.get_all_fleet_names()
-        self.logger = logging.getLogger("optimal_dispatch")
-        self.logger.info("will run optimal dispatch logic")
+    def run(self, dbsession, fleet_names):
+        # self.fleet_names = dbsession.get_all_fleet_names()
 
+        self.fleet_names = fleet_names
+        self.logger = logging.getLogger("optimal_dispatch")
+        self.logger.info(f"will run optimal dispatch logic for {fleet_names}")
         self.fleets = []
 
         for fleet_name in self.fleet_names:
