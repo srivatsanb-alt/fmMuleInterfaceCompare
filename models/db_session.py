@@ -440,29 +440,48 @@ class DBSession:
         )
 
     def get_trip_analytics_with_pagination(
-        self, booked_from, booked_till, sherpa_name, page=0, limit=50
+        self, booked_from, booked_till, sherpa_names, page=0, limit=50
     ):
-        trip_analytics = (
-            self.session.query(tm.TripAnalytics)
-            .join(tm.Trip, (tm.TripAnalytics.trip_id == tm.Trip.id))
-            .filter(tm.Trip.booking_time > booked_from)
-            .filter(tm.Trip.booking_time < booked_till)
-            .filter(tm.TripAnalytics.sherpa_name == sherpa_name)
-            .offset(page)
-            .limit(limit)
-            .all()
-        )
+
+        trip_analytics = {}
+        count = 0
+        if sherpa_names:
+            trip_analytics = (
+                self.session.query(tm.TripAnalytics)
+                .join(tm.Trip, (tm.TripAnalytics.trip_id == tm.Trip.id))
+                .filter(tm.Trip.booking_time > booked_from)
+                .filter(tm.Trip.booking_time < booked_till)
+                .filter(tm.TripAnalytics.sherpa_name.in_(sherpa_names))
+                .offset(page)
+                .limit(limit)
+                .all()
+            )
+            count = (
+                self.session.query(tm.TripAnalytics)
+                .join(tm.Trip, (tm.TripAnalytics.trip_id == tm.Trip.id))
+                .filter(tm.Trip.booking_time > booked_from)
+                .filter(tm.Trip.booking_time < booked_till)
+                .filter(tm.TripAnalytics.sherpa_name.in_(sherpa_names))
+                .count()
+            )
+        else:
+            trip_analytics = (
+                self.session.query(tm.TripAnalytics)
+                .join(tm.Trip, (tm.TripAnalytics.trip_id == tm.Trip.id))
+                .filter(tm.Trip.booking_time > booked_from)
+                .filter(tm.Trip.booking_time < booked_till)
+                .offset(page)
+                .limit(limit)
+                .all()
+            )
+            count = (
+                self.session.query(tm.TripAnalytics)
+                .join(tm.Trip, (tm.TripAnalytics.trip_id == tm.Trip.id))
+                .filter(tm.Trip.booking_time > booked_from)
+                .filter(tm.Trip.booking_time < booked_till)
+                .count()
+            )
         trip_analytics = jsonable_encoder(trip_analytics)
-
-        count = (
-            self.session.query(tm.TripAnalytics)
-            .join(tm.Trip, (tm.TripAnalytics.trip_id == tm.Trip.id))
-            .filter(tm.Trip.booking_time > booked_from)
-            .filter(tm.Trip.booking_time < booked_till)
-            .filter(tm.TripAnalytics.sherpa_name == sherpa_name)
-            .count()
-        )
-
         trip_analytics = {"trips_analytics": [trip_analytics], "count": count}
         return trip_analytics
 

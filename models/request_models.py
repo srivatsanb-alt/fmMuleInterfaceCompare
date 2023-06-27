@@ -363,6 +363,13 @@ class SherpaImgUpdateCtrlReq(ClientReq):
     type: str = "sherpa_img_update"
 
 
+class TripStatusReq_pg(ClientReq):
+    skip: int
+    limit:int
+    filter_sherpa_names: Optional[List[str]]
+    booked_from: Optional[str]
+    booked_till: Optional[str]
+    
 class TripStatusReq(ClientReq):
     booked_from: Optional[str]
     booked_till: Optional[str]
