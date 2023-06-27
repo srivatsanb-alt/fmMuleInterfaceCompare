@@ -1022,6 +1022,8 @@ class Handlers:
             if next_station:
                 to_station: fm.Station = self.dbsession.get_station(next_station)
 
+        sherpa.status.assign_next_task = False
+
         # end transaction
         self.dbsession.session.commit()
 

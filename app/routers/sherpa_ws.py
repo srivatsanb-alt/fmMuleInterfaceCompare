@@ -140,7 +140,7 @@ async def reader(websocket, sherpa):
 
         ok, reason = accept_message(sherpa, msg)
         if not ok:
-            logging.warn(
+            logger.warning(
                 f"message rejected type={msg_type},ts={ts},sherpa={sherpa},reason={reason}"
             )
             continue
