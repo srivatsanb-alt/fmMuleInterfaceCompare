@@ -432,11 +432,16 @@ class DBSession:
 
         return trip_ids
 
-    def get_trip_analytics_with_ts(self, booked_from , booked_till,sherpa_name, page= 0, limit= 50):
-        trips = self.session.query(tm.TripAnalytics).filter(tm.TripAnalytics.start_time> booked_from).filter(tm.Trip.start_time < booked_till).filter(tm.TripAnalytics.sherpa_name==sherpa_name).offset(page).limit(limit).all()
+    def get_trip_analytics_with_ts(self, booked_from , booked_till,sherpa_names, page= 0, limit= 50):
+        trips = {}
+        count = 0
+        if(sherpa_names):
+            trips = self.session.query(tm.TripAnalytics).filter(tm.TripAnalytics.start_time> booked_from).filter(tm.Trip.start_time < booked_till).filter(tm.TripAnalytics.sherpa_name.in_(sherpa_names)).offset(page).limit(limit).all()
+            count =  self.session.query(tm.TripAnalytics).filter(tm.TripAnalytics.start_time> booked_from).filter(tm.Trip.start_time < booked_till).filter(tm.TripAnalytics.sherpa_name.in_(sherpa_names)).count()
+        else:
+            trips = self.session.query(tm.TripAnalytics).filter(tm.TripAnalytics.start_time> booked_from).filter(tm.Trip.start_time < booked_till).offset(page).limit(limit).all()
+            count =  self.session.query(tm.TripAnalytics).filter(tm.TripAnalytics.start_time> booked_from).filter(tm.Trip.start_time < booked_till).count()
         trips= jsonable_encoder(trips)
-        count =  self.session.query(tm.TripAnalytics).filter(tm.TripAnalytics.start_time> booked_from).filter(tm.Trip.start_time < booked_till).filter(tm.TripAnalytics.sherpa_name==sherpa_name).count()
-        
         trips = {"trips":[trips], "count":count}
         return trips
 

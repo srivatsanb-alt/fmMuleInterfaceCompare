@@ -273,7 +273,7 @@ async def ongoing_trip_status(user_name=Depends(dpd.get_user_from_header)):
 
 @router.post("/analytics_pg")
 async def trip_analytics_pg(
-    trip_analytics_req: rqm.TripStatusReq, sherpa_name: str, page: int = 0, limit: int = 50, user_name=Depends(dpd.get_user_from_header)
+    trip_analytics_req: rqm.TripStatusReq_pg, user_name=Depends(dpd.get_user_from_header)
 ):
     response = {}
     if not user_name:
@@ -284,7 +284,7 @@ async def trip_analytics_pg(
             trip_analytics_req.booked_from = str_to_dt(trip_analytics_req.booked_from)
             trip_analytics_req.booked_till = str_to_dt(trip_analytics_req.booked_till)
 
-        trip_analytics = dbsession.get_trip_analytics_with_ts(trip_analytics_req.booked_from, trip_analytics_req.booked_till, sherpa_name, page, limit)
+        trip_analytics = dbsession.get_trip_analytics_with_ts(trip_analytics_req.booked_from, trip_analytics_req.booked_till, trip_analytics_req.filter_sherpa_names, trip_analytics_req.skip, trip_analytics_req.limit)
         response =trip_analytics
     return response
 
