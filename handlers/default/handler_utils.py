@@ -1,9 +1,7 @@
 import logging
 import logging.config
-import json
 import redis
 import os
-import time
 import numpy as np
 from typing import List
 import datetime
@@ -251,7 +249,7 @@ def check_sherpa_status(dbsession: DBSession):
         )
 
         if stale_sherpa_status.trip_id:
-            maybe_add_alert(
+            utils_util.maybe_add_alert(
                 dbsession,
                 [stale_sherpa_status.sherpa_name],
                 f"Lost connection to {stale_sherpa_status.sherpa_name}, sherpa doing trip: {stale_sherpa_status.trip_id}",
@@ -335,27 +333,6 @@ def is_reset_fleet_required(fleet_name, map_files):
             )
             return True
     return False
-
-
-def check_if_notification_alert_present(
-    dbsession: DBSession, log: str, enitity_names: list
-):
-    notification = (
-        dbsession.session.query(mm.Notifications)
-        .filter(mm.Notifications.entity_names == enitity_names)
-        .filter(mm.Notifications.log == log)
-        .all()
-    )
-    if len(notification):
-        return True
-    return False
-
-
-def maybe_add_alert(dbsession: DBSession, enitity_names: list, log: str):
-    if not check_if_notification_alert_present(dbsession, log, enitity_names):
-        dbsession.add_notification(
-            enitity_names, log, mm.NotificationLevels.alert, mm.NotificationModules.generic
-        )
 
 
 def record_sherpa_mode_change(

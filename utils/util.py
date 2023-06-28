@@ -199,3 +199,26 @@ def get_route_length(pose_1, pose_2, fleet_name):
         route_length = float(route_length)
 
     return route_length
+
+
+def check_if_notification_alert_present(dbsession, log: str, enitity_names: list):
+    import models.misc_models as mm
+
+    notification = (
+        dbsession.session.query(mm.Notifications)
+        .filter(mm.Notifications.entity_names == enitity_names)
+        .filter(mm.Notifications.log == log)
+        .all()
+    )
+    if len(notification):
+        return True
+    return False
+
+
+def maybe_add_alert(dbsession, enitity_names: list, log: str):
+    import models.misc_models as mm
+
+    if not check_if_notification_alert_present(dbsession, log, enitity_names):
+        dbsession.add_notification(
+            enitity_names, log, mm.NotificationLevels.alert, mm.NotificationModules.generic
+        )

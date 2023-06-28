@@ -1019,7 +1019,7 @@ class Handlers:
                     trip_error_msg = f"Cancel the trip: {pending_trip.trip_id}, invalid station ({station_name}) in trip route"
                     trip_error_msg_e = trip_error_msg + f", exception: {e}"
                     logging.getLogger().warning(trip_error_msg_e)
-                    hutils.maybe_add_alert(
+                    utils_util.maybe_add_alert(
                         self.dbsession, [sherpa.fleet.name], trip_error_msg
                     )
                     return
@@ -1337,7 +1337,7 @@ class Handlers:
 
         if reset_fleet:
             update_map_msg = f"Map files of fleet: {fleet_name} has been modified, please update the map by pressing the update_map button on the webpage header!"
-            hutils.maybe_add_alert(self.dbsession, [fleet_name], update_map_msg)
+            utils_util.maybe_add_alert(self.dbsession, [fleet_name], update_map_msg)
 
         response: rqm.VerifyFleetFilesResp = rqm.VerifyFleetFilesResp(
             fleet_name=fleet_name, files_info=map_file_info
