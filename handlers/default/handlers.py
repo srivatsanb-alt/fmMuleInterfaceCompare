@@ -1019,7 +1019,7 @@ class Handlers:
                     trip_error_msg = f"Cancel the trip: {pending_trip.trip_id}, invalid station ({station_name}) in trip route"
                     trip_error_msg_e = trip_error_msg + f", exception: {e}"
                     logging.getLogger().warning(trip_error_msg_e)
-                    hutils.maybe_add_alert(
+                    utils_util.maybe_add_alert(
                         self.dbsession, [sherpa.fleet.name], trip_error_msg
                     )
                     return
@@ -1318,39 +1318,6 @@ class Handlers:
                 mm.NotificationLevels.info,
                 mm.NotificationModules.peripheral_devices,
             )
-
-    def handle_verify_fleet_files(self, req: rqm.SherpaReq):
-
-        # query db
-        sherpa: fm.Sherpa = self.dbsession.get_sherpa(req.source)
-        fleet_name = sherpa.fleet.name
-        map_files = self.dbsession.get_map_files(fleet_name)
-
-        # end transaction
-        self.dbsession.session.commit()
-
-        map_file_info = [
-            rqm.MapFileInfo(file_name=mf.filename, hash=mf.file_hash) for mf in map_files
-        ]
-
-        reset_fleet = hutils.is_reset_fleet_required(fleet_name, map_files)
-
-        if reset_fleet:
-            update_map_msg = f"Map files of fleet: {fleet_name} has been modified, please update the map by pressing the update_map button on the webpage header!"
-            hutils.maybe_add_alert(self.dbsession, [fleet_name], update_map_msg)
-
-        response: rqm.VerifyFleetFilesResp = rqm.VerifyFleetFilesResp(
-            fleet_name=fleet_name, files_info=map_file_info
-        )
-
-        self.dbsession.add_notification(
-            [fleet_name, sherpa.name],
-            f"{sherpa.name} connected to fleet manager!",
-            mm.NotificationLevels.info,
-            mm.NotificationModules.generic,
-        )
-
-        return response.to_json()
 
     def handle_resource_access(self, req: rqm.ResourceReq):
         sherpa: fm.Sherpa = self.dbsession.get_sherpa(req.source)

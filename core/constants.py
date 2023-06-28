@@ -4,7 +4,6 @@ class MessageType:
     PERIPHERALS = "peripherals"
     SHERPA_STATUS = "sherpa_status"
     TRIP_STATUS = "trip_status"
-    VERIFY_FLEET_FILES = "verify_fleet_files"
     BOOKING = "book"
     PASS_TO_SHERPA = "pass_to_sherpa"
     RESOURCE_ACCESS = "resource_access"
