@@ -235,8 +235,8 @@ class FleetSimulator:
             stations: List[Station] = dbsession.get_all_stations()
 
             for sherpa in sherpas:
-                self.send_verify_fleet_files_req(sherpa.name)
-                print(f"sending verify fleet files req sherpa: {sherpa.name}")
+                # self.send_verify_fleet_files_req(sherpa.name)
+                # print(f"sending verify fleet files req sherpa: {sherpa.name}")
                 self.visas_held[sherpa.name] = []
                 self.visa_needed[sherpa.name] = []
 

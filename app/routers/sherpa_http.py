@@ -1,4 +1,3 @@
-import time
 import redis
 import json
 import os
@@ -12,8 +11,10 @@ import models.fleet_models as fm
 import models.misc_models as mm
 import models.request_models as rqm
 from utils.rq_utils import Queues
+import utils.util as utils_util
 import app.routers.dependencies as dpd
 import core.constants as cc
+
 
 # manages all the http requests for Sherpa
 router = APIRouter(
@@ -111,10 +112,36 @@ async def resource_access(
 
 @router.get("/verify_fleet_files", response_model=rqm.VerifyFleetFilesResp)
 async def verify_fleet_files(sherpa: str = Depends(dpd.get_sherpa)):
-    response = await dpd.process_req_with_response(
-        None, rqm.SherpaReq(type="verify_fleet_files", timestamp=time.time()), sherpa
-    )
-    return rqm.VerifyFleetFilesResp.from_json(response)
+    import utils.fleet_utils as fu
+
+    response = {}
+
+    if sherpa is None:
+        dpd.raise_error("Unknown requester", 401)
+
+    logging.getLogger().info(f"Got a verify fleet files request from {sherpa}")
+
+    with DBSession() as dbsession:
+        sherpa: fm.Sherpa = dbsession.get_sherpa(sherpa)
+        fleet_name = sherpa.fleet.name
+        map_files = dbsession.get_map_files(fleet_name)
+
+        map_file_info = [
+            rqm.MapFileInfo(file_name=mf.filename, hash=mf.file_hash) for mf in map_files
+        ]
+
+        reset_fleet = fu.is_reset_fleet_required(fleet_name, map_files)
+        if reset_fleet:
+            update_map_msg = f"Map files of fleet: {fleet_name} has been modified, please update the map by pressing the update_map button on the webpage header!"
+            utils_util.maybe_add_alert(dbsession, [fleet_name], update_map_msg)
+
+        response: rqm.VerifyFleetFilesResp = rqm.VerifyFleetFilesResp(
+            fleet_name=fleet_name, files_info=map_file_info
+        )
+
+        logging.getLogger().info(f"sent a verify fleet files response to {sherpa}")
+
+    return response
 
 
 @router.post("/req_ack/{req_id}")

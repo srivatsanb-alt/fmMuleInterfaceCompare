@@ -104,6 +104,22 @@ def get_filenames(directory: str) -> List:
     return file_names
 
 
+def is_reset_fleet_required(fleet_name, map_files):
+    fleet_path = os.path.join(os.environ["FM_STATIC_DIR"], f"{fleet_name}/map")
+    for mf in map_files:
+        file_path = f"{fleet_path}/{mf.filename}"
+        try:
+            filehash = compute_sha1_hash(file_path)
+            if filehash != mf.file_hash:
+                return True
+        except Exception as e:
+            logging.getLogger().info(
+                f"Unable to find the shasum of file {file_path}, exception: {e}"
+            )
+            return True
+    return False
+
+
 def maybe_update_map_files(fleet_name: str) -> None:
     maybe_create_gmaj_file(fleet_name)
     maybe_create_graph_object(fleet_name)

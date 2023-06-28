@@ -288,53 +288,6 @@ def get_conveyor_ops_info(trip_metadata):
     return num_units
 
 
-def update_map_file_info_with_certs(
-    map_file_info, sherpa_hostname, sherpa_ip_address, ip_changed
-):
-    save_path = os.path.join(os.getenv("FM_STATIC_DIR"), "certs")
-
-    files_to_process = [
-        os.path.join(save_path, filename)
-        for filename in [f"{sherpa_hostname}_cert.pem", f"{sherpa_hostname}_key.pem"]
-    ]
-
-    if not all([os.path.exists(filename) for filename in files_to_process]) or ip_changed:
-        logging.getLogger().info(
-            f"will generate new cert files, HOSTNAME {sherpa_hostname}, ip_address: {sherpa_ip_address}, ip_changed: {ip_changed}"
-        )
-        generate_certs_for_sherpa(sherpa_hostname, sherpa_ip_address, save_path)
-
-    all_file_hash = []
-    for file_path in files_to_process:
-        all_file_hash.append(compute_sha1_hash(file_path))
-
-    cert_files = [f"{sherpa_hostname}_cert.pem", f"{sherpa_hostname}_key.pem"]
-
-    # hardcoding to 2
-    for i in range(2):
-        map_file_info.append(
-            rqm.MapFileInfo(file_name=cert_files[i], hash=all_file_hash[i])
-        )
-
-    return map_file_info
-
-
-def is_reset_fleet_required(fleet_name, map_files):
-    fleet_path = os.path.join(os.environ["FM_STATIC_DIR"], f"{fleet_name}/map")
-    for mf in map_files:
-        file_path = f"{fleet_path}/{mf.filename}"
-        try:
-            filehash = compute_sha1_hash(file_path)
-            if filehash != mf.file_hash:
-                return True
-        except Exception as e:
-            logging.getLogger().info(
-                f"Unable to find the shasum of file {file_path}, exception: {e}"
-            )
-            return True
-    return False
-
-
 def record_sherpa_mode_change(
     dbsession: DBSession,
     sherpa_name: str,
