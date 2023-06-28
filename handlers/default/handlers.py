@@ -66,7 +66,6 @@ class Handlers:
         return True, None
 
     def record_msg_received(self, msg, update_msgs):
-
         # add the message received to sherpa events
         if req_ctxt.sherpa_name and msg.type not in update_msgs:
             hutils.add_sherpa_event(
@@ -125,7 +124,6 @@ class Handlers:
         logging.getLogger("status_updates").info(f"{sherpa.name} initialized")
 
     def update_sherpa_info(self, sherpa_status: fm.SherpaStatus, init_response: dict):
-
         if sherpa_status.other_info is None:
             sherpa_status.other_info = {}
         sherpa_status.other_info.update(
@@ -448,7 +446,6 @@ class Handlers:
     def do_post_actions(
         self, ongoing_trip: tm.OngoingTrip, sherpa: fm.Sherpa, curr_station: fm.Station
     ):
-
         if not curr_station:
             raise ValueError("Sherpa not at a station, cannot do post action")
 
@@ -606,7 +603,6 @@ class Handlers:
     def should_assign_next_task(
         self, sherpa: fm.Sherpa, ongoing_trip: tm.OngoingTrip, pending_trip: tm.PendingTrip
     ):
-
         done = False
         next_task = "no new task to assign"
         sherpa_status: fm.SherpaStatus = sherpa.status
@@ -757,7 +753,6 @@ class Handlers:
         return response
 
     def handle_delete_ongoing_trip(self, req: rqm.DeleteOngoingTripReq):
-
         # query db
         if req.trip_id is None:
             trips: List[tm.Trip] = self.dbsession.get_trip_with_booking_id(req.booking_id)
@@ -837,7 +832,6 @@ class Handlers:
         return response
 
     def handle_sherpa_status(self, req: rqm.SherpaStatusMsg):
-
         # query db
         sherpa, ongoing_trip, pending_trip = self.get_sherpa_trips(req.sherpa_name)
         status: fm.SherpaStatus = sherpa.status
@@ -886,7 +880,6 @@ class Handlers:
         logging.getLogger(sherpa.name).info(f"{sherpa.name} switched to {req.mode} mode")
 
     def handle_trip_status(self, req: rqm.TripStatusMsg):
-
         # query db
         sherpa: fm.Sherpa = self.dbsession.get_sherpa(req.source)
         ongoing_trip: tm.OngoingTrip = self.dbsession.get_ongoing_trip_with_trip_id(
@@ -988,7 +981,6 @@ class Handlers:
         utils_comms.send_status_update(trip_status_update)
 
     def handle_assign_next_task(self, req: rqm.AssignNextTask):
-
         # Run optimal dispatch for scheduled trips
         if req.sherpa_name is None:
             self.run_optimal_dispatch()
@@ -1021,6 +1013,8 @@ class Handlers:
                 from_station: fm.Station = self.dbsession.get_station(curr_station)
             if next_station:
                 to_station: fm.Station = self.dbsession.get_station(next_station)
+
+        sherpa.status.assign_next_task = False
 
         # end transaction
         self.dbsession.session.commit()
@@ -1056,7 +1050,6 @@ class Handlers:
                 self.start_leg(ongoing_trip, sherpa, from_station, to_station)
 
     def handle_reached(self, req: rqm.ReachedReq):
-
         # query db
         sherpa: fm.Sherpa = self.dbsession.get_sherpa(req.source)
         ongoing_trip: tm.OngoingTrip = self.dbsession.get_ongoing_trip(sherpa.name)
@@ -1117,7 +1110,6 @@ class Handlers:
         return response
 
     def handle_peripherals(self, req: rqm.SherpaPeripheralsReq):
-
         # query db
         sherpa: fm.Sherpa = self.dbsession.get_sherpa(req.source)
         ongoing_trip: tm.OngoingTrip = self.dbsession.get_ongoing_trip(sherpa.name)
@@ -1164,7 +1156,6 @@ class Handlers:
         curr_station: fm.Station,
         req: rqm.SherpaPeripheralsReq,
     ):
-
         valid_error_devices = ["auto_hitch", "conveyor"]
         if req.error_device in valid_error_devices:
             peripheral_error_resolver = getattr(
@@ -1185,7 +1176,6 @@ class Handlers:
         curr_station: fm.Station,
         req: rqm.DispatchButtonReq,
     ):
-
         if not req.value:
             logging.getLogger(sherpa.name).info(
                 f"dispatch button not pressed on {sherpa.name}, taking no action"
@@ -1216,7 +1206,6 @@ class Handlers:
         curr_station: fm.Station,
         req: rqm.HitchReq,
     ):
-
         # auto hitch
         if req.hitch:
             if tm.TripState.WAITING_STATION_AUTO_HITCH_START not in ongoing_trip.states:
@@ -1268,7 +1257,6 @@ class Handlers:
         curr_station: fm.Station,
         req: rqm.ConveyorReq,
     ):
-
         fleet_name = ongoing_trip.trip.fleet_name
 
         conveyor_start_state = getattr(
@@ -1297,7 +1285,6 @@ class Handlers:
             )
 
     def handle_verify_fleet_files(self, req: rqm.SherpaReq):
-
         # query db
         sherpa: fm.Sherpa = self.dbsession.get_sherpa(req.source)
         fleet_name = sherpa.fleet.name
@@ -1408,7 +1395,6 @@ class Handlers:
         return response.to_json()
 
     def handle_delete_visa_assignments(self, req: rqm.DeleteVisaAssignments):
-
         # query db
         visa_assignments: List[vm.VisaAssignment] = self.get_all_visa_assignments()
 
