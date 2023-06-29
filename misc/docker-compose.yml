@@ -70,8 +70,6 @@ services:
     image: grafana/grafana:9.5.2
     container_name: fm_grafana
     restart: always
-    ports:
-      - "3000:3000"
     expose:
       - 3000
     user: "root:root"

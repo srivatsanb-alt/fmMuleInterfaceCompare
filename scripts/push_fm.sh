@@ -143,8 +143,8 @@ if [ $build_base == 1 ] ; then
   echo "Will build base image!"
   docker image build -t fleet_manager_base:dev -f docker_files/Dockerfile.base .
   docker pull nginx:1.23.3
-  echo "will build nginx docker image"
   docker pull postgres:14.0
+  docker pull grafana/grafana:9.5.2
   docker pull registry:2
 }
 else
