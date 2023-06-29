@@ -293,7 +293,7 @@ async def create_generic_alerts(
         dbsession.add_notification(
             [],
             alert_description,
-            mm.NotificationLevels.action_request,
+            mm.NotificationLevels.alert,
             mm.NotificationModules.generic,
         )
 

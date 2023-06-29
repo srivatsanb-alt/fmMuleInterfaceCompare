@@ -16,7 +16,7 @@ services:
       PGDATABASE: ati_fleet
       PGTZ: Asia/Kolkata
       TZ: Asia/Kolkata
-      FM_DATABASE_URI: postgresql://postgres:postgres@db 
+      FM_DATABASE_URI: postgresql://postgres:postgres@db
     volumes:
       - .:/app/static
     expose:
@@ -46,21 +46,40 @@ services:
   reverseproxy:
     image: fm_nginx:1.23.3
     container_name: reverseproxy
-    hostname: fm_rev_proxy 
+    hostname: fm_rev_proxy
     ports:
       - "443:443"
     restart: always
     volumes:
-      - ./certs:/certs  
+      - ./certs:/certs
     links:
       - fleet_manager
       - registry
+      - grafana
     network_mode: bridge
-  
+
   registry:
     restart: always
     image: registry:2
     container_name: fm_docker_registry
     expose:
       - 5000
+    network_mode: bridge
+
+  grafana:
+    image: grafana/grafana:9.5.2
+    container_name: fm_grafana
+    restart: always
+    ports:
+      - "3000:3000"
+    expose:
+      - 3000
+    user: "root:root"
+    links:
+      - db
+    volumes:
+      -  ./grafana_config/grafana.ini:/etc/grafana/grafana.ini
+      -  ./grafana_config/datasources:/etc/grafana/provisioning/datasources
+      -  ./grafana_config/dashboards:/etc/grafana/provisioning/dashboards
+      -  ./grafana_config/dashboard_definitions/fleet_analytics.json:/var/lib/dashboards/fleet_analytics.json
     network_mode: bridge

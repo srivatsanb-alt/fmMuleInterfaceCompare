@@ -81,7 +81,7 @@ async def add_edit_sherpa(
                 dbsession.add_notification(
                     [fleet.name],
                     action_request,
-                    mm.NotificationLevels.action_request,
+                    mm.NotificationLevels.alert,
                     mm.NotificationModules.generic,
                 )
 
