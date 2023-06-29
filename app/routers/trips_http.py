@@ -205,15 +205,16 @@ async def trip_status_with_type(
             # introducing sleep to allow other endpoints to work simultaneously
             count = count + 1
             if count % 50 == 0:
-                await asyncio.sleep(50e-3)
+                await asyncio.sleep(100e-3)
 
     return response
+
 
 # returns trip status, i.e. the time slot of the trip booking and the trip status with timestamp.
 
 
 @router.post("/status_pg/{type}")
-async def trip_status_with_type(
+async def trip_status_pg_with_type(
     type: str,
     trip_status_req: rqm.TripStatusReq_pg,
     user_name=Depends(dpd.get_user_from_header),
@@ -237,13 +238,16 @@ async def trip_status_with_type(
         if trip_status_req.booked_from and trip_status_req.booked_till:
             trip_status_req.booked_from = str_to_dt(trip_status_req.booked_from)
             trip_status_req.booked_till = str_to_dt(trip_status_req.booked_till)
-            
+
             response = dbsession.get_trips_with_timestamp_and_status_pagination(
-                trip_status_req.booked_from, trip_status_req.booked_till, valid_status,
-                trip_status_req.filter_sherpa_names,trip_status_req.skip,trip_status_req.limit
+                trip_status_req.booked_from,
+                trip_status_req.booked_till,
+                valid_status,
+                trip_status_req.filter_sherpa_names,
+                trip_status_req.skip,
+                trip_status_req.limit,
             )
 
-            
     return response
 
 
@@ -277,7 +281,7 @@ async def trip_status(
 
             # introducing sleep to allow other endpoints to work simultaneously
             if count % 50 == 0:
-                await asyncio.sleep(50e-3)
+                await asyncio.sleep(100e-3)
 
     return response
 
@@ -362,7 +366,7 @@ async def trip_analytics(
             # introducing sleep to allow other endpoints to work simultaneously
             count = count + 1
             if count % 50 == 0:
-                await asyncio.sleep(50e-3)
+                await asyncio.sleep(100e-3)
 
     return response
 
