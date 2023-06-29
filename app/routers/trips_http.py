@@ -159,9 +159,6 @@ async def clear_optimal_dispatch_assignments(
     return response
 
 
-# returns trip status, i.e. the time slot of the trip booking and the trip status with timestamp.
-
-
 @router.post("/status/{type}")
 async def trip_status_with_type(
     type: str,
@@ -210,6 +207,43 @@ async def trip_status_with_type(
             if count % 50 == 0:
                 await asyncio.sleep(50e-3)
 
+    return response
+
+# returns trip status, i.e. the time slot of the trip booking and the trip status with timestamp.
+
+
+@router.post("/status_pg/{type}")
+async def trip_status_with_type(
+    type: str,
+    trip_status_req: rqm.TripStatusReq_pg,
+    user_name=Depends(dpd.get_user_from_header),
+):
+    response = {}
+
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    valid_status = []
+    if type == "yet_to_start":
+        valid_status = tm.YET_TO_START_TRIP_STATUS
+    elif type == "completed":
+        valid_status = tm.COMPLETED_TRIP_STATUS
+    elif type == "ongoing":
+        valid_status = tm.ONGOING_TRIP_STATUS
+    else:
+        dpd.raise_error("Query sent for an invalid trip type")
+
+    with DBSession() as dbsession:
+        if trip_status_req.booked_from and trip_status_req.booked_till:
+            trip_status_req.booked_from = str_to_dt(trip_status_req.booked_from)
+            trip_status_req.booked_till = str_to_dt(trip_status_req.booked_till)
+            
+            response = dbsession.get_trips_with_timestamp_and_status_pagination(
+                trip_status_req.booked_from, trip_status_req.booked_till, valid_status,
+                trip_status_req.filter_sherpa_names,trip_status_req.skip,trip_status_req.limit
+            )
+
+            
     return response
 
 
