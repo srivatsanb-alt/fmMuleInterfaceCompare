@@ -380,6 +380,32 @@ class Handlers:
             )
             return
 
+    def record_dispatch_wait_start(ongoing_trip: tm.OngoingTrip):
+        trip_metadata = ongoing_trip.trip.trip_metadata
+        if trip_metadata is None:
+            trip_metadata = {}
+        trip_metadata.update(
+            {"dispatch_wait_start": utils_util.dt_to_str(datetime.datetime.now())}
+        )
+        flag_modified(ongoing_trip.trip, trip_metadata)
+
+    def record_dispatch_wait_end(ongoing_trip: tm.OngoingTrip):
+        trip_metadata = ongoing_trip.trip.trip_metadata
+        if trip_metadata is None:
+            return
+
+        dispatch_start = trip_metadata.get("dispatch_wait_start", None)
+        if dispatch_start:
+            dispatch_start_dt = utils_util.str_to_dt(dispatch_start)
+            disaptch_wait = datetime.datetime.now() - dispatch_start_dt
+
+            total_dispatch_wait_time = trip_metadata.get("total_dispatch_wait_time", None)
+            if total_dispatch_wait_time is None:
+                total_dispatch_wait_time = 0
+
+            trip_metadata.update({"total_dispatch_wait_time": disaptch_wait.seconds})
+            flag_modified(ongoing_trip.trip, trip_metadata)
+
     def add_dispatch_start_to_ongoing_trip(
         self, ongoing_trip: tm.OngoingTrip, sherpa: fm.Sherpa, timeout=False
     ):
@@ -396,8 +422,8 @@ class Handlers:
                 pattern=rqm.PatternEnum.wait_for_dispatch, activate=True
             ),
         )
-
         _ = utils_comms.send_req_to_sherpa(self.dbsession, sherpa, sherpa_action_msg)
+        self.record_dispatch_wait_start(ongoing_trip)
 
     def add_auto_hitch_start_to_ongoing_trip(
         self, ongoing_trip: tm.OngoingTrip, sherpa: fm.Sherpa
@@ -474,7 +500,6 @@ class Handlers:
         if StationProperties.DISPATCH_NOT_REQD not in curr_station.properties:
             timeout = StationProperties.DISPATCH_OPTIONAL in curr_station.properties
             self.add_dispatch_start_to_ongoing_trip(ongoing_trip, sherpa, timeout)
-
             if StationProperties.DISPATCH_OPTIONAL in curr_station.properties:
                 self.dbsession.add_notification(
                     [ongoing_trip.trip.fleet_name, sherpa.name],
@@ -1222,6 +1247,8 @@ class Handlers:
             return
 
         ongoing_trip.add_state(tm.TripState.WAITING_STATION_DISPATCH_END)
+        self.record_dispatch_wait_end(ongoing_trip)
+
         logging.getLogger(sherpa.name).info(f"dispatch button pressed on {sherpa.name}")
 
         # ask sherpa to stop playing the sound
