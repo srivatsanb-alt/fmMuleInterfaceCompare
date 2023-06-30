@@ -390,8 +390,8 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 9,
-        "w": 11,
+        "h": 10,
+        "w": 12,
         "x": 0,
         "y": 8
       },
@@ -494,9 +494,9 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 9,
-        "w": 13,
-        "x": 11,
+        "h": 10,
+        "w": 12,
+        "x": 12,
         "y": 8
       },
       "id": 18,
@@ -553,6 +553,226 @@
       ],
       "title": "Average takt time",
       "type": "barchart"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "P9108C6AB093B026B"
+      },
+      "description": "Average Obstacle Time for each tug on its most used route",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "continuous-YlBl"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineWidth": 1,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 0,
+        "y": 18
+      },
+      "id": 19,
+      "options": {
+        "barRadius": 0,
+        "barWidth": 0.97,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "right",
+          "showLegend": true
+        },
+        "orientation": "auto",
+        "showValue": "never",
+        "stacking": "none",
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        },
+        "xTickLabelRotation": 0,
+        "xTickLabelSpacing": 0
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "P9108C6AB093B026B"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH joined_table AS (\n  SELECT\n    substring(t.sherpa_name, 1, 6) as Sherpa, t.route as Route, t.start_time as start_time, t.end_time as end_time, t.fleet_name,\n    a.actual_trip_time as Trip_Time, a.time_elapsed_obstacle_stoppages as Obstacle_Time,\n    a.time_elapsed_visa_stoppages as Visa_Time, a.time_elapsed_other_stoppages as Other_Time\n  FROM\n    trips AS t\n  INNER JOIN\n    trip_analytics AS a ON t.id = a.trip_id\n)\nSELECT\n  Sherpa,\n  Route,\n  AVG(Obstacle_Time) AS Total_Obstacle_Time\nFROM\n  (\n    SELECT\n      Sherpa,\n      Route,\n      start_time,\n      end_time,\n      Obstacle_Time,\n      fleet_name,\n      ROW_NUMBER() OVER (PARTITION BY Sherpa ORDER BY route_count DESC) AS route_rank\n    FROM\n      (\n        SELECT\n          Sherpa,\n          Route,\n          start_time,\n          end_time,\n          Obstacle_Time,\n          fleet_name,\n          COUNT(*) AS route_count\n        FROM\n          joined_table\n        GROUP BY\n          Sherpa,\n          Route,\n          start_time,\n          end_time,\n          Obstacle_Time,\n          fleet_name\n      ) counted_data\n  ) ranked_data\nWHERE\n  route_rank = 1 AND fleet_name = '$fleetvar'\nGROUP BY\n  Sherpa,\n  Route;\n",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Average Obstacle Time",
+      "type": "barchart"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "P9108C6AB093B026B"
+      },
+      "description": "Average Time for each tug waits for dispatch button press at its most used route",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "continuous-YlBl"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineWidth": 1,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 12,
+        "y": 18
+      },
+      "id": 20,
+      "options": {
+        "barRadius": 0,
+        "barWidth": 0.97,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "right",
+          "showLegend": true
+        },
+        "orientation": "horizontal",
+        "showValue": "never",
+        "stacking": "none",
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        },
+        "xTickLabelRotation": 0,
+        "xTickLabelSpacing": 0
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "P9108C6AB093B026B"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH joined_table AS (\n  SELECT\n  substring(t.sherpa_name,1,6) as Sherpa, t.route as Route, t.start_time as start_time, t.end_time as end_time, t.trip_metadata as trip_metadata, t.fleet_name\n  FROM\n    trips AS t\n  INNER JOIN\n    trip_analytics AS a ON t.id = a.trip_id\n)\n\nSELECT\n  Sherpa,\n  Route,\n  COALESCE(CAST(trip_metadata->>'total_dispatch_wait_time' as numeric),0) AS total_dispatch_time\n\nFROM\n  (\n    SELECT\n      Sherpa,\n      Route,\n      start_time,\n      end_time,\n      ROW_NUMBER() OVER (PARTITION BY Sherpa ORDER BY COUNT(*) DESC) AS route_rank,\n      fleet_name,\n      trip_metadata\n    FROM\n      joined_table\n    GROUP BY\n      Sherpa,\n      Route,\n      start_time,\n      end_time,\n      fleet_name,\n      trip_metadata\n  ) ranked_data\nWHERE\n  route_rank = 2 and fleet_name = '$fleetvar' \nGROUP BY\n  Sherpa,\n  Route,\n  trip_metadata;\n\n\n\n",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Average Dispatch wait time",
+      "type": "barchart"
     }
   ],
   "refresh": "",
@@ -584,11 +804,11 @@
     ]
   },
   "time": {
-    "from": "now-1y",
+    "from": "now-1h",
     "to": "now"
   },
   "timepicker": {},
-  "timezone": "",
+  "timezone": "Asia/Kolkata",
   "title": "FleetAnalytics",
   "uid": "a71c7d27-6737-4dc1-a113-6618e41206fb",
   "version": 1,
