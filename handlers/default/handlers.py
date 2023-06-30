@@ -380,16 +380,16 @@ class Handlers:
             )
             return
 
-    def record_dispatch_wait_start(ongoing_trip: tm.OngoingTrip):
+    def record_dispatch_wait_start(self, ongoing_trip: tm.OngoingTrip):
         trip_metadata = ongoing_trip.trip.trip_metadata
         if trip_metadata is None:
             trip_metadata = {}
         trip_metadata.update(
             {"dispatch_wait_start": utils_util.dt_to_str(datetime.datetime.now())}
         )
-        flag_modified(ongoing_trip.trip, trip_metadata)
+        flag_modified(ongoing_trip.trip, "trip_metadata")
 
-    def record_dispatch_wait_end(ongoing_trip: tm.OngoingTrip):
+    def record_dispatch_wait_end(self, ongoing_trip: tm.OngoingTrip):
         trip_metadata = ongoing_trip.trip.trip_metadata
         if trip_metadata is None:
             return
@@ -406,7 +406,7 @@ class Handlers:
 
             trip_metadata.update({"total_dispatch_wait_time": str(disaptch_wait.seconds)})
             del trip_metadata["dispatch_wait_start"]
-            flag_modified(ongoing_trip.trip, trip_metadata)
+            flag_modified(ongoing_trip.trip, "trip_metadata")
 
     def add_dispatch_start_to_ongoing_trip(
         self, ongoing_trip: tm.OngoingTrip, sherpa: fm.Sherpa, timeout=False
