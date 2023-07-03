@@ -63,16 +63,20 @@ def send_slack_alerts():
                     pass
                 else:
                     body = f":warning: sherpa {sherpa.sherpa_name} in {sherpa.mode} mode: {sherpa.error}"
-                    response = webhook.send(text=body)
+                    try:
+                        response = webhook.send(text=body)
+                        if response.status_code == 200:
+                            logger.info(
+                                f"slack alert sent, sherpa {sherpa.sherpa_name} in {sherpa.mode} mode: {sherpa.error}"
+                            )
+                        else:
+                            logger.info(
+                                f"slack alert not sent, sherpa {sherpa.sherpa_name} in {sherpa.mode} mode: {sherpa.error}"
+                            )
 
-                    if response.status_code == 200:
-                        logger.info(
-                            f"slack alert sent, sherpa {sherpa.sherpa_name} in {sherpa.mode} mode: {sherpa.error}"
-                        )
-                    else:
-                        logger.info(
-                            f"slack alert not sent, sherpa {sherpa.sherpa_name} in {sherpa.mode} mode: {sherpa.error}"
-                        )
+                        all_previous_error[sherpa.sherpa_name] = sherpa.error
 
-                    all_previous_error[sherpa.sherpa_name] = sherpa.error
+                    except Exception as e:
+                        logger.info(f"unable to send slack alert, exception: {e}")
+
         time.sleep(time_interval)
