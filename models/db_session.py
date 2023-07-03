@@ -384,11 +384,13 @@ class DBSession:
             .all()
         )
 
-    def get_trips_with_timestamp_and_status_pagination(self, booked_from, booked_till, valid_status, sherpa_names, page=0, limit=50):
+    def get_trips_with_timestamp_and_status_pagination(
+        self, booked_from, booked_till, valid_status, sherpa_names, page=0, limit=50
+    ):
         trips = {}
         count = 0
         if sherpa_names:
-            trips =  (
+            trips = (
                 self.session.query(tm.Trip)
                 .filter(tm.Trip.booking_time > booked_from)
                 .filter(tm.Trip.booking_time < booked_till)
@@ -397,8 +399,7 @@ class DBSession:
                 .order_by(tm.Trip.id.desc())
                 .offset(page)
                 .limit(limit)
-                .limit
-                .all()
+                .limit.all()
             )
             count = (
                 self.session.query(tm.Trip)
@@ -411,7 +412,7 @@ class DBSession:
                 .count()
             )
         else:
-            trips =  (
+            trips = (
                 self.session.query(tm.Trip)
                 .filter(tm.Trip.booking_time > booked_from)
                 .filter(tm.Trip.booking_time < booked_till)
@@ -435,6 +436,7 @@ class DBSession:
         trips = jsonable_encoder(trips)
         trips = {"trips": [trips], "count": count}
         return trips
+
     def get_trips_with_timestamp_and_status(self, booked_from, booked_till, valid_status):
         return (
             self.session.query(tm.Trip)
@@ -444,6 +446,7 @@ class DBSession:
             .order_by(tm.Trip.id.desc())
             .all()
         )
+
     def get_trips_with_ids_and_status(self, trip_ids, valid_status):
         return (
             self.session.query(tm.Trip)
@@ -452,52 +455,7 @@ class DBSession:
             .order_by(tm.Trip.id.desc())
             .all()
         )
-    def get_trips_with_timestamp_and_status_pagination(self, booked_from, booked_till, valid_status, sherpa_names, page=0, limit=50):
-        trips = {}
-        count = 0
-        if sherpa_names:
-            trips =  (
-                self.session.query(tm.Trip)
-                .filter(tm.Trip.booking_time > booked_from)
-                .filter(tm.Trip.booking_time < booked_till)
-                .filter(tm.Trip.status.in_(valid_status))
-                .filter(tm.Trip.sherpa_name.in_(sherpa_names))
-                .order_by(tm.Trip.id.desc())
-                .offset(page)
-                .limit(limit)
-                .limit
-                .all()
-            )
-            count = (
-                self.session.query(tm.Trip)
-                .filter(tm.Trip.booking_time > booked_from)
-                .filter(tm.Trip.booking_time < booked_till)
-                .filter(tm.Trip.status.in_(valid_status))
-                .filter(tm.Trip.sherpa_name.in_(sherpa_names))
-                .count()
-            )
-        else:
-            trips =  (
-                self.session.query(tm.Trip)
-                .filter(tm.Trip.booking_time > booked_from)
-                .filter(tm.Trip.booking_time < booked_till)
-                .filter(tm.Trip.status.in_(valid_status))
-                .order_by(tm.Trip.id.desc())
-                .offset(page)
-                .limit(limit)
-                .all()
-            )
-            count = (
-                self.session.query(tm.Trip)
-                .filter(tm.Trip.booking_time > booked_from)
-                .filter(tm.Trip.booking_time < booked_till)
-                .filter(tm.Trip.status.in_(valid_status))
-                .count()
-            )
-        trips = jsonable_encoder(trips)
-        trips = {"trips": [trips], "count": count}
-        return trips
-    
+
     def get_trips_with_timestamp(self, booked_from, booked_till):
         return (
             self.session.query(tm.Trip)
