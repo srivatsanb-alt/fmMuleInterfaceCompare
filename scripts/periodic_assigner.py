@@ -56,6 +56,7 @@ def assign_next_task():
                     all_sherpa_status = (
                         db_session.session.query(SherpaStatus)
                         .filter(SherpaStatus.assign_next_task.is_(True))
+                        .filter(SherpaStatus.disabled.is_(False))
                         .all()
                     )
                     for sherpa_status in all_sherpa_status:
