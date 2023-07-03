@@ -15,7 +15,7 @@ ENV FM_INSTALL_DIR="/app" REDIS_PORT=$REDIS_PORT FM_PORT=$FM_PORT PLUGIN_PORT=$P
 
 
 ENV FM_REDIS_URI="redis://localhost:$REDIS_PORT" \
-    FM_MAP_DIR="/app/static" \
+    FM_STATIC_DIR="/app/static" \
     FM_LOG_DIR="/app/logs" \
     FM_MISC_DIR="/app/misc/" \
     FM_CONFIG_DIR="/app/static/fleet_config/" \

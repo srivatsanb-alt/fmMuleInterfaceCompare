@@ -180,11 +180,11 @@ bash load_docker_images.sh
   simulate=true
   ```
 
-  c. To get trip bookings done automatically add routes(list of station names), trip booking frequency(seconds) to fleet_config.
+  c. To get trip bookings done automatically add routes(list of station names), trip booking frequency(seconds) to fleet_config. route1 will be a scheduled trip, route2 would be booked as a normal one time trip
   ```markdown
   [fleet.simulator.routes]
-  route1 = [["Station A", "Station B"], [10]]
-  route2 = [["Station A", "Station C"], [60]]
+  route1 = [["Station A", "Station B"], ["10", "2023-05-31 15:00:00", "2023-05-31 16:00:00"]]
+  route2 = [["Station B", "Station A"], ["-1", "", ""]]
   ```
 
   d. Make sure all the stations mentioned in gmaj file(<fleet_name>/map/grid_map_attributes.json) has only the below mentioned tags. Tags like conveyor, auto_hitch, auto_unhitch will not work in simulator mode.

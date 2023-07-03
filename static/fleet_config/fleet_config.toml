@@ -6,6 +6,9 @@ notifications=true
 slack_webhook_url="https://hooks.slack.com/services/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"
 time_interval=20
 
+[fleet.backup]
+keep_size_mb=1000
+
 [fleet.rq]
 default_job_timeout = 15
 generic_handler_job_timeout = 10
@@ -38,10 +41,13 @@ http_scheme="https"
 all_server_ips=["127.0.0.1"]
 
 [fleet.simulator.routes]
-#route1 = [["Station A", "Station B"], [10]]]
+# scheduled trip
+#route1 = [["Station A", "Station B"], ["10", "2023-05-31 15:00:00", "2023-05-31 16:00:00"]]
+
+# one time trip
+#route2 = [["Station B", "Station A"], ["-1", "", ""]]
+
 
 [fleet.simulator.initialize_sherpas_at]
 #sample_sherpa="Station A"
 
-[optimal_dispatch.exclude_stations]
-#sample_sherpa=["Station A", "Station B"]

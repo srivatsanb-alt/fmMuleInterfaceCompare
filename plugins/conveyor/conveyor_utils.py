@@ -131,7 +131,7 @@ def add_edit_conv(
 
     if api_key is None:
         if not conv_info:
-            api_key = gen_api_key(id)
+            api_key = gen_api_key(conveyor_name)
             logging.getLogger(logger_name).info(
                 f"generated api_key {api_key}  for conveyor name: {conveyor_name}"
             )

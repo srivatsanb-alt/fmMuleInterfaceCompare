@@ -54,9 +54,6 @@ async def diagnostics(
         if not sherpa_status:
             dpd.raise_error("Bad sherpa name")
 
-        if not sherpa_status.sherpa.ip_address:
-            dpd.raise_error("Sherpa not yet connected to the fleet manager")
-
         req = rqm.DiagnosticsReq(sherpa_name=entity_name)
         response = await send_async_req_to_sherpa(dbsession, sherpa_status.sherpa, req)
 
@@ -80,10 +77,6 @@ async def restart_mule_docker(
 
     with DBSession() as dbsession:
         sherpa_status = dbsession.get_sherpa_status(entity_name)
-
-        if not sherpa_status.sherpa.ip_address:
-            dpd.raise_error("Sherpa not yet connected to the fleet manager")
-
         req = {"endpoint": "restart_mule_docker", "source": user_name}
         response = await send_async_req_to_sherpa(dbsession, sherpa_status.sherpa, req)
 
@@ -107,10 +100,6 @@ async def update_sherpa_img(
 
     with DBSession() as dbsession:
         sherpa_status = dbsession.get_sherpa_status(entity_name)
-
-        if not sherpa_status.sherpa.ip_address:
-            dpd.raise_error("Sherpa not yet connected to the fleet manager")
-
         update_image_req = rqm.SherpaImgUpdateCtrlReq(sherpa_name=entity_name)
         _ = await dpd.process_req_with_response(None, update_image_req, user_name)
 
@@ -229,9 +218,6 @@ async def sherpa_emergency_stop(
         if not sherpa_status:
             dpd.raise_error("Bad sherpa name")
 
-        if not sherpa_status.sherpa.ip_address:
-            dpd.raise_error("Sherpa not yet connected to the fleet manager")
-
         fleet_name = sherpa_status.sherpa.fleet.name
         fleet_status = dbsession.get_fleet(fleet_name)
 
@@ -275,9 +261,6 @@ async def switch_mode(
         if not sherpa_status:
             dpd.raise_error("Bad sherpa name")
 
-        if not sherpa_status.sherpa.ip_address:
-            dpd.raise_error("Sherpa not yet connected to the fleet manager")
-
         switch_mode_req = rqm.SwitchModeReq(
             mode=switch_mode_ctrl_req.mode, sherpa_name=entity_name
         )
@@ -311,9 +294,6 @@ async def reset_pose(
         if not sherpa_status:
             dpd.raise_error("Bad sherpa name")
 
-        if not sherpa_status.sherpa.ip_address:
-            dpd.raise_error("Sherpa not yet connected to the fleet manager")
-
         station = dbsession.get_station(reset_pose_ctrl_req.fleet_station)
 
         if not station:
@@ -345,9 +325,6 @@ async def induct_sherpa(
 
         if sherpa is None:
             dpd.raise_error(f"Invalid sherpa name: {sherpa_name}")
-
-        if not sherpa.ip_address:
-            dpd.raise_error("Sherpa not yet connected to the fleet manager")
 
         if sherpa.status.pose is None:
             dpd.raise_error(

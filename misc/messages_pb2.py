@@ -21,7 +21,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   package='ati.schema',
   syntax='proto3',
   serialized_options=None,
-  serialized_pb=_b('\n\x0emessages.proto\x12\nati.schema\"\x1e\n\x0bMuleCommand\x12\x0f\n\x07\x43ommand\x18\x01 \x01(\t\"\x1c\n\nMuleStatus\x12\x0e\n\x06Status\x18\x01 \x01(\t\"]\n\x0cSystemHealth\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x12\n\nepo_signal\x18\x02 \x01(\r\x12\x1e\n\x16\x64\x65lfino_firmware_error\x18\x03 \x01(\r\x12\x0b\n\x03msg\x18\x04 \x01(\t\"\xbe\x01\n\x0fMulePeripherals\x12\x0b\n\x03Msg\x18\x01 \x01(\t\x12\x11\n\tAutoHitch\x18\x02 \x01(\t\x12\x10\n\x08\x43onveyor\x18\x03 \x01(\t\x12\x16\n\x0e\x44ispatchButton\x18\x04 \x01(\t\x12\x0f\n\x07Speaker\x18\x05 \x01(\t\x12\x11\n\tIndicator\x18\x06 \x01(\t\x12\x14\n\x0c\x65rror_device\x18\x07 \x01(\t\x12\x19\n\x11loadcell_overload\x18\t \x01(\t\x12\x0c\n\x04time\x18\x08 \x01(\x01\"\x81\x01\n\x07\x41lertFM\x12\x19\n\x11trolley_load_cell\x18\x01 \x01(\t\x12\x19\n\x11low_battery_alarm\x18\x02 \x01(\t\x12\x12\n\nobstructed\x18\x03 \x01(\t\x12\x12\n\nuser_pause\x18\x04 \x01(\t\x12\x18\n\x10\x65mergency_button\x18\x05 \x01(\t\"\x1f\n\rControlStatus\x12\x0e\n\x06Status\x18\x01 \x01(\t\")\n\x06Vector\x12\t\n\x01x\x18\x01 \x01(\x01\x12\t\n\x01y\x18\x02 \x01(\x01\x12\t\n\x01z\x18\x03 \x01(\x01\"\xec\x01\n\x0eOdometryUpdate\x12\x0c\n\x04time\x18\x07 \x01(\x01\x12\x10\n\x08\x66rame_id\x18\x08 \x01(\r\x12$\n\x08Position\x18\x01 \x01(\x0b\x32\x12.ati.schema.Vector\x12$\n\x08Velocity\x18\x02 \x01(\x0b\x32\x12.ati.schema.Vector\x12$\n\x08Welocity\x18\x04 \x01(\x0b\x32\x12.ati.schema.Vector\x12!\n\x05\x41ngle\x18\x03 \x01(\x0b\x32\x12.ati.schema.Vector\x12\x11\n\tOmegaLeft\x18\x05 \x01(\x01\x12\x12\n\nOmegaRight\x18\x06 \x01(\x01\"\xba\x01\n\x0b\x44riveUpdate\x12\x0c\n\x04time\x18\x07 \x01(\x01\x12\x14\n\x0cLeftThrottle\x18\x01 \x01(\x01\x12\x15\n\rRightThrottle\x18\x02 \x01(\x01\x12\x11\n\tRearOmega\x18\x08 \x01(\x01\x12\x12\n\nBrakeInput\x18\x03 \x01(\x01\x12\x15\n\rSteeringAngle\x18\x04 \x01(\x01\x12\r\n\x05v_ref\x18\x05 \x01(\x01\x12\x11\n\tomega_ref\x18\x06 \x01(\x01\x12\x10\n\x08gradient\x18\t \x01(\x01\"V\n\x0f\x44\x65tectedObjects\x12\x0c\n\x04time\x18\x02 \x01(\x01\x12#\n\x07objects\x18\x01 \x03(\x0b\x32\x12.ati.schema.Object\x12\x10\n\x08\x66rame_id\x18\x03 \x01(\r\">\n\rDetectedRoads\x12\x0c\n\x04time\x18\x02 \x01(\x01\x12\x1f\n\x05lanes\x18\x01 \x03(\x0b\x32\x10.ati.schema.Lane\"\xc7\x01\n\x06Object\x12$\n\x08position\x18\x01 \x01(\x0b\x32\x12.ati.schema.Vector\x12#\n\x07\x65xtents\x18\x02 \x01(\x0b\x32\x12.ati.schema.Vector\x12$\n\x04type\x18\x03 \x01(\x0e\x32\x16.ati.schema.ObjectType\x12$\n\x08vertices\x18\x04 \x03(\x0b\x32\x12.ati.schema.Vector\x12\x12\n\nmin_height\x18\x05 \x01(\x01\x12\x12\n\nmax_height\x18\x06 \x01(\x01\"*\n\x04Lane\x12\"\n\x05\x61reas\x18\x01 \x03(\x0b\x32\x13.ati.schema.Polygon\",\n\x07Polygon\x12!\n\x05\x65\x64ges\x18\x01 \x03(\x0b\x32\x12.ati.schema.Vector\"H\n\x04Line\x12\x1f\n\x03pt1\x18\x01 \x01(\x0b\x32\x12.ati.schema.Vector\x12\x1f\n\x03pt2\x18\x02 \x01(\x0b\x32\x12.ati.schema.Vector\"Y\n\x08LinePose\x12\x0c\n\x04\x64ist\x18\x01 \x01(\x01\x12\r\n\x05theta\x18\x02 \x01(\x01\x12\x0c\n\x04prob\x18\x03 \x01(\x01\x12\"\n\x08line_seg\x18\x04 \x01(\x0b\x32\x10.ati.schema.Line\"W\n\nRadarPoint\x12$\n\x08position\x18\x01 \x01(\x0b\x32\x12.ati.schema.Vector\x12\x10\n\x08velocity\x18\x02 \x01(\x01\x12\x11\n\tintensity\x18\x03 \x01(\x01\"\\\n\x0cLidarPoint2D\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x10\n\x08\x66rame_id\x18\x02 \x01(\x07\x12\x11\n\tdistances\x18\x03 \x01(\x0c\x12\x19\n\x11horizontal_angles\x18\x04 \x01(\x0c\";\n\x0bLidarGround\x12\x0c\n\x04time\x18\x03 \x01(\x01\x12\x0c\n\x04mask\x18\x01 \x01(\x0c\x12\x10\n\x08\x66rame_id\x18\x02 \x01(\x07\"\xb8\x01\n\x0e\x44rivableRegion\x12\x0c\n\x04time\x18\x05 \x01(\x01\x12\x10\n\x08\x66rame_id\x18\x01 \x01(\x07\x12\x10\n\x08origin_x\x18\x02 \x01(\x0f\x12\x10\n\x08origin_y\x18\x03 \x01(\x0f\x12\x0c\n\x04grid\x18\x04 \x01(\x0c\x12\x0c\n\x04roll\x18\x06 \x01(\x01\x12\r\n\x05pitch\x18\x07 \x01(\x01\x12\x17\n\x0fprocessing_time\x18\x08 \x01(\x01\x12\x0e\n\x06height\x18\t \x01(\x0c\x12\x0e\n\x06sensor\x18\n \x01(\x0c\"\xdb\x01\n\tImuUpdate\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x14\n\x0chw_time_diag\x18\x06 \x01(\x06\x12\x13\n\x0bhw_time_acc\x18\x07 \x01(\x06\x12\x14\n\x0chw_time_gyro\x18\x08 \x01(\x06\x12\x0c\n\x04temp\x18\x05 \x01(\x01\x12(\n\x0c\x61\x63\x63\x65leration\x18\x02 \x01(\x0b\x32\x12.ati.schema.Vector\x12$\n\x08welocity\x18\x03 \x01(\x0b\x32\x12.ati.schema.Vector\x12!\n\x05\x66ield\x18\x04 \x01(\x0b\x32\x12.ati.schema.Vector\"E\n\x0eGyroBiasUpdate\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12%\n\tgyro_bias\x18\x02 \x01(\x0b\x32\x12.ati.schema.Vector\"<\n\nGyroUpdate\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12 \n\x04gyro\x18\x02 \x01(\x0b\x32\x12.ati.schema.Vector\"<\n\x0fPitchRollUpdate\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\r\n\x05pitch\x18\x02 \x01(\x01\x12\x0c\n\x04roll\x18\x03 \x01(\x01\"F\n\x0b\x43\x61meraFrame\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\n\n\x02id\x18\x02 \x01(\t\x12\x0e\n\x06height\x18\x03 \x01(\r\x12\r\n\x05width\x18\x04 \x01(\r\"M\n\nGpsReading\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x10\n\x08latitude\x18\x02 \x01(\x01\x12\x11\n\tlongitude\x18\x03 \x01(\x01\x12\x0c\n\x04hdop\x18\x04 \x01(\x01\"R\n\x0e\x45ncoderReading\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\t\n\x01v\x18\x02 \x01(\x01\x12\t\n\x01w\x18\x03 \x01(\x01\x12\r\n\x05v_ref\x18\x04 \x01(\x01\x12\r\n\x05w_ref\x18\x05 \x01(\x01\"\xfe\x01\n\x13\x45ncoderDebugReading\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\r\n\x05motor\x18\x02 \x01(\x05\x12\r\n\x05ticks\x18\x03 \x01(\x05\x12\x11\n\tticks_ref\x18\x04 \x01(\x05\x12\x0b\n\x03pwm\x18\x05 \x01(\x05\x12\r\n\x05\x65rror\x18\x06 \x01(\x05\x12\x11\n\tint_error\x18\x07 \x01(\x05\x12\x12\n\nderivative\x18\x08 \x01(\x05\x12\x13\n\x0b\x63ontrol_ref\x18\t \x01(\x01\x12\x11\n\tticks_raw\x18\n \x01(\x05\x12\x11\n\tbrake_pwm\x18\x0b \x01(\x05\x12\x15\n\rencoder_error\x18\x0c \x01(\x05\x12\x13\n\x0bhill_assist\x18\r \x01(\x05\"e\n\x0bRadarUpdate\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x10\n\x08\x66rame_no\x18\x02 \x01(\r\x12\x0e\n\x06numpts\x18\x03 \x01(\r\x12&\n\x06points\x18\x04 \x03(\x0b\x32\x16.ati.schema.RadarPoint\")\n\x08IrUpdate\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x0f\n\x07ir_msgs\x18\x02 \x03(\x01\"%\n\x07\x41\x64\x63Vals\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x0c\n\x04vals\x18\x02 \x03(\r\"b\n\tPoseFrame\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\"\n\x04left\x18\x02 \x01(\x0b\x32\x14.ati.schema.LinePose\x12#\n\x05right\x18\x03 \x01(\x0b\x32\x14.ati.schema.LinePose\"H\n\nGenericMsg\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x0c\n\x04name\x18\x02 \x01(\t\x12\x0e\n\x06\x66ields\x18\x03 \x03(\t\x12\x0e\n\x06values\x18\x04 \x03(\t\"S\n\rLidarSlamPose\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x11\n\tPositionX\x18\x02 \x01(\x01\x12\x11\n\tPositionY\x18\x03 \x01(\x01\x12\x0e\n\x06\x41ngleZ\x18\x04 \x01(\x01\"\"\n\x04Note\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x0c\n\x04note\x18\x02 \x01(\t\"w\n\x0cHealthUpdate\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x10\n\x08\x63pu_util\x18\x02 \x01(\x01\x12\x10\n\x08\x63pu_temp\x18\x03 \x01(\x01\x12\x11\n\tmem_avail\x18\x04 \x01(\x01\x12\x10\n\x08gpu_temp\x18\x05 \x01(\x01\x12\x10\n\x08gpu_util\x18\x06 \x01(\x01\"`\n\rControlUpdate\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\r\n\x05predx\x18\x02 \x01(\x01\x12\r\n\x05predy\x18\x03 \x01(\x01\x12\r\n\x05predt\x18\x04 \x01(\x01\x12\t\n\x01v\x18\x05 \x01(\x01\x12\t\n\x01w\x18\x06 \x01(\x01\"8\n\nLaneUpdate\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\r\n\x05xcorr\x18\x02 \x01(\x01\x12\r\n\x05ycorr\x18\x03 \x01(\x01\"5\n\x11\x43\x61meraNearObjects\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x12\n\nnum_frames\x18\x02 \x01(\r\"\xe1\x01\n\rPathOccupancy\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x10\n\x08\x66rame_id\x18\x02 \x01(\x07\x12\x0c\n\x04grid\x18\x03 \x01(\x0c\x12\x12\n\ngrid_width\x18\x0c \x01(\x07\x12\x0b\n\x03xcr\x18\x04 \x01(\x01\x12\x0b\n\x03ycr\x18\x05 \x01(\x01\x12\x12\n\nobs_factor\x18\x06 \x01(\x01\x12\x12\n\nunc_factor\x18\x07 \x01(\x01\x12\x12\n\nvel_factor\x18\x08 \x01(\x01\x12\x0c\n\x04path\x18\t \x01(\x0c\x12\x17\n\x0fhumans_detected\x18\n \x01(\x08\x12\x11\n\thuman_pos\x18\x0b \x01(\x0c\"\xa3\x01\n\x0fSensorException\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x11\n\tsensor_id\x18\x02 \x01(\x07\x12\x10\n\x08\x66rame_id\x18\x03 \x01(\x07\x12\x12\n\nmessage_id\x18\x08 \x01(\x07\x12\x10\n\x08severity\x18\t \x01(\x05\x12\x0c\n\x04\x64\x61ta\x18\x04 \x01(\x0c\x12\x0b\n\x03msg\x18\x05 \x01(\t\x12\r\n\x05\x66ield\x18\x06 \x03(\t\x12\r\n\x05value\x18\x07 \x03(\t\"H\n\tSystemMsg\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x11\n\tmodule_id\x18\x02 \x01(\r\x12\x0b\n\x03ref\x18\x03 \x01(\x01\x12\r\n\x05value\x18\x04 \x01(\x01\"\x87\x01\n\x08YelliMsg\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x17\n\x0fprocessing_time\x18\x02 \x01(\x01\x12\x10\n\x08\x66rame_id\x18\x03 \x01(\r\x12\x0e\n\x06pose_x\x18\x04 \x01(\x01\x12\x0e\n\x06pose_y\x18\x05 \x01(\x01\x12\x0e\n\x06pose_t\x18\x06 \x01(\x01\x12\x12\n\nbest_score\x18\x07 \x01(\x01\"\xc9\x01\n\nLidarFrame\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x10\n\x08\x66rame_id\x18\x02 \x01(\x07\x12\x13\n\x0bhw_frame_id\x18\x04 \x01(\x07\x12\x14\n\x0chw_timestamp\x18\x05 \x01(\x06\x12\x0c\n\x04\x64\x61ta\x18\x03 \x01(\x0c\x12\x15\n\rmajor_version\x18\x06 \x01(\x07\x12\x15\n\rminor_version\x18\x07 \x01(\x07\x12\x1b\n\x13num_missing_sectors\x18\x08 \x01(\x07\x12\x17\n\x0fmissing_sectors\x18\t \x01(\t\"G\n\x10LidarLookupTable\x12\x0c\n\x04\x64\x61ta\x18\x01 \x01(\x0c\x12\t\n\x01W\x18\x02 \x01(\x07\x12\t\n\x01H\x18\x03 \x01(\x07\x12\x0f\n\x07\x63olumns\x18\x04 \x01(\x07\"\x8a\x01\n\x10LidarSmallHeader\x12\x17\n\x0fvertical_angles\x18\x03 \x01(\x0c\x12\x19\n\x11horizontal_angles\x18\x04 \x01(\x0c\x12\x14\n\x0clookup_table\x18\x05 \x01(\x0c\x12\x15\n\rmajor_version\x18\x06 \x01(\x07\x12\x15\n\rminor_version\x18\x07 \x01(\x07\"\xa6\x01\n\x10LidarSmallPacket\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x10\n\x08\x66rame_id\x18\x02 \x01(\x07\x12\x13\n\x0bhw_frame_id\x18\x04 \x01(\x07\x12\x14\n\x0chw_timestamp\x18\x05 \x01(\x06\x12\x11\n\tdistances\x18\x03 \x01(\x0c\x12\x1b\n\x13num_missing_sectors\x18\x06 \x01(\x07\x12\x17\n\x0fmissing_sectors\x18\x07 \x01(\t\"j\n\x10LidarExtraPacket\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x10\n\x08\x66rame_id\x18\x02 \x01(\x07\x12\x11\n\tintensity\x18\x03 \x01(\x0c\x12\x14\n\x0creflectivity\x18\x04 \x01(\x0c\x12\r\n\x05noise\x18\x05 \x01(\x0c\"\xcf\x01\n\x15\x64\x65precated_LidarPoint\x12\x0c\n\x04time\x18\x05 \x01(\x01\x12\x10\n\x08\x66rame_id\x18\n \x01(\x07\x12\r\n\x05\x62\x65\x61ms\x18\x06 \x01(\r\x12\x0e\n\x06slices\x18\x07 \x01(\r\x12\x17\n\x0fvertical_angles\x18\x01 \x01(\x0c\x12\x19\n\x11horizontal_angles\x18\x02 \x01(\x0c\x12\x11\n\tdistances\x18\x03 \x01(\x0c\x12\x13\n\x0bintensities\x18\x04 \x01(\x0c\x12\n\n\x02id\x18\x08 \x01(\x0c\x12\x0f\n\x07ptcloud\x18\t \x01(\x0c\"\xa6\x01\n\x06\x42\x65\x64Msg\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x10\n\x08\x66rame_id\x18\x02 \x01(\x07\x12\x0f\n\x07ward_id\x18\x03 \x01(\x07\x12\x11\n\tmap_level\x18\x04 \x01(\x07\x12+\n\x0e\x64\x65tected_lines\x18\x05 \x03(\x0b\x32\x13.ati.schema.Polygon\x12+\n\x0epredicted_boxs\x18\x06 \x03(\x0b\x32\x13.ati.schema.Polygon\"z\n\nBedSideMsg\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x10\n\x08\x66rame_id\x18\x02 \x01(\x07\x12\x0f\n\x07ward_id\x18\x03 \x01(\x07\x12\x11\n\tmap_level\x18\x04 \x01(\x07\x12(\n\x0c\x62\x65\x64side_locs\x18\x05 \x03(\x0b\x32\x12.ati.schema.Vector\"q\n\x10HubMotorCurrents\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x1b\n\x13steer_motor_current\x18\x02 \x01(\x01\x12\x17\n\x0f\x62\x61ttery_current\x18\x03 \x01(\x01\x12\x19\n\x11hub_motor_current\x18\x04 \x01(\x01\"~\n\x0cSensorStatus\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x11\n\tsensor_id\x18\x02 \x01(\x07\x12\x10\n\x08\x66rame_id\x18\x03 \x01(\x07\x12\x0c\n\x04\x64\x61ta\x18\x04 \x01(\x0c\x12\x0b\n\x03msg\x18\x05 \x01(\t\x12\x10\n\x08severity\x18\t \x01(\x05\x12\x0e\n\x06status\x18\n \x01(\x08\"\x8c\x01\n\x08\x41rucoMsg\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x10\n\x08\x66rame_id\x18\x02 \x01(\x07\x12\'\n\x0btranslation\x18\x03 \x01(\x0b\x32\x12.ati.schema.Vector\x12$\n\x08rotation\x18\x04 \x01(\x0b\x32\x12.ati.schema.Vector\x12\x11\n\tmarker_id\x18\x05 \x01(\x05\"Z\n\rArucoMulePose\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12(\n\x04pose\x18\x02 \x01(\x0b\x32\x1a.ati.schema.OdometryUpdate\x12\x11\n\tmarker_id\x18\x03 \x01(\x05\"f\n\x0fTagDetectionMsg\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12#\n\x07\x63orners\x18\x02 \x03(\x0b\x32\x12.ati.schema.Vector\x12\x0e\n\x06tag_id\x18\x03 \x01(\x05\x12\x10\n\x08tag_type\x18\x04 \x01(\t\"g\n\x0bTagMulePose\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12(\n\x04pose\x18\x02 \x01(\x0b\x32\x1a.ati.schema.OdometryUpdate\x12\x0e\n\x06tag_id\x18\x03 \x01(\x05\x12\x10\n\x08tag_type\x18\x04 \x01(\t\"\x82\x01\n\x0cTagLocalPose\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12 \n\x04rvec\x18\x02 \x01(\x0b\x32\x12.ati.schema.Vector\x12 \n\x04tvec\x18\x03 \x01(\x0b\x32\x12.ati.schema.Vector\x12\x0e\n\x06tag_id\x18\x04 \x01(\x05\x12\x10\n\x08tag_type\x18\x05 \x01(\t\")\n\tPS4Report\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x0e\n\x06report\x18\x02 \x01(\t\"%\n\x08PS4State\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x0b\n\x03ref\x18\x02 \x01(\x05\"8\n\x0e\x43onveyorUpdate\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x0b\n\x03pwm\x18\x02 \x01(\x01\x12\x0b\n\x03\x64ir\x18\x03 \x01(\x01\"9\n\x11\x41utoUnhitchUpdate\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x16\n\x0eunhitch_signal\x18\x02 \x01(\x01\"-\n\x06Pose2d\x12\t\n\x01x\x18\x01 \x01(\x01\x12\t\n\x01y\x18\x02 \x01(\x01\x12\r\n\x05theta\x18\x03 \x01(\x01\"\xd8\x01\n\x0cTrackerState\x12\x0c\n\x04mode\x18\x01 \x01(\t\x12\t\n\x01v\x18\x02 \x01(\x01\x12\t\n\x01w\x18\x03 \x01(\x01\x12\x0b\n\x03\x63te\x18\x04 \x01(\x01\x12\n\n\x02te\x18\x05 \x01(\x01\x12\x12\n\nvel_factor\x18\x06 \x01(\x01\x12\x13\n\x0bsteer_angle\x18\x07 \x01(\x01\x12%\n\tmule_pose\x18\x08 \x01(\x0b\x32\x12.ati.schema.Pose2d\x12$\n\x08ref_pose\x18\t \x01(\x0b\x32\x12.ati.schema.Pose2d\x12\x15\n\rspeed_profile\x18\n \x01(\x07\"\'\n\nBatteryMsg\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x0b\n\x03soc\x18\x02 \x01(\x01*6\n\nObjectType\x12\x0b\n\x07UNKNOWN\x10\x00\x12\x0e\n\nPEDESTRIAN\x10\x01\x12\x0b\n\x07VEHICLE\x10\x02*\xa5\x01\n\x08SensorId\x12\t\n\x05LIDAR\x10\x00\x12\x0f\n\x0bRIGHT_MOTOR\x10\x01\x12\x0e\n\nLEFT_MOTOR\x10\x02\x12\x17\n\x13REAR_STEERING_MOTOR\x10\x03\x12\t\n\x05\x42RAKE\x10\x04\x12\x0b\n\x07\x43HANNEL\x10\x05\x12\x14\n\x10REAR_DRIVE_MOTOR\x10\x06\x12\x0c\n\x08RP_LIDAR\x10\x07\x12\x0f\n\x0bTOTE_SENSOR\x10\x08\x12\x07\n\x03IMU\x10\t*U\n\x0eLidarMessageId\x12\x12\n\x0eMissingSectors\x10\x00\x12\x18\n\x14MaxRollPitchExceeded\x10\x01\x12\x15\n\x11NumMissingSectors\x10\x02\x62\x06proto3')
+  serialized_pb=_b('\n\x0emessages.proto\x12\nati.schema\"\x1e\n\x0bMuleCommand\x12\x0f\n\x07\x43ommand\x18\x01 \x01(\t\"\x1c\n\nMuleStatus\x12\x0e\n\x06Status\x18\x01 \x01(\t\"]\n\x0cSystemHealth\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x12\n\nepo_signal\x18\x02 \x01(\r\x12\x1e\n\x16\x64\x65lfino_firmware_error\x18\x03 \x01(\r\x12\x0b\n\x03msg\x18\x04 \x01(\t\"\xbe\x01\n\x0fMulePeripherals\x12\x0b\n\x03Msg\x18\x01 \x01(\t\x12\x11\n\tAutoHitch\x18\x02 \x01(\t\x12\x10\n\x08\x43onveyor\x18\x03 \x01(\t\x12\x16\n\x0e\x44ispatchButton\x18\x04 \x01(\t\x12\x0f\n\x07Speaker\x18\x05 \x01(\t\x12\x11\n\tIndicator\x18\x06 \x01(\t\x12\x14\n\x0c\x65rror_device\x18\x07 \x01(\t\x12\x19\n\x11loadcell_overload\x18\t \x01(\t\x12\x0c\n\x04time\x18\x08 \x01(\x01\"\xc1\x01\n\x07\x41lertFM\x12\x19\n\x11trolley_load_cell\x18\x01 \x01(\t\x12\x19\n\x11low_battery_alarm\x18\x02 \x01(\t\x12\x12\n\nobstructed\x18\x03 \x01(\t\x12\x12\n\nuser_pause\x18\x04 \x01(\t\x12\x18\n\x10\x65mergency_button\x18\x05 \x01(\t\x12\x1c\n\x14\x61uto_unhitch_failure\x18\x06 \x01(\t\x12 \n\x18\x64ispatch_action_required\x18\x07 \x01(\t\"\x1f\n\rControlStatus\x12\x0e\n\x06Status\x18\x01 \x01(\t\")\n\x06Vector\x12\t\n\x01x\x18\x01 \x01(\x01\x12\t\n\x01y\x18\x02 \x01(\x01\x12\t\n\x01z\x18\x03 \x01(\x01\"\xec\x01\n\x0eOdometryUpdate\x12\x0c\n\x04time\x18\x07 \x01(\x01\x12\x10\n\x08\x66rame_id\x18\x08 \x01(\r\x12$\n\x08Position\x18\x01 \x01(\x0b\x32\x12.ati.schema.Vector\x12$\n\x08Velocity\x18\x02 \x01(\x0b\x32\x12.ati.schema.Vector\x12$\n\x08Welocity\x18\x04 \x01(\x0b\x32\x12.ati.schema.Vector\x12!\n\x05\x41ngle\x18\x03 \x01(\x0b\x32\x12.ati.schema.Vector\x12\x11\n\tOmegaLeft\x18\x05 \x01(\x01\x12\x12\n\nOmegaRight\x18\x06 \x01(\x01\"\xba\x01\n\x0b\x44riveUpdate\x12\x0c\n\x04time\x18\x07 \x01(\x01\x12\x14\n\x0cLeftThrottle\x18\x01 \x01(\x01\x12\x15\n\rRightThrottle\x18\x02 \x01(\x01\x12\x11\n\tRearOmega\x18\x08 \x01(\x01\x12\x12\n\nBrakeInput\x18\x03 \x01(\x01\x12\x15\n\rSteeringAngle\x18\x04 \x01(\x01\x12\r\n\x05v_ref\x18\x05 \x01(\x01\x12\x11\n\tomega_ref\x18\x06 \x01(\x01\x12\x10\n\x08gradient\x18\t \x01(\x01\"V\n\x0f\x44\x65tectedObjects\x12\x0c\n\x04time\x18\x02 \x01(\x01\x12#\n\x07objects\x18\x01 \x03(\x0b\x32\x12.ati.schema.Object\x12\x10\n\x08\x66rame_id\x18\x03 \x01(\r\">\n\rDetectedRoads\x12\x0c\n\x04time\x18\x02 \x01(\x01\x12\x1f\n\x05lanes\x18\x01 \x03(\x0b\x32\x10.ati.schema.Lane\"\xc7\x01\n\x06Object\x12$\n\x08position\x18\x01 \x01(\x0b\x32\x12.ati.schema.Vector\x12#\n\x07\x65xtents\x18\x02 \x01(\x0b\x32\x12.ati.schema.Vector\x12$\n\x04type\x18\x03 \x01(\x0e\x32\x16.ati.schema.ObjectType\x12$\n\x08vertices\x18\x04 \x03(\x0b\x32\x12.ati.schema.Vector\x12\x12\n\nmin_height\x18\x05 \x01(\x01\x12\x12\n\nmax_height\x18\x06 \x01(\x01\"*\n\x04Lane\x12\"\n\x05\x61reas\x18\x01 \x03(\x0b\x32\x13.ati.schema.Polygon\",\n\x07Polygon\x12!\n\x05\x65\x64ges\x18\x01 \x03(\x0b\x32\x12.ati.schema.Vector\"H\n\x04Line\x12\x1f\n\x03pt1\x18\x01 \x01(\x0b\x32\x12.ati.schema.Vector\x12\x1f\n\x03pt2\x18\x02 \x01(\x0b\x32\x12.ati.schema.Vector\"Y\n\x08LinePose\x12\x0c\n\x04\x64ist\x18\x01 \x01(\x01\x12\r\n\x05theta\x18\x02 \x01(\x01\x12\x0c\n\x04prob\x18\x03 \x01(\x01\x12\"\n\x08line_seg\x18\x04 \x01(\x0b\x32\x10.ati.schema.Line\"W\n\nRadarPoint\x12$\n\x08position\x18\x01 \x01(\x0b\x32\x12.ati.schema.Vector\x12\x10\n\x08velocity\x18\x02 \x01(\x01\x12\x11\n\tintensity\x18\x03 \x01(\x01\"\\\n\x0cLidarPoint2D\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x10\n\x08\x66rame_id\x18\x02 \x01(\x07\x12\x11\n\tdistances\x18\x03 \x01(\x0c\x12\x19\n\x11horizontal_angles\x18\x04 \x01(\x0c\";\n\x0bLidarGround\x12\x0c\n\x04time\x18\x03 \x01(\x01\x12\x0c\n\x04mask\x18\x01 \x01(\x0c\x12\x10\n\x08\x66rame_id\x18\x02 \x01(\x07\"\xb8\x01\n\x0e\x44rivableRegion\x12\x0c\n\x04time\x18\x05 \x01(\x01\x12\x10\n\x08\x66rame_id\x18\x01 \x01(\x07\x12\x10\n\x08origin_x\x18\x02 \x01(\x0f\x12\x10\n\x08origin_y\x18\x03 \x01(\x0f\x12\x0c\n\x04grid\x18\x04 \x01(\x0c\x12\x0c\n\x04roll\x18\x06 \x01(\x01\x12\r\n\x05pitch\x18\x07 \x01(\x01\x12\x17\n\x0fprocessing_time\x18\x08 \x01(\x01\x12\x0e\n\x06height\x18\t \x01(\x0c\x12\x0e\n\x06sensor\x18\n \x01(\x0c\"\xdb\x01\n\tImuUpdate\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x14\n\x0chw_time_diag\x18\x06 \x01(\x06\x12\x13\n\x0bhw_time_acc\x18\x07 \x01(\x06\x12\x14\n\x0chw_time_gyro\x18\x08 \x01(\x06\x12\x0c\n\x04temp\x18\x05 \x01(\x01\x12(\n\x0c\x61\x63\x63\x65leration\x18\x02 \x01(\x0b\x32\x12.ati.schema.Vector\x12$\n\x08welocity\x18\x03 \x01(\x0b\x32\x12.ati.schema.Vector\x12!\n\x05\x66ield\x18\x04 \x01(\x0b\x32\x12.ati.schema.Vector\"E\n\x0eGyroBiasUpdate\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12%\n\tgyro_bias\x18\x02 \x01(\x0b\x32\x12.ati.schema.Vector\"<\n\nGyroUpdate\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12 \n\x04gyro\x18\x02 \x01(\x0b\x32\x12.ati.schema.Vector\"<\n\x0fPitchRollUpdate\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\r\n\x05pitch\x18\x02 \x01(\x01\x12\x0c\n\x04roll\x18\x03 \x01(\x01\"F\n\x0b\x43\x61meraFrame\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\n\n\x02id\x18\x02 \x01(\t\x12\x0e\n\x06height\x18\x03 \x01(\r\x12\r\n\x05width\x18\x04 \x01(\r\"M\n\nGpsReading\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x10\n\x08latitude\x18\x02 \x01(\x01\x12\x11\n\tlongitude\x18\x03 \x01(\x01\x12\x0c\n\x04hdop\x18\x04 \x01(\x01\"R\n\x0e\x45ncoderReading\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\t\n\x01v\x18\x02 \x01(\x01\x12\t\n\x01w\x18\x03 \x01(\x01\x12\r\n\x05v_ref\x18\x04 \x01(\x01\x12\r\n\x05w_ref\x18\x05 \x01(\x01\"\xfe\x01\n\x13\x45ncoderDebugReading\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\r\n\x05motor\x18\x02 \x01(\x05\x12\r\n\x05ticks\x18\x03 \x01(\x05\x12\x11\n\tticks_ref\x18\x04 \x01(\x05\x12\x0b\n\x03pwm\x18\x05 \x01(\x05\x12\r\n\x05\x65rror\x18\x06 \x01(\x05\x12\x11\n\tint_error\x18\x07 \x01(\x05\x12\x12\n\nderivative\x18\x08 \x01(\x05\x12\x13\n\x0b\x63ontrol_ref\x18\t \x01(\x01\x12\x11\n\tticks_raw\x18\n \x01(\x05\x12\x11\n\tbrake_pwm\x18\x0b \x01(\x05\x12\x15\n\rencoder_error\x18\x0c \x01(\x05\x12\x13\n\x0bhill_assist\x18\r \x01(\x05\"e\n\x0bRadarUpdate\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x10\n\x08\x66rame_no\x18\x02 \x01(\r\x12\x0e\n\x06numpts\x18\x03 \x01(\r\x12&\n\x06points\x18\x04 \x03(\x0b\x32\x16.ati.schema.RadarPoint\"0\n\rUltrasoundMsg\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x11\n\tdistances\x18\x02 \x03(\r\")\n\x08IrUpdate\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x0f\n\x07ir_msgs\x18\x02 \x03(\x01\"%\n\x07\x41\x64\x63Vals\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x0c\n\x04vals\x18\x02 \x03(\r\"b\n\tPoseFrame\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\"\n\x04left\x18\x02 \x01(\x0b\x32\x14.ati.schema.LinePose\x12#\n\x05right\x18\x03 \x01(\x0b\x32\x14.ati.schema.LinePose\"H\n\nGenericMsg\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x0c\n\x04name\x18\x02 \x01(\t\x12\x0e\n\x06\x66ields\x18\x03 \x03(\t\x12\x0e\n\x06values\x18\x04 \x03(\t\"S\n\rLidarSlamPose\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x11\n\tPositionX\x18\x02 \x01(\x01\x12\x11\n\tPositionY\x18\x03 \x01(\x01\x12\x0e\n\x06\x41ngleZ\x18\x04 \x01(\x01\"\"\n\x04Note\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x0c\n\x04note\x18\x02 \x01(\t\"w\n\x0cHealthUpdate\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x10\n\x08\x63pu_util\x18\x02 \x01(\x01\x12\x10\n\x08\x63pu_temp\x18\x03 \x01(\x01\x12\x11\n\tmem_avail\x18\x04 \x01(\x01\x12\x10\n\x08gpu_temp\x18\x05 \x01(\x01\x12\x10\n\x08gpu_util\x18\x06 \x01(\x01\"`\n\rControlUpdate\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\r\n\x05predx\x18\x02 \x01(\x01\x12\r\n\x05predy\x18\x03 \x01(\x01\x12\r\n\x05predt\x18\x04 \x01(\x01\x12\t\n\x01v\x18\x05 \x01(\x01\x12\t\n\x01w\x18\x06 \x01(\x01\"8\n\nLaneUpdate\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\r\n\x05xcorr\x18\x02 \x01(\x01\x12\r\n\x05ycorr\x18\x03 \x01(\x01\"5\n\x11\x43\x61meraNearObjects\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x12\n\nnum_frames\x18\x02 \x01(\r\"\xe1\x01\n\rPathOccupancy\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x10\n\x08\x66rame_id\x18\x02 \x01(\x07\x12\x0c\n\x04grid\x18\x03 \x01(\x0c\x12\x12\n\ngrid_width\x18\x0c \x01(\x07\x12\x0b\n\x03xcr\x18\x04 \x01(\x01\x12\x0b\n\x03ycr\x18\x05 \x01(\x01\x12\x12\n\nobs_factor\x18\x06 \x01(\x01\x12\x12\n\nunc_factor\x18\x07 \x01(\x01\x12\x12\n\nvel_factor\x18\x08 \x01(\x01\x12\x0c\n\x04path\x18\t \x01(\x0c\x12\x17\n\x0fhumans_detected\x18\n \x01(\x08\x12\x11\n\thuman_pos\x18\x0b \x01(\x0c\"\xa3\x01\n\x0fSensorException\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x11\n\tsensor_id\x18\x02 \x01(\x07\x12\x10\n\x08\x66rame_id\x18\x03 \x01(\x07\x12\x12\n\nmessage_id\x18\x08 \x01(\x07\x12\x10\n\x08severity\x18\t \x01(\x05\x12\x0c\n\x04\x64\x61ta\x18\x04 \x01(\x0c\x12\x0b\n\x03msg\x18\x05 \x01(\t\x12\r\n\x05\x66ield\x18\x06 \x03(\t\x12\r\n\x05value\x18\x07 \x03(\t\"H\n\tSystemMsg\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x11\n\tmodule_id\x18\x02 \x01(\r\x12\x0b\n\x03ref\x18\x03 \x01(\x01\x12\r\n\x05value\x18\x04 \x01(\x01\"\x87\x01\n\x08YelliMsg\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x17\n\x0fprocessing_time\x18\x02 \x01(\x01\x12\x10\n\x08\x66rame_id\x18\x03 \x01(\r\x12\x0e\n\x06pose_x\x18\x04 \x01(\x01\x12\x0e\n\x06pose_y\x18\x05 \x01(\x01\x12\x0e\n\x06pose_t\x18\x06 \x01(\x01\x12\x12\n\nbest_score\x18\x07 \x01(\x01\"\xc9\x01\n\nLidarFrame\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x10\n\x08\x66rame_id\x18\x02 \x01(\x07\x12\x13\n\x0bhw_frame_id\x18\x04 \x01(\x07\x12\x14\n\x0chw_timestamp\x18\x05 \x01(\x06\x12\x0c\n\x04\x64\x61ta\x18\x03 \x01(\x0c\x12\x15\n\rmajor_version\x18\x06 \x01(\x07\x12\x15\n\rminor_version\x18\x07 \x01(\x07\x12\x1b\n\x13num_missing_sectors\x18\x08 \x01(\x07\x12\x17\n\x0fmissing_sectors\x18\t \x01(\t\"G\n\x10LidarLookupTable\x12\x0c\n\x04\x64\x61ta\x18\x01 \x01(\x0c\x12\t\n\x01W\x18\x02 \x01(\x07\x12\t\n\x01H\x18\x03 \x01(\x07\x12\x0f\n\x07\x63olumns\x18\x04 \x01(\x07\"\x8a\x01\n\x10LidarSmallHeader\x12\x17\n\x0fvertical_angles\x18\x03 \x01(\x0c\x12\x19\n\x11horizontal_angles\x18\x04 \x01(\x0c\x12\x14\n\x0clookup_table\x18\x05 \x01(\x0c\x12\x15\n\rmajor_version\x18\x06 \x01(\x07\x12\x15\n\rminor_version\x18\x07 \x01(\x07\"\xa6\x01\n\x10LidarSmallPacket\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x10\n\x08\x66rame_id\x18\x02 \x01(\x07\x12\x13\n\x0bhw_frame_id\x18\x04 \x01(\x07\x12\x14\n\x0chw_timestamp\x18\x05 \x01(\x06\x12\x11\n\tdistances\x18\x03 \x01(\x0c\x12\x1b\n\x13num_missing_sectors\x18\x06 \x01(\x07\x12\x17\n\x0fmissing_sectors\x18\x07 \x01(\t\"j\n\x10LidarExtraPacket\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x10\n\x08\x66rame_id\x18\x02 \x01(\x07\x12\x11\n\tintensity\x18\x03 \x01(\x0c\x12\x14\n\x0creflectivity\x18\x04 \x01(\x0c\x12\r\n\x05noise\x18\x05 \x01(\x0c\"\xcf\x01\n\x15\x64\x65precated_LidarPoint\x12\x0c\n\x04time\x18\x05 \x01(\x01\x12\x10\n\x08\x66rame_id\x18\n \x01(\x07\x12\r\n\x05\x62\x65\x61ms\x18\x06 \x01(\r\x12\x0e\n\x06slices\x18\x07 \x01(\r\x12\x17\n\x0fvertical_angles\x18\x01 \x01(\x0c\x12\x19\n\x11horizontal_angles\x18\x02 \x01(\x0c\x12\x11\n\tdistances\x18\x03 \x01(\x0c\x12\x13\n\x0bintensities\x18\x04 \x01(\x0c\x12\n\n\x02id\x18\x08 \x01(\x0c\x12\x0f\n\x07ptcloud\x18\t \x01(\x0c\"\xa6\x01\n\x06\x42\x65\x64Msg\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x10\n\x08\x66rame_id\x18\x02 \x01(\x07\x12\x0f\n\x07ward_id\x18\x03 \x01(\x07\x12\x11\n\tmap_level\x18\x04 \x01(\x07\x12+\n\x0e\x64\x65tected_lines\x18\x05 \x03(\x0b\x32\x13.ati.schema.Polygon\x12+\n\x0epredicted_boxs\x18\x06 \x03(\x0b\x32\x13.ati.schema.Polygon\"z\n\nBedSideMsg\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x10\n\x08\x66rame_id\x18\x02 \x01(\x07\x12\x0f\n\x07ward_id\x18\x03 \x01(\x07\x12\x11\n\tmap_level\x18\x04 \x01(\x07\x12(\n\x0c\x62\x65\x64side_locs\x18\x05 \x03(\x0b\x32\x12.ati.schema.Vector\"q\n\x10HubMotorCurrents\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x1b\n\x13steer_motor_current\x18\x02 \x01(\x01\x12\x17\n\x0f\x62\x61ttery_current\x18\x03 \x01(\x01\x12\x19\n\x11hub_motor_current\x18\x04 \x01(\x01\"~\n\x0cSensorStatus\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x11\n\tsensor_id\x18\x02 \x01(\x07\x12\x10\n\x08\x66rame_id\x18\x03 \x01(\x07\x12\x0c\n\x04\x64\x61ta\x18\x04 \x01(\x0c\x12\x0b\n\x03msg\x18\x05 \x01(\t\x12\x10\n\x08severity\x18\t \x01(\x05\x12\x0e\n\x06status\x18\n \x01(\x08\"\x8c\x01\n\x08\x41rucoMsg\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x10\n\x08\x66rame_id\x18\x02 \x01(\x07\x12\'\n\x0btranslation\x18\x03 \x01(\x0b\x32\x12.ati.schema.Vector\x12$\n\x08rotation\x18\x04 \x01(\x0b\x32\x12.ati.schema.Vector\x12\x11\n\tmarker_id\x18\x05 \x01(\x05\"Z\n\rArucoMulePose\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12(\n\x04pose\x18\x02 \x01(\x0b\x32\x1a.ati.schema.OdometryUpdate\x12\x11\n\tmarker_id\x18\x03 \x01(\x05\"f\n\x0fTagDetectionMsg\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12#\n\x07\x63orners\x18\x02 \x03(\x0b\x32\x12.ati.schema.Vector\x12\x0e\n\x06tag_id\x18\x03 \x01(\x05\x12\x10\n\x08tag_type\x18\x04 \x01(\t\"g\n\x0bTagMulePose\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12(\n\x04pose\x18\x02 \x01(\x0b\x32\x1a.ati.schema.OdometryUpdate\x12\x0e\n\x06tag_id\x18\x03 \x01(\x05\x12\x10\n\x08tag_type\x18\x04 \x01(\t\"\x82\x01\n\x0cTagLocalPose\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12 \n\x04rvec\x18\x02 \x01(\x0b\x32\x12.ati.schema.Vector\x12 \n\x04tvec\x18\x03 \x01(\x0b\x32\x12.ati.schema.Vector\x12\x0e\n\x06tag_id\x18\x04 \x01(\x05\x12\x10\n\x08tag_type\x18\x05 \x01(\t\")\n\tPS4Report\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x0e\n\x06report\x18\x02 \x01(\t\"%\n\x08PS4State\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x0b\n\x03ref\x18\x02 \x01(\x05\"8\n\x0e\x43onveyorUpdate\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x0b\n\x03pwm\x18\x02 \x01(\x01\x12\x0b\n\x03\x64ir\x18\x03 \x01(\x01\"9\n\x11\x41utoUnhitchUpdate\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x16\n\x0eunhitch_signal\x18\x02 \x01(\x01\"-\n\x06Pose2d\x12\t\n\x01x\x18\x01 \x01(\x01\x12\t\n\x01y\x18\x02 \x01(\x01\x12\r\n\x05theta\x18\x03 \x01(\x01\"\xd8\x01\n\x0cTrackerState\x12\x0c\n\x04mode\x18\x01 \x01(\t\x12\t\n\x01v\x18\x02 \x01(\x01\x12\t\n\x01w\x18\x03 \x01(\x01\x12\x0b\n\x03\x63te\x18\x04 \x01(\x01\x12\n\n\x02te\x18\x05 \x01(\x01\x12\x12\n\nvel_factor\x18\x06 \x01(\x01\x12\x13\n\x0bsteer_angle\x18\x07 \x01(\x01\x12%\n\tmule_pose\x18\x08 \x01(\x0b\x32\x12.ati.schema.Pose2d\x12$\n\x08ref_pose\x18\t \x01(\x0b\x32\x12.ati.schema.Pose2d\x12\x15\n\rspeed_profile\x18\n \x01(\x07\"\'\n\nBatteryMsg\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x0b\n\x03soc\x18\x02 \x01(\x01*6\n\nObjectType\x12\x0b\n\x07UNKNOWN\x10\x00\x12\x0e\n\nPEDESTRIAN\x10\x01\x12\x0b\n\x07VEHICLE\x10\x02*\xa5\x01\n\x08SensorId\x12\t\n\x05LIDAR\x10\x00\x12\x0f\n\x0bRIGHT_MOTOR\x10\x01\x12\x0e\n\nLEFT_MOTOR\x10\x02\x12\x17\n\x13REAR_STEERING_MOTOR\x10\x03\x12\t\n\x05\x42RAKE\x10\x04\x12\x0b\n\x07\x43HANNEL\x10\x05\x12\x14\n\x10REAR_DRIVE_MOTOR\x10\x06\x12\x0c\n\x08RP_LIDAR\x10\x07\x12\x0f\n\x0bTOTE_SENSOR\x10\x08\x12\x07\n\x03IMU\x10\t*U\n\x0eLidarMessageId\x12\x12\n\x0eMissingSectors\x10\x00\x12\x18\n\x14MaxRollPitchExceeded\x10\x01\x12\x15\n\x11NumMissingSectors\x10\x02\x62\x06proto3')
 )
 
 _OBJECTTYPE = _descriptor.EnumDescriptor(
@@ -45,8 +45,8 @@ _OBJECTTYPE = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   serialized_options=None,
-  serialized_start=6907,
-  serialized_end=6961,
+  serialized_start=7021,
+  serialized_end=7075,
 )
 _sym_db.RegisterEnumDescriptor(_OBJECTTYPE)
 
@@ -100,8 +100,8 @@ _SENSORID = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   serialized_options=None,
-  serialized_start=6964,
-  serialized_end=7129,
+  serialized_start=7078,
+  serialized_end=7243,
 )
 _sym_db.RegisterEnumDescriptor(_SENSORID)
 
@@ -127,8 +127,8 @@ _LIDARMESSAGEID = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   serialized_options=None,
-  serialized_start=7131,
-  serialized_end=7216,
+  serialized_start=7245,
+  serialized_end=7330,
 )
 _sym_db.RegisterEnumDescriptor(_LIDARMESSAGEID)
 
@@ -395,6 +395,20 @@ _ALERTFM = _descriptor.Descriptor(
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='auto_unhitch_failure', full_name='ati.schema.AlertFM.auto_unhitch_failure', index=5,
+      number=6, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='dispatch_action_required', full_name='ati.schema.AlertFM.dispatch_action_required', index=6,
+      number=7, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
   ],
   extensions=[
   ],
@@ -408,7 +422,7 @@ _ALERTFM = _descriptor.Descriptor(
   oneofs=[
   ],
   serialized_start=381,
-  serialized_end=510,
+  serialized_end=574,
 )
 
 
@@ -438,8 +452,8 @@ _CONTROLSTATUS = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=512,
-  serialized_end=543,
+  serialized_start=576,
+  serialized_end=607,
 )
 
 
@@ -483,8 +497,8 @@ _VECTOR = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=545,
-  serialized_end=586,
+  serialized_start=609,
+  serialized_end=650,
 )
 
 
@@ -563,8 +577,8 @@ _ODOMETRYUPDATE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=589,
-  serialized_end=825,
+  serialized_start=653,
+  serialized_end=889,
 )
 
 
@@ -650,8 +664,8 @@ _DRIVEUPDATE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=828,
-  serialized_end=1014,
+  serialized_start=892,
+  serialized_end=1078,
 )
 
 
@@ -695,8 +709,8 @@ _DETECTEDOBJECTS = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1016,
-  serialized_end=1102,
+  serialized_start=1080,
+  serialized_end=1166,
 )
 
 
@@ -733,8 +747,8 @@ _DETECTEDROADS = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1104,
-  serialized_end=1166,
+  serialized_start=1168,
+  serialized_end=1230,
 )
 
 
@@ -799,8 +813,8 @@ _OBJECT = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1169,
-  serialized_end=1368,
+  serialized_start=1233,
+  serialized_end=1432,
 )
 
 
@@ -830,8 +844,8 @@ _LANE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1370,
-  serialized_end=1412,
+  serialized_start=1434,
+  serialized_end=1476,
 )
 
 
@@ -861,8 +875,8 @@ _POLYGON = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1414,
-  serialized_end=1458,
+  serialized_start=1478,
+  serialized_end=1522,
 )
 
 
@@ -899,8 +913,8 @@ _LINE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1460,
-  serialized_end=1532,
+  serialized_start=1524,
+  serialized_end=1596,
 )
 
 
@@ -951,8 +965,8 @@ _LINEPOSE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1534,
-  serialized_end=1623,
+  serialized_start=1598,
+  serialized_end=1687,
 )
 
 
@@ -996,8 +1010,8 @@ _RADARPOINT = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1625,
-  serialized_end=1712,
+  serialized_start=1689,
+  serialized_end=1776,
 )
 
 
@@ -1048,8 +1062,8 @@ _LIDARPOINT2D = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1714,
-  serialized_end=1806,
+  serialized_start=1778,
+  serialized_end=1870,
 )
 
 
@@ -1093,8 +1107,8 @@ _LIDARGROUND = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1808,
-  serialized_end=1867,
+  serialized_start=1872,
+  serialized_end=1931,
 )
 
 
@@ -1187,8 +1201,8 @@ _DRIVABLEREGION = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1870,
-  serialized_end=2054,
+  serialized_start=1934,
+  serialized_end=2118,
 )
 
 
@@ -1267,8 +1281,8 @@ _IMUUPDATE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=2057,
-  serialized_end=2276,
+  serialized_start=2121,
+  serialized_end=2340,
 )
 
 
@@ -1305,8 +1319,8 @@ _GYROBIASUPDATE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=2278,
-  serialized_end=2347,
+  serialized_start=2342,
+  serialized_end=2411,
 )
 
 
@@ -1343,8 +1357,8 @@ _GYROUPDATE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=2349,
-  serialized_end=2409,
+  serialized_start=2413,
+  serialized_end=2473,
 )
 
 
@@ -1388,8 +1402,8 @@ _PITCHROLLUPDATE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=2411,
-  serialized_end=2471,
+  serialized_start=2475,
+  serialized_end=2535,
 )
 
 
@@ -1440,8 +1454,8 @@ _CAMERAFRAME = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=2473,
-  serialized_end=2543,
+  serialized_start=2537,
+  serialized_end=2607,
 )
 
 
@@ -1492,8 +1506,8 @@ _GPSREADING = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=2545,
-  serialized_end=2622,
+  serialized_start=2609,
+  serialized_end=2686,
 )
 
 
@@ -1551,8 +1565,8 @@ _ENCODERREADING = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=2624,
-  serialized_end=2706,
+  serialized_start=2688,
+  serialized_end=2770,
 )
 
 
@@ -1666,8 +1680,8 @@ _ENCODERDEBUGREADING = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=2709,
-  serialized_end=2963,
+  serialized_start=2773,
+  serialized_end=3027,
 )
 
 
@@ -1718,8 +1732,46 @@ _RADARUPDATE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=2965,
-  serialized_end=3066,
+  serialized_start=3029,
+  serialized_end=3130,
+)
+
+
+_ULTRASOUNDMSG = _descriptor.Descriptor(
+  name='UltrasoundMsg',
+  full_name='ati.schema.UltrasoundMsg',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='time', full_name='ati.schema.UltrasoundMsg.time', index=0,
+      number=1, type=1, cpp_type=5, label=1,
+      has_default_value=False, default_value=float(0),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='distances', full_name='ati.schema.UltrasoundMsg.distances', index=1,
+      number=2, type=13, cpp_type=3, label=3,
+      has_default_value=False, default_value=[],
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=3132,
+  serialized_end=3180,
 )
 
 
@@ -1756,8 +1808,8 @@ _IRUPDATE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=3068,
-  serialized_end=3109,
+  serialized_start=3182,
+  serialized_end=3223,
 )
 
 
@@ -1794,8 +1846,8 @@ _ADCVALS = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=3111,
-  serialized_end=3148,
+  serialized_start=3225,
+  serialized_end=3262,
 )
 
 
@@ -1839,8 +1891,8 @@ _POSEFRAME = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=3150,
-  serialized_end=3248,
+  serialized_start=3264,
+  serialized_end=3362,
 )
 
 
@@ -1891,8 +1943,8 @@ _GENERICMSG = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=3250,
-  serialized_end=3322,
+  serialized_start=3364,
+  serialized_end=3436,
 )
 
 
@@ -1943,8 +1995,8 @@ _LIDARSLAMPOSE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=3324,
-  serialized_end=3407,
+  serialized_start=3438,
+  serialized_end=3521,
 )
 
 
@@ -1981,8 +2033,8 @@ _NOTE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=3409,
-  serialized_end=3443,
+  serialized_start=3523,
+  serialized_end=3557,
 )
 
 
@@ -2047,8 +2099,8 @@ _HEALTHUPDATE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=3445,
-  serialized_end=3564,
+  serialized_start=3559,
+  serialized_end=3678,
 )
 
 
@@ -2113,8 +2165,8 @@ _CONTROLUPDATE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=3566,
-  serialized_end=3662,
+  serialized_start=3680,
+  serialized_end=3776,
 )
 
 
@@ -2158,8 +2210,8 @@ _LANEUPDATE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=3664,
-  serialized_end=3720,
+  serialized_start=3778,
+  serialized_end=3834,
 )
 
 
@@ -2196,8 +2248,8 @@ _CAMERANEAROBJECTS = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=3722,
-  serialized_end=3775,
+  serialized_start=3836,
+  serialized_end=3889,
 )
 
 
@@ -2304,8 +2356,8 @@ _PATHOCCUPANCY = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=3778,
-  serialized_end=4003,
+  serialized_start=3892,
+  serialized_end=4117,
 )
 
 
@@ -2391,8 +2443,8 @@ _SENSOREXCEPTION = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=4006,
-  serialized_end=4169,
+  serialized_start=4120,
+  serialized_end=4283,
 )
 
 
@@ -2443,8 +2495,8 @@ _SYSTEMMSG = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=4171,
-  serialized_end=4243,
+  serialized_start=4285,
+  serialized_end=4357,
 )
 
 
@@ -2516,8 +2568,8 @@ _YELLIMSG = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=4246,
-  serialized_end=4381,
+  serialized_start=4360,
+  serialized_end=4495,
 )
 
 
@@ -2603,8 +2655,8 @@ _LIDARFRAME = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=4384,
-  serialized_end=4585,
+  serialized_start=4498,
+  serialized_end=4699,
 )
 
 
@@ -2655,8 +2707,8 @@ _LIDARLOOKUPTABLE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=4587,
-  serialized_end=4658,
+  serialized_start=4701,
+  serialized_end=4772,
 )
 
 
@@ -2714,8 +2766,8 @@ _LIDARSMALLHEADER = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=4661,
-  serialized_end=4799,
+  serialized_start=4775,
+  serialized_end=4913,
 )
 
 
@@ -2787,8 +2839,8 @@ _LIDARSMALLPACKET = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=4802,
-  serialized_end=4968,
+  serialized_start=4916,
+  serialized_end=5082,
 )
 
 
@@ -2846,8 +2898,8 @@ _LIDAREXTRAPACKET = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=4970,
-  serialized_end=5076,
+  serialized_start=5084,
+  serialized_end=5190,
 )
 
 
@@ -2940,8 +2992,8 @@ _DEPRECATED_LIDARPOINT = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=5079,
-  serialized_end=5286,
+  serialized_start=5193,
+  serialized_end=5400,
 )
 
 
@@ -3006,8 +3058,8 @@ _BEDMSG = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=5289,
-  serialized_end=5455,
+  serialized_start=5403,
+  serialized_end=5569,
 )
 
 
@@ -3065,8 +3117,8 @@ _BEDSIDEMSG = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=5457,
-  serialized_end=5579,
+  serialized_start=5571,
+  serialized_end=5693,
 )
 
 
@@ -3117,8 +3169,8 @@ _HUBMOTORCURRENTS = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=5581,
-  serialized_end=5694,
+  serialized_start=5695,
+  serialized_end=5808,
 )
 
 
@@ -3190,8 +3242,8 @@ _SENSORSTATUS = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=5696,
-  serialized_end=5822,
+  serialized_start=5810,
+  serialized_end=5936,
 )
 
 
@@ -3249,8 +3301,8 @@ _ARUCOMSG = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=5825,
-  serialized_end=5965,
+  serialized_start=5939,
+  serialized_end=6079,
 )
 
 
@@ -3294,8 +3346,8 @@ _ARUCOMULEPOSE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=5967,
-  serialized_end=6057,
+  serialized_start=6081,
+  serialized_end=6171,
 )
 
 
@@ -3346,8 +3398,8 @@ _TAGDETECTIONMSG = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=6059,
-  serialized_end=6161,
+  serialized_start=6173,
+  serialized_end=6275,
 )
 
 
@@ -3398,8 +3450,8 @@ _TAGMULEPOSE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=6163,
-  serialized_end=6266,
+  serialized_start=6277,
+  serialized_end=6380,
 )
 
 
@@ -3457,8 +3509,8 @@ _TAGLOCALPOSE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=6269,
-  serialized_end=6399,
+  serialized_start=6383,
+  serialized_end=6513,
 )
 
 
@@ -3495,8 +3547,8 @@ _PS4REPORT = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=6401,
-  serialized_end=6442,
+  serialized_start=6515,
+  serialized_end=6556,
 )
 
 
@@ -3533,8 +3585,8 @@ _PS4STATE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=6444,
-  serialized_end=6481,
+  serialized_start=6558,
+  serialized_end=6595,
 )
 
 
@@ -3578,8 +3630,8 @@ _CONVEYORUPDATE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=6483,
-  serialized_end=6539,
+  serialized_start=6597,
+  serialized_end=6653,
 )
 
 
@@ -3616,8 +3668,8 @@ _AUTOUNHITCHUPDATE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=6541,
-  serialized_end=6598,
+  serialized_start=6655,
+  serialized_end=6712,
 )
 
 
@@ -3661,8 +3713,8 @@ _POSE2D = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=6600,
-  serialized_end=6645,
+  serialized_start=6714,
+  serialized_end=6759,
 )
 
 
@@ -3755,8 +3807,8 @@ _TRACKERSTATE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=6648,
-  serialized_end=6864,
+  serialized_start=6762,
+  serialized_end=6978,
 )
 
 
@@ -3793,8 +3845,8 @@ _BATTERYMSG = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=6866,
-  serialized_end=6905,
+  serialized_start=6980,
+  serialized_end=7019,
 )
 
 _ODOMETRYUPDATE.fields_by_name['Position'].message_type = _VECTOR
@@ -3862,6 +3914,7 @@ DESCRIPTOR.message_types_by_name['GpsReading'] = _GPSREADING
 DESCRIPTOR.message_types_by_name['EncoderReading'] = _ENCODERREADING
 DESCRIPTOR.message_types_by_name['EncoderDebugReading'] = _ENCODERDEBUGREADING
 DESCRIPTOR.message_types_by_name['RadarUpdate'] = _RADARUPDATE
+DESCRIPTOR.message_types_by_name['UltrasoundMsg'] = _ULTRASOUNDMSG
 DESCRIPTOR.message_types_by_name['IrUpdate'] = _IRUPDATE
 DESCRIPTOR.message_types_by_name['AdcVals'] = _ADCVALS
 DESCRIPTOR.message_types_by_name['PoseFrame'] = _POSEFRAME
@@ -4105,6 +4158,13 @@ RadarUpdate = _reflection.GeneratedProtocolMessageType('RadarUpdate', (_message.
   # @@protoc_insertion_point(class_scope:ati.schema.RadarUpdate)
   ))
 _sym_db.RegisterMessage(RadarUpdate)
+
+UltrasoundMsg = _reflection.GeneratedProtocolMessageType('UltrasoundMsg', (_message.Message,), dict(
+  DESCRIPTOR = _ULTRASOUNDMSG,
+  __module__ = 'messages_pb2'
+  # @@protoc_insertion_point(class_scope:ati.schema.UltrasoundMsg)
+  ))
+_sym_db.RegisterMessage(UltrasoundMsg)
 
 IrUpdate = _reflection.GeneratedProtocolMessageType('IrUpdate', (_message.Message,), dict(
   DESCRIPTOR = _IRUPDATE,

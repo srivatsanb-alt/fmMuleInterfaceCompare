@@ -5,6 +5,11 @@ import secrets
 import string
 import toml
 import os
+import psutil
+import redis
+import json
+import time
+from rq import Worker
 
 
 TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
@@ -78,10 +83,142 @@ def generate_random_job_id():
 def get_all_map_names():
     map_names = []
     _ = os.system(
-        "find $FM_MAP_DIR -name 'map' -printf '%h\n' | awk -'F/' '{ print $NF }' > /app/static/map_names.txt"
+        "find $FM_STATIC_DIR -name 'map' -printf '%h\n' | awk -'F/' '{ print $NF }' > /app/static/map_names.txt"
     )
-    map_names_file = open(os.path.join(os.getenv("FM_MAP_DIR"), "map_names.txt"), "r")
+    map_names_file = open(os.path.join(os.getenv("FM_STATIC_DIR"), "map_names.txt"), "r")
     for line in map_names_file.readlines():
         map_names.append(line[:-1])
 
     return map_names
+
+
+def sys_perf():
+    ONE_GB = 1024**3
+
+    cpu = psutil.cpu_times_percent()
+    mem = psutil.virtual_memory()
+    swap = psutil.swap_memory()
+    net = psutil.net_io_counters()
+    cpu_count = psutil.cpu_count()
+    load_avg = psutil.getloadavg()
+    cpu_freq = psutil.cpu_freq()
+
+    column_names = [
+        "datetime",
+        "cpu_user",
+        "cpu_system",
+        "cpu_idle",
+        "cpu_count",
+        "cpu_freq",
+        "mem_available_gb",
+        "mem_used_gb",
+        "swap_used_gb",
+        "load_avg_1",
+        "load_avg_5",
+        "load_avg_15",
+        "net_packets_sent",
+        "net_packets_recv",
+        "net_errin",
+        "net_errout",
+    ]
+
+    data = [
+        dt_to_str(datetime.datetime.now()),
+        cpu.user,
+        cpu.system,
+        cpu.idle,
+        cpu_count,
+        cpu_freq.current,
+        np.round(mem.available / ONE_GB, 3),
+        np.round(mem.used / ONE_GB, 3),
+        np.round(swap.used / ONE_GB, 3),
+        load_avg[0],
+        load_avg[1],
+        load_avg[2],
+        net.packets_sent,
+        net.packets_recv,
+        net.errin,
+        net.errout,
+    ]
+
+    return column_names, data
+
+
+def rq_perf():
+    redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
+    data = []
+    workers = Worker.all(connection=redis_conn)
+
+    column_names = [
+        "datetime",
+        "worker_name",
+        "worker_pid",
+        "worker_state",
+        "worker_queues",
+        "num_jobs",
+        "successful_job_count",
+        "failed_job_count",
+        "total_working_time",
+    ]
+
+    for worker in workers:
+        wqs = worker.queues
+        worker_data = [
+            dt_to_str(datetime.datetime.now()),
+            worker.name,
+            worker.pid,
+            worker.state,
+            [wq.name for wq in wqs],
+            [len(wq) for wq in wqs],
+            worker.successful_job_count,
+            worker.failed_job_count,
+            worker.total_working_time,
+        ]
+        data.append(worker_data)
+
+    return column_names, data
+
+
+def get_route_length(pose_1, pose_2, fleet_name):
+    job_id = generate_random_job_id()
+    redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
+    route_length = redis_conn.get(f"rl_{str(pose_1)}_{str(pose_2)}")
+    if route_length is None:
+        control_router_rl_job = [pose_1, pose_2, fleet_name, job_id]
+        redis_conn.setex(
+            f"control_router_rl_job_{job_id}",
+            int(redis_conn.get("default_job_timeout_ms").decode()),
+            json.dumps(control_router_rl_job),
+        )
+        while not redis_conn.get(f"result_{job_id}"):
+            time.sleep(0.005)
+
+        route_length = json.loads(redis_conn.get(f"result_{job_id}"))
+        redis_conn.delete(f"result_{job_id}")
+    else:
+        route_length = float(route_length)
+
+    return route_length
+
+
+def check_if_notification_alert_present(dbsession, log: str, enitity_names: list):
+    import models.misc_models as mm
+
+    notification = (
+        dbsession.session.query(mm.Notifications)
+        .filter(mm.Notifications.entity_names == enitity_names)
+        .filter(mm.Notifications.log == log)
+        .all()
+    )
+    if len(notification):
+        return True
+    return False
+
+
+def maybe_add_alert(dbsession, enitity_names: list, log: str):
+    import models.misc_models as mm
+
+    if not check_if_notification_alert_present(dbsession, log, enitity_names):
+        dbsession.add_notification(
+            enitity_names, log, mm.NotificationLevels.alert, mm.NotificationModules.generic
+        )

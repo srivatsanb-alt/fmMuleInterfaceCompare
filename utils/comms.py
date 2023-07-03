@@ -119,7 +119,9 @@ async def send_async_req_to_sherpa(dbsession, sherpa: Sherpa, msg: FMReq) -> Dic
     if success:
         response = json.loads(redis_conn.get(f"response_{req_id}"))
         redis_conn.delete(f"success_{req_id}")
-        logging.getLogger().info(f"Response from sherpa {response}")
+        logging.getLogger().info(
+            f"Response from sherpa {response}, req_id: {req_id} successful"
+        )
         return response
     else:
         raise Exception(f"req id {req_id} failed, req sent: {body}")

@@ -144,10 +144,10 @@ class Trip(Base, TimestampMixin):
             scheduled = metadata.get("scheduled", "False")
             if eval(scheduled):
                 self.scheduled = True
-                self.start_time = str_to_dt(metadata["scheduled_start_time"])
-                self.end_time = str_to_dt(metadata["scheduled_end_time"])
+                start_time = str_to_dt(metadata["scheduled_start_time"])
+                end_time = str_to_dt(metadata["scheduled_end_time"])
 
-                if self.end_time < self.start_time:
+                if end_time < start_time:
                     raise ValueError("trip end time less than start time")
 
                 self.time_period = int(metadata["scheduled_time_period"])
@@ -207,20 +207,20 @@ class TripLeg(Base, TimestampMixin):
     to_station = Column(String)
 
     # commenting out - NEEDS dashboard changes
-    # status = Column(String, index=True)
-    # stoppage_reason = Column(String)
+    status = Column(String, index=True)
+    stoppage_reason = Column(String)
 
     def __init__(self, trip_id, from_station, to_station):
         self.trip_id = trip_id
         self.start_time = datetime.datetime.now()
         self.to_station = to_station
         self.from_station = from_station
-        # self.status = TripLegStatus.STARTED
+        self.status = TripLegStatus.STARTED
 
     def end(self):
         self.end_time = datetime.datetime.now()
-        # self.status = TripLegStatus.ENDED
-        # self.stoppage_reason = None
+        self.status = TripLegStatus.ENDED
+        self.stoppage_reason = None
 
     def finished(self):
         return True if self.end_time else False

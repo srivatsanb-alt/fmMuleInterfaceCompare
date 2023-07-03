@@ -1,0 +1,816 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "P9108C6AB093B026B"
+      },
+      "description": "Total trips run on the current date",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "blue",
+            "mode": "fixed"
+          },
+          "displayName": "Total Trips",
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 5,
+        "x": 0,
+        "y": 0
+      },
+      "id": 14,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "9.5.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "P9108C6AB093B026B"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "\nSELECT\n  COUNT(DISTINCT id)\nFROM\n  trips\nWHERE\nstart_time >= $__timeFrom() AND end_time <= $__timeTo() AND\n  fleet_name = '$fleetvar';\n",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "P9108C6AB093B026B"
+      },
+      "description": "Distance per sherpa (KM)",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "continuous-YlBl"
+          },
+          "mappings": [],
+          "min": 0,
+          "noValue": "---",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "lengthm"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 10,
+        "x": 5,
+        "y": 0
+      },
+      "id": 2,
+      "options": {
+        "displayMode": "basic",
+        "minVizHeight": 10,
+        "minVizWidth": 0,
+        "orientation": "vertical",
+        "reduceOptions": {
+          "calcs": [],
+          "fields": "",
+          "values": true
+        },
+        "showUnfilled": true,
+        "text": {},
+        "valueMode": "color"
+      },
+      "pluginVersion": "9.5.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "P9108C6AB093B026B"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "\nSELECT\n  SUBSTRING(sherpa_name, 1, 6) AS Sherpa,\n  ROUND(SUM((SELECT SUM(s) FROM UNNEST(etas_at_start) s))) AS Distance\nFROM\n  trips\nWHERE\n  fleet_name = '$fleetvar'\n  AND sherpa_name IS NOT NULL\n  AND start_time >= $__timeFrom() AND end_time <= $__timeTo()\nGROUP BY\n  sherpa_name;",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Tug-Wise Distance",
+      "type": "bargauge"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "P9108C6AB093B026B"
+      },
+      "description": "Trips per sherpa",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "continuous-YlBl"
+          },
+          "mappings": [],
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 9,
+        "x": 15,
+        "y": 0
+      },
+      "id": 10,
+      "options": {
+        "displayMode": "gradient",
+        "minVizHeight": 10,
+        "minVizWidth": 0,
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [],
+          "fields": "",
+          "limit": 25,
+          "values": true
+        },
+        "showUnfilled": true,
+        "valueMode": "color"
+      },
+      "pluginVersion": "9.5.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "P9108C6AB093B026B"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "\nSELECT\n  SUBSTRING(sherpa_name, 1, 6) AS sherpa_substring,\n  COUNT(*) AS trip_count\nFROM\n  trips\nWHERE\n  start_time >= $__timeFrom() \n  AND end_time <= $__timeTo() \n  AND end_time IS NOT NULL\n  AND fleet_name = '$fleetvar'\n  AND status = 'succeeded'\nGROUP BY\n  sherpa_name;\n",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Tug-Wise Trips",
+      "type": "bargauge"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "P9108C6AB093B026B"
+      },
+      "description": "Total distance run on the current date",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "yellow",
+            "mode": "fixed"
+          },
+          "displayName": "Total Distance",
+          "mappings": [],
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "lengthm"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 5,
+        "x": 0,
+        "y": 4
+      },
+      "id": 15,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "sum"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "9.5.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "P9108C6AB093B026B"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  SUM(subquery.distance) AS Distance,\n  subquery.start_date AS Date\nFROM\n  (\n    SELECT\n      start_time::DATE AS start_date,\n      (SELECT SUM(s) FROM UNNEST(etas_at_start) s) AS distance\n    FROM\n      trips\n    WHERE\n      start_time >= $__timeFrom() AND end_time <= $__timeTo() AND\n      fleet_name = '$fleetvar'\n  ) AS subquery\nGROUP BY\n  subquery.start_date;\n",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "P9108C6AB093B026B"
+      },
+      "description": "Robot in fleetmode with ongoing trips / total hours in fleetmode\nThis statistic depends on how the client uses the bot.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "#4d3434",
+            "mode": "continuous-YlBl"
+          },
+          "mappings": [],
+          "max": 100,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 0,
+        "y": 8
+      },
+      "id": 12,
+      "options": {
+        "displayMode": "lcd",
+        "minVizHeight": 10,
+        "minVizWidth": 0,
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [],
+          "fields": "",
+          "values": true
+        },
+        "showUnfilled": true,
+        "valueMode": "color"
+      },
+      "pluginVersion": "9.5.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "P9108C6AB093B026B"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "\n\nSELECT\n  SUBSTRING(sherpa_name, 1, 6) AS Sherpa,\n  ROUND(SUM(EXTRACT(EPOCH FROM (end_time - start_time)))/((CASE WHEN $__timeFrom()::DATE = CURRENT_DATE THEN extract(epoch from current_timestamp::time) ELSE 86400 END/100)*COUNT(DISTINCT(start_time::DATE)))) AS Utilization\nFROM\n  trips\nWHERE\n  status = 'succeeded'\n  AND sherpa_name IS NOT NULL\n  AND start_time IS NOT NULL\n  AND end_time IS NOT NULL\n  AND DATE_TRUNC('day', start_time) = DATE_TRUNC('day', end_time)\n  AND start_time >= $__timeFrom() AND end_time <= $__timeTo()\n  AND fleet_name = '$fleetvar'\nGROUP BY\n  sherpa_name;",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Utilization",
+      "type": "bargauge"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "P9108C6AB093B026B"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "light-blue",
+            "mode": "fixed"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "left",
+            "fillOpacity": 80,
+            "gradientMode": "hue",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineWidth": 1,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 12,
+        "y": 8
+      },
+      "id": 18,
+      "options": {
+        "barRadius": 0,
+        "barWidth": 0.97,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "right",
+          "showLegend": true
+        },
+        "orientation": "auto",
+        "showValue": "auto",
+        "stacking": "none",
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        },
+        "xTickLabelRotation": 0,
+        "xTickLabelSpacing": 0
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "P9108C6AB093B026B"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH joined_table AS (\n  SELECT\n  substring(t.sherpa_name,1,6) as Sherpa, t.route as Route, t.start_time as start_time, t.end_time as end_time, a.actual_trip_time as Trip_Time, a.time_elapsed_obstacle_stoppages as Obstacle_Time,\n  a.time_elapsed_visa_stoppages as Visa_Time, a.time_elapsed_other_stoppages as Other_Time, t.fleet_name\n  FROM\n    trips AS t\n  INNER JOIN\n    trip_analytics AS a ON t.id = a.trip_id\n)\n\n\nSELECT\n  Sherpa,\n  Route,\n  AVG(EXTRACT(EPOCH FROM (end_time - start_time))) AS Trip_time\n\nFROM\n  (\n    SELECT\n      Sherpa,\n      Route,\n      start_time,\n      end_time,\n      ROW_NUMBER() OVER (PARTITION BY Sherpa ORDER BY COUNT(*) DESC) AS route_rank,\n      fleet_name\n    FROM\n      joined_table\n    GROUP BY\n      Sherpa,\n      Route,\n      start_time,\n      end_time,\n      fleet_name\n  ) ranked_data\nWHERE\n  route_rank = 1 and fleet_name = '$fleetvar' \nGROUP BY\n  Sherpa,\n  Route;",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Average takt time",
+      "type": "barchart"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "P9108C6AB093B026B"
+      },
+      "description": "Average Obstacle Time for each tug on its most used route",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "continuous-YlBl"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineWidth": 1,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 0,
+        "y": 18
+      },
+      "id": 19,
+      "options": {
+        "barRadius": 0,
+        "barWidth": 0.97,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "right",
+          "showLegend": true
+        },
+        "orientation": "auto",
+        "showValue": "never",
+        "stacking": "none",
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        },
+        "xTickLabelRotation": 0,
+        "xTickLabelSpacing": 0
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "P9108C6AB093B026B"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH joined_table AS (\n  SELECT\n    substring(t.sherpa_name, 1, 6) as Sherpa, t.route as Route, t.start_time as start_time, t.end_time as end_time, t.fleet_name,\n    a.actual_trip_time as Trip_Time, a.time_elapsed_obstacle_stoppages as Obstacle_Time,\n    a.time_elapsed_visa_stoppages as Visa_Time, a.time_elapsed_other_stoppages as Other_Time\n  FROM\n    trips AS t\n  INNER JOIN\n    trip_analytics AS a ON t.id = a.trip_id\n)\nSELECT\n  Sherpa,\n  Route,\n  AVG(Obstacle_Time) AS Total_Obstacle_Time\nFROM\n  (\n    SELECT\n      Sherpa,\n      Route,\n      start_time,\n      end_time,\n      Obstacle_Time,\n      fleet_name,\n      ROW_NUMBER() OVER (PARTITION BY Sherpa ORDER BY route_count DESC) AS route_rank\n    FROM\n      (\n        SELECT\n          Sherpa,\n          Route,\n          start_time,\n          end_time,\n          Obstacle_Time,\n          fleet_name,\n          COUNT(*) AS route_count\n        FROM\n          joined_table\n        GROUP BY\n          Sherpa,\n          Route,\n          start_time,\n          end_time,\n          Obstacle_Time,\n          fleet_name\n      ) counted_data\n  ) ranked_data\nWHERE\n  route_rank = 1 AND fleet_name = '$fleetvar'\nGROUP BY\n  Sherpa,\n  Route;\n",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Average Obstacle Time",
+      "type": "barchart"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "P9108C6AB093B026B"
+      },
+      "description": "Average Time for each tug waits for dispatch button press at its most used route",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "continuous-YlBl"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineWidth": 1,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 12,
+        "y": 18
+      },
+      "id": 20,
+      "options": {
+        "barRadius": 0,
+        "barWidth": 0.97,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "right",
+          "showLegend": true
+        },
+        "orientation": "horizontal",
+        "showValue": "never",
+        "stacking": "none",
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        },
+        "xTickLabelRotation": 0,
+        "xTickLabelSpacing": 0
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "P9108C6AB093B026B"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH joined_table AS (\n  SELECT\n  substring(t.sherpa_name,1,6) as Sherpa, t.route as Route, t.start_time as start_time, t.end_time as end_time, t.trip_metadata as trip_metadata, t.fleet_name\n  FROM\n    trips AS t\n  INNER JOIN\n    trip_analytics AS a ON t.id = a.trip_id\n)\n\nSELECT\n  Sherpa,\n  Route,\n  COALESCE(CAST(trip_metadata->>'total_dispatch_wait_time' as numeric),0) AS total_dispatch_time\n\nFROM\n  (\n    SELECT\n      Sherpa,\n      Route,\n      start_time,\n      end_time,\n      ROW_NUMBER() OVER (PARTITION BY Sherpa ORDER BY COUNT(*) DESC) AS route_rank,\n      fleet_name,\n      trip_metadata\n    FROM\n      joined_table\n    GROUP BY\n      Sherpa,\n      Route,\n      start_time,\n      end_time,\n      fleet_name,\n      trip_metadata\n  ) ranked_data\nWHERE\n  route_rank = 2 and fleet_name = '$fleetvar' \nGROUP BY\n  Sherpa,\n  Route,\n  trip_metadata;\n\n\n\n",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Average Dispatch wait time",
+      "type": "barchart"
+    }
+  ],
+  "refresh": "",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": [],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": true,
+          "text": "all_hands_map",
+          "value": "all_hands_map"
+        },
+        "hide": 0,
+        "label": "Fleet_Selector ",
+        "name": "fleetvar",
+        "options": [
+          {
+            "selected": true,
+            "text": "all_hands_map",
+            "value": "all_hands_map"
+          }
+        ],
+        "query": "all_hands_map",
+        "skipUrlSync": false,
+        "type": "textbox"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "Asia/Kolkata",
+  "title": "FleetAnalytics",
+  "uid": "a71c7d27-6737-4dc1-a113-6618e41206fb",
+  "version": 1,
+  "weekStart": ""
+}

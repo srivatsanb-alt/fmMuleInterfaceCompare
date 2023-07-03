@@ -1,11 +1,15 @@
+import time
+import logging
+
+# ati code imports
+from core.config import Config
 from models.db_session import DBSession
-from models.request_models import AssignNextTask
+import models.request_models as rqm
 from models.fleet_models import SherpaStatus
 from app.routers.dependencies import process_req
 from models.trip_models import PendingTrip
-from utils.util import check_if_timestamp_has_passed
-import time
-import logging
+from utils.util import check_if_timestamp_has_passed, str_to_dt
+
 
 # adds scheduled trips to the job queue.
 
@@ -14,17 +18,21 @@ def enqueue_scheduled_trips(db_session: DBSession, schdeuled_job_id):
     pending_trips = db_session.session.query(PendingTrip).all()
     for pending_trip in pending_trips:
         if pending_trip.trip.scheduled:
+            trip_metadata = pending_trip.trip.trip_metadata
+            scheduled_start_time = str_to_dt(trip_metadata["scheduled_start_time"])
             if (
-                not check_if_timestamp_has_passed(pending_trip.trip.start_time)
+                not check_if_timestamp_has_passed(scheduled_start_time)
                 and pending_trip.trip_id not in schdeuled_job_id
             ):
-                assign_next_task_req = AssignNextTask()
+                trigger_optimal_dispatch_req = rqm.TriggerOptimalDispatch(
+                    fleet_name=pending_trip.trip.fleet_name
+                )
                 logging.getLogger().info(
-                    f"will enqueue a job at {pending_trip.trip.start_time} for pending_trip with trip_id: {pending_trip.trip_id}"
+                    f"will enqueue a job at {scheduled_start_time} for pending_trip with trip_id: {pending_trip.trip_id}"
                 )
 
                 process_req(
-                    None, assign_next_task_req, "self", dt=pending_trip.trip.start_time
+                    None, trigger_optimal_dispatch_req, "self", dt=scheduled_start_time
                 )
                 schdeuled_job_id.append(pending_trip.trip_id)
 
@@ -32,9 +40,10 @@ def enqueue_scheduled_trips(db_session: DBSession, schdeuled_job_id):
 
 
 # assigns next task to the sherpa.
-
-
 def assign_next_task():
+    rq_params = Config.get_fleet_rq_params()
+    job_timeout = rq_params.get("generic_handler_job_timeout", 10)
+
     while True:
         schdeuled_job_id = []
         sleep_time = 20
@@ -47,17 +56,21 @@ def assign_next_task():
                     all_sherpa_status = (
                         db_session.session.query(SherpaStatus)
                         .filter(SherpaStatus.assign_next_task.is_(True))
+                        .filter(SherpaStatus.disabled.is_(False))
                         .all()
                     )
                     for sherpa_status in all_sherpa_status:
                         logging.getLogger("status_updates").info(
                             f"will send assign task request for {sherpa_status.sherpa_name}"
                         )
-                        assign_next_task_req = AssignNextTask(
+                        assign_next_task_req = rqm.AssignNextTask(
                             sherpa_name=sherpa_status.sherpa_name
                         )
 
-                        process_req(None, assign_next_task_req, "self")
+                        # should not clog the generic handler
+                        process_req(
+                            None, assign_next_task_req, "self", ttl=int(0.5 * job_timeout)
+                        )
 
                     schdeuled_job_id = enqueue_scheduled_trips(db_session, schdeuled_job_id)
                     time.sleep(2)

@@ -15,9 +15,11 @@ from redis import Redis
 from core.config import Config
 from core.constants import MessageType
 from models.db_session import DBSession
+import models.misc_models as mm
 import models.request_models as rqm
 import app.routers.dependencies as dpd
 import utils.log_utils as lu
+import utils.util as utils_util
 from utils.rq_utils import Queues, enqueue
 
 MSG_INVALID = "msg_invalid"
@@ -108,6 +110,19 @@ async def sherpa_status(
         if sherpa.status.other_info is None:
             sherpa.status.other_info = {}
         manage_sherpa_ip_change(sherpa, x_real_ip)
+        connect_notification = f"{sherpa.name} connected to fleet manager!"
+        entity_names = [sherpa.fleet.name, sherpa.name]
+
+        # send sherpa connected notification
+        if not utils_util.check_if_notification_alert_present(
+            dbsession, connect_notification, entity_names
+        ):
+            dbsession.add_notification(
+                entity_names,
+                connect_notification,
+                mm.NotificationLevels.info,
+                mm.NotificationModules.generic,
+            )
 
     await websocket.accept()
     logger.info(f"websocket connection accepeted for {sherpa_name}")
@@ -140,7 +155,7 @@ async def reader(websocket, sherpa):
 
         ok, reason = accept_message(sherpa, msg)
         if not ok:
-            logging.warn(
+            logging.getLogger("status_updates").warning(
                 f"message rejected type={msg_type},ts={ts},sherpa={sherpa},reason={reason}"
             )
             continue

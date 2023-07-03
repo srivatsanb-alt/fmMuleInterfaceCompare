@@ -1,11 +1,13 @@
 from typing import Union
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm.attributes import flag_modified
+import asyncio
 
 # ati code imports
 import app.routers.dependencies as dpd
 import models.request_models as rqm
 import models.trip_models as tm
+import models.misc_models as mm
 from models.db_session import DBSession
 from utils.util import str_to_dt
 import utils.trip_utils as tu
@@ -157,7 +159,96 @@ async def clear_optimal_dispatch_assignments(
     return response
 
 
+@router.post("/status/{type}")
+async def trip_status_with_type(
+    type: str,
+    trip_status_req: rqm.TripStatusReq,
+    user_name=Depends(dpd.get_user_from_header),
+):
+    response = {}
+
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    valid_status = []
+    if type == "yet_to_start":
+        valid_status = tm.YET_TO_START_TRIP_STATUS
+    elif type == "completed":
+        valid_status = tm.COMPLETED_TRIP_STATUS
+    elif type == "ongoing":
+        valid_status = tm.ONGOING_TRIP_STATUS
+    else:
+        dpd.raise_error("Query sent for an invalid trip type")
+
+    with DBSession() as dbsession:
+        if trip_status_req.booked_from and trip_status_req.booked_till:
+            trip_status_req.booked_from = str_to_dt(trip_status_req.booked_from)
+            trip_status_req.booked_till = str_to_dt(trip_status_req.booked_till)
+
+            all_trips = dbsession.get_trips_with_timestamp_and_status(
+                trip_status_req.booked_from, trip_status_req.booked_till, valid_status
+            )
+
+        else:
+            if not trip_status_req.trip_ids:
+                return response
+
+            all_trips = dbsession.get_trips_with_ids_and_status(
+                trip_status_req.trip_ids, valid_status
+            )
+            # dpd.raise_error("no trip id given or available in the given timeframe")
+
+        count = 0
+        for trip in all_trips:
+            response.update({trip.id: tu.get_trip_status(trip)})
+
+            # introducing sleep to allow other endpoints to work simultaneously
+            count = count + 1
+            if count % 50 == 0:
+                await asyncio.sleep(100e-3)
+
+    return response
+
+
 # returns trip status, i.e. the time slot of the trip booking and the trip status with timestamp.
+
+
+@router.post("/status_pg/{type}")
+async def trip_status_pg_with_type(
+    type: str,
+    trip_status_req: rqm.TripStatusReq_pg,
+    user_name=Depends(dpd.get_user_from_header),
+):
+    response = {}
+
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    valid_status = []
+    if type == "yet_to_start":
+        valid_status = tm.YET_TO_START_TRIP_STATUS
+    elif type == "completed":
+        valid_status = tm.COMPLETED_TRIP_STATUS
+    elif type == "ongoing":
+        valid_status = tm.ONGOING_TRIP_STATUS
+    else:
+        dpd.raise_error("Query sent for an invalid trip type")
+
+    with DBSession() as dbsession:
+        if trip_status_req.booked_from and trip_status_req.booked_till:
+            trip_status_req.booked_from = str_to_dt(trip_status_req.booked_from)
+            trip_status_req.booked_till = str_to_dt(trip_status_req.booked_till)
+
+            response = dbsession.get_trips_with_timestamp_and_status_pagination(
+                trip_status_req.booked_from,
+                trip_status_req.booked_till,
+                valid_status,
+                trip_status_req.filter_sherpa_names,
+                trip_status_req.skip,
+                trip_status_req.limit,
+            )
+
+    return response
 
 
 @router.post("/status")
@@ -170,23 +261,27 @@ async def trip_status(
         dpd.raise_error("Unknown requester", 401)
 
     with DBSession() as dbsession:
+        all_trips = None
         if trip_status_req.booked_from and trip_status_req.booked_till:
             trip_status_req.booked_from = str_to_dt(trip_status_req.booked_from)
             trip_status_req.booked_till = str_to_dt(trip_status_req.booked_till)
-
-            trip_status_req.trip_ids = dbsession.get_trip_ids_with_timestamp(
+            all_trips = dbsession.get_trips_with_timestamp(
                 trip_status_req.booked_from, trip_status_req.booked_till
             )
 
-        if not trip_status_req.trip_ids:
-            return response
-            # dpd.raise_error("no trip id given or available in the given timeframe")
+        else:
+            if not trip_status_req.trip_ids:
+                return response
+            all_trips = dbsession.get_trips_with_ids(trip_status_req.trip_ids)
 
-        for trip_id in trip_status_req.trip_ids:
-            trip: tm.Trip = dbsession.get_trip(trip_id)
-            if not trip:
-                dpd.raise_error("invalid trip id")
-            response.update({trip_id: tu.get_trip_status(trip)})
+        count = 0
+        for trip in all_trips:
+            response.update({trip.id: tu.get_trip_status(trip)})
+            count = count + 1
+
+            # introducing sleep to allow other endpoints to work simultaneously
+            if count % 50 == 0:
+                await asyncio.sleep(100e-3)
 
     return response
 
@@ -212,6 +307,31 @@ async def ongoing_trip_status(user_name=Depends(dpd.get_user_from_header)):
 # performs analysis for every trip leg and also for the overall trip.
 
 
+@router.post("/analytics_pg")
+async def trip_analytics_pg(
+    trip_analytics_req: rqm.TripStatusReq_pg, user_name=Depends(dpd.get_user_from_header)
+):
+    response = {}
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    with DBSession() as dbsession:
+        if trip_analytics_req.booked_from and trip_analytics_req.booked_till:
+            trip_analytics_req.booked_from = str_to_dt(trip_analytics_req.booked_from)
+            trip_analytics_req.booked_till = str_to_dt(trip_analytics_req.booked_till)
+
+        trip_analytics = dbsession.get_trip_analytics_with_pagination(
+            trip_analytics_req.booked_from,
+            trip_analytics_req.booked_till,
+            trip_analytics_req.filter_sherpa_names,
+            trip_analytics_req.skip,
+            trip_analytics_req.limit,
+        )
+        response = trip_analytics
+
+    return response
+
+
 @router.post("/analytics")
 async def trip_analytics(
     trip_analytics_req: rqm.TripStatusReq, user_name=Depends(dpd.get_user_from_header)
@@ -225,21 +345,28 @@ async def trip_analytics(
             trip_analytics_req.booked_from = str_to_dt(trip_analytics_req.booked_from)
             trip_analytics_req.booked_till = str_to_dt(trip_analytics_req.booked_till)
 
-            trip_analytics_req.trip_ids = dbsession.get_trip_ids_with_timestamp(
+            all_trip_analytics = dbsession.get_trip_analytics_with_timestamp(
                 trip_analytics_req.booked_from, trip_analytics_req.booked_till
             )
 
-        if not trip_analytics_req.trip_ids:
-            return response
+        else:
+            if not trip_analytics_req.trip_ids:
+                return response
+                all_trip_analytics = dbsession.get_trip_analytics_with_trip_ids(
+                    trip_analytics_req.trip_ids
+                )
             # dpd.raise_error("no trip id given or available in the given timeframe")
 
-        for trip_id in trip_analytics_req.trip_ids:
-            trip_legs_id = dbsession.get_all_trip_legs(trip_id)
-            for trip_leg_id in trip_legs_id:
-                trip_analytics: tm.TripAnalytics = dbsession.get_trip_analytics(trip_leg_id)
-                if not trip_analytics:
-                    continue
-                response.update({trip_leg_id: tu.get_trip_analytics(trip_analytics)})
+        count = 0
+        for trip_analytics in all_trip_analytics:
+            response.update(
+                {trip_analytics.trip_leg_id: tu.get_trip_analytics(trip_analytics)}
+            )
+
+            # introducing sleep to allow other endpoints to work simultaneously
+            count = count + 1
+            if count % 50 == 0:
+                await asyncio.sleep(100e-3)
 
     return response
 
@@ -324,13 +451,14 @@ async def get_saved_routes(
         dpd.raise_error("Unknown requester", 401)
 
     with DBSession() as dbsession:
-        _tags = ["exclude_stations", "battery_swap", "parking"]
+
         saved_routes = dbsession.get_saved_routes_fleet(fleet_name)
 
         for saved_route in saved_routes:
             used_by_backend = False
             update = False
-            for _tag in _tags:
+
+            for _tag in mm.ConditionalTripTags:
                 if _tag in saved_route.tag:
                     used_by_backend = True
 

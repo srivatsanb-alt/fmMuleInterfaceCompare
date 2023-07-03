@@ -13,11 +13,14 @@ import json
 
 # ati code imports
 from core.db import get_engine
+from core.config import Config
 
 
 def backup_data():
+    backup_config = Config.get_backup_config()
+
     logging.getLogger().info("Starting periodic data_backup")
-    fm_backup_path = os.path.join(os.getenv("FM_MAP_DIR"), "data_backup")
+    fm_backup_path = os.path.join(os.getenv("FM_STATIC_DIR"), "data_backup")
     start_time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
     current_data = f"{start_time}_data"
 
@@ -96,5 +99,64 @@ def backup_data():
             pass
 
         shutil.copytree(os.getenv("FM_LOG_DIR"), logs_save_path)
-        logging.getLogger("status_updates").info("Backed up data")
-        time.sleep(120)
+        logging.getLogger("misc").info(f"Backed up data")
+
+        try:
+            # default keep size is 1000MB
+            keep_size_mb = backup_config.get("keep_size_mb", 1000)
+            cleanup_data(keep_size_mb)
+
+        except Exception as e:
+            logging.getLogger("misc").error(
+                f"couldn't cleanup old backed up data, exception: {e}"
+            )
+        time.sleep(10)
+
+
+def get_directory_size(directory):
+    total_size = 0
+    for path, dirs, files in os.walk(directory):
+        for file in files:
+            file_path = os.path.join(path, file)
+
+            # returns size in bytes
+            total_size += os.path.getsize(file_path)
+
+    total_size_mb = total_size / (1024 * 1024)
+    return total_size_mb
+
+
+def sort_and_remove_directories(directory, target_size):
+    directories = [os.path.join(directory, name) for name in os.listdir(directory)]
+    directories.sort()
+
+    # cannot delete the current backup data
+    directories.pop()
+
+    current_size = 0
+    for dir_path in directories:
+        dir_size = get_directory_size(dir_path)
+        if current_size + dir_size <= target_size:
+            shutil.rmtree(dir_path)
+            current_size += dir_size
+            logging.getLogger("misc").warning(f"Deleted {dir_path}")
+
+
+def cleanup_data(keep_size_mb=1000):
+    fm_backup_path = os.path.join(os.getenv("FM_STATIC_DIR"), "data_backup")
+    data_backup_size = get_directory_size(fm_backup_path)
+
+    # delete if data_backup size greater than keep_size
+    if data_backup_size > keep_size_mb:
+        logging.getLogger("misc").warning(
+            f"data_backup folder size ({data_backup_size} mb) greater than {keep_size_mb} mb"
+        )
+        lst = os.listdir(fm_backup_path)
+        number_files = len(lst)
+        if number_files > 1:
+            logging.getLogger("misc").info(
+                "will check if some old backed up data can be deleted"
+            )
+            sort_and_remove_directories(fm_backup_path, data_backup_size - keep_size_mb)
+        else:
+            logging.getLogger("misc").warning("no older backed up data to delete")

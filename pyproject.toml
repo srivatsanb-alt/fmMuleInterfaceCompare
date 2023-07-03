@@ -38,6 +38,8 @@ zstandard = "^0.20.0"
 opencv-python = "^4.7.0.68"
 psycopg2 = "^2.9.5"
 psutil = "^5.9.4"
+python-multipart = "^0.0.6"
+serial = "^0.0.97"
 
 [tool.poetry.dev-dependencies]
 

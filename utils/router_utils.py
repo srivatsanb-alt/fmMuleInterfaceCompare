@@ -32,7 +32,7 @@ class AllRouterModules:
         self.fleet_names = fleet_names
         self.router_modules = {}
         for fleet_name in self.fleet_names:
-            map_path = os.path.join(os.environ["FM_MAP_DIR"], f"{fleet_name}/map/")
+            map_path = os.path.join(os.environ["FM_STATIC_DIR"], f"{fleet_name}/map/")
             self.router_modules.update({fleet_name: RouterModule(map_path)})
 
     def get_router_module(self, fleet_name: str):

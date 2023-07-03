@@ -81,14 +81,25 @@ class VisaReq:
 # Messages from sherpas
 
 
-class ErrInfo(BaseModel):
-    err_code: str
+class AddFMIncidentReq(BaseModel):
+    type: str
+    code: str
+    incident_id: str
+    message: str
+    data_uploaded: bool
+    data_path: Optional[str] = None
     module: Optional[str] = None
     sub_module: Optional[str] = None
-    err_msg: str
-    err_disp_msg: Optional[str] = None
-    recovery_msg: Optional[str] = None
+    display_message: Optional[str] = None
+    recovery_message: Optional[str] = None
     other_info: Optional[dict] = None
+
+
+class UpdateIncidentDataDetailsReq(BaseModel):
+    incident_id: str
+    data_uploaded: bool
+    data_path: Optional[str]
+    other_info: Optional[Dict[str, str]] = None
 
 
 class SherpaReq(BaseModel):
@@ -148,6 +159,12 @@ class ResourceReq(SherpaReq):
     charging_bay: str = None
     access_type: AccessType = None
     type = MessageType.RESOURCE_ACCESS
+
+
+class FileUploadReq(BaseModel):
+    filename: str
+    type: str
+    fm_incident_id: Optional[str]
 
 
 #################################################
@@ -213,6 +230,12 @@ class TripStatusMsg(SherpaMsg, JsonMixin):
 
 #################################################
 # internal messsages FM to FM
+class TriggerOptimalDispatch(BaseModel):
+    source: str = "self"
+    fleet_name: str
+    type: str = MessageType.TRIGGER_OPTIMAL_DISPATCH
+
+
 class AssignNextTask(BaseModel):
     source: str = "self"
     sherpa_name: str = None
@@ -340,6 +363,13 @@ class SherpaImgUpdateCtrlReq(ClientReq):
     type: str = "sherpa_img_update"
 
 
+class TripStatusReq_pg(ClientReq):
+    skip: int
+    limit:int
+    filter_sherpa_names: Optional[List[str]]
+    booked_from: Optional[str]
+    booked_till: Optional[str]
+    
 class TripStatusReq(ClientReq):
     booked_from: Optional[str]
     booked_till: Optional[str]
@@ -363,6 +393,7 @@ class DeleteOptimalDispatchAssignments(ClientReq):
 
 class GetFMIncidents(ClientReq):
     sherpa_name: str
+    num_of_incidents: int = 1
 
 
 class SaveRouteReq(ClientReq):
@@ -380,6 +411,11 @@ class UpdateSavedRouteReq(ClientReq):
 class UpdateSherpaMetaDataReq(ClientReq):
     sherpa_name: str
     info: Dict[str, str]
+
+
+class GenericFromToTimeReq(ClientReq):
+    from_dt: str
+    to_dt: str
 
 
 #################################################
