@@ -2,6 +2,7 @@ import time
 import redis
 import json
 import os
+import logging
 from fastapi import Depends, APIRouter
 
 from models.db_session import DBSession
@@ -108,10 +109,29 @@ async def resource_access(
 
 @router.get("/verify_fleet_files", response_model=rqm.VerifyFleetFilesResp)
 async def verify_fleet_files(sherpa: str = Depends(dpd.get_sherpa)):
-    response = await dpd.process_req_with_response(
-        None, rqm.SherpaReq(type="verify_fleet_files", timestamp=time.time()), sherpa
-    )
-    return rqm.VerifyFleetFilesResp.from_json(response)
+    response = {}
+
+    if sherpa is None:
+        dpd.raise_error("Unknown requester", 401)
+
+    logging.getLogger().info(f"Got a verify fleet files request from {sherpa}")
+
+    with DBSession() as dbsession:
+        sherpa: fm.Sherpa = dbsession.get_sherpa(sherpa)
+        fleet_name = sherpa.fleet.name
+        map_files = dbsession.get_map_files(fleet_name)
+
+        map_file_info = [
+            rqm.MapFileInfo(file_name=mf.filename, hash=mf.file_hash) for mf in map_files
+        ]
+
+        response: rqm.VerifyFleetFilesResp = rqm.VerifyFleetFilesResp(
+            fleet_name=fleet_name, files_info=map_file_info
+        )
+
+        logging.getLogger().info(f"sent a verify fleet files response to {sherpa}")
+
+    return response
 
 
 @router.post("/fatal_error")
