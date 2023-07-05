@@ -12,7 +12,6 @@ from core.config import Config
 import redis
 import os
 import json
-import logging
 from models.request_models import SherpaReq
 from models.db_session import DBSession
 
