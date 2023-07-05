@@ -64,13 +64,12 @@ def assign_next_task():
                             f"will send assign task request for {sherpa_status.sherpa_name}"
                         )
                         assign_next_task_req = rqm.AssignNextTask(
-                            sherpa_name=sherpa_status.sherpa_name
+                            sherpa_name=sherpa_status.sherpa_name,
+                            ttl=int(0.5 * job_timeout),
                         )
 
                         # should not clog the generic handler
-                        process_req(
-                            None, assign_next_task_req, "self", ttl=int(0.5 * job_timeout)
-                        )
+                        process_req(None, assign_next_task_req, "self")
 
                     schdeuled_job_id = enqueue_scheduled_trips(db_session, schdeuled_job_id)
                     time.sleep(2)
