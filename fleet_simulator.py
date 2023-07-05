@@ -4,7 +4,6 @@ from utils.util import generate_random_job_id
 from core.config import Config
 import requests
 import ast
-import datetime
 import redis
 from models.request_models import (
     SherpaStatusMsg,
@@ -42,6 +41,8 @@ import threading
 LOOKAHEAD = 5.0
 PATH_DENSITY = 1000
 THETA_MAX = np.rad2deg(10)
+rq_params = Config.get_fleet_rq_params()
+TIMEOUT = rq_params.get("generic_handler_job_timeout", 10)
 
 
 def should_trip_msg_be_sent(sherpa_events):
@@ -265,7 +266,8 @@ class FleetSimulator:
         generic_q = Queues.queues_dict["generic_handler"]
         trip_msg = TripMsg(route=route, metadata=trip_metadata)
         book_req = BookingReq(trips=[trip_msg], source="simulator")
-        enqueue(generic_q, handle, self.handler_obj, book_req)
+        args = [self.handler_obj, book_req]
+        enqueue(generic_q, handle, *args)
 
     def book_predefined_trips(self):
         all_route_details = self.simulator_config.get("routes", {})
@@ -310,7 +312,10 @@ class FleetSimulator:
                         name=conveyor.name,
                     )
                     queue = Queues.queues_dict["generic_handler"]
-                    enqueue(queue, handle, self.handler_obj, msg, ttl=1)
+                    args = [self.handler_obj, msg]
+                    kwargs = {"ttl": 1}
+                    kwargs.update({"job_timeout": TIMEOUT})
+                    enqueue(queue, handle, *args, **kwargs)
 
     def book_conveyor_trips(self):
         print(
@@ -337,7 +342,8 @@ class FleetSimulator:
         msg = SherpaReq(
             type="verify_fleet_files", source=sherpa_name, timestamp=time.time()
         )
-        enqueue(generic_q, handle, self.handler_obj, msg, ttl=1)
+        args = [self.handler_obj, msg]
+        enqueue(generic_q, handle, *args)
 
     def get_visa_request(self, sherpa_name, visa_params):
         zone_id, zone_name = visa_params
@@ -383,7 +389,10 @@ class FleetSimulator:
 
             if sherpa.status.pose or pose:
                 msg = SherpaStatusMsg.from_dict(msg)
-                enqueue(sherpa_update_q, handle, self.handler_obj, msg, ttl=1)
+                args = [self.handler_obj, msg]
+                kwargs = {"ttl": 1}
+                kwargs.update({"job_timeout": TIMEOUT})
+                enqueue(sherpa_update_q, handle, *args, **kwargs)
 
     def send_trip_status(self, sherpa_name):
         from utils.router_utils import get_dense_path
@@ -478,9 +487,8 @@ class FleetSimulator:
                             visa_release_msg = self.get_visa_release(
                                 sherpa_name, visa_params
                             )
-                            enqueue(
-                                sherpa_visa_q, handle, self.handler_obj, visa_release_msg
-                            )
+                            args = [self.handler_obj, visa_release_msg]
+                            enqueue(sherpa_visa_q, handle, *args)
                             self.visas_held[sherpa_name] = []
                     else:
                         visa_params = check_visa_needed(ez, curr_pose)
@@ -494,9 +502,8 @@ class FleetSimulator:
                             visa_request_msg = self.get_visa_request(
                                 sherpa_name, visa_params
                             )
-                            enqueue(
-                                sherpa_visa_q, handle, self.handler_obj, visa_request_msg
-                            )
+                            args = [self.handler_obj, visa_request_msg]
+                            enqueue(sherpa_visa_q, handle, *args)
 
                 print(
                     f"simulating trip_id: {ongoing_trip.trip_id}, steps: {steps}, progress: {i / len(x_vals)}"
@@ -546,13 +553,10 @@ class FleetSimulator:
                 final_trip_status_msg.stoppages.extra_info = StoppageInfo.from_dict(
                     trip_status_msg["stoppages"]["extra_info"]
                 )
-                enqueue(
-                    sherpa_trip_q,
-                    handle,
-                    self.handler_obj,
-                    final_trip_status_msg,
-                    ttl=1,
-                )
+                args = [self.handler_obj, final_trip_status_msg]
+                kwargs = {"ttl": 1}
+                kwargs.update({"job_timeout": TIMEOUT})
+                enqueue(sherpa_trip_q, handle, *args, **kwargs)
                 time.sleep(sleep_time)
                 session.session.expire_all()
 
@@ -577,7 +581,8 @@ class FleetSimulator:
             )
             reached_req.source = sherpa_name
             print(f"will send a reached msg for {sherpa_name}, {reached_req}")
-            enqueue(queue, handle, self.handler_obj, reached_req)
+            args = [self.handler_obj, reached_req]
+            enqueue(queue, handle, *args)
 
     def peripheral_response_is_needed(self, waiting_start, waiting_end, states):
         if waiting_start in states and waiting_end not in states:
@@ -642,7 +647,8 @@ class FleetSimulator:
                 f"Sherpa {sherpa_name} - trip_id {ongoing_trip.trip_id}, leg {ongoing_trip.trip_leg_id} sent a peripheral msg {peripheral_response}"
             )
             queue = Queues.queues_dict["generic_handler"]
-            enqueue(queue, handle, self.handler_obj, peripheral_response)
+            args = [self.handler_obj, peripheral_response]
+            enqueue(queue, handle, *args)
 
     def act_on_sherpa_events(self):
         simulated_trip_legs = []

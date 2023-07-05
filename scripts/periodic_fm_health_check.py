@@ -11,9 +11,9 @@ def periodic_health_check():
     logging.getLogger().info(f"started periodic_health_check script")
     while True:
         try:
-            fm_health_check = FMHealthCheck()
+            fm_health_check = FMHealthCheck(ttl=2)
             q = Queues.queues_dict.get("misc_handler")
-            process_req(q, fm_health_check, "self", ttl=2)
+            process_req(q, fm_health_check, "self")
         except Exception as e:
             logging.getLogger().info(f"exception in periodic fm fm_health_check script {e}")
 
