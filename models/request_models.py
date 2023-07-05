@@ -427,6 +427,7 @@ class GenericFromToTimeReq(ClientReq):
 class FMReq(BaseModel):
     source: Union[str, None] = None
     endpoint: str
+    ttl: Optional[int] = None
 
 
 class InitReq(FMReq):

@@ -138,7 +138,7 @@ def process_req(queue, req, user, redis_conn=None, dt=None):
 
     ttl = req.ttl
     if ttl:
-        kwargs.update({"ttl": 1})
+        kwargs.update({"ttl": ttl})
 
     timeout = default_job_timeout
     if not queue:
