@@ -12,6 +12,7 @@ from core.config import Config
 import redis
 import os
 import json
+import logging
 from models.request_models import SherpaReq
 from models.db_session import DBSession
 
@@ -116,10 +117,12 @@ def generate_jwt_token(username: str):
 
 
 # processes the requests in the job queue.
-def process_req(queue, req, user, dt=None, ttl=None):
-
+def process_req(queue, req, user, redis_conn=None, dt=None):
     if not user:
         raise HTTPException(status_code=403, detail=f"Unknown requeter {user}")
+
+    if redis_conn is None:
+        redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
 
     job = None
     req.source = user
@@ -128,32 +131,44 @@ def process_req(queue, req, user, dt=None, ttl=None):
     args = [handler_obj, req]
     kwargs = {}
 
-    if ttl:
-        kwargs.update({"ttl": ttl})
+    default_job_timeout = int(int(redis_conn.get("default_job_timeout_ms").decode()) / 1000)
+    generic_handler_job_timeout = int(
+        int(redis_conn.get("generic_handler_job_timeout_ms").decode()) / 1000
+    )
 
+    ttl = req.ttl
+    if ttl:
+        kwargs.update({"ttl": 1})
+
+    timeout = default_job_timeout
     if not queue:
         queue = Queues.queues_dict["generic_handler"]
+        timeout = generic_handler_job_timeout
+
+    kwargs.update({"job_timeout": timeout})
 
     # add retry only for SherpaReq(req comes from Sherpa)
     if isinstance(req, SherpaReq):
-        kwargs.update({"retry": Retry(max=3, interval=[0.5, 1, 2])})
+        kwargs.update({"retry": Retry(max=2, interval=[0.5, 2])})
 
     if dt:
         job = enqueue_at(queue, dt, handle, *args, **kwargs)
         return job
 
     job = enqueue(queue, handle, *args, **kwargs)
+
     return job
 
 
 # processes the requests in the queue and responds back(request finished, failed, etc.)
 async def process_req_with_response(queue, req, user: str):
-    job: Job = process_req(queue, req, user)
-    add_job_to_queued_jobs(job.id, req.source)
-
     redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
 
+    job: Job = process_req(queue, req, user, redis_conn)
+    add_job_to_queued_jobs(job.id, req.source)
+
     error_detail = "Unable to process request"
+    status_code = 500  # internal server error
     while True:
         job = Job.fetch(job.id, connection=redis_conn)
         status = job.get_status(refresh=True)
@@ -173,9 +188,10 @@ async def process_req_with_response(queue, req, user: str):
 
             if isinstance(error_value, ValueError):
                 error_detail = str(error_value)
+                status_code = 409  # request conflicts with the current state of the server.
 
             job.cancel()
-            raise HTTPException(status_code=500, detail=error_detail)
+            raise HTTPException(status_code=status_code, detail=error_detail)
 
         await asyncio.sleep(0.005)
 

@@ -163,6 +163,13 @@ async def reader(websocket, sherpa):
         sherpa_update_q = Queues.queues_dict[f"{sherpa}_update_handler"]
         sherpa_trip_q = Queues.queues_dict[f"{sherpa}_trip_update_handler"]
 
+        kwargs = {}
+        generic_handler_job_timeout = int(
+            int(redis.get("generic_handler_job_timeout_ms").decode()) / 1000
+        )
+        kwargs.update({"ttl": 3})
+        kwargs.update({"job_timeout": generic_handler_job_timeout})
+
         if msg_type == MessageType.TRIP_STATUS:
             msg["source"] = sherpa
             trip_status_msg = rqm.TripStatusMsg.from_dict(msg)
@@ -171,7 +178,8 @@ async def reader(websocket, sherpa):
             trip_status_msg.stoppages.extra_info = rqm.StoppageInfo.from_dict(
                 msg["stoppages"]["extra_info"]
             )
-            enqueue(sherpa_trip_q, handle, handler_obj, trip_status_msg, ttl=1)
+            args = [handler_obj, trip_status_msg]
+            enqueue(sherpa_trip_q, handle, *args, **kwargs)
 
         elif msg_type == MessageType.SHERPA_STATUS:
             msg["source"] = sherpa
@@ -181,7 +189,8 @@ async def reader(websocket, sherpa):
                     f"sherpa name mismatch, sherpa name in DB: {sherpa}, sherpa_name sent by sherpa: {temp}, will not enqueue sherpa_status msg"
                 )
             else:
-                enqueue(sherpa_update_q, handle, handler_obj, status_msg, ttl=1)
+                args = [handler_obj, status_msg]
+                enqueue(sherpa_update_q, handle, *args, **kwargs)
         else:
             logging.error(f"Unsupported message type {msg_type}")
 
