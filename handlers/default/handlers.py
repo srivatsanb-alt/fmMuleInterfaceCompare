@@ -1046,8 +1046,12 @@ class Handlers:
                     trip_error_msg = f"Cancel the trip: {pending_trip.trip_id}, invalid station ({station_name}) in trip route"
                     trip_error_msg_e = trip_error_msg + f", exception: {e}"
                     logging.getLogger().warning(trip_error_msg_e)
-                    utils_util.maybe_add_alert(
-                        self.dbsession, [sherpa.fleet.name], trip_error_msg
+                    utils_util.maybe_add_notification(
+                        self.dbsession,
+                        [sherpa.fleet.name],
+                        trip_error_msg,
+                        mm.NotificationLevels.alert,
+                        mm.NotificationModules.generic,
                     )
                     return
 

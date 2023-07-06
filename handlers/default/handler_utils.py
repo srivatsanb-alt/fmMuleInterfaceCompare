@@ -249,10 +249,12 @@ def check_sherpa_status(dbsession: DBSession):
         )
 
         if stale_sherpa_status.trip_id:
-            utils_util.maybe_add_alert(
+            utils_util.maybe_add_notification(
                 dbsession,
                 [stale_sherpa_status.sherpa_name],
                 f"Lost connection to {stale_sherpa_status.sherpa_name}, sherpa doing trip: {stale_sherpa_status.trip_id}",
+                mm.NotificationLevels.alert,
+                mm.NotificationModules.generic,
             )
 
         # set mode change - reflects in sherpa_oee
