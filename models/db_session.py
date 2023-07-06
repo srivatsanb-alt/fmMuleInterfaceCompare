@@ -738,3 +738,15 @@ class DBSession:
             .filter(mm.FileUploads.filename == filename)
             .one_or_none()
         )
+
+    def get_expected_trip_time(self, from_station, to_station, limit=5):
+        subquery = (
+            self.session.query(tm.TripAnalytics.actual_trip_time)
+            .filter(tm.TripAnalytics.from_station == from_station)
+            .filter(tm.TripAnalytics.to_station == to_station)
+            .filter(tm.TripAnalytics.actual_trip_time != None)
+            .order_by(tm.TripAnalytics.trip_leg_id.desc())
+            .limit(10)
+            .subquery()
+        )
+        return self.session.query(func.avg(subquery.c.actual_trip_time)).scalar()

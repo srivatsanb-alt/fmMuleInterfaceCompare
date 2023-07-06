@@ -222,3 +222,14 @@ def maybe_add_alert(dbsession, enitity_names: list, log: str):
         dbsession.add_notification(
             enitity_names, log, mm.NotificationLevels.alert, mm.NotificationModules.generic
         )
+
+
+def get_closest_station(dbsession, pose, fleet_name):
+    temp = None
+    all_stations = dbsession.get_all_stations_in_fleet(fleet_name)
+    for station in all_stations:
+        if are_poses_close(pose, station.pose):
+            temp = station
+            break
+
+    return temp
