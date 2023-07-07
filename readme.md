@@ -12,6 +12,8 @@
 9. [Fleet maintenance](#fleet-maintenance)
 10. [Flash Summon button firmware](#flash-summon-button-firmware)
 11. [Use saved routes](#use-saved-routes)
+12. [Setup master FM comms](#setup-master-fm-comms)
+13. [Debug FM](#debug-fm)
 
 # FM Installation #
 
@@ -154,7 +156,7 @@ bash load_docker_images.sh
 
    3. Use FM through UI, if running FM on localhost use ip as 127.0.0.1
    ```markdown
-   https://<ip>/login
+   https://<ip>/fm/
    username: <username>
    password: <password>
    ```
@@ -458,6 +460,59 @@ b. Go to route ops(maintenance) page, select the route you want the sherpa is fo
 3. Disable sherpa from going to a list of stations
 
 a. Go to route ops(maintenance) page, select the stations that sherpa shouldn't go to, press save, select sherpa from dropdown and tag it as exclude_stations route.
+
+
+# Setup master FM comms # 
+
+1. Generate api key for the FM server 
+```
+cd <path_to_fleet_manager_repository>/utils
+python3 api_key_gen.py --hw_id <customer_name>
+```
+
+2. Add customer to master_fm database 
+```
+1.Login to sanjaya.atimotors.com
+2.Use add client functionality in client configuration page (requires customer name, api key generated in the previous step)
+```
+
+3. Make sure mfm_ip, port, cert_files are set as given below 
+```
+mfm_ip="sanjaya.atimotors.com"
+mfm_port="443"
+mfm_cert_file="/etc/ssl/certs/ca-certificates.crt"
+```
+
+4. Edit params in static/fleet_config/master_fm_config.toml in the FM server and restart the same
+```
+[master_fm.comms]
+send_updates=true
+ws_update_freq=60
+update_freq=120
+api_key=<api_key>
+```
+
+# Debug FM # 
+1. Check if there were any queue build ups. The output would show queue build ups if any.
+```
+docker exec -it fleet_manager bash 
+bash scripts/inspect_fm.sh
+```
+
+2. Check for occurences of rq in fleet_manager.log, the output might lead to the issue
+```
+grep -e rq -C 5 logs/fleet_manager.log
+```
+
+3. If you are unable to login to FM, Check the docker logs- this should be run outside docker. There might be some errors in the init scripts.
+```
+docker logs fleet_manager 
+docker logs fleet_db
+```
+
+
+
+
 
 
 

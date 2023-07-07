@@ -1,7 +1,7 @@
 [master_fm]
-mfm_ip="15.206.242.52"
+mfm_ip="sanjaya.atimotors.com"
 mfm_port="443"
-mfm_cert_file="/app/master_fm_comms/aws_master_cert.pem"
+mfm_cert_file="/etc/ssl/certs/ca-certificates.crt"
 http_scheme="https"
 ws_scheme="wss"
 ws_suffix="ws/api/v1/master_fm/fm_client"
