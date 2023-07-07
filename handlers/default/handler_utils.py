@@ -16,11 +16,8 @@ import core.constants as cc
 from models.db_session import DBSession
 import models.fleet_models as fm
 import models.trip_models as tm
-import models.request_models as rqm
 import models.misc_models as mm
 import utils.util as utils_util
-from utils.create_certs import generate_certs_for_sherpa
-from utils.fleet_utils import compute_sha1_hash
 import utils.log_utils as lu
 
 
