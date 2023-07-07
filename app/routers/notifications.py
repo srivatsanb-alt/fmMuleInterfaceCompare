@@ -35,7 +35,7 @@ async def clear_notification(
     with DBSession() as dbsession:
         notification = dbsession.get_notifications_with_id(id)
         if not notification:
-            dpd.raise_error("Bad detail")
+            dpd.raise_error(f"No notification found with id: {id}")
 
         if notification.cleared_by is None:
             notification.cleared_by = []
