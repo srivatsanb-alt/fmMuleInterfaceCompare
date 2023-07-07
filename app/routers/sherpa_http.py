@@ -133,7 +133,11 @@ async def verify_fleet_files(sherpa: str = Depends(dpd.get_sherpa)):
         reset_fleet = fu.is_reset_fleet_required(fleet_name, map_files)
         if reset_fleet:
             update_map_msg = f"Map files of fleet: {fleet_name} has been modified, please update the map by pressing the update_map button on the webpage header!"
-            utils_util.maybe_add_alert(dbsession, [fleet_name], update_map_msg)
+            log_level = mm.NotificationLevels.alert
+            module = mm.NotificationModules.generic
+            utils_util.maybe_add_notification(
+                dbsession, [fleet_name], update_map_msg, log_level, module
+            )
 
         response: rqm.VerifyFleetFilesResp = rqm.VerifyFleetFilesResp(
             fleet_name=fleet_name, files_info=map_file_info
@@ -194,8 +198,8 @@ async def sherpa_alerts(
             alert = alert + alert_msg.user_pause
         else:
             dpd.raise_error("Invalid alert msg")
-
-        dbsession.add_notification(
+        utils_util.maybe_add_notification(
+            dbsession,
             [sherpa_obj.name, sherpa_obj.fleet.name],
             alert,
             mm.NotificationLevels.alert,

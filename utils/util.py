@@ -215,10 +215,26 @@ def check_if_notification_alert_present(dbsession, log: str, enitity_names: list
     return False
 
 
-def maybe_add_alert(dbsession, enitity_names: list, log: str):
+def maybe_add_notification(
+    dbsession, enitity_names: list, log: str, log_level=None, module=None
+):
     import models.misc_models as mm
 
+    if log_level is None:
+        log_level = mm.NotificationLevels.info
+    if module is None:
+        module = mm.NotificationModules.generic
+
     if not check_if_notification_alert_present(dbsession, log, enitity_names):
-        dbsession.add_notification(
-            enitity_names, log, mm.NotificationLevels.alert, mm.NotificationModules.generic
-        )
+        dbsession.add_notification(enitity_names, log, log_level, module)
+
+
+def get_closest_station(dbsession, pose, fleet_name):
+    temp = None
+    all_stations = dbsession.get_all_stations_in_fleet(fleet_name)
+    for station in all_stations:
+        if are_poses_close(pose, station.pose):
+            temp = station
+            break
+
+    return temp
