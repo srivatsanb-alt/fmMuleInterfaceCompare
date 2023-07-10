@@ -1,5 +1,7 @@
 import time
 import logging
+from sqlalchemy.sql import not_
+
 
 # ati code imports
 from core.config import Config
@@ -56,7 +58,7 @@ def assign_next_task():
                     all_sherpa_status = (
                         db_session.session.query(SherpaStatus)
                         .filter(SherpaStatus.assign_next_task.is_(True))
-                        .filter(SherpaStatus.disabled.is_(False))
+                        .filter(not_(SherpaStatus.disabled.is_(True)))
                         .all()
                     )
                     for sherpa_status in all_sherpa_status:
