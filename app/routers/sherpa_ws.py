@@ -182,7 +182,7 @@ async def reader(websocket, sherpa):
             status_msg = rqm.SherpaStatusMsg.from_dict(msg)
             if status_msg.sherpa_name != sherpa:
                 logger.error(
-                    f"sherpa name mismatch, sherpa name in DB: {sherpa}, sherpa_name sent by sherpa: {temp}, will not enqueue sherpa_status msg"
+                    f"sherpa name mismatch, sherpa name in DB: {sherpa}, sherpa_name sent by sherpa: {status_msg.sherpa_name}, will not enqueue sherpa_status msg"
                 )
             else:
                 args = [handler_obj, status_msg]
