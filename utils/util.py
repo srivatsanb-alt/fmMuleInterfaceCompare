@@ -128,7 +128,7 @@ def sys_perf():
         cpu.system,
         cpu.idle,
         cpu_count,
-        cpu_freq.current,
+        cpu_freq.current if cpu_freq else None,
         np.round(mem.available / ONE_GB, 3),
         np.round(mem.used / ONE_GB, 3),
         np.round(swap.used / ONE_GB, 3),
