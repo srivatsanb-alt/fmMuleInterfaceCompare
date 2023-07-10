@@ -143,7 +143,7 @@ async def verify_fleet_files(sherpa: str = Depends(dpd.get_sherpa)):
             fleet_name=fleet_name, files_info=map_file_info
         )
 
-        logging.getLogger().info(f"sent a verify fleet files response to {sherpa}")
+        logging.getLogger().info(f"sent a verify fleet files response to {sherpa.name}")
 
     return response
 

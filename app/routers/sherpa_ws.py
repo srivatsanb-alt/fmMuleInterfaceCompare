@@ -114,15 +114,11 @@ async def sherpa_status(
         entity_names = [sherpa.fleet.name, sherpa.name]
 
         # send sherpa connected notification
-        if not utils_util.check_if_notification_alert_present(
-            dbsession, connect_notification, entity_names
-        ):
-            dbsession.add_notification(
-                entity_names,
-                connect_notification,
-                mm.NotificationLevels.info,
-                mm.NotificationModules.generic,
-            )
+        log_level = mm.NotificationLevels.info
+        module = mm.NotificationModules.generic
+        utils_util.maybe_add_notification(
+            dbsession, entity_names, connect_notification, log_level, module
+        )
 
     await websocket.accept()
     logger.info(f"websocket connection accepeted for {sherpa_name}")
