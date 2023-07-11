@@ -82,7 +82,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "\nSELECT\n  COUNT(DISTINCT id)\nFROM\n  trips\nWHERE\nstart_time >= CAST($__timeFrom() AS timestamp with time zone)  AND end_time <= CAST($__timeTo() AS timestamp with time zone) AND\n  fleet_name = '$fleetvar';\n",
+          "rawSql": "\nSELECT\n  COUNT(DISTINCT id)\nFROM\n  trips\nWHERE\nstart_time >= CAST($__timeFrom() AS timestamp with time zone)  AND end_time <= CAST($__timeTo() AS timestamp with time zone) AND\n  fleet_name = '$fleetvar' AND status='succeeded';\n",
           "refId": "A",
           "sql": {
             "columns": [
@@ -596,7 +596,7 @@
               }
             ]
           },
-          "unit": "short"
+          "unit": "s"
         },
         "overrides": []
       },
@@ -706,7 +706,7 @@
               }
             ]
           },
-          "unit": "short"
+          "unit": "s"
         },
         "overrides": []
       },
@@ -780,21 +780,21 @@
     "list": [
       {
         "current": {
-          "selected": true,
-          "text": "all_hands_map",
-          "value": "all_hands_map"
+          "selected": false,
+          "text": "master_fleet_map_superSet",
+          "value": "master_fleet_map_superSet"
         },
         "hide": 0,
         "label": "Fleet_Selector ",
         "name": "fleetvar",
         "options": [
           {
-            "selected": true,
+            "selected": false,
             "text": "all_hands_map",
             "value": "all_hands_map"
           }
         ],
-        "query": "all_hands_map",
+        "query": "master_fleet_map_superSet",
         "skipUrlSync": false,
         "type": "textbox"
       }
