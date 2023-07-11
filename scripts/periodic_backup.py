@@ -18,7 +18,6 @@ from core.config import Config
 
 def backup_data():
     backup_config = Config.get_backup_config()
-
     logging.getLogger().info("Starting periodic data_backup")
     fm_backup_path = os.path.join(os.getenv("FM_STATIC_DIR"), "data_backup")
     start_time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
@@ -104,7 +103,7 @@ def backup_data():
         try:
             # default keep size is 1000MB
             keep_size_mb = backup_config.get("keep_size_mb", 1000)
-            cleanup_data(keep_size_mb)
+            cleanup_data(current_data, keep_size_mb)
 
         except Exception as e:
             logging.getLogger("misc").error(
@@ -126,13 +125,31 @@ def get_directory_size(directory):
     return total_size_mb
 
 
-def sort_and_remove_directories(directory, target_size):
-    directories = [os.path.join(directory, name) for name in os.listdir(directory)]
-    directories.sort()
+def sort_dir_list(list_dir):
+    TIME_FORMAT = "%Y-%m-%d-%H-%M-%S"
+    for dir in list_dir:
+        try:
+            datetime.datetime.strptime(dir.rsplit("_", 1)[0], TIME_FORMAT)
+        except Exception as e:
+            logging.getLogger("misc").info(
+                f"Directory name not in valid format, ignoring {dir}, cannot be sorted according to timestamp, exception: {e}"
+            )
+            list_dir.remove(dir)
 
-    # cannot delete the current backup data
-    directories.pop()
+    list_dir.sort(
+        key=lambda date: datetime.datetime.strptime(date.rsplit("_", 1)[0], TIME_FORMAT)
+    )
 
+
+def sort_and_remove_directories(directory, target_size, current_data):
+
+    list_dir = os.listdir(directory)
+
+    # cannot delete current data folder
+    list_dir.remove(current_data)
+    sort_dir_list(list_dir)
+
+    directories = [os.path.join(directory, name) for name in list_dir]
     current_size = 0
     for dir_path in directories:
         dir_size = get_directory_size(dir_path)
@@ -142,7 +159,7 @@ def sort_and_remove_directories(directory, target_size):
             logging.getLogger("misc").warning(f"Deleted {dir_path}")
 
 
-def cleanup_data(keep_size_mb=1000):
+def cleanup_data(current_data, keep_size_mb=1000):
     fm_backup_path = os.path.join(os.getenv("FM_STATIC_DIR"), "data_backup")
     data_backup_size = get_directory_size(fm_backup_path)
 
@@ -157,6 +174,8 @@ def cleanup_data(keep_size_mb=1000):
             logging.getLogger("misc").info(
                 "will check if some old backed up data can be deleted"
             )
-            sort_and_remove_directories(fm_backup_path, data_backup_size - keep_size_mb)
+            sort_and_remove_directories(
+                fm_backup_path, data_backup_size - keep_size_mb, current_data
+            )
         else:
             logging.getLogger("misc").warning("no older backed up data to delete")
