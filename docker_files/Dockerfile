@@ -33,6 +33,9 @@ ENV FM_REDIS_URI="redis://localhost:$REDIS_PORT" \
 RUN ln -fs /usr/share/zoneinfo/Asia/Kolkata /etc/localtime && \
        dpkg-reconfigure -f noninteractive tzdata
 
+RUN echo "alias inspect='bash scripts/inspect_fm.sh'" >> ~/.bashrc
+RUN echo "alias rqi='poetry run rq info'" >> ~/.bashrc
+
 COPY . /app/
 RUN echo "Copying messages_pb2.py to mule/ati/schema on the docker"
 COPY ./misc/messages_pb2.py /app/mule/ati/schema/
