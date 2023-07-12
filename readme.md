@@ -496,12 +496,13 @@ api_key=<api_key>
 1. Check if there were any queue build ups. The output would show queue build ups if any.
 ```
 docker exec -it fleet_manager bash 
-bash scripts/inspect_fm.sh
+inspect
+rqi
 ```
 
-2. Check for occurences of rq in fleet_manager.log, the output might lead to the issue
+2. Check for occurences of rq errors (rqe) in fleet_manager.log, the output might lead to the issue
 ```
-grep -e rq -C 5 logs/fleet_manager.log
+rqe
 ```
 
 3. If you are unable to login to FM, Check the docker logs- this should be run outside docker. There might be some errors in the init scripts.
