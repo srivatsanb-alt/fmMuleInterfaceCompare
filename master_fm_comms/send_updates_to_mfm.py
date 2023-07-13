@@ -24,33 +24,34 @@ def upload_map_files(mfm_context: mu.MFMContext):
             for fleet in all_fleets:
                 map_path = os.path.join(os.environ["FM_STATIC_DIR"], f"{fleet.name}/map/")
                 all_map_files = os.listdir(map_path)
-                files = []
+                upload_done = []
                 for file_name in all_map_files:
+                    files = []
                     files.append(
                         ("uploaded_files", open(os.path.join(map_path, file_name), "rb"))
                     )
-
-                endpoint = "upload_map_files"
-                response_status_code, response_json = mu.send_http_req_to_mfm(
-                    mfm_context,
-                    endpoint,
-                    "post",
-                    req_json=None,
-                    files=files,
-                    params=None,
-                    query=fleet.name,
-                )
-
-                if response_status_code == 200:
-                    logging.getLogger("mfm_updates").info(
-                        f"uploaded map files of {fleet.name} to master fm successfully"
+                    endpoint = "upload_map_files"
+                    response_status_code, response_json = mu.send_http_req_to_mfm(
+                        mfm_context,
+                        endpoint,
+                        "post",
+                        req_json=None,
+                        files=files,
+                        params=None,
+                        query=fleet.name,
                     )
-                    map_files_uploaded[i] = True
-                else:
-                    logging.getLogger("mfm_updates").info(
-                        f"unable to upload map_files to master fm, status_code {response_status_code}"
-                    )
-                    time.sleep(10)
+                    if response_status_code == 200:
+                        logging.getLogger("mfm_updates").info(
+                            f"uploaded map file {file_name} of {fleet.name} to master fm successfully"
+                        )
+                        upload_done.append(file_name)
+                        if len(upload_done) == len(all_map_files):
+                            map_files_uploaded[i] = True
+                    else:
+                        logging.getLogger("mfm_updates").info(
+                            f"unable to upload map_file {file_name} of {fleet.name} to master fm, status_code {response_status_code}"
+                        )
+                        time.sleep(10)
                 i += 1
 
 
