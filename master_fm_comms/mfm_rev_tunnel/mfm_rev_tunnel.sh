@@ -70,7 +70,7 @@ rm rev_tunnel_$client_name.service
 sudo systemctl daemon-reload 
 sudo systemctl start rev_tunnel_$client_name.service
 sudo systemctl enable rev_tunnel_$client_name.service
-echo "created a sytemctl service named $rev_tunnel_$client_name.service"
+echo "created a sytemctl service named rev_tunnel_$client_name.service"
 sleep 5
 
 # print status of nginx, rev_tunnel
