@@ -23,7 +23,8 @@ else {
 fi
 
 # create rev_tunnel.service file
-ssh_key_path=$HOME"/.ssh/id_ed25519"
+ssh_key_file=$(ls -l $HOME/.ssh/. | grep id | grep -v "[pub, rsa]$" | awk '{print $NF}')
+ssh_key_path="$HOME/.ssh/$ssh_key_file"
 if [ -f "$ssh_key_path" ]; then
     echo "$ssh_key_path exists."
 else {
@@ -31,6 +32,7 @@ else {
   exit
 }
 fi
+
 
 echo -e "[Unit]\nDescription=Keep reverse tunnel for client $client_name always open\nAfter=network.target" > rev_tunnel_$client_name.service
 echo -e "\n[Service]\nUser=$USER\nEnvironment='AUTOSSH_GATETIME=0'\nExecStart=autossh -M 0 -o 'ServerAliveInterval 30' -o 'ServerAliveCountMax 3' -N -R 9010:localhost:9010 $remote_fm_server" -i $ssh_key_path >> rev_tunnel_$client_name.service
