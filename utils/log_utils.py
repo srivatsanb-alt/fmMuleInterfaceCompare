@@ -17,6 +17,7 @@ def get_other_loggers():
     others_loggers.append("control_module_router")
     others_loggers.append("process_times")
     others_loggers.append("rq")
+    others_loggers.append("fm_debug")
 
     return others_loggers
 
