@@ -179,9 +179,12 @@ def rq_perf():
     return column_names, data
 
 
-def get_route_length(pose_1, pose_2, fleet_name):
+def get_route_length(pose_1, pose_2, fleet_name, redis_conn=None):
     job_id = generate_random_job_id()
-    redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
+
+    if redis_conn is None:
+        redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
+
     route_length = redis_conn.get(f"rl_{str(pose_1)}_{str(pose_2)}")
     if route_length is None:
         control_router_rl_job = [pose_1, pose_2, fleet_name, job_id]
