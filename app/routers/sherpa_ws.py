@@ -25,6 +25,7 @@ from utils.rq_utils import Queues, enqueue
 MSG_INVALID = "msg_invalid"
 MSG_TYPE_REPEATED = "msg_type_repeated_within_time_window"
 MSG_TS_INVALID = "msg_timestamp_invalid"
+MAX_REJECTS = 3
 
 
 # setup logging
@@ -66,10 +67,23 @@ def accept_message(sherpa: str, msg):
 
     type_key = f"{sherpa}_{msg_type}"
     ts_key = f"{sherpa}_ts"
+    reject_key = f"{sherpa}_rejects"
 
+    num_rejects = redis.hget(reject_key, msg_type)
+    num_rejects = int(num_rejects) if num_rejects else 0
+
+    if num_rejects > MAX_REJECTS:
+        logging.getLogger("fm_debug").warning(
+            f"Accepting {msg_type} msg from {sherpa}, was rejected: {num_rejects} times"
+        )
+        num_rejects = redis.hset(reject_key, msg_type, 0)
+        return True, None
+
+    # set if not exists
     if not redis.setnx(type_key, ""):
-        # same message type received less than 0.5 seconds ago
+        redis.hset(reject_key, msg_type, num_rejects + 1)
         return False, MSG_TYPE_REPEATED
+
     # set an expiry of 0.5 seconds
     redis.expire(type_key, expire_after_ms)
 
@@ -78,9 +92,15 @@ def accept_message(sherpa: str, msg):
 
     # check if timestamp is valid
     if math.isclose(ts, prev_ts, rel_tol=1e-10) or ts < prev_ts:
+        logging.getLogger("fm_debug").warning(
+            f"Message rejected: {MSG_TS_INVALID} prev_ts: {prev_ts}, ts: {ts}"
+        )
+        redis.hset(reject_key, msg_type, num_rejects + 1)
         return False, MSG_TS_INVALID
 
     redis.hset(ts_key, msg_type, ts)
+    redis.hset(reject_key, msg_type, 0)
+
     return True, None
 
 

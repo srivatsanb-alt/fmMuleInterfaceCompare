@@ -476,11 +476,28 @@ python3 api_key_gen.py --hw_id <customer_name>
 2.Use add client functionality in client configuration page (requires customer name, api key generated in the previous step)
 ```
 
-3. Make sure mfm_ip, port, cert_files are set as given below 
+3. If the FM server has direct access to sanjaya.atimotors.com then make sure mfm_ip, port, cert_files are set as given below in static/fleet_config/master_fm_config.toml
 ```
 mfm_ip="sanjaya.atimotors.com"
 mfm_port="443"
 mfm_cert_file="/etc/ssl/certs/ca-certificates.crt"
+http_scheme="https"
+ws_scheme="wss"
+```
+
+4. If the FM server doesn't have direct access to sanjaya.atimotors.com but the FM server can be accessed via ssh then set mfm_ip, port, schemes are set as given below in static/fleet_config/master_fm_config.toml. We will have to setup reverse tunnel to sanjaya.atimotors.com
+```
+mfm_ip="127.0.0.1"
+mfm_port="9010"
+mfm_cert_file="/etc/ssl/certs/ca-certificates.crt"
+http_scheme="http"
+ws_scheme="ws"
+```
+
+5. To setup reverse tunnel, copy the folder mfm_rev_tunnel from FM_v<fm_version>_docker_images to the machine which has access sanjaya.atimotors.com(pingable) and has ssh access to the FM server.
+```
+cd mfm_rev_tunnel
+bash mfm_rev_tunnel.sh
 ```
 
 4. Edit params in static/fleet_config/master_fm_config.toml in the FM server and restart the same

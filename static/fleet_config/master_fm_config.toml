@@ -1,4 +1,5 @@
 [master_fm]
+#Config for VPN reverse tunnel setup mfm_ip="127.0.0.1", mfm_port="9010", ws_scheme: "ws" http_scheme: "http", only these four parameters needs to be changed
 mfm_ip="sanjaya.atimotors.com"
 mfm_port="443"
 mfm_cert_file="/etc/ssl/certs/ca-certificates.crt"
