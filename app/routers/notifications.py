@@ -125,4 +125,7 @@ async def writer(websocket, token):
                         del notification[id]["cleared_by"]
                 await websocket.send_json(notification)
             except Exception as e:
-                logger.info(f"Exception in notification webSocket writer {e}")
+                logger.error(
+                    f"Exception in notification webSocket writer for {websocket.client.host}, Exception: {e}"
+                )
+                raise e
