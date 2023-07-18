@@ -6,6 +6,7 @@ import numpy as np
 from typing import List
 import datetime
 import pandas as pd
+import redis
 from sqlalchemy import func
 from sqlalchemy.orm.attributes import flag_modified
 
@@ -51,10 +52,13 @@ def start_trip(
     start_pose = sherpa_status.pose
     fleet_name = ongoing_trip.trip.fleet_name
 
+    redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
     etas_at_start = []
     for station in all_stations:
         end_pose = station.pose
-        route_length = utils_util.get_route_length(start_pose, end_pose, fleet_name)
+        route_length = utils_util.get_route_length(
+            start_pose, end_pose, fleet_name, redis_conn
+        )
         if route_length == np.inf:
             reason = f"no route from {start_pose} to {end_pose}"
             trip_failed_log = f"trip {ongoing_trip.trip_id} failed, sherpa_name: {ongoing_trip.sherpa_name} , reason: {reason}"

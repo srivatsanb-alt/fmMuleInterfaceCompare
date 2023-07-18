@@ -257,6 +257,7 @@ class OptimalDispatch:
         w1 = self.config["eta_power_factor"]
         w2 = self.config["priority_power_factor"]
         max_trips_to_consider = self.config.get("max_trips_to_consider", 15)
+        redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
 
         cost_matrix = np.ones((len(self.pickup_q), len(self.sherpa_q))) * np.inf
         priority_normalised_cost_matrix = (
@@ -293,7 +294,9 @@ class OptimalDispatch:
                     )
                     total_eta = np.inf
                 else:
-                    route_length = utils_util.get_route_length(pose_1, pose_2, fleet_name)
+                    route_length = utils_util.get_route_length(
+                        pose_1, pose_2, fleet_name, redis_conn
+                    )
                     total_eta = route_length + sherpa_q_val["remaining_eta"]
 
                 # to handle w1 == 0  and eta == np.inf case
