@@ -205,8 +205,13 @@ async def reader(websocket, sherpa):
                     f"sherpa name mismatch, sherpa name in DB: {sherpa}, sherpa_name sent by sherpa: {status_msg.sherpa_name}, will not enqueue sherpa_status msg"
                 )
             else:
-                args = [handler_obj, status_msg]
-                enqueue(sherpa_update_q, handle, *args, **kwargs)
+                try:
+                    args = [handler_obj, status_msg]
+                    enqueue(sherpa_update_q, handle, *args, **kwargs)
+                except Exception as e:
+                    logging.getLogger().info(
+                        f"Unable to enqueue status msg of type {msg_type} for {sherpa}, exception: {e}"
+                    )
         else:
             logging.error(f"Unsupported message type {msg_type}")
 
