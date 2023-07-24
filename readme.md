@@ -78,7 +78,20 @@
     copy all the map files of fleet_2 to static/fleet_2/map/
     ```  
 
-5. If server has internet, allows you to download open-source packages (Recommended to use step 6 instead of this step)
+5. Check all the options available in push_fm script, use them according to your requirements
+```
+Program to push fleet_manager repo to the FM server!
+Args: [-i/W|c|h|v]
+options:
+i     Give IP address of the FM server, default is localhost
+W     Copies the contents of static folder on local machine directly to the FM server, else the static folder on server will be retained
+c     Checksout the local directory static to its current git commit after the push is successful
+b     WILL NOT build the base image
+v     Will run docker as host, useful if fm has to communicate with master fm via vpn connection
+h     Display help
+```
+
+6. If server has internet, allows you to download open-source packages (Recommended to use step 6 instead of this step)
 
     a. If you want to setup fm on a remote location, run push_fm script to create all the docker images on the server
     ```markdown
@@ -90,7 +103,7 @@
     ./scripts/push_fm.sh -W
      ```
 
-6. If server doesn't have internet access, copy built docker images to the server from Ati server(data@192.168.10.21:/atidata/datasets/FM_v<fm_version>_docker_images), run the following commands
+7. If server doesn't have internet access, copy built docker images to the server from Ati server(data@192.168.10.21:/atidata/datasets/FM_v<fm_version>_docker_images), run the following commands
 
     a. Load base images on server/localhost
     ```markdown
@@ -109,15 +122,15 @@
     ```markdown
     ./scripts/push_fm.sh -Wb
 
-7. [Setup plugins](#setup-plugin) if any.
+8. [Setup plugins](#setup-plugin) if any.
 
-8. [Setup sherpas](#setup-sherpas).
+9. [Setup sherpas](#setup-sherpas).
 
-9. [Setup optimal dispatch config](#setup-optimal-dispatch-config)
+10. [Setup optimal dispatch config](#setup-optimal-dispatch-config)
 
-10. [Push mule docker image to local docker registry](#push-mule-docker-image-to-local-docker-registry)
+11. [Push mule docker image to local docker registry](#push-mule-docker-image-to-local-docker-registry)
 
-11. To start using fleet_manager, follow [Start or Restart FM](#start-or-restart-fm)
+12. To start using fleet_manager, follow [Start or Restart FM](#start-or-restart-fm)
 
 
 # Setup FM by copying built docker images #
@@ -132,7 +145,7 @@ bash load_docker_images.sh
 
 3. Backup the current fleet_config directory present in the FM server. Copy the updated fleet_config directory from FM_v<fm_version>_docker_images folder to the FM server static dir, update it with the info from fleet_config backup . With updates, config parameters change, redoing config will help.  Static dir should contain updated fleet_config, mule_config, certs, all the required map_folders etc.
     
-4. Copy docker-compose.yml from <fm_repository>/misc/ or FM_v<fm_version>_docker_images folder to the static folder.
+4. Copy docker_compose_host.yml,docker_compose_bridge.yml  from <fm_repository>/misc/ or FM_v<fm_version>_docker_images folder to the static folder.
 
 5. Create cert files if not already present by following [Setup FM with push_fm script](#setup-fm-with-push_fm-script) steps 1-3.
 
@@ -145,13 +158,13 @@ bash load_docker_images.sh
 
 # Start or Restart FM #
 
-   1. Modify timezone if required by setting environment variables TZ, PGTZ in services fleet_manager, db enlisted in static/docker-compose.yml.
+   1. Modify timezone if required by setting environment variables TZ, PGTZ in services fleet_manager, db enlisted in static/<docker_compose_file>, docker_compose_file can be docker_compose_host.yml(to access master_fm via VPN) or docker_compose_bridge.yml based on the conf you choose
 
    2. Start FM
    ```markdown
    cd static
-   docker-compose -p fm down
-   docker-compose -p fm up
+   docker-compose -p fm -f <docker_compose_file> down
+   docker-compose -p fm -f <docker_compose_file> up
    ```
 
    3. Use FM through UI, if running FM on localhost use ip as 127.0.0.1

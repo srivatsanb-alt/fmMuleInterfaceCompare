@@ -3,13 +3,13 @@ Help()
   # Display Help
   echo "Program to push fleet_manager repo to the FM server!"
   echo
-  echo "Args: [-i/W|c|h]"
+  echo "Args: [-i/W|c|h|v]"
   echo "options:"
   echo "i     Give IP address of the FM server, default is localhost"
-  echo "D     Clears existing db tables - Will reset trips state"
-  echo "W     WILL NOT copy the static files from the FM server. Copies the contents of static folder on local machine directly to the FM server."
+  echo "W     Copies the contents of static folder on local machine directly to the FM server, else static files on FM server will be retained"
   echo "c     Checksout the local directory static to its current git commit after the push is successful"
   echo "b     WILL NOT build the base image"
+  echo "v     Will run docker as host, useful if fm has to communicate with master fm via vpn connection"
   echo "h     Display help"
 }
 
