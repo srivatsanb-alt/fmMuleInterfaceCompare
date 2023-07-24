@@ -164,7 +164,13 @@ class OptimalDispatch:
                 trip: Trip = dbsession.get_trip(trip_id)
                 remaining_eta = np.sum(trip.etas)
                 final_dest = trip.augmented_route[-1]
-                final_pose = dbsession.get_station(final_dest).pose
+                try:
+                    final_pose = dbsession.get_station(final_dest).pose
+                except Exception as e:
+                    raise ValueError(
+                        f"Unable to get pose, details of station: {final_dest}, exception: {e}"
+                    )
+
                 pose = final_pose
 
             if not pose:
@@ -224,7 +230,13 @@ class OptimalDispatch:
             if trip_metadata is not None:
                 sherpa_name = trip_metadata.get("sherpa_name")
 
-            pose = dbsession.get_station(pending_trip.trip.route[0]).pose
+            try:
+                pose = dbsession.get_station(pending_trip.trip.route[0]).pose
+            except Exception as e:
+                raise ValueError(
+                    f"Unable to get pose, details of station: {pending_trip.trip.route[0]}, exception: {e}"
+                )
+
             if not pose:
                 raise ValueError(
                     f"{pending_trip.trip.route[0]} pose is None,  cannot assemble_cost_matrix"
