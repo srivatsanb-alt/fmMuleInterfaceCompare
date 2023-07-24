@@ -167,7 +167,7 @@ class OptimalDispatch:
                 try:
                     final_pose = dbsession.get_station(final_dest).pose
                 except Exception as e:
-                    raise ValueError(
+                    raise Exception(
                         f"Unable to get pose, details of station: {final_dest}, exception: {e}"
                     )
 
@@ -233,7 +233,7 @@ class OptimalDispatch:
             try:
                 pose = dbsession.get_station(pending_trip.trip.route[0]).pose
             except Exception as e:
-                raise ValueError(
+                raise Exception(
                     f"Unable to get pose, details of station: {pending_trip.trip.route[0]}, exception: {e}"
                 )
 
