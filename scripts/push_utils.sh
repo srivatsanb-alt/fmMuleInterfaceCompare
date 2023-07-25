@@ -38,7 +38,8 @@ create_static_backup()
 
   ssh $usr_name@$ip_address "rsync -aP --exclude={data_backup,psql} /home/$usr_name/static/. /home/$usr_name/static_old/."
   rsync -azP --no-o --no-g --no-perms --exclude={data_backup,psql} ./static/* $usr_name@$ip_address:/home/$usr_name/static/.
-  rsync -azP ./misc/docker-compose.yml $usr_name@$ip_address:/home/$usr_name/static/.
+  rsync -azP ./misc/docker_compose_bridge.yml $usr_name@$ip_address:/home/$usr_name/static/.
+  rsync -azP ./misc/docker_compose_host.yml $usr_name@$ip_address:/home/$usr_name/static/.
 
   echo "setting env variable FM_SERVER_IP $FM_SERVER_IP"
   ssh $usr_name@$ip_address "export FM_SERVER_IP=$ip_address"
