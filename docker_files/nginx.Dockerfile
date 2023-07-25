@@ -2,7 +2,9 @@ FROM nginx:1.23.3
 WORKDIR /certs
 RUN mkdir /var/wwww
 
-COPY ./misc/nginx.conf /etc/nginx/nginx.conf
+ARG CONF
+
+COPY ./misc/$CONF /etc/nginx/nginx.conf
 COPY ./misc/nginx.htpasswd /etc/nginx/conf.d/nginx.htpasswd
 
 RUN mkdir -p /var/www/fm/html
