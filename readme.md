@@ -160,29 +160,34 @@ bash load_docker_images.sh
 
    1. Modify timezone if required by setting environment variables TZ, PGTZ in services fleet_manager, db enlisted in static/<docker_compose_file>, docker_compose_file can be docker_compose_host.yml(to access master_fm via VPN) or docker_compose_bridge.yml based on the conf you choose
 
-   2. Start FM
+   2. If docker is going to be run in host network mode, modify below mentioned parameters in static/grafana_config/datasources/default.yml 
+   ```
+   url: localhost:5432
+   ```
+
+   3. Start FM
    ```markdown
    cd static
    docker-compose -p fm -f <docker_compose_file> down
    docker-compose -p fm -f <docker_compose_file> up
    ```
 
-   3. Use FM through UI, if running FM on localhost use ip as 127.0.0.1
+   4. Use FM through UI, if running FM on localhost use ip as 127.0.0.1
    ```markdown
    https://<ip>/fm/
    username: <username>
    password: <password>
    ```
 
-   4. Addition/Deletion of fleets, sherpas should be done through Configure page on the dashboard. Adding it to fleet_config.toml will have no effect. Fleets names have to be same as map_names. Copy the map files to the static directory on FM server by following [Setup FM with push_fm script](#setup-fm-with-push_fm-script) step 4 before trying to add it through dashboard.
+   5. Addition/Deletion of fleets, sherpas should be done through Configure page on the dashboard. Adding it to fleet_config.toml will have no effect. Fleets names have to be same as map_names. Copy the map files to the static directory on FM server by following [Setup FM with push_fm script](#setup-fm-with-push_fm-script) step 4 before trying to add it through dashboard.
 
-   5. Please restart FM using restart_fleet_manager button on the maintenance page, after adding sherpas/fleets.  
+   6. Please restart FM using restart_fleet_manager button on the maintenance page, after adding sherpas/fleets.  
 
-   6. Induct all the sherpas that you want to use   
+   7. Induct all the sherpas that you want to use   
       a. Press enable for trips button from sherpa card   
       b. Only those sherpas that has been enabled for trips will get assigned with a trip 
     
-   7. Follow [Fleet maintenance](#fleet-maintenance) if needs be 
+   8. Follow [Fleet maintenance](#fleet-maintenance) if needs be 
 
 
 # Run FM Simulator #
