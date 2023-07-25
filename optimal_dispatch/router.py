@@ -130,4 +130,9 @@ def start_router_module():
 
 
 if __name__ == "__main__":
-    start_router_module()
+    while True:
+        try:
+            start_router_module()
+        except Exception as e:
+            logging.getLogger().error(f"Exception in router, exception: {e}")
+            time.sleep(10)
