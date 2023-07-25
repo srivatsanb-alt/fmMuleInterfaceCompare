@@ -109,7 +109,7 @@ h     Display help
     ```markdown
     ssh username@ip
     cd FM_v<fm_version>_docker_images
-    bash load_docker_images.sh
+    bash load_docker_images.sh <docker_network> # recommended to set docker_network to bridge
     exit
     ```
 
@@ -137,10 +137,10 @@ h     Display help
 
 1. Copy built docker images to the FM server from Ati server(data@192.168.10.21:/atidata/datasets/FM_v<fm_version>_docker_images) 
 
-2. Load docker images 
+2. Load docker images, with arg docker network(host, bridge), recommended to set docker_network to bridge
 ```markdown
 cd FM_v<fm_version>_docker_images
-bash load_docker_images.sh
+bash load_docker_images.sh <docker_network>
 ```
 
 3. Backup the current fleet_config directory present in the FM server. Copy the updated fleet_config directory from FM_v<fm_version>_docker_images folder to the FM server static dir, update it with the info from fleet_config backup . With updates, config parameters change, redoing config will help.  Static dir should contain updated fleet_config, mule_config, certs, all the required map_folders etc.
@@ -158,7 +158,7 @@ bash load_docker_images.sh
 
 # Start or Restart FM #
 
-   1. Modify timezone if required by setting environment variables TZ, PGTZ in services fleet_manager, db enlisted in static/<docker_compose_file>, docker_compose_file can be docker_compose_host.yml(to access master_fm via VPN) or docker_compose_bridge.yml based on the conf you choose
+   1. Modify timezone if required by setting environment variables TZ, PGTZ in services fleet_manager, db enlisted in static/<docker_compose_file>, docker_compose_file can be docker_compose_host.yml(to access master_fm via VPN) or docker_compose_bridge.yml based on the conf you choose, recommended to set docker_network to bridge
 
    2. If docker is going to be run in host network mode, modify below mentioned parameters in static/grafana_config/datasources/default.yml 
    ```
