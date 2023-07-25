@@ -6,7 +6,6 @@ import numpy as np
 from typing import List
 import datetime
 import pandas as pd
-import redis
 from sqlalchemy import func
 from sqlalchemy.orm.attributes import flag_modified
 
