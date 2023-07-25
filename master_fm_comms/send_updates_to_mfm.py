@@ -22,13 +22,16 @@ def send_reset_map_dir_req(mfm_context, fleet_name: str):
         query=fleet_name,
     )
     if response_status_code != 200:
-        raise Exception(f"Unable to reset map dir for fleet_name: {fleet_name}")
+        logging.getLogger("mfm_updates").warning(
+            f"Unable to reset map dir for fleet_name: {fleet_name}"
+        )
+        return False
 
     logging.getLogger("mfm_updates").info(
         f"Reset map dir of the fleet: {fleet_name} successfully"
     )
 
-    return
+    return True
 
 
 def upload_map_files(mfm_context: mu.MFMContext):
@@ -42,7 +45,8 @@ def upload_map_files(mfm_context: mu.MFMContext):
                 map_path = os.path.join(os.environ["FM_STATIC_DIR"], f"{fleet.name}/map/")
                 all_map_files = os.listdir(map_path)
                 upload_done = []
-                send_reset_map_dir_req(mfm_context, fleet.name)
+                while not send_reset_map_dir_req(mfm_context, fleet.name):
+                    time.sleep(30)
                 for file_name in all_map_files:
                     files = []
                     files.append(
