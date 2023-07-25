@@ -211,8 +211,10 @@ async def get_route_wps(
             stations_poses.append(station.pose)
         job_id = utils_util.generate_random_job_id()
         control_router_wps_job = [stations_poses, fleet_name, job_id]
-        await redis_conn.set(
-            f"control_router_wps_job_{job_id}", json.dumps(control_router_wps_job)
+        await redis_conn.setex(
+            f"control_router_wps_job_{job_id}",
+            5 * int(redis_conn.get("default_job_timeout_ms").decode()),
+            json.dumps(control_router_wps_job),
         )
 
         while not await redis_conn.get(f"result_wps_job_{job_id}"):
