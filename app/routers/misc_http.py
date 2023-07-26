@@ -305,17 +305,19 @@ async def get_fm_incidents(
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    response = {}
+    num_incidents = 0
+    response = {"num_incidents": 0}
     with DBSession() as dbsession:
         fm_incidents = dbsession.get_recent_fm_incident(
             get_fm_incident.sherpa_name, n=get_fm_incident.num_of_incidents
         )
 
         if fm_incidents is None:
-            response = {"num_incidents": 0}
             return response
 
         for fm_incident in fm_incidents:
+            num_incidents += 1
+            response["num_incidents"] = num_incidents
             incident_id = fm_incident.incident_id
             response[incident_id] = {}
             response[incident_id].update({"code": fm_incident.code})
