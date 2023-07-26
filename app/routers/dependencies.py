@@ -17,8 +17,9 @@ from models.db_session import DBSession
 
 
 # upon assignment of a task, it gets added into the job queue
-def add_job_to_queued_jobs(job_id, source):
-    redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
+def add_job_to_queued_jobs(job_id, source, redis_conn=None):
+    if redis_conn is None:
+        redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
     queued_jobs = redis_conn.get("queued_jobs")
     if queued_jobs is None:
         queued_jobs = b"{}"
@@ -37,8 +38,9 @@ def add_job_to_queued_jobs(job_id, source):
 
 
 # removes job from the job queue
-def remove_job_from_queued_jobs(job_id, source):
-    redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
+def remove_job_from_queued_jobs(job_id, source, redis_conn=None):
+    if redis_conn is None:
+        redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
     queued_jobs = redis_conn.get("queued_jobs")
     if queued_jobs is None:
         return
@@ -164,16 +166,18 @@ async def process_req_with_response(queue, req, user: str):
     redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
 
     job: Job = process_req(queue, req, user, redis_conn)
-    add_job_to_queued_jobs(job.id, req.source)
+    add_job_to_queued_jobs(job.id, req.source, redis_conn)
 
     error_detail = "Unable to process request"
     status_code = 500  # internal server error
+
+    job = Job.fetch(job.id, connection=redis_conn)
     while True:
-        job = Job.fetch(job.id, connection=redis_conn)
-        status = job.get_status(refresh=True)
+        job.refresh()
+        status = job.get_status()
 
         if status in ["finished", "failed"]:
-            remove_job_from_queued_jobs(job.id, req.source)
+            remove_job_from_queued_jobs(job.id, req.source, redis_conn)
 
         if status == "finished":
             response = job.result
