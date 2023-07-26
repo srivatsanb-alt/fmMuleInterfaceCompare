@@ -312,6 +312,7 @@ async def get_fm_incidents(
         )
 
         if fm_incidents is None:
+            response = {"num_incidents": 0}
             return response
 
         for fm_incident in fm_incidents:
