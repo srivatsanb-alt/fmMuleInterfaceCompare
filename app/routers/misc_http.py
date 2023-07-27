@@ -213,7 +213,7 @@ async def get_route_wps(
         control_router_wps_job = [stations_poses, fleet_name, job_id]
         await redis_conn.setex(
             f"control_router_wps_job_{job_id}",
-            5 * int((await redis_conn.get("default_job_timeout_ms")).decode()),
+            5 * int((await redis_conn.get("default_job_timeout_ms"))),
             json.dumps(control_router_wps_job),
         )
 
