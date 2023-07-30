@@ -182,12 +182,13 @@ class DBSession:
             ext_ref_ids.append(booking_req.ext_ref_id)
 
     def delete_old_bookings_and_combined_trips(self, datetime):
-        self.session.query(CombinedTrips).filter(
-            CombinedTrips.updated_at < datetime
-        ).delete()
+        logging.getLogger("plugin_ies").info(f"deleting old bookings before {datetime}")
         self.session.query(IESBookingReq).filter(
-            IESBookingReq.updated_at < datetime
-        ).delete()
+            IESBookingReq.status.in_(tm.COMPLETED_TRIP_STATUS)
+        ).filter(IESBookingReq.updated_at < datetime).delete()
+        self.session.query(CombinedTrips).filter(
+            CombinedTrips.status.in_(tm.COMPLETED_TRIP_STATUS)
+        ).filter(CombinedTrips.updated_at < datetime).delete()
 
 
 class IESBookingReq(Base, TimestampMixin):
