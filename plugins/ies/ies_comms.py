@@ -84,7 +84,6 @@ async def get_sherpas_at_start(user_name=Depends(dpd.get_user_from_header)):
 
     logging.info(f"getting sherpas at start...")
     response = {}
-    count = 0
     with im.DBSession() as dbsession:
         ies_sherpas = dbsession.get_all_ies_sherpas()
         all_ies_routes = dbsession.get_all_ies_routes()
@@ -100,23 +99,11 @@ async def get_sherpas_at_start(user_name=Depends(dpd.get_user_from_header)):
             sherpa_exclude_stations = iu.get_exclude_stations_sherpa(
                 sherpa_name, fleet_name
             )
-            logging.info(
-                f"IES: sherpa: {sherpa_name} at station: {sherpa_at_station} excl: {len(set(sherpa_exclude_stations).intersection(set(route)))}"
-            )
             if (
                 sherpa_at_station == start_station
                 and len(set(sherpa_exclude_stations).intersection(set(route))) == 0
             ):
-                response.update(
-                    {
-                        count: {
-                            "sherpa": sherpa_name,
-                            "station": route[0],
-                            "route_tag": route_tag,
-                        }
-                    }
-                )
-                count += 1
+                response.update({route_tag: {"sherpa": sherpa_name, "station": route[0]}})
     return response
 
 
@@ -229,6 +216,7 @@ async def consolidate_and_book_trip(
         dpd.raise_error("Unknown requester", 401)
 
     response = {}
+
     q = Queue("plugin_ies", connection=get_redis_conn())
     ies_handler = IES_HANDLER()
     msg = {
