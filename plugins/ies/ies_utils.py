@@ -101,6 +101,7 @@ def get_last_completed_task_msg(last_completed_task):
 def compose_and_send_job_update_msg(ext_ref_id, status, route, next_idx_aug):
     logger.info(f"sending JobUpdates...{ext_ref_id}")
     msg_to_ies = MsgToIES("JobUpdate", ext_ref_id, IES_JOB_STATUS_MAPPING[status]).to_dict()
+    next_idx_aug = 0 if next_idx_aug == None else next_idx_aug
     last_completed_task = None if next_idx_aug == 0 else route[next_idx_aug - 1]
     msg_to_ies.update(
         {
