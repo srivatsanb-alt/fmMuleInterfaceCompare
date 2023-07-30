@@ -231,7 +231,7 @@ class IES_HANDLER:
         ).astimezone(pytz.timezone(tz))
         self.logger.info(f"from: {jobs_from}; till: {jobs_till}")
         jobs = self.dbsession.get_jobs_between_time(jobs_from, jobs_till)
-        self.logger.info(f"jobs: {jobs}")
+        self.logger.info(f"no. of jobs: {len(jobs)}")
         for job in jobs:
             iu.compose_and_send_job_update_msg(
                 job.ext_ref_id,
