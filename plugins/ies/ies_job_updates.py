@@ -53,40 +53,45 @@ def delete_old_data_from_db(dbsession):
 # read status from periodic messages, for those trips in DB, send periodic msgs to IES.
 def send_job_updates():
     while True:
-        with im.DBSession() as dbsession:
-            delete_old_data_from_db(dbsession)
-            all_active_combined_trips = dbsession.get_ongoing_combined_trips()
-            status_code, trip_status_response = _get_trip_status_response(
-                all_active_combined_trips
-            )
-            if status_code != 200:
-                logger.info(f"trip status req to FM failed")
-                continue
-
-            for combined_trip in all_active_combined_trips:
-                trip_id = combined_trip.trip_id
-                trip_details = trip_status_response.get(str(trip_id))
-                # send_agv_update_and_fault(trip_details["sherpa_name"], trip.ext_ref_id)
-
-                trip_status_from_FM = trip_details["trip_details"]["status"]
-                next_idx_aug_from_FM = trip_details["trip_details"]["next_idx_aug"]
-                trip_status_db = combined_trip.status
-                next_idx_aug_db = combined_trip.next_idx_aug
-                logger.info(
-                    f"Trip id {trip_id}; FM: {trip_status_from_FM, next_idx_aug_from_FM}; DB: {trip_status_db, next_idx_aug_db}"
+        try:
+            logger.info("running send_job_updates")
+            with im.DBSession() as dbsession:
+                if datetime.datetime.now().minute == 30:
+                    delete_old_data_from_db(dbsession)
+                all_active_combined_trips = dbsession.get_ongoing_combined_trips()
+                status_code, trip_status_response = _get_trip_status_response(
+                    all_active_combined_trips
                 )
-                if (
-                    trip_status_from_FM != trip_status_db
-                    or next_idx_aug_from_FM != next_idx_aug_db
-                ):
-                    _send_JobUpdate_msgs(
-                        combined_trip,
-                        trip_status_from_FM,
-                        next_idx_aug_from_FM,
-                        dbsession,
+                if status_code != 200:
+                    logger.info(f"trip status req to FM failed")
+                    continue
+
+                for combined_trip in all_active_combined_trips:
+                    trip_id = combined_trip.trip_id
+                    trip_details = trip_status_response.get(str(trip_id))
+                    # send_agv_update_and_fault(trip_details["sherpa_name"], trip.ext_ref_id)
+
+                    trip_status_from_FM = trip_details["trip_details"]["status"]
+                    next_idx_aug_from_FM = trip_details["trip_details"]["next_idx_aug"]
+                    trip_status_db = combined_trip.status
+                    next_idx_aug_db = combined_trip.next_idx_aug
+                    logger.info(
+                        f"Trip id {trip_id}; FM: {trip_status_from_FM, next_idx_aug_from_FM}; DB: {trip_status_db, next_idx_aug_db}"
                     )
-                    combined_trip.status = trip_status_from_FM
-                    combined_trip.next_idx_aug = next_idx_aug_from_FM
+                    if (
+                        trip_status_from_FM != trip_status_db
+                        or next_idx_aug_from_FM != next_idx_aug_db
+                    ):
+                        _send_JobUpdate_msgs(
+                            combined_trip,
+                            trip_status_from_FM,
+                            next_idx_aug_from_FM,
+                            dbsession,
+                        )
+                        combined_trip.status = trip_status_from_FM
+                        combined_trip.next_idx_aug = next_idx_aug_from_FM
+        except Exception as e:
+            logger.info(f"failed sending job updates, exception: {e}")
         time.sleep(30)
 
 
