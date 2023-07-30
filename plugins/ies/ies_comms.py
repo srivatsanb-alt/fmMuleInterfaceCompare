@@ -216,6 +216,8 @@ async def consolidate_and_book_trip(
         dpd.raise_error("Unknown requester", 401)
 
     response = {}
+    if len(consolidate_book_req.ext_ref_ids) == 0:
+        dpd.raise_error("please select atleast one entry to consolidate", 400)
 
     q = Queue("plugin_ies", connection=get_redis_conn())
     ies_handler = IES_HANDLER()
