@@ -244,6 +244,7 @@ async def trip_status_pg_with_type(
                 trip_status_req.booked_till,
                 valid_status,
                 trip_status_req.filter_sherpa_names,
+                trip_status_req.filter_status,
                 trip_status_req.skip,
                 trip_status_req.limit,
             )
@@ -324,6 +325,8 @@ async def trip_analytics_pg(
             trip_analytics_req.booked_from,
             trip_analytics_req.booked_till,
             trip_analytics_req.filter_sherpa_names,
+            trip_analytics_req.order_by,
+            trip_analytics_req.order_mode,
             trip_analytics_req.skip,
             trip_analytics_req.limit,
         )
