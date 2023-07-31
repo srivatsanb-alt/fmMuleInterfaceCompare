@@ -419,7 +419,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "\n\nSELECT\n  SUBSTRING(sherpa_name, 1, 6) AS Sherpa,\n  ROUND(SUM(EXTRACT(EPOCH FROM (end_time - start_time)))/((CASE WHEN $__timeFrom()::DATE = CURRENT_DATE THEN extract(epoch from current_timestamp::time) ELSE 86400 END/100)*COUNT(DISTINCT(start_time::DATE)))) AS Utilization\nFROM\n  trips\nWHERE\n  status = 'succeeded'\n  AND sherpa_name IS NOT NULL\n  AND start_time IS NOT NULL\n  AND end_time IS NOT NULL\n  AND DATE_TRUNC('day', start_time) = DATE_TRUNC('day', end_time)\n  AND start_time >= CAST($__timeFrom() AS timestamp with time zone) AND end_time <= CAST($__timeTo() AS timestamp with time zone)\n  AND fleet_name = '$fleetvar'\nGROUP BY\n  sherpa_name;",
+          "rawSql": "\n\nSELECT\n  SUBSTRING(sherpa_name, 1, 6) AS Sherpa,\n  ROUND(SUM(EXTRACT(EPOCH FROM (end_time - start_time)))/((CASE WHEN CAST($__timeFrom() as timestamp with time zone)::DATE = CAST(current_timestamp as timestamp with time zone)::DATE THEN extract(epoch from CAST(current_timestamp as timestamp with time zone)::time) ELSE 86400 END/100)*COUNT(DISTINCT(start_time::DATE)))) AS Utilization\nFROM\n  trips\nWHERE\n  status = 'succeeded'\n  AND sherpa_name IS NOT NULL\n  AND start_time IS NOT NULL\n  AND end_time IS NOT NULL\n  AND DATE_TRUNC('day', start_time) = DATE_TRUNC('day', end_time)\n  AND start_time >= CAST($__timeFrom() AS timestamp with time zone) AND end_time <= CAST($__timeTo() AS timestamp with time zone)\n  AND fleet_name = '$fleetvar'\nGROUP BY\n  sherpa_name;",
           "refId": "A",
           "sql": {
             "columns": [
@@ -591,8 +591,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               }
             ]
           },
@@ -697,8 +696,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -781,8 +779,8 @@
       {
         "current": {
           "selected": false,
-          "text": "master_fleet_map_superSet",
-          "value": "master_fleet_map_superSet"
+          "text": "JNTata_corridor",
+          "value": "JNTata_corridor"
         },
         "hide": 0,
         "label": "Fleet_Selector ",
@@ -794,14 +792,14 @@
             "value": "all_hands_map"
           }
         ],
-        "query": "master_fleet_map_superSet",
+        "query": "JNTata_corridor",
         "skipUrlSync": false,
         "type": "textbox"
       }
     ]
   },
   "time": {
-    "from": "now-90d",
+    "from": "now-6h",
     "to": "now"
   },
   "timepicker": {},
