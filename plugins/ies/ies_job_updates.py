@@ -56,7 +56,7 @@ def send_job_updates():
         try:
             logger.info("running send_job_updates")
             with im.DBSession() as dbsession:
-                if datetime.datetime.now().minute == 30:
+                if datetime.datetime.now().minute % 30 == 0:
                     delete_old_data_from_db(dbsession)
                 all_active_combined_trips = dbsession.get_ongoing_combined_trips()
                 status_code, trip_status_response = _get_trip_status_response(
