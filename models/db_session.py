@@ -385,11 +385,12 @@ class DBSession:
         )
 
     def get_trips_with_timestamp_and_status_pagination(
-        self, booked_from, booked_till, valid_status, sherpa_names,filter_status, page=0, limit=50
+        self, booked_from, booked_till, valid_status, sherpa_names,filter_status, order_by = "id", 
+            order_mode="desc", page=0, limit=50
     ):
         trips = {}
         count = 0
-        if sherpa_names:
+        if sherpa_names and sherpa_names != "[]" :
             trips = (
                 self.session.query(tm.Trip)
                 .filter(tm.Trip.booking_time > booked_from)
@@ -397,7 +398,7 @@ class DBSession:
                 .filter(tm.Trip.status.in_(valid_status))
                 .filter(tm.Trip.assign_sherpa.in_(sherpa_names))
                 .filter(tm.Trip.status.in_(filter_status))
-                .order_by(tm.Trip.id.desc())
+                .order_by(text(f"{order_by} {order_mode}" ))
                 .offset(page)
                 .limit(limit)
                 .limit.all()
@@ -418,8 +419,7 @@ class DBSession:
                 .filter(tm.Trip.booking_time > booked_from)
                 .filter(tm.Trip.booking_time < booked_till)
                 .filter(tm.Trip.status.in_(valid_status))
-                .filter(tm.Trip.assign_sherpa.in_(sherpa_names))
-                .order_by(tm.Trip.id.desc())
+                .order_by(text(f"{order_by} {order_mode}" ))
                 .offset(page)
                 .limit(limit)
                 .all()
@@ -429,13 +429,12 @@ class DBSession:
                 .filter(tm.Trip.booking_time > booked_from)
                 .filter(tm.Trip.booking_time < booked_till)
                 .filter(tm.Trip.status.in_(valid_status))
-                .filter(tm.Trip.assign_sherpa.in_(sherpa_names))
                 .offset(page)
                 .limit(limit)
                 .count()
             )
         trips = jsonable_encoder(trips)
-        trips = {"trips": [trips], "count": count}
+        trips = {"trips": trips, "count": count, "limit": limit, "order_by":order_by, "order_mode": order_mode}
         return trips
 
     def get_trips_with_timestamp_and_status(self, booked_from, booked_till, valid_status):
@@ -502,7 +501,8 @@ class DBSession:
         return jsonable_encoder(legs)
 
     def get_trip_analytics_with_pagination(
-        self, booked_from, booked_till, sherpa_names, order_by = "trip_id", order_mode="desc", page=0, limit=50
+        self, booked_from, booked_till, sherpa_names, order_by = "id", 
+            order_mode="desc", page=0, limit=50
     ):
         #data validation
         if(limit==0): 

@@ -245,6 +245,8 @@ async def trip_status_pg_with_type(
                 valid_status,
                 trip_status_req.filter_sherpa_names,
                 trip_status_req.filter_status,
+                trip_status_req.order_by,
+                trip_status_req.order_mode,
                 trip_status_req.skip,
                 trip_status_req.limit,
             )
