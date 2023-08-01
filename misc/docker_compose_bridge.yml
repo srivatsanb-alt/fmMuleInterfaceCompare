@@ -14,6 +14,7 @@ services:
       PGTZ: Asia/Kolkata
       TZ: Asia/Kolkata
       FM_DATABASE_URI: postgresql://postgres:postgres@db
+      FM_MONGO_DATABASE_URI: mongodb://ati:atiMongo@mongo:27017
     ports:
      - "8001:8001"
      - "8002:8002"
@@ -24,8 +25,10 @@ services:
       - .:/app/static
     depends_on:
       - db
+      - mongo
     links:
       - db
+      - mongo
     network_mode: bridge
 
   db:
