@@ -40,6 +40,7 @@ psycopg2 = "^2.9.5"
 psutil = "^5.9.4"
 python-multipart = "^0.0.6"
 serial = "^0.0.97"
+pymongo = "^4.4.1"
 
 [tool.poetry.dev-dependencies]
 

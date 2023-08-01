@@ -104,7 +104,7 @@ services:
     environment:
       ME_CONFIG_MONGODB_ADMINUSERNAME: ati
       ME_CONFIG_MONGODB_ADMINPASSWORD: atiMongo
-      ME_CONFIG_MONGODB_URL: mongodb://ati:Mongoe@mongo:27017/
+      ME_CONFIG_MONGODB_URL: mongodb://ati:atiMongo@mongo:27017
     depends_on:
       - mongo
     links:
