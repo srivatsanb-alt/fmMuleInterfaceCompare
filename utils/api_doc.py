@@ -8,9 +8,12 @@ resp_json = response.json()
 
 
 show_only = ["/api/v1/trips"]
+show_all = False
 
 print(f"FM Version: {FM_VERSION}")
-print(f"**This doc would only show apis that start with any of {show_only}**\n\n")
+
+if not show_all:
+    print(f"**This doc would only show apis that start with any of {show_only}**\n\n")
 
 
 all_path_details= resp_json["paths"]
@@ -18,7 +21,7 @@ all_components = resp_json["components"]
 
 count = 1
 for url, details in all_path_details.items():
-    if any([item in url for item in show_only]):
+    if any([item in url for item in show_only]) or show_all:
         print(f"{count}) URL: {url}")
         req_method = list(details.keys())[0]
         print(f"METHOD: {req_method}")
