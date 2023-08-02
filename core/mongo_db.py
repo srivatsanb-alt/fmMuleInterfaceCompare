@@ -43,19 +43,20 @@ class FMMongo:
     def get_all_documents(self, collection):
         return collection.find()
 
-    def get_documents_with_filter(self, collection, filter):
-        return collection.find(filter, {"_id": 0})
+    def get_documents_with_filter(self, collection, filter, display_filter={"_id": 0}):
+        return collection.find(filter, display_filter)
 
     def get_documents_with_permission_level(self, collection, permission_level):
-        filter = {"permission_level": {"$lt": permission_level}}
+        filter = {"permission_level": {"$lte": permission_level}}
         return self.get_documents_with_filter(collection, filter)
 
-    def get_all_document_types(collection, permission_level=None):
+    def get_all_document_types(self, collection, permission_level=None):
         filter = {}
         if permission_level is not None:
             filter = {"permission_level": {"$lt": permission_level}}
         all_types = []
-        cursor = collection.find(filter, {"type": 1, "_id": 0})
+        display_filter = {"type": 1, "_id": 0}
+        cursor = self.get_documents_with_filter(collection, filter, display_filter)
         for record in cursor:
             temp = record.get("type")
             if temp:
