@@ -22,11 +22,27 @@ class FMMongo:
     def list_database_names(self):
         return self.mongo_client.list_database_names()
 
-    def get_database(self, db_name):
+    def create_database(self, db_name):
         return self.mongo_client[db_name]
 
+    def get_database(self, db_name):
+        if db_name in self.list_database_names():
+            return self.mongo_client[db_name]
+        raise Exception(f"Database {db_name} not found")
+
+    def create_collection(self, db, collection_name, validator={}):
+        try:
+            db.create_collection(collection_name)
+            db.command("collMod", collection_name, validator=validator)
+            return True
+        except Exception as e:
+            print(f"Unable to create collection {collection_name}, Exception: {e}")
+        return False
+
     def get_collection(self, collection_name, db_name):
-        return self.mongo_client[db_name][collection_name]
+        if collection_name in self.mongo_client[db_name].list_collection_names():
+            return self.mongo_client[db_name][collection_name]
+        raise Exception(f"Collection {collection_name} not yet created")
 
     def create_index(collection, var, is_unique=True):
         collection.create_index(var, unique=is_unique)
