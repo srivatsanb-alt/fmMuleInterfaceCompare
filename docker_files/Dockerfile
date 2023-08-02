@@ -38,6 +38,7 @@ RUN echo "alias rqi='poetry run rq info'" >> ~/.bashrc
 RUN echo "alias rqe='grep -e rq -C 5 /app/logs/fleet_manager.log'" >> ~/.bashrc
 RUN echo "alias apihw='poetry run python /app/utils/api_key_gen.py --hw_id'" >> ~/.bashrc
 RUN echo "alias apind='poetry run python utils/gen_api_keys_n_devices.py --num_devices'" >> ~/.bashrc
+RUN echo "alias sip='psql -c \"select sherpas.name, sherpas.ip_address, fleets.name from sherpas join fleets on fleet_id=fleets.id;\"'" >> ~/.bashrc
 
 COPY . /app/
 RUN echo "Copying messages_pb2.py to mule/ati/schema on the docker"
