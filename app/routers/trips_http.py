@@ -1,8 +1,13 @@
+from io import BytesIO
+import json
+import logging
 from typing import Union
 from fastapi import APIRouter, Depends
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm.attributes import flag_modified
 import asyncio
-
+import pandas as pd
 # ati code imports
 import app.routers.dependencies as dpd
 import models.request_models as rqm
@@ -548,3 +553,43 @@ async def update_saved_route_metadata(
         flag_modified(saved_route, "other_info")
 
     return response
+
+@router.post("/export_analytics_data")
+async def update_saved_route_metadata(
+     trip_analytics_req: rqm.TripStatusReq, user_name=Depends(dpd.get_user_from_header)
+):
+    response = {}
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    with DBSession() as dbsession:
+        if trip_analytics_req.booked_from and trip_analytics_req.booked_till:
+            trip_analytics_req.booked_from = str_to_dt(trip_analytics_req.booked_from)
+            trip_analytics_req.booked_till = str_to_dt(trip_analytics_req.booked_till)
+
+            all_trip_analytics = dbsession.get_trip_analytics_with_timestamp(
+                trip_analytics_req.booked_from, trip_analytics_req.booked_till
+            )
+
+        else:
+            if not trip_analytics_req.trip_ids:
+                return response
+                all_trip_analytics = dbsession.get_trip_analytics_with_trip_ids(
+                    trip_analytics_req.trip_ids
+                )
+            # dpd.raise_error("no trip id given or available in the given timeframe")
+       
+        logging.getLogger().info(
+            f"normalised json: {jsonable_encoder(all_trip_analytics)}"
+        )
+
+        df = pd.DataFrame(
+        jsonable_encoder(all_trip_analytics), 
+        columns=["sherpa_name",	"trip_id",	"trip_leg_id",	"start_time",	"end_time",	"from_station",	"to_station",	"cte",	"te",	"expected_trip_time",	"actual_trip_time",	"time_elapsed_obstacle_stoppages",	"time_elapsed_visa_stoppages",	"time_elapsed_other_stoppages",	"num_trip_msg",	"created_at",	"updated_at"]
+    )
+    pd.
+    return StreamingResponse(
+        iter([df.to_csv(index=False)]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename=detail_analytics.csv"}
+    )
