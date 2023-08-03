@@ -30,21 +30,23 @@ class FMMongo:
             return self.mongo_client[db_name]
         raise Exception(f"Database {db_name} not found")
 
-    def create_collection(self, db, collection_name, validator={}):
+    def add_validator(self, collection_name, db, validator={}):
+        db.command("collMod", collection_name, validator=validator)
+
+    def create_collection(self, collection_name, db):
         try:
             db.create_collection(collection_name)
-            db.command("collMod", collection_name, validator=validator)
             return True
         except Exception as e:
             print(f"Unable to create collection {collection_name}, Exception: {e}")
         return False
 
-    def get_collection(self, collection_name, db_name):
-        if collection_name in self.mongo_client[db_name].list_collection_names():
-            return self.mongo_client[db_name][collection_name]
+    def get_collection(self, collection_name, db):
+        if collection_name in db.list_collection_names():
+            return db[collection_name]
         raise Exception(f"Collection {collection_name} not yet created")
 
-    def create_index(collection, var, is_unique=True):
+    def create_index(var, collection, is_unique=True):
         collection.create_index(var, unique=is_unique)
 
     def add_permission_level(self, level, **kwargs):
