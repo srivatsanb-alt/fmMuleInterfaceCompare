@@ -23,7 +23,11 @@ class FMMongo:
         return self.mongo_client.list_database_names()
 
     def create_database(self, db_name):
-        return self.mongo_client[db_name]
+        db = self.mongo_client[db_name]
+        db.create_collection("dummy")
+        col = self.get_collection["dummy", db]
+        col.insert_one("{}")
+        return
 
     def get_database(self, db_name):
         if db_name in self.list_database_names():

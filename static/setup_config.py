@@ -2,11 +2,10 @@ from core.mongo_db import FMMongo
 from core.config_validator import ConfigValidator, ConfigDefaults
 
 fm_mongo = FMMongo()
+fm_mongo.create_database("fm_config")
 fc_db = fm_mongo.get_database("fm_config")
 
-all_collection_names = ["optimal_dispatch", "comms", "backup", "simulator"]
-
-collection_name = "optimal_dispatch"
+all_collection_names = ["optimal_dispatch", "comms", "backup", "stations", "master_fm", "conditional_trips"]
 
 for collection_name in all_collection_names:
     fm_mongo.create_collection(collection_name, fc_db)
