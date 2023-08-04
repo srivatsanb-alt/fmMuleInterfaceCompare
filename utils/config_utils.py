@@ -1,3 +1,33 @@
+class CONFIG_VIEW_PERMISSION_LEVELS:
+    OPERATOR = 0
+    SUPERVISOR = 1
+    SUPPORT = 2
+
+
+class FrontendUsers:
+    users = {
+        "$jsonSchema": {
+            "bsonType": "object",
+            "required": ["name", "hashed_password", "role", "fleet_access"],
+            "properties": {
+                "name": {"bsonType": "string", "description": "login username"},
+                "hashed_password": {
+                    "bsonType": "string",
+                    "description": "hashed login password",
+                },
+                "role": {
+                    "bsonType": "string",
+                    "enum": ["operator", "supervisor", "support"],
+                    "description": "Role based access would be provided in the frontend app",
+                },
+                "fleet_access": {
+                    "bsonType": "array",
+                },
+            },
+        }
+    }
+
+
 class ConfigValidator:
     optimal_dispatch = {
         "$jsonSchema": {
@@ -81,7 +111,7 @@ class ConfigValidator:
     rq = {
         "$jsonSchema": {
             "bsonType": "object",
-            "required": ["default_job_timeout", "generic_handler_job_timeou"],
+            "required": ["default_job_timeout", "generic_handler_job_timeout"],
             "properties": {
                 "default_job_timeout": {
                     "bsonType": "int",
@@ -118,7 +148,6 @@ class ConfigValidator:
             "properties": {
                 "all_plugins": {
                     "bsonType": "array",
-                    "enum": ["conveyor", "summon_button", "ies"],
                     "description": "list of all the plugins that needs to be activated`",
                 }
             },
@@ -198,7 +227,6 @@ class ConfigValidator:
             "properties": {
                 "trip_types": {
                     "bsonType": "array",
-                    "enum": ["idling_sherpas", "battery_swap"],
                     "description": "list of all the conditional_trips that needs to be activated`",
                 },
                 "idling_sherpas": {
@@ -253,25 +281,6 @@ class ConfigValidator:
                             "maximum": 10,
                         },
                     },
-                },
-            },
-        }
-    }
-
-    users = {
-        "$jsonSchema": {
-            "bsonType": "object",
-            "required": ["name", "hashed_password", "role"],
-            "properties": {
-                "name": {"bsonType": "string", "description": "login username"},
-                "hashed_password": {
-                    "bsonType": "string",
-                    "description": "hashed login password",
-                },
-                "role": {
-                    "bsonType": "string",
-                    "enum": ["operator", "supervisor", "support"],
-                    "description": "Role based access would be provided in the frontend app",
                 },
             },
         }

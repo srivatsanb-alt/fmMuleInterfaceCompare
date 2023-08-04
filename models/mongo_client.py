@@ -1,16 +1,11 @@
 import pymongo as pm
 import os
+from utils.config_utils import CONFIG_VIEW_PERMISSION_LEVELS
 
 
 def get_mongo_client(uri: str):
     mongo_client = pm.MongoClient(uri)
     return mongo_client
-
-
-class PERMISSION_LEVELS:
-    OPERATOR = 0
-    SUPPORT = 1
-    DEV = 2
 
 
 class FMMongo:
@@ -23,10 +18,11 @@ class FMMongo:
         return self.mongo_client.list_database_names()
 
     def create_database(self, db_name):
-        db = self.mongo_client[db_name]
-        db.create_collection("dummy")
-        col = self.get_collection["dummy", db]
-        col.insert_one("{}")
+        if db_name not in self.list_database_names():
+            db = self.mongo_client[db_name]
+            db.create_collection("dummy")
+            col = self.get_collection["dummy", db]
+            col.insert_one("{}")
         return
 
     def get_database(self, db_name):
@@ -54,7 +50,7 @@ class FMMongo:
         collection.create_index(var, unique=is_unique)
 
     def add_permission_level(self, level, **kwargs):
-        level_int = getattr(PERMISSION_LEVELS, level.upper(), None)
+        level_int = getattr(CONFIG_VIEW_PERMISSION_LEVELS, level.upper(), None)
         if level_int is None:
             raise Exception("Invalid permission level")
         kwargs.update({"permission_level": level_int})
