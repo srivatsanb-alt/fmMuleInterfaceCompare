@@ -57,7 +57,8 @@ class ConfigValidator:
             "properties": {
                 "keep_size_mb": {
                     "bsonType": "int",
-                    "description": "will make sure disk space used by static/data_backup folder size(MB) is less than keep_size_mb",
+                    "minimum": 100,
+                    "description": "Will try make sure disk space used by static/data_backup folder size(MB) is less than keep_size_mb",
                 }
             },
         },
@@ -77,6 +78,27 @@ class ConfigValidator:
         }
     }
 
+    rq = {
+        "$jsonSchema": {
+            "bsonType": "object",
+            "required": ["default_job_timeout", "generic_handler_job_timeou"],
+            "properties": {
+                "default_job_timeout": {
+                    "bsonType": "int",
+                    "description": "Jobs/requests queued up in any redis queue will timeout after default_job_timeout seconds",
+                    "minimum": 10,
+                    "maximum": 50,
+                },
+                "generic_handler_job_timeout": {
+                    "bsonType": "int",
+                    "minimum": 10,
+                    "maximum": 50,
+                    "description": "Jobs/requests queued up in any redis queue will timeout after generic_handler_job_timeout seconds",
+                },
+            },
+        }
+    }
+
     stations = {
         "$jsonSchema": {
             "bsonType": "object",
@@ -90,7 +112,7 @@ class ConfigValidator:
         }
     }
 
-    all_plugins = {
+    plugins = {
         "$jsonSchema": {
             "bsonType": "object",
             "properties": {
@@ -132,17 +154,17 @@ class ConfigValidator:
                 "mfm_cert_file": {
                     "bsonType": "string",
                     "enum": ["/etc/ssl/certs/ca-certificates.crt"],
-                    "description": "ssl cert file to use to access sanjaya/master_fm",
+                    "description": "Path to ssl cert file to use to access sanjaya/master_fm",
                 },
                 "ws_scheme": {
                     "bsonType": "string",
                     "enum": ["ws", "wss"],
-                    "description": "websocket protocol to use, use wss if mfm_port is set to 443 else use ws",
+                    "description": "Websocket protocol to use, use wss if mfm_port is set to 443 else use ws",
                 },
                 "http_scheme": {
                     "bsonType": "string",
                     "enum": ["http", "https"],
-                    "description": "http protocol to use, use https if mfm_port is set to 443 else use http",
+                    "description": "Http protocol to use, use https if mfm_port is set to 443 else use http",
                 },
                 "ws_suffix": {
                     "bsonType": "string",
@@ -163,7 +185,7 @@ class ConfigValidator:
                 },
                 "api_key": {
                     "bsonType": "string",
-                    "description": "api_key required to connect to master_fm/sanjaya server",
+                    "description": "Api_key required to connect to master_fm/sanjaya server",
                 },
             },
         }
@@ -267,6 +289,7 @@ class ConfigDefaults:
     }
     backup = {"keep_size_mb": 1000}
     comms = {"sherpa_heartbeat_interval": 60}
+    rq = {"default_job_timeout": 15, "generic_handler_job_timeout": 10}
     stations = {"dispatch_timeout": 10}
     master_fm = {
         "mfm_ip": "sanjaya.atimotors.com",
@@ -285,3 +308,4 @@ class ConfigDefaults:
         "idling_sherpas": {"book": False, "max_trips": 2, "threshold": 600, "priority": 1},
         "battery_swap": {"book": False, "max_trips": 2, "threshold": 15, "priority": 3},
     }
+    plugins = {"all_plugins": []}
