@@ -1,7 +1,7 @@
 class ConfigValidator:
     optimal_dispatch = {
         "$jsonSchema": {
-            "type": "object",
+            "bsonType": "object",
             "required": [
                 "method",
                 "prioritise_waiting_stations",
@@ -12,34 +12,34 @@ class ConfigValidator:
             ],
             "properties": {
                 "method": {
-                    "type": "string",
+                    "bsonType": "string",
                     "enum": ["hungarian"],
                     "description": "Algorithm used to solve taxi dispatch problem",
                 },
                 "prioritise_waiting_stations": {
-                    "type": "boolean",
+                    "bsonType": "bool",
                     "description": "If set to True, multiply trip priority with a factor calculated based on wait time(time since booking)",
                 },
                 "eta_power_factor": {
-                    "type": "number",
+                    "bsonType": "double",
                     "minimum": 0.1,
                     "maximum": 1.0,
                     "description": "Modifier - actual eta will be modified to eta^eta_power_factor",
                 },
                 "priority_power_factor": {
-                    "type": "number",
+                    "bsonType": "double",
                     "minimum": 0.1,
                     "maximum": 1.0,
                     "description": "Modifier - actual trip priority will be modified to trip_priority^priority_power_factor",
                 },
                 "max_trips_to_consider": {
-                    "type": "number",
+                    "bsonType": "int",
                     "minimum": 1,
                     "maximum": 20,
                     "description": "Max number of trips that will be considered for optimal dispatch, decrease to lessen conputational cost",
                 },
                 "permission_level": {
-                    "type": "number",
+                    "bsonType": "int",
                     "minimum": 1,
                     "maximum": 3,
                     "description": "For role based access",
@@ -50,27 +50,27 @@ class ConfigValidator:
 
     backup = {
         "$jsonSchema": {
-            "type": "object",
+            "bsonType": "object",
             "required": [
                 "keep_size_mb",
             ],
             "properties": {
                 "keep_size_mb": {
-                    "type": "number",
+                    "bsonType": "int",
                     "description": "will make sure disk space used by static/data_backup folder size(MB) is less than keep_size_mb",
                 }
             },
-        }
+        },
     }
     comms = {
         "$jsonSchema": {
-            "type": "object",
+            "bsonType": "object",
             "required": [
                 "mule_heartbeat_interval",
             ],
             "properties": {
                 "mule_heartbeat_interval": {
-                    "type": "number",
+                    "bsonType": "int",
                     "description": "mule will be considered disconnected, if no sherpa_status message was received in the last mule_heartbeat_interval seconds",
                 }
             },
@@ -79,7 +79,7 @@ class ConfigValidator:
 
     simulator = {
         "$jsonSchema": {
-            "type": "object",
+            "bsonType": "object",
             "required": [
                 "simulate",
                 "book_trips",
