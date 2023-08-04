@@ -97,7 +97,7 @@ services:
       MONGO_INITDB_ROOT_USERNAME: ati
       MONGO_INITDB_ROOT_PASSWORD: atiMongo
     volumes:
-      - ./mongo:/data/db
+     - ./mongo:/data/db:rw
     network_mode: bridge
 
   mongo-express:
