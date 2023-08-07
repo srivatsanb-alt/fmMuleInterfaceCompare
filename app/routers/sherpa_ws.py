@@ -12,7 +12,7 @@ from redis import Redis
 
 
 # ati code imports
-from core.config import Config
+import core.handler_configuration as hc
 from core.constants import MessageType
 from models.db_session import DBSession
 import models.misc_models as mm
@@ -158,7 +158,8 @@ async def sherpa_status(
 
 
 async def reader(websocket, sherpa):
-    handler_obj = Config.get_handler()
+    handler_obj = hc.HandlerConfiguration.get_handler()
+
     while True:
         try:
             msg = await websocket.receive_json()

@@ -8,13 +8,14 @@ from fastapi.param_functions import Query
 from rq.job import Job
 from rq import Retry
 from utils.rq_utils import enqueue, enqueue_at, Queues
-from core.config import Config
 import redis
 import os
 import json
 from models.request_models import SherpaReq
 from models.db_session import DBSession
 
+# ati code imports
+import core.handler_configuration as hc
 
 # upon assignment of a task, it gets added into the job queue
 def add_job_to_queued_jobs(job_id, source, redis_conn=None):
@@ -128,7 +129,7 @@ def process_req(queue, req, user, redis_conn=None, dt=None):
     job = None
     req.source = user
 
-    handler_obj = Config.get_handler()
+    handler_obj = hc.HandlerConfiguration.get_handler()
     args = [handler_obj, req]
     kwargs = {}
 

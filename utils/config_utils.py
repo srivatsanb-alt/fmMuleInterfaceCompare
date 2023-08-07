@@ -285,6 +285,7 @@ class ConfigValidator:
             },
         }
     }
+
     simulator = {
         "$jsonSchema": {
             "bsonType": "object",
