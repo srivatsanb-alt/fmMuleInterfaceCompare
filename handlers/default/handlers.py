@@ -14,13 +14,12 @@ import models.trip_models as tm
 import models.visa_models as vm
 from models.base_models import StationProperties
 from models.db_session import DBSession
-
+from models.mongo_client import FMMongo
 import utils.log_utils as lu
 import utils.comms as utils_comms
 import utils.util as utils_util
 import utils.visa_utils as utils_visa
 import core.constants as cc
-from core.config import Config
 
 from optimal_dispatch.dispatcher import OptimalDispatch
 import handlers.default.handler_utils as hutils
@@ -366,9 +365,9 @@ class Handlers:
 
     # run optimal_dispatch
     def run_optimal_dispatch(self, fleet_names):
-        optimal_dispatch_config = Config.get_optimal_dispatch_config()
+        fm_mongo = FMMongo()
+        optimal_dispatch_config = fm_mongo.get_optimal_dispatch_config()
         optimal_dispatch = OptimalDispatch(optimal_dispatch_config)
-
         optimal_dispatch.run(self.dbsession, fleet_names)
 
     def do_pre_actions(self, ongoing_trip: tm.OngoingTrip):
@@ -414,7 +413,9 @@ class Handlers:
         ongoing_trip.add_state(tm.TripState.WAITING_STATION_DISPATCH_START)
         dispatch_mesg = rqm.DispatchButtonReq(value=True)
         if timeout:
-            dispatch_timeout = Config.get_dispatch_timeout()
+            fm_mongo = FMMongo()
+            station_config = fm_mongo.get_station_config()
+            dispatch_timeout = station_config["dispatch_timeout"]
             dispatch_mesg = rqm.DispatchButtonReq(value=True, timeout=dispatch_timeout)
 
         sherpa_action_msg = rqm.PeripheralsReq(

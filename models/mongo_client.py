@@ -80,3 +80,20 @@ class FMMongo:
             if temp:
                 all_types.append(temp)
         return temp
+
+    def get_station_config(self):
+        fc_db = self.mongo_client.get_database("fm_config")
+        station_config = self.get_collection("station", fc_db).find_one()
+        if station_config is None:
+            raise Exception("No station config")
+        return station_config
+
+    def get_optimal_dispatch_config(self):
+        fc_db = self.mongo_client.get_database("fm_config")
+
+        optimal_dispatch_config = self.get_collection("optimal_dispatch", fc_db).find_one()
+
+        if optimal_dispatch_config is None:
+            raise Exception("No optimal_dispatch config")
+
+        return optimal_dispatch_config
