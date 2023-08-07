@@ -11,7 +11,7 @@ from sqlalchemy.orm.attributes import flag_modified
 
 
 # ati code imports
-from core.config import Config
+from models.mongo_client import FMMongo
 import core.constants as cc
 from models.db_session import DBSession
 import models.fleet_models as fm
@@ -231,9 +231,11 @@ def delete_notifications(dbsession: DBSession):
 
 
 def check_sherpa_status(dbsession: DBSession):
-    MULE_HEARTBEAT_INTERVAL = Config.get_fleet_comms_params()["mule_heartbeat_interval"]
+    fm_mongo = FMMongo()
+    comms_config = fm_mongo.get_comms_config()
+    sherpa_heartbeat_interval = comms_config["sherpa_heartbeat_interval"]
     stale_sherpas_status: fm.SherpaStatus = dbsession.get_all_stale_sherpa_status(
-        MULE_HEARTBEAT_INTERVAL
+        sherpa_heartbeat_interval
     )
 
     for stale_sherpa_status in stale_sherpas_status:
@@ -245,7 +247,7 @@ def check_sherpa_status(dbsession: DBSession):
             stale_sherpa_status.disabled_reason = cc.DisabledReason.STALE_HEARTBEAT
 
         logging.getLogger("status_updates").warning(
-            f"stale heartbeat from sherpa {stale_sherpa_status.sherpa_name} last_update_at: {stale_sherpa_status.updated_at} mule_heartbeat_interval: {MULE_HEARTBEAT_INTERVAL}"
+            f"stale heartbeat from sherpa {stale_sherpa_status.sherpa_name} last_update_at: {stale_sherpa_status.updated_at} mule_heartbeat_interval: {sherpa_heartbeat_interval}"
         )
 
         if stale_sherpa_status.trip_id:

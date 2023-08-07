@@ -21,7 +21,7 @@ class FMMongo:
         if db_name not in self.list_database_names():
             db = self.mongo_client[db_name]
             db.create_collection("dummy")
-            col = self.get_collection["dummy", db]
+            col = self.get_collection("dummy", db)
             col.insert_one("{}")
         return
 
@@ -97,3 +97,13 @@ class FMMongo:
             raise Exception("No optimal_dispatch config")
 
         return optimal_dispatch_config
+
+    def get_comms_config(self):
+        fc_db = self.mongo_client.get_database("fm_config")
+
+        comms_config = self.get_collection("comms", fc_db).find_one()
+
+        if comms_config is None:
+            raise Exception("No comms config")
+
+        return comms_config
