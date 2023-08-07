@@ -4,9 +4,6 @@ import redis
 from rq import Queue
 import json
 
-# ati code imports
-from core.config import Config
-
 # utils for redis rq
 class Queues:
     redis_conn = redis.from_url(
@@ -65,7 +62,7 @@ def report_failure(job, connection, fail_type, value, traceback):
     job.save()
 
     logging.getLogger().error(
-        f"RQ job failed: error: {fail_type}, value {value}, func: {job.func_name}, args: {job.args}, kwargs: {job.kwargs}",
+        f"RQ job failed: error: {fail_type}, value {value}, func: {job.func_name}, timeout: {job.timeout}, ttl: {job.ttl}, args: {job.args}, kwargs: {job.kwargs}",
         exc_info=(fail_type, value, traceback),
     )
 
@@ -75,32 +72,16 @@ def report_success(job, connection, result, *args, **kwargs):
 
 
 def enqueue(queue: Queue, func, *args, **kwargs):
-
-    rq_params = Config.get_fleet_rq_params()
-    if queue.name == "generic_handler":
-        job_timeout = rq_params.get("generic_handler_job_timeout", 10)
-    else:
-        job_timeout = rq_params.get("default_job_timeout", 10)
-
     kwargs.setdefault("result_ttl", 100)
     kwargs.setdefault("failure_ttl", 0)
-    kwargs.setdefault("job_timeout", job_timeout)
     kwargs.setdefault("on_failure", report_failure)
     kwargs.setdefault("on_success", report_success)
     return queue.enqueue(func, *args, **kwargs)
 
 
 def enqueue_at(queue: Queue, dt, func, *args, **kwargs):
-
-    rq_params = Config.get_fleet_rq_params()
-    if queue.name == "generic_handler":
-        job_timeout = rq_params.get("generic_handler_job_timeout", 10)
-    else:
-        job_timeout = rq_params.get("default_job_timeout", 10)
-
     kwargs.setdefault("result_ttl", 100)
     kwargs.setdefault("failure_ttl", 0)
-    kwargs.setdefault("job_timeout", job_timeout)
     kwargs.setdefault("on_failure", report_failure)
     kwargs.setdefault("on_success", report_success)
     return queue.enqueue_at(dt, func, *args, **kwargs)

@@ -10,7 +10,7 @@ import json
 # ati code imports
 import utils.log_utils as lu
 import utils.fleet_utils as fu
-from utils.upgrade_db import upgrade_db_schema
+from utils.upgrade_db import upgrade_db_schema, maybe_drop_tables
 from models.db_session import DBSession
 
 # get log config
@@ -57,6 +57,18 @@ def populate_redis_with_basic_info(dbsession: DBSession):
     # set seperate loggers for all sherpas
     lu.set_log_config_dict(sherpa_names)
 
+    # redis_expire_timeout
+    fleet_config = toml.load(os.path.join(os.getenv("FM_CONFIG_DIR"), "fleet_config.toml"))
+
+    # store default job timeout
+    default_job_timeout = fleet_config["fleet"]["rq"].get("default_job_timeout", 15)
+    generic_handler_job_timeout = fleet_config["fleet"]["rq"].get(
+        "generic_handler_job_timeout", 10
+    )
+
+    redis_conn.set("default_job_timeout_ms", default_job_timeout * 1000)
+    redis_conn.set("generic_handler_job_timeout_ms", generic_handler_job_timeout * 1000)
+
 
 def main():
     # regenerate_mule_config for routing
@@ -68,6 +80,7 @@ def main():
     DB_UP = False
     while not DB_UP:
         try:
+            maybe_drop_tables()
             fu.create_all_tables()
             upgrade_db_schema()
             DB_UP = True

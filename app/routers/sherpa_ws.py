@@ -15,14 +15,17 @@ from redis import Redis
 from core.config import Config
 from core.constants import MessageType
 from models.db_session import DBSession
+import models.misc_models as mm
 import models.request_models as rqm
 import app.routers.dependencies as dpd
 import utils.log_utils as lu
+import utils.util as utils_util
 from utils.rq_utils import Queues, enqueue
 
 MSG_INVALID = "msg_invalid"
 MSG_TYPE_REPEATED = "msg_type_repeated_within_time_window"
 MSG_TS_INVALID = "msg_timestamp_invalid"
+MAX_REJECTS = 3
 
 
 # setup logging
@@ -64,10 +67,23 @@ def accept_message(sherpa: str, msg):
 
     type_key = f"{sherpa}_{msg_type}"
     ts_key = f"{sherpa}_ts"
+    reject_key = f"{sherpa}_rejects"
 
+    num_rejects = redis.hget(reject_key, msg_type)
+    num_rejects = int(num_rejects) if num_rejects else 0
+
+    if num_rejects > MAX_REJECTS:
+        logging.getLogger("fm_debug").warning(
+            f"Accepting {msg_type} msg from {sherpa}, was rejected: {num_rejects} times"
+        )
+        num_rejects = redis.hset(reject_key, msg_type, 0)
+        return True, None
+
+    # set if not exists
     if not redis.setnx(type_key, ""):
-        # same message type received less than 0.5 seconds ago
+        redis.hset(reject_key, msg_type, num_rejects + 1)
         return False, MSG_TYPE_REPEATED
+
     # set an expiry of 0.5 seconds
     redis.expire(type_key, expire_after_ms)
 
@@ -76,9 +92,15 @@ def accept_message(sherpa: str, msg):
 
     # check if timestamp is valid
     if math.isclose(ts, prev_ts, rel_tol=1e-10) or ts < prev_ts:
+        logging.getLogger("fm_debug").warning(
+            f"Message rejected: {MSG_TS_INVALID} prev_ts: {prev_ts}, ts: {ts}"
+        )
+        redis.hset(reject_key, msg_type, num_rejects + 1)
         return False, MSG_TS_INVALID
 
     redis.hset(ts_key, msg_type, ts)
+    redis.hset(reject_key, msg_type, 0)
+
     return True, None
 
 
@@ -107,6 +129,15 @@ async def sherpa_status(
         if sherpa.status.other_info is None:
             sherpa.status.other_info = {}
         manage_sherpa_ip_change(sherpa, x_real_ip)
+        connect_notification = f"{sherpa.name} connected to fleet manager!"
+        entity_names = [sherpa.fleet.name, sherpa.name]
+
+        # send sherpa connected notification
+        log_level = mm.NotificationLevels.info
+        module = mm.NotificationModules.generic
+        utils_util.maybe_add_notification(
+            dbsession, entity_names, connect_notification, log_level, module
+        )
 
     await websocket.accept()
     logger.info(f"websocket connection accepeted for {sherpa_name}")
@@ -139,13 +170,20 @@ async def reader(websocket, sherpa):
 
         ok, reason = accept_message(sherpa, msg)
         if not ok:
-            logger.warning(
+            logging.getLogger("status_updates").warning(
                 f"message rejected type={msg_type},ts={ts},sherpa={sherpa},reason={reason}"
             )
             continue
 
         sherpa_update_q = Queues.queues_dict[f"{sherpa}_update_handler"]
         sherpa_trip_q = Queues.queues_dict[f"{sherpa}_trip_update_handler"]
+
+        kwargs = {}
+        generic_handler_job_timeout = int(
+            int(redis.get("generic_handler_job_timeout_ms").decode()) / 1000
+        )
+        kwargs.update({"ttl": 3})
+        kwargs.update({"job_timeout": generic_handler_job_timeout})
 
         if msg_type == MessageType.TRIP_STATUS:
             msg["source"] = sherpa
@@ -155,17 +193,24 @@ async def reader(websocket, sherpa):
             trip_status_msg.stoppages.extra_info = rqm.StoppageInfo.from_dict(
                 msg["stoppages"]["extra_info"]
             )
-            enqueue(sherpa_trip_q, handle, handler_obj, trip_status_msg, ttl=1)
+            args = [handler_obj, trip_status_msg]
+            enqueue(sherpa_trip_q, handle, *args, **kwargs)
 
         elif msg_type == MessageType.SHERPA_STATUS:
             msg["source"] = sherpa
             status_msg = rqm.SherpaStatusMsg.from_dict(msg)
             if status_msg.sherpa_name != sherpa:
                 logger.error(
-                    f"sherpa name mismatch, sherpa name in DB: {sherpa}, sherpa_name sent by sherpa: {temp}, will not enqueue sherpa_status msg"
+                    f"sherpa name mismatch, sherpa name in DB: {sherpa}, sherpa_name sent by sherpa: {status_msg.sherpa_name}, will not enqueue sherpa_status msg"
                 )
             else:
-                enqueue(sherpa_update_q, handle, handler_obj, status_msg, ttl=1)
+                try:
+                    args = [handler_obj, status_msg]
+                    enqueue(sherpa_update_q, handle, *args, **kwargs)
+                except Exception as e:
+                    logging.getLogger().info(
+                        f"Unable to enqueue status msg of type {msg_type} for {sherpa}, exception: {e}"
+                    )
         else:
             logging.error(f"Unsupported message type {msg_type}")
 

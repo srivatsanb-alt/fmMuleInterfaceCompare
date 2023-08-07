@@ -16,6 +16,8 @@ def get_other_loggers():
     others_loggers.append("misc")
     others_loggers.append("control_module_router")
     others_loggers.append("process_times")
+    others_loggers.append("rq")
+    others_loggers.append("fm_debug")
 
     return others_loggers
 
@@ -49,7 +51,8 @@ def add_logger(log_name: str, log_config: dict, propagate=0):
 
 
 def add_handler(log_name: str, log_config: dict):
-    MAX_LOG_SIZE = 2e8
+    # 100 MB
+    MAX_LOG_SIZE = 1e8
     log_file = os.path.join(os.getenv("FM_LOG_DIR"), f"{log_name}.log")
 
     if log_name == "":

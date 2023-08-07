@@ -129,6 +129,24 @@ class BookConditionalTrip:
 
         return was_idling_trip
 
+    def was_last_trip_a_battery_swap_trip(self, sherpa_name: str):
+        was_battery_swap_trip = False
+        last_trip = (
+            self.dbsession.session.query(tm.Trip)
+            .filter(tm.Trip.sherpa_name == sherpa_name)
+            .filter(tm.Trip.status.in_(tm.COMPLETED_TRIP_STATUS))
+            .filter(tm.Trip.start_time != None)
+            .order_by(tm.Trip.start_time.desc())
+            .first()
+        )
+
+        if last_trip is None:
+            pass
+        elif last_trip.booked_by == f"battery_swap_{sherpa_name}":
+            was_battery_swap_trip = True
+
+        return was_battery_swap_trip
+
     def get_num_booked_trips(self, trip_type):
         trips = (
             self.dbsession.session.query(tm.Trip)
@@ -216,6 +234,13 @@ class BookConditionalTrip:
             if already_booked:
                 logging.getLogger("misc").info(
                     f"conditional trip booked already for {sherpa_name}"
+                )
+                continue
+
+            was_battery_swap_trip = self.was_last_trip_a_battery_swap_trip(sherpa_name)
+            if was_battery_swap_trip:
+                logging.getLogger("misc").info(
+                    f"last trip was a conditional trip of type {trip_type}, need not book again"
                 )
                 continue
 

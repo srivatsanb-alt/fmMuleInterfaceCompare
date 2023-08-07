@@ -78,31 +78,21 @@ class VisaReq:
 
 
 #################################################
-# Messages from sherpas
-
-
-class ErrInfo(BaseModel):
-    err_code: str
-    module: Optional[str] = None
-    sub_module: Optional[str] = None
-    err_msg: str
-    err_disp_msg: Optional[str] = None
-    recovery_msg: Optional[str] = None
-    other_info: Optional[dict] = None
-
-
+# Messages from sherpa
 class SherpaReq(BaseModel):
     source: Union[str, None] = None
     type: str
     timestamp: float
+    ttl: Optional[int] = None
 
 
 class WSResp(BaseModel):
     success: bool
     response: Optional[Dict[str, Union[str, int, float, dict, None]]]
+    ttl: Optional[int] = None
 
 
-class InitExtraInfo(BaseModel):
+class InitExtraInfo(SherpaReq):
     display_name: str
     ip_address: str
     chassis_number: str
@@ -148,6 +138,34 @@ class ResourceReq(SherpaReq):
     charging_bay: str = None
     access_type: AccessType = None
     type = MessageType.RESOURCE_ACCESS
+
+
+# messages from sherpa not going to queue
+class FileUploadReq(BaseModel):
+    filename: str
+    type: str
+    fm_incident_id: Optional[str]
+
+
+class AddFMIncidentReq(BaseModel):
+    type: str
+    code: str
+    incident_id: str
+    message: str
+    data_uploaded: bool
+    data_path: Optional[str] = None
+    module: Optional[str] = None
+    sub_module: Optional[str] = None
+    display_message: Optional[str] = None
+    recovery_message: Optional[str] = None
+    other_info: Optional[dict] = None
+
+
+class UpdateIncidentDataDetailsReq(BaseModel):
+    incident_id: str
+    data_uploaded: bool
+    data_path: Optional[str]
+    other_info: Optional[Dict[str, str]] = None
 
 
 #################################################
@@ -213,19 +231,26 @@ class TripStatusMsg(SherpaMsg, JsonMixin):
 
 #################################################
 # internal messsages FM to FM
-class AssignNextTask(BaseModel):
-    source: str = "self"
+class InternalReq(BaseModel):
+    source: Union[str, None] = None
+    ttl: Optional[int] = None
+
+
+class TriggerOptimalDispatch(InternalReq):
+    fleet_name: str
+    type: str = MessageType.TRIGGER_OPTIMAL_DISPATCH
+
+
+class AssignNextTask(InternalReq):
     sherpa_name: str = None
     type: str = MessageType.ASSIGN_NEXT_TASK
 
 
-class FMHealthCheck(BaseModel):
-    source: str = "self"
+class FMHealthCheck(InternalReq):
     type: str = MessageType.FM_HEALTH_CHECK
 
 
-class MiscProcess(BaseModel):
-    source: str = "self"
+class MiscProcess(InternalReq):
     type: str = MessageType.MISC_PROCESS
 
 
@@ -233,6 +258,7 @@ class MiscProcess(BaseModel):
 # Messages from frontend
 class ClientReq(BaseModel):
     source: Union[str, None] = None
+    ttl: Optional[int] = None
 
 
 class MasterDataInfo(ClientReq):
@@ -340,6 +366,17 @@ class SherpaImgUpdateCtrlReq(ClientReq):
     type: str = "sherpa_img_update"
 
 
+class TripStatusReq_pg(ClientReq):
+    skip: int
+    limit: int
+    filter_sherpa_names: Optional[List[str]]
+    filter_status: Optional[List[str]]
+    booked_from: Optional[str]
+    booked_till: Optional[str]
+    
+    order_by: Optional[str]
+    order_mode: Optional[str]
+
 class TripStatusReq(ClientReq):
     booked_from: Optional[str]
     booked_till: Optional[str]
@@ -363,6 +400,7 @@ class DeleteOptimalDispatchAssignments(ClientReq):
 
 class GetFMIncidents(ClientReq):
     sherpa_name: str
+    num_of_incidents: int = 1
 
 
 class SaveRouteReq(ClientReq):
@@ -382,13 +420,17 @@ class UpdateSherpaMetaDataReq(ClientReq):
     info: Dict[str, str]
 
 
+class GenericFromToTimeReq(ClientReq):
+    from_dt: str
+    to_dt: str
+
+
 #################################################
 # Messages to sherpas
-
-
 class FMReq(BaseModel):
     source: Union[str, None] = None
     endpoint: str
+    ttl: Optional[int] = None
 
 
 class InitReq(FMReq):

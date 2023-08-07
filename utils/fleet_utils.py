@@ -79,12 +79,12 @@ def compute_sha1_hash(fpath: str) -> str:
 
 def get_map_file_path(fleet_name: str, file_name: str) -> str:
     return os.path.join(
-        f"{os.environ['FM_MAP_DIR']}", f"{fleet_name}", "map", f"{file_name}"
+        f"{os.environ['FM_STATIC_DIR']}", f"{fleet_name}", "map", f"{file_name}"
     )
 
 
 def get_map_path(fleet_name: str) -> str:
-    return os.path.join(f"{os.environ['FM_MAP_DIR']}", f"{fleet_name}", "map")
+    return os.path.join(f"{os.environ['FM_STATIC_DIR']}", f"{fleet_name}", "map")
 
 
 def get_filenames(directory: str) -> List:
@@ -102,6 +102,22 @@ def get_filenames(directory: str) -> List:
             continue
         file_names.append(item)  # Add it to the list.
     return file_names
+
+
+def is_reset_fleet_required(fleet_name, map_files):
+    fleet_path = os.path.join(os.environ["FM_STATIC_DIR"], f"{fleet_name}/map")
+    for mf in map_files:
+        file_path = f"{fleet_path}/{mf.filename}"
+        try:
+            filehash = compute_sha1_hash(file_path)
+            if filehash != mf.file_hash:
+                return True
+        except Exception as e:
+            logging.getLogger().info(
+                f"Unable to find the shasum of file {file_path}, exception: {e}"
+            )
+            return True
+    return False
 
 
 def maybe_update_map_files(fleet_name: str) -> None:
@@ -167,6 +183,11 @@ def add_master_fm_data_upload(dbsession: DBSession):
                 "last_trip_analytics_update_dt": utils_util.dt_to_str(
                     datetime.datetime.now()
                 ),
+                "last_sherpa_oee_update_dt": utils_util.dt_to_str(datetime.datetime.now()),
+                "last_fm_incidents_update_dt": utils_util.dt_to_str(
+                    datetime.datetime.now()
+                ),
+                "last_file_upload_dt": utils_util.dt_to_str(datetime.datetime.now()),
             }
         )
         dbsession.add_to_session(mfm_du)

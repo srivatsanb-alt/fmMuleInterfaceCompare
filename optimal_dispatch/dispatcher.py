@@ -2,8 +2,6 @@ import numpy as np
 import logging
 import logging.config
 import redis
-import time
-import json
 from typing import List
 from sqlalchemy.sql import or_
 import os
@@ -12,10 +10,10 @@ import pandas as pd
 
 # ati code imports
 import utils.log_utils as lu
+import utils.util as utils_util
 from models.fleet_models import Fleet, AvailableSherpas, OptimalDispatchState
 from models.trip_models import Trip, PendingTrip, TripStatus
 from optimal_dispatch.hungarian import hungarian_assignment
-from utils.util import generate_random_job_id
 
 # get log config
 logging.config.dictConfig(lu.get_log_config_dict())
@@ -130,7 +128,11 @@ class OptimalDispatch:
             wait_time_dt = datetime.datetime.now() - pending_trip.trip.booking_time
 
             if pending_trip.trip.scheduled:
-                wait_time_dt = datetime.datetime.now() - pending_trip.trip.start_time
+                trip_metadata = pending_trip.trip.trip_metadata
+                scheduled_start_time = utils_util.str_to_dt(
+                    trip_metadata["scheduled_start_time"]
+                )
+                wait_time_dt = datetime.datetime.now() - scheduled_start_time
 
             waiting_times.append(wait_time_dt.seconds)
 
@@ -162,7 +164,13 @@ class OptimalDispatch:
                 trip: Trip = dbsession.get_trip(trip_id)
                 remaining_eta = np.sum(trip.etas)
                 final_dest = trip.augmented_route[-1]
-                final_pose = dbsession.get_station(final_dest).pose
+                try:
+                    final_pose = dbsession.get_station(final_dest).pose
+                except Exception as e:
+                    raise Exception(
+                        f"Unable to get pose, details of station: {final_dest}, exception: {e}"
+                    )
+
                 pose = final_pose
 
             if not pose:
@@ -188,7 +196,11 @@ class OptimalDispatch:
         valid_pending_trips = []
         for pending_trip in pending_trips:
             if pending_trip.trip.scheduled:
-                if pending_trip.trip.start_time > datetime.datetime.now():
+                trip_metadata = pending_trip.trip.trip_metadata
+                scheduled_start_time = utils_util.str_to_dt(
+                    trip_metadata["scheduled_start_time"]
+                )
+                if scheduled_start_time > datetime.datetime.now():
                     continue
             valid_pending_trips.append(pending_trip)
 
@@ -218,7 +230,13 @@ class OptimalDispatch:
             if trip_metadata is not None:
                 sherpa_name = trip_metadata.get("sherpa_name")
 
-            pose = dbsession.get_station(pending_trip.trip.route[0]).pose
+            try:
+                pose = dbsession.get_station(pending_trip.trip.route[0]).pose
+            except Exception as e:
+                raise Exception(
+                    f"Unable to get pose, details of station: {pending_trip.trip.route[0]}, exception: {e}"
+                )
+
             if not pose:
                 raise ValueError(
                     f"{pending_trip.trip.route[0]} pose is None,  cannot assemble_cost_matrix"
@@ -248,10 +266,10 @@ class OptimalDispatch:
             count += 1
 
     def assemble_cost_matrix(self, fleet_name):
-        redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
         w1 = self.config["eta_power_factor"]
         w2 = self.config["priority_power_factor"]
         max_trips_to_consider = self.config.get("max_trips_to_consider", 15)
+        redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
 
         cost_matrix = np.ones((len(self.pickup_q), len(self.sherpa_q))) * np.inf
         priority_normalised_cost_matrix = (
@@ -288,23 +306,15 @@ class OptimalDispatch:
                     )
                     total_eta = np.inf
                 else:
-                    job_id = generate_random_job_id()
-                    control_router_rl_job = [pose_1, pose_2, fleet_name, job_id]
-                    redis_conn.set(
-                        f"control_router_rl_job_{job_id}", json.dumps(control_router_rl_job)
+                    route_length = utils_util.get_route_length(
+                        pose_1, pose_2, fleet_name, redis_conn
                     )
-                    while not redis_conn.get(f"result_{job_id}"):
-                        time.sleep(0.005)
-
-                    route_length = json.loads(redis_conn.get(f"result_{job_id}"))
-                    redis_conn.delete(f"result_{job_id}")
                     total_eta = route_length + sherpa_q_val["remaining_eta"]
 
                 # to handle w1 == 0  and eta == np.inf case
                 weighted_total_eta = (
                     (total_eta**w1) if (total_eta != np.inf) else total_eta
                 )
-
                 weighted_pickup_priority = (
                     (pickup_priority**w2)
                     if (pickup_priority != np.inf)
@@ -348,11 +358,12 @@ class OptimalDispatch:
         cost_matrix_df = pd.DataFrame(cost_matrix, index=index, columns=columns)
         self.logger.info(f"{text}:\n{cost_matrix_df.to_markdown()}\n")
 
-    def run(self, dbsession):
-        self.fleet_names = dbsession.get_all_fleet_names()
-        self.logger = logging.getLogger("optimal_dispatch")
-        self.logger.info("will run optimal dispatch logic")
+    def run(self, dbsession, fleet_names):
+        # self.fleet_names = dbsession.get_all_fleet_names()
 
+        self.fleet_names = fleet_names
+        self.logger = logging.getLogger("optimal_dispatch")
+        self.logger.info(f"will run optimal dispatch logic for {fleet_names}")
         self.fleets = []
 
         for fleet_name in self.fleet_names:

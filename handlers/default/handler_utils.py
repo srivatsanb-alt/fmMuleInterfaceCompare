@@ -1,15 +1,11 @@
 import logging
 import logging.config
-import json
 import redis
 import os
-import time
 import numpy as np
 from typing import List
 import datetime
-import psutil
 import pandas as pd
-from rq import Worker
 from sqlalchemy import func
 from sqlalchemy.orm.attributes import flag_modified
 
@@ -20,11 +16,8 @@ import core.constants as cc
 from models.db_session import DBSession
 import models.fleet_models as fm
 import models.trip_models as tm
-import models.request_models as rqm
 import models.misc_models as mm
 import utils.util as utils_util
-from utils.create_certs import generate_certs_for_sherpa
-from utils.fleet_utils import compute_sha1_hash
 import utils.log_utils as lu
 
 
@@ -54,29 +47,17 @@ def start_trip(
     sherpa: fm.Sherpa,
     all_stations: List[fm.Station],
 ):
-
-    redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
     sherpa_status: fm.SherpaStatus = sherpa.status
     start_pose = sherpa_status.pose
     fleet_name = ongoing_trip.trip.fleet_name
 
+    redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
     etas_at_start = []
     for station in all_stations:
-        job_id = utils_util.generate_random_job_id()
         end_pose = station.pose
-        control_router_rl_job = [start_pose, end_pose, fleet_name, job_id]
-        redis_conn.set(f"control_router_rl_job_{job_id}", json.dumps(control_router_rl_job))
-
-        while not redis_conn.get(f"result_{job_id}"):
-            time.sleep(0.005)
-
-        route_length = json.loads(redis_conn.get(f"result_{job_id}"))
-        redis_conn.delete(f"result_{job_id}")
-
-        logging.getLogger(ongoing_trip.sherpa_name).info(
-            f"route_length {control_router_rl_job}- {route_length}"
+        route_length = utils_util.get_route_length(
+            start_pose, end_pose, fleet_name, redis_conn
         )
-
         if route_length == np.inf:
             reason = f"no route from {start_pose} to {end_pose}"
             trip_failed_log = f"trip {ongoing_trip.trip_id} failed, sherpa_name: {ongoing_trip.sherpa_name} , reason: {reason}"
@@ -179,98 +160,25 @@ def is_sherpa_available_for_new_trip(sherpa_status):
 # FM HEALTH CHECK #
 def record_rq_perf():
     redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
-    fm_backup_path = os.path.join(os.getenv("FM_MAP_DIR"), "data_backup")
+    fm_backup_path = os.path.join(os.getenv("FM_STATIC_DIR"), "data_backup")
     current_data = redis_conn.get("current_data_folder").decode()
     csv_save_path = os.path.join(fm_backup_path, current_data, "rq_perf.csv")
-
-    data = []
-    workers = Worker.all(connection=redis_conn)
-
-    column_names = [
-        "datetime",
-        "worker_name",
-        "worker_pid",
-        "worker_state",
-        "worker_queues",
-        "successful_job_count",
-        "failed_job_count",
-        "total_working_time",
-    ]
-
-    for worker in workers:
-        worker_data = [
-            utils_util.dt_to_str(datetime.datetime.now()),
-            worker.name,
-            worker.pid,
-            worker.state,
-            worker.queues,
-            worker.successful_job_count,
-            worker.failed_job_count,
-            worker.total_working_time,
-        ]
-        data.append(worker_data)
-
+    column_names, data = utils_util.rq_perf()
+    data = data
     df = pd.DataFrame(data, columns=column_names)
-
     header = True if not os.path.exists(csv_save_path) else False
     df.to_csv(csv_save_path, mode="a", index=False, header=header)
 
 
 def record_cpu_perf():
-    ONE_GB = 1024**3
 
     redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
-    fm_backup_path = os.path.join(os.getenv("FM_MAP_DIR"), "data_backup")
+    fm_backup_path = os.path.join(os.getenv("FM_STATIC_DIR"), "data_backup")
     current_data = redis_conn.get("current_data_folder").decode()
     csv_save_path = os.path.join(fm_backup_path, current_data, "sys_perf.csv")
 
-    cpu = psutil.cpu_times_percent()
-    mem = psutil.virtual_memory()
-    swap = psutil.swap_memory()
-    net = psutil.net_io_counters()
-    cpu_count = psutil.cpu_count()
-    load_avg = psutil.getloadavg()
-    cpu_freq = psutil.cpu_freq()
-
-    data = [
-        [
-            utils_util.dt_to_str(datetime.datetime.now()),
-            cpu.user,
-            cpu.system,
-            cpu.idle,
-            cpu_count,
-            cpu_freq,
-            np.round(mem.available / ONE_GB, 3),
-            np.round(mem.used / ONE_GB, 3),
-            np.round(swap.used / ONE_GB, 3),
-            load_avg[0],
-            load_avg[1],
-            load_avg[2],
-            net.packets_sent,
-            net.packets_recv,
-            net.errin,
-            net.errout,
-        ]
-    ]
-
-    column_names = [
-        "datetime",
-        "cpu_user",
-        "cpu_system",
-        "cpu_idle",
-        "cpu_count",
-        "cpu_freq",
-        "mem_available_gb",
-        "mem_used_gb",
-        "swap_used_gb",
-        "load_avg_1",
-        "load_avg_5",
-        "load_avg_15",
-        "net_packets_sent",
-        "net_packets_recv",
-        "net_errin",
-        "net_errout",
-    ]
+    column_names, data = utils_util.sys_perf()
+    data = [data]
 
     df = pd.DataFrame(data, columns=column_names)
 
@@ -329,6 +237,9 @@ def check_sherpa_status(dbsession: DBSession):
     )
 
     for stale_sherpa_status in stale_sherpas_status:
+        sherpa_name = stale_sherpa_status.sherpa_name
+        last_sherpa_mode_change = dbsession.get_last_sherpa_mode_change(sherpa_name)
+
         if not stale_sherpa_status.disabled:
             stale_sherpa_status.disabled = True
             stale_sherpa_status.disabled_reason = cc.DisabledReason.STALE_HEARTBEAT
@@ -338,11 +249,20 @@ def check_sherpa_status(dbsession: DBSession):
         )
 
         if stale_sherpa_status.trip_id:
-            maybe_add_alert(
+            utils_util.maybe_add_notification(
                 dbsession,
                 [stale_sherpa_status.sherpa_name],
                 f"Lost connection to {stale_sherpa_status.sherpa_name}, sherpa doing trip: {stale_sherpa_status.trip_id}",
+                mm.NotificationLevels.alert,
+                mm.NotificationModules.generic,
             )
+
+        # set mode change - reflects in sherpa_oee
+        disconnected = "disconnected"
+        if stale_sherpa_status.mode != disconnected:
+            mode = "disconnected"
+            stale_sherpa_status.mode = mode
+            record_sherpa_mode_change(dbsession, sherpa_name, mode, last_sherpa_mode_change)
 
 
 def add_sherpa_event(dbsession: DBSession, sherpa_name, msg_type, context):
@@ -368,74 +288,6 @@ def get_conveyor_ops_info(trip_metadata):
             if num_units is not None:
                 num_units = int(num_units)
     return num_units
-
-
-def update_map_file_info_with_certs(
-    map_file_info, sherpa_hostname, sherpa_ip_address, ip_changed
-):
-    save_path = os.path.join(os.getenv("FM_MAP_DIR"), "certs")
-
-    files_to_process = [
-        os.path.join(save_path, filename)
-        for filename in [f"{sherpa_hostname}_cert.pem", f"{sherpa_hostname}_key.pem"]
-    ]
-
-    if not all([os.path.exists(filename) for filename in files_to_process]) or ip_changed:
-        logging.getLogger().info(
-            f"will generate new cert files, HOSTNAME {sherpa_hostname}, ip_address: {sherpa_ip_address}, ip_changed: {ip_changed}"
-        )
-        generate_certs_for_sherpa(sherpa_hostname, sherpa_ip_address, save_path)
-
-    all_file_hash = []
-    for file_path in files_to_process:
-        all_file_hash.append(compute_sha1_hash(file_path))
-
-    cert_files = [f"{sherpa_hostname}_cert.pem", f"{sherpa_hostname}_key.pem"]
-
-    # hardcoding to 2
-    for i in range(2):
-        map_file_info.append(
-            rqm.MapFileInfo(file_name=cert_files[i], hash=all_file_hash[i])
-        )
-
-    return map_file_info
-
-
-def is_reset_fleet_required(fleet_name, map_files):
-    fleet_path = os.path.join(os.environ["FM_MAP_DIR"], f"{fleet_name}/map")
-    for mf in map_files:
-        file_path = f"{fleet_path}/{mf.filename}"
-        try:
-            filehash = compute_sha1_hash(file_path)
-            if filehash != mf.file_hash:
-                return True
-        except Exception as e:
-            logging.getLogger().info(
-                f"Unable to find the shasum of file {file_path}, exception: {e}"
-            )
-            return True
-    return False
-
-
-def check_if_notification_alert_present(
-    dbsession: DBSession, log: str, enitity_names: list
-):
-    notification = (
-        dbsession.session.query(mm.Notifications)
-        .filter(mm.Notifications.entity_names == enitity_names)
-        .filter(mm.Notifications.log == log)
-        .all()
-    )
-    if len(notification):
-        return True
-    return False
-
-
-def maybe_add_alert(dbsession: DBSession, enitity_names: list, log: str):
-    if not check_if_notification_alert_present(dbsession, log, enitity_names):
-        dbsession.add_notification(
-            enitity_names, log, mm.NotificationLevels.alert, mm.NotificationModules.generic
-        )
 
 
 def record_sherpa_mode_change(

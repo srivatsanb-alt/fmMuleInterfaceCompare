@@ -5,9 +5,6 @@ services:
     container_name: fleet_manager
     restart: always
     build: .
-    ports:
-      - '8001:8001'
-      - '8002:8002'
     environment:
       PGHOST: db
       PGPORT: 5432
@@ -16,15 +13,18 @@ services:
       PGDATABASE: ati_fleet
       PGTZ: Asia/Kolkata
       TZ: Asia/Kolkata
-      FM_DATABASE_URI: postgresql://postgres:postgres@db 
+      FM_DATABASE_URI: postgresql://postgres:postgres@db
+    ports:
+     - "8001:8001"
+     - "8002:8002"
+    expose:
+     - 8001
+     - 8002
     volumes:
       - .:/app/static
-    expose:
-      - 8001
-      - 8002
-    links:
-      - db
     depends_on:
+      - db
+    links:
       - db
     network_mode: bridge
 
@@ -46,21 +46,40 @@ services:
   reverseproxy:
     image: fm_nginx:1.23.3
     container_name: reverseproxy
-    hostname: fm_rev_proxy 
+    hostname: fm_rev_proxy
+    restart: always
     ports:
       - "443:443"
-    restart: always
+    expose:
+      - 443
     volumes:
-      - ./certs:/certs  
+      - ./certs:/certs
     links:
       - fleet_manager
       - registry
+      - grafana
     network_mode: bridge
-  
+
   registry:
     restart: always
     image: registry:2
     container_name: fm_docker_registry
+    network_mode: bridge
+
+  grafana:
+    image: grafana/grafana:9.5.2
+    container_name: fm_grafana
+    restart: always
+    user: "root:root"
+    ports:
+      - "3000:3000"
     expose:
-      - 5000
+      - 3000
+    links:
+      - db
+    volumes:
+      -  ./grafana_config/grafana.ini:/etc/grafana/grafana.ini
+      -  ./grafana_config/datasources:/etc/grafana/provisioning/datasources
+      -  ./grafana_config/dashboards:/etc/grafana/provisioning/dashboards
+      -  ./grafana_config/dashboard_definitions/fleet_analytics.json:/var/lib/dashboards/fleet_analytics.json
     network_mode: bridge

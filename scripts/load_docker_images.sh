@@ -1,4 +1,23 @@
-set -e 
+set -e
+
+DOCKER_NETWORK=$1 
+# not required while pushing from fleet_manager repo
+echo "loading fm nginx image"
+if [ "$DOCKER_NETWORK" = "host" ] ; then {
+   docker image load -i fm_nginx_host.tar || echo "unable to load nginx final image"
+}
+elif [ "$DOCKER_NETWORK" = "bridge" ] ; then {
+   docker image load -i fm_nginx_bridge.tar || echo "unable to load nginx final image" 
+}
+else {
+   echo "Need a valid argument - mention docker network (bridge, host)"
+   echo "Error!"
+   exit
+}
+fi
+
+
+
 # base images
 echo "loading postgres image"
 docker image load -i postgres_14_0.tar
@@ -13,14 +32,9 @@ echo "loading fm_base image"
 docker image load -i fm_base.tar
 echo "loaded fm_base image"
 
-
-# not required while pushing from fleet_manager repo
-echo "loading fm nginx image"
-docker image load -i fm_nginx.tar || echo "unable to load nginx final image"
-
+echo "loading grafana_9_5_2 image"
+docker image load -i grafana_9_5_2.tar
+echo "loaded grafana_9_5_2 image"
 
 echo "loading fm_final image"
 docker image load -i fm_final.tar || echo "unable to load fm final image successfully"
-
-
-

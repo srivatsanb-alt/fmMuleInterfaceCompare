@@ -44,8 +44,11 @@ def get_mfm_url(mfm_context: MFMContext, endpoint, query=""):
         "update_sherpa_info": os.path.join(
             mfm_url, "api/v1/master_fm/fm_client/update_sherpa_info"
         ),
-        "upload_map_files": os.path.join(
-            mfm_url, "api/v1/master_fm/fm_client/upload_map_files", str(query)
+        "upload_map_file": os.path.join(
+            mfm_url, "api/v1/master_fm/fm_client/upload_map_file", str(query)
+        ),
+        "reset_map_dir": os.path.join(
+            mfm_url, "api/v1/master_fm/fm_client/reset_map_dir", str(query)
         ),
         "update_trip_info": os.path.join(
             mfm_url, "api/v1/master_fm/fm_client/update_trip_info"
@@ -56,6 +59,13 @@ def get_mfm_url(mfm_context: MFMContext, endpoint, query=""):
         "update_fm_version_info": os.path.join(
             mfm_url, "api/v1/master_fm/fm_client/update_fm_version_info"
         ),
+        "update_fm_incidents": os.path.join(
+            mfm_url, "api/v1/master_fm/fm_client/add_fm_incidents"
+        ),
+        "update_sherpa_oee": os.path.join(
+            mfm_url, "api/v1/master_fm/fm_client/update_sherpa_oee"
+        ),
+        "upload_file": os.path.join(mfm_url, "api/v1/master_fm/fm_client/upload_file"),
     }
     return fm_endpoints.get(endpoint, None)
 
@@ -68,7 +78,7 @@ def check_response(response):
 
 
 def send_http_req_to_mfm(
-    mfm_context, endpoint, req_type, req_json=None, files=None, query=""
+    mfm_context, endpoint, req_type, req_json=None, files=None, params=None, query=""
 ):
     response_json = None
     url = get_mfm_url(mfm_context, endpoint, query)
@@ -82,6 +92,9 @@ def send_http_req_to_mfm(
 
     if files:
         kwargs.update({"files": files})
+
+    if params:
+        kwargs.update({"params": params})
 
     if mfm_context.http_scheme == "https":
         kwargs.update({"verify": mfm_context.cert_file})

@@ -3,13 +3,13 @@ Help()
   # Display Help
   echo "Program to push fleet_manager repo to the FM server!"
   echo
-  echo "Args: [-i/W|c|h]"
+  echo "Args: [-i/W|c|h|v]"
   echo "options:"
   echo "i     Give IP address of the FM server, default is localhost"
-  echo "D     Clears existing db tables - Will reset trips state"
-  echo "W     WILL NOT copy the static files from the FM server. Copies the contents of static folder on local machine directly to the FM server."
+  echo "W     Copies the contents of static folder on local machine directly to the FM server, else static files on FM server will be retained"
   echo "c     Checksout the local directory static to its current git commit after the push is successful"
   echo "b     WILL NOT build the base image"
+  echo "v     Will run docker as host, useful if fm has to communicate with master fm via vpn connection"
   echo "h     Display help"
 }
 
@@ -38,7 +38,8 @@ create_static_backup()
 
   ssh $usr_name@$ip_address "rsync -aP --exclude={data_backup,psql} /home/$usr_name/static/. /home/$usr_name/static_old/."
   rsync -azP --no-o --no-g --no-perms --exclude={data_backup,psql} ./static/* $usr_name@$ip_address:/home/$usr_name/static/.
-  rsync -azP ./misc/docker-compose.yml $usr_name@$ip_address:/home/$usr_name/static/.
+  rsync -azP ./misc/docker_compose_bridge.yml $usr_name@$ip_address:/home/$usr_name/static/.
+  rsync -azP ./misc/docker_compose_host.yml $usr_name@$ip_address:/home/$usr_name/static/.
 
   echo "setting env variable FM_SERVER_IP $FM_SERVER_IP"
   ssh $usr_name@$ip_address "export FM_SERVER_IP=$ip_address"

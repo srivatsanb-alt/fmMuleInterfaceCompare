@@ -5,7 +5,7 @@ from core.db import get_session, get_engine
 from models.misc_models import FMVersion
 
 
-AVAILABLE_UPGRADES = ["2.2", "3.0", "3.01", "3.1", "3.2"]
+AVAILABLE_UPGRADES = ["2.2", "3.0", "3.01", "3.1", "3.2", "3.3"]
 NO_SCHEMA_CHANGES = ["3.0", "3.01", "3.1"]
 
 
@@ -88,3 +88,32 @@ def upgrade_db_schema():
                 print(f"Successfully upgraded db from {fm_version.version} to {version}")
                 fm_version.version = version
                 session.commit()
+
+
+def maybe_delete_fm_incidents_v3_3():
+    # many schema changes ,false positives in fm_incidents data - dropping the table with old data
+    with get_engine(os.getenv("FM_DATABASE_URI")).connect() as conn:
+        conn.execute("commit")
+        result = conn.execute(
+            "SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='fm_incidents'"
+        )
+        column_names = [row[0] for row in result]
+
+        # data_path was added post FM_v3.2.1
+        if "data_path" not in column_names:
+            conn.execute('DROP TABLE "fm_incidents"')
+            print("dropped table fm_incidents")
+
+
+def maybe_drop_tables():
+    with get_session(os.getenv("FM_DATABASE_URI")) as session:
+        try:
+            fm_version = session.query(FMVersion).one_or_none()
+            if fm_version:
+                if float(fm_version.version) <= 3.3:
+                    maybe_delete_fm_incidents_v3_3()
+
+        except Exception as e:
+            print(
+                f"Unable tom fetch fm version from DB, cannot drop tables based on fm_version, exception: {e}"
+            )

@@ -4,7 +4,6 @@ class MessageType:
     PERIPHERALS = "peripherals"
     SHERPA_STATUS = "sherpa_status"
     TRIP_STATUS = "trip_status"
-    VERIFY_FLEET_FILES = "verify_fleet_files"
     BOOKING = "book"
     PASS_TO_SHERPA = "pass_to_sherpa"
     RESOURCE_ACCESS = "resource_access"
@@ -19,6 +18,7 @@ class MessageType:
     MISC_PROCESS = "misc_process"
     FORCE_DELETE_ONGOING_TRIP = "force_delete_ongoing_trip"
     SAVE_ROUTE = "save_route"
+    TRIGGER_OPTIMAL_DISPATCH = "trigger_optimal_dispatch"
 
 
 OptimalDispatchInfluencers = [

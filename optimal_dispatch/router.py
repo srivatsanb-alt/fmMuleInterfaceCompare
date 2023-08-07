@@ -2,11 +2,12 @@ import redis
 import json
 import time
 import os
-import logging
 import sys
 import numpy as np
 import logging
 import logging.config
+from utils.router_utils import get_dense_path
+
 
 # ati code imports
 import utils.log_utils as lu
@@ -25,12 +26,11 @@ from utils.router_utils import AllRouterModules
 
 
 def start_router_module():
-
+    redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
     with DBSession() as dbsession:
         fleet_names = dbsession.get_all_fleet_names()
 
     all_router_modules = AllRouterModules(fleet_names)
-    redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
 
     logger = logging.getLogger("control_module_router")
 
@@ -48,14 +48,24 @@ def start_router_module():
             route_length = 0
             if not are_poses_close(pose_1, pose_2):
                 try:
-                    route_length = rm.get_route_length(pose_1, pose_2)
+                    route_length = redis_conn.get(f"rl_{str(pose_1)}_{str(pose_2)}")
+                    if route_length is None:
+                        route_length = rm.get_route_length(pose_1, pose_2)
+                        redis_conn.set(f"rl_{str(pose_1)}_{str(pose_2)}", route_length)
+                    else:
+                        route_length = float(route_length)
                 except Exception as e:
                     logger.info(
                         f"unable to find route length between {pose_1} and {pose_2} of {fleet_name} \n Exception {e}"
                     )
                     route_length = json.dumps(np.inf)
 
-            redis_conn.set(f"result_{job_id}", route_length)
+            redis_conn.setex(
+                f"result_{job_id}",
+                int(redis_conn.get("default_job_timeout_ms").decode()),
+                route_length,
+            )
+
             logger.info(f"Result : {control_router_rl_job} - {route_length}")
             redis_conn.delete(key)
 
@@ -81,10 +91,48 @@ def start_router_module():
                 )
                 wps_list = []
 
-            redis_conn.set(f"result_wps_job_{job_id}", json.dumps(wps_list))
+            redis_conn.setex(
+                f"result_wps_job_{job_id}",
+                int(redis_conn.get("default_job_timeout_ms").decode()),
+                json.dumps(wps_list),
+            )
+
+        for key in redis_conn.keys("control_router_dp_rl_job_*"):
+            str_job = redis_conn.get(key)
+            logger.info(f"Got a dp_rl job {str_job}")
+            control_router_get_route_job = json.loads(str_job)
+            pose_1 = control_router_get_route_job[0]
+            pose_2 = control_router_get_route_job[1]
+            fleet_name = control_router_get_route_job[2]
+            job_id = control_router_get_route_job[3]
+            rm = all_router_modules.get_router_module(fleet_name)
+
+            route_length = 0
+            if not are_poses_close(pose_1, pose_2):
+                try:
+                    final_route, visa_obj, rl = rm.get_route(pose_1, pose_2)
+                    x_vals, y_vals, t_vals, _ = get_dense_path(final_route)
+                    dp_rl_result = [x_vals.tolist(), y_vals.tolist(), t_vals.tolist(), rl]
+                except Exception as e:
+                    logger.info(
+                        f"unable to find route between {pose_1} and {pose_2} of {fleet_name} \n Exception {e}"
+                    )
+                    dp_rl_result = [[], [], [], 0]
+
+            redis_conn.setex(
+                f"result_dp_rl_job_{job_id}",
+                int(redis_conn.get("default_job_timeout_ms").decode()),
+                json.dumps(dp_rl_result),
+            )
+            redis_conn.delete(key)
 
         time.sleep(0.2)
 
 
 if __name__ == "__main__":
-    start_router_module()
+    while True:
+        try:
+            start_router_module()
+        except Exception as e:
+            logging.getLogger().error(f"Exception in router, exception: {e}")
+            time.sleep(10)

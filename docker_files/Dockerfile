@@ -15,7 +15,7 @@ ENV FM_INSTALL_DIR="/app" REDIS_PORT=$REDIS_PORT FM_PORT=$FM_PORT PLUGIN_PORT=$P
 
 
 ENV FM_REDIS_URI="redis://localhost:$REDIS_PORT" \
-    FM_MAP_DIR="/app/static" \
+    FM_STATIC_DIR="/app/static" \
     FM_LOG_DIR="/app/logs" \
     FM_MISC_DIR="/app/misc/" \
     FM_CONFIG_DIR="/app/static/fleet_config/" \
@@ -32,6 +32,13 @@ ENV FM_REDIS_URI="redis://localhost:$REDIS_PORT" \
 
 RUN ln -fs /usr/share/zoneinfo/Asia/Kolkata /etc/localtime && \
        dpkg-reconfigure -f noninteractive tzdata
+
+RUN echo "alias inspect='bash /app/scripts/inspect_fm.sh'" >> ~/.bashrc
+RUN echo "alias rqi='poetry run rq info'" >> ~/.bashrc
+RUN echo "alias rqe='grep -e rq -C 5 /app/logs/fleet_manager.log'" >> ~/.bashrc
+RUN echo "alias apihw='poetry run python /app/utils/api_key_gen.py --hw_id'" >> ~/.bashrc
+RUN echo "alias apind='poetry run python utils/gen_api_keys_n_devices.py --num_devices'" >> ~/.bashrc
+RUN echo "alias sip='psql -c \"select sherpas.name, sherpas.ip_address, fleets.name from sherpas join fleets on fleet_id=fleets.id;\"'" >> ~/.bashrc
 
 COPY . /app/
 RUN echo "Copying messages_pb2.py to mule/ati/schema on the docker"
