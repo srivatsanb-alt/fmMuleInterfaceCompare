@@ -285,6 +285,59 @@ class ConfigValidator:
             },
         }
     }
+    simulator = {
+        "$jsonSchema": {
+            "bsonType": "object",
+            "required": [
+                "simulate",
+                "book_trips",
+                "visa_handling",
+                "speedup_factor",
+                "average_velocity",
+                "pause_at_station",
+                "conveyor_capacity",
+            ],
+            "properties": {
+                "simulate": {
+                    "bsonType": "bool",
+                    "description": "Whether to run fleet simulator or not, if set to true sherpa proxies will be created.",
+                },
+                "book_trips": {
+                    "bsonType": "bool",
+                    "description": "Whether to book predefined trips or not, trip definitions need to be configured in routes section",
+                },
+                "visa_handling": {
+                    "bsonType": "bool",
+                    "description": "Whether to simulate visas or not",
+                },
+                "speedup_factor": {
+                    "bsonType": "double",
+                    "description": "Run simulations at a accelarated pace by increasing the speedup_factor, speedup_factor=1.0 is real time",
+                    "minimum": 1.0,
+                },
+                "average_velocity": {
+                    "bsonType": "double",
+                    "description": "Average velocity of sherpas to used in simulations",
+                    "minimum": 0.1,
+                    "maximum": 1.5,
+                },
+                "pause_at_station": {
+                    "bsonType": "int",
+                },
+                "conveyor_capacity": {
+                    "bsonType": "int",
+                },
+                "routes": {
+                    "bsonType": "object",
+                    "description": 'Add keys(key name can be anything) with values like ["Station A", "Station B"], ["10", "2023-05-31 15:00:00", "2023-05-31 16:00:00"]',
+                },
+                "initialize_sherpas_at": {
+                    "bsonType": "object",
+                    "description": "Add sherpa name as key and station name as val",
+                },
+            },
+        }
+    }
 
 
 class ConfigDefaults:
@@ -318,3 +371,12 @@ class ConfigDefaults:
         "battery_swap": {"book": False, "max_trips": 2, "threshold": 15, "priority": 3},
     }
     plugins = {"all_plugins": []}
+    simulator = {
+        "simulate": False,
+        "book_trips": False,
+        "visa_handling": False,
+        "speedup_factor": 1.0,
+        "average_velocity": 0.8,
+        "pause_at_station": 10,
+        "conveyor_capacity": 6,
+    }
