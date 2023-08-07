@@ -13,7 +13,7 @@ class FrontendUsers:
                 "name": {"bsonType": "string", "description": "login username"},
                 "hashed_password": {
                     "bsonType": "string",
-                    "description": "hashed login password",
+                    "description": "Hashed login password",
                 },
                 "role": {
                     "bsonType": "string",
