@@ -48,7 +48,7 @@ class ConfigValidator:
                 },
                 "prioritise_waiting_stations": {
                     "bsonType": "bool",
-                    "description": "If set to True, multiply trip priority with a factor calculated based on wait time(time since booking)",
+                    "description": "If set to True, will multiply trip priority with a factor calculated based on wait time(time since booking)",
                 },
                 "eta_power_factor": {
                     "bsonType": "double",
@@ -223,13 +223,13 @@ class ConfigValidator:
     conditional_trips = {
         "$jsonSchema": {
             "bsonType": "object",
-            "required": ["trip_types", "idling_sherpa", "battery_swap"],
+            "required": ["trip_types", "auto_park", "battery_swap"],
             "properties": {
                 "trip_types": {
                     "bsonType": "array",
                     "description": "list of all the conditional_trips that needs to be activated`",
                 },
-                "idling_sherpa": {
+                "auto_park": {
                     "bsonType": "object",
                     "required": ["book", "max_trips", "threshold", "priority"],
                     "properties": {
@@ -367,8 +367,8 @@ class ConfigDefaults:
         "api_key": "",
     }
     conditional_trips = {
-        "trip_types": ["battery_swap", "idling_sherpa"],
-        "idling_sherpa": {"book": False, "max_trips": 2, "threshold": 600, "priority": 1},
+        "trip_types": ["battery_swap", "auto_park"],
+        "auto_park": {"book": False, "max_trips": 2, "threshold": 600, "priority": 1},
         "battery_swap": {"book": False, "max_trips": 2, "threshold": 15, "priority": 3},
     }
     plugins = {"all_plugins": []}
