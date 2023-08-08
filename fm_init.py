@@ -24,33 +24,33 @@ from mule.ati.common.config import load_mule_config
 
 
 def setfm_mongo_config():
-    fm_mongo = FMMongo()
-    fm_mongo.create_database("fm_config")
-    fc_db = fm_mongo.get_database("fm_config")
-    config_val_members = inspect.getmembers(cu.ConfigValidator)
-    all_collection_names = []
-    for val in config_val_members:
-        if not val[0].startswith("__"):
-            all_collection_names.append(val[0])
+    with FMMongo() as fm_mongo:
+        fm_mongo.create_database("fm_config")
+        fc_db = fm_mongo.get_database("fm_config")
+        config_val_members = inspect.getmembers(cu.ConfigValidator)
+        all_collection_names = []
+        for val in config_val_members:
+            if not val[0].startswith("__"):
+                all_collection_names.append(val[0])
 
-    for collection_name in all_collection_names:
-        fm_mongo.create_collection(collection_name, fc_db)
-        fm_mongo.add_validator(
-            collection_name, fc_db, getattr(cu.ConfigValidator, collection_name)
-        )
-        fc_db.command(
-            "collMod",
-            collection_name,
-            validator=getattr(cu.ConfigValidator, collection_name),
-        )
-        c = fm_mongo.get_collection(collection_name, fc_db)
-        default_config = getattr(cu.ConfigDefaults, collection_name)
-        query = {}
-        if c.find_one_and_replace(query, default_config):
-            logging.getLogger().info(f"updated {collection_name}")
-        else:
-            c.insert_one(default_config)
-            logging.getLogger().info(f"Inserted {collection_name}")
+        for collection_name in all_collection_names:
+            fm_mongo.create_collection(collection_name, fc_db)
+            fm_mongo.add_validator(
+                collection_name, fc_db, getattr(cu.ConfigValidator, collection_name)
+            )
+            fc_db.command(
+                "collMod",
+                collection_name,
+                validator=getattr(cu.ConfigValidator, collection_name),
+            )
+            c = fm_mongo.get_collection(collection_name, fc_db)
+            default_config = getattr(cu.ConfigDefaults, collection_name)
+            query = {}
+            if c.find_one_and_replace(query, default_config):
+                logging.getLogger().info(f"updated {collection_name}")
+            else:
+                c.insert_one(default_config)
+                logging.getLogger().info(f"Inserted {collection_name}")
 
 
 def regenerate_config():

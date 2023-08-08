@@ -14,6 +14,12 @@ class FMMongo:
             uri = os.getenv("FM_MONGO_DATABASE_URI")
         self.mongo_client = get_mongo_client(uri)
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.mongo_client.close()
+
     def list_database_names(self):
         return self.mongo_client.list_database_names()
 
@@ -22,7 +28,7 @@ class FMMongo:
             db = self.mongo_client[db_name]
             db.create_collection("dummy")
             col = self.get_collection("dummy", db)
-            col.insert_one("{}")
+            col.insert_one({})
         return
 
     def get_database(self, db_name):
@@ -81,29 +87,9 @@ class FMMongo:
                 all_types.append(temp)
         return temp
 
-    def get_station_config(self):
+    def get_collection_from_fm_config(self, collection_name):
         fc_db = self.mongo_client.get_database("fm_config")
-        station_config = self.get_collection("station", fc_db).find_one()
-        if station_config is None:
-            raise Exception("No station config")
-        return station_config
-
-    def get_optimal_dispatch_config(self):
-        fc_db = self.mongo_client.get_database("fm_config")
-
-        optimal_dispatch_config = self.get_collection("optimal_dispatch", fc_db).find_one()
-
-        if optimal_dispatch_config is None:
-            raise Exception("No optimal_dispatch config")
-
-        return optimal_dispatch_config
-
-    def get_comms_config(self):
-        fc_db = self.mongo_client.get_database("fm_config")
-
-        comms_config = self.get_collection("comms", fc_db).find_one()
-
-        if comms_config is None:
-            raise Exception("No comms config")
-
-        return comms_config
+        temp = self.get_collection(collection_name, fc_db).find_one()
+        if temp is None:
+            raise Exception(f"No {collection_name} config")
+        return temp
