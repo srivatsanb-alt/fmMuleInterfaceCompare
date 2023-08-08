@@ -2,7 +2,9 @@ import logging
 import os
 import requests
 from dataclasses import dataclass
-import toml
+
+# ati code imports
+from models.mongo_client import FMMongo
 
 
 @dataclass
@@ -116,28 +118,23 @@ def send_http_req_to_mfm(
 
 
 def get_mfm_context():
-    mfm_config_path = os.path.join(os.getenv("FM_CONFIG_DIR"), "master_fm_config.toml")
+    with FMMongo() as fm_mongo:
+        mfm_config = fm_mongo.get_collection_from_fm_config("master_fm")
 
-    if not os.path.exists(mfm_config_path):
-        logging.getLogger("mfm_updates").error(f"mfm_config : {mfm_config_path} not found")
-        return
-
-    mfm_config = toml.load(mfm_config_path)
-
-    if not mfm_config["master_fm"]["comms"].get("send_updates", False):
+    if not mfm_config["send_updates"]:
         logging.getLogger("mfm_updates").info("Send updates set/default to False")
         return
 
     mfm_context = MFMContext(
-        http_scheme=mfm_config["master_fm"]["http_scheme"],
-        server_ip=mfm_config["master_fm"]["mfm_ip"],
-        server_port=mfm_config["master_fm"]["mfm_port"],
-        ws_scheme=mfm_config["master_fm"]["ws_scheme"],
-        ws_suffix=mfm_config["master_fm"]["ws_suffix"],
-        cert_file=mfm_config["master_fm"]["mfm_cert_file"],
-        x_api_key=mfm_config["master_fm"]["comms"]["api_key"],
-        update_freq=mfm_config["master_fm"]["comms"]["update_freq"],
-        ws_update_freq=mfm_config["master_fm"]["comms"]["ws_update_freq"],
+        http_scheme=mfm_config["http_scheme"],
+        server_ip=mfm_config["mfm_ip"],
+        server_port=mfm_config["mfm_port"],
+        ws_scheme=mfm_config["ws_scheme"],
+        ws_suffix=mfm_config["ws_suffix"],
+        cert_file=mfm_config["mfm_cert_file"],
+        x_api_key=mfm_config["api_key"],
+        update_freq=mfm_config["update_freq"],
+        ws_update_freq=mfm_config["ws_update_freq"],
     )
 
     return mfm_context

@@ -1,13 +1,12 @@
 # python module imports
 import datetime
 import time
-import os
-import toml
 import logging
 from sqlalchemy.sql import not_
 
 # ati code imports
 from models.db_session import DBSession
+from models.mongo_client import FMMongo
 import models.trip_models as tm
 import models.fleet_models as fm
 import models.request_models as rqm
@@ -15,15 +14,13 @@ import app.routers.dependencies as dpd
 
 
 def get_conditional_trip_config():
-    conf_path = os.path.join(os.getenv("FM_CONFIG_DIR"), "conditional_trips.toml")
 
-    if not os.path.exists(conf_path):
-        logging.getLogger("misc").error(f"conditional trip config : {conf_path} not found")
-        return
+    with FMMongo() as fm_mongo:
+        conditional_trips_config = fm_mongo.get_collection_from_fm_config(
+            "conditional_trips"
+        )
 
-    config = toml.load(conf_path)
-
-    return config.get("conditional_trips", {})
+    return conditional_trips_config
 
 
 def enqueue_trip_msg(sherpa_name: str, route: list, trip_type: str, priority: float):

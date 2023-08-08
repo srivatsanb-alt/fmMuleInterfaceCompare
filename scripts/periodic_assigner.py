@@ -4,7 +4,7 @@ from sqlalchemy.sql import not_
 
 
 # ati code imports
-from core.config import Config
+from models.mongo_client import FMMongo
 from models.db_session import DBSession
 import models.request_models as rqm
 from models.fleet_models import SherpaStatus
@@ -43,7 +43,10 @@ def enqueue_scheduled_trips(db_session: DBSession, schdeuled_job_id):
 
 # assigns next task to the sherpa.
 def assign_next_task():
-    rq_params = Config.get_fleet_rq_params()
+
+    with FMMongo() as fm_mongo:
+        rq_params = fm_mongo.get_collection_from_fm_config("rq")
+
     job_timeout = rq_params.get("generic_handler_job_timeout", 10)
 
     while True:

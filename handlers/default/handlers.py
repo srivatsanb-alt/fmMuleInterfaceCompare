@@ -365,8 +365,11 @@ class Handlers:
 
     # run optimal_dispatch
     def run_optimal_dispatch(self, fleet_names):
-        fm_mongo = FMMongo()
-        optimal_dispatch_config = fm_mongo.get_optimal_dispatch_config()
+        with FMMongo() as fm_mongo:
+            optimal_dispatch_config = fm_mongo.get_collection_from_fm_config(
+                "optimal_dispatch"
+            )
+
         optimal_dispatch = OptimalDispatch(optimal_dispatch_config)
         optimal_dispatch.run(self.dbsession, fleet_names)
 
@@ -413,8 +416,10 @@ class Handlers:
         ongoing_trip.add_state(tm.TripState.WAITING_STATION_DISPATCH_START)
         dispatch_mesg = rqm.DispatchButtonReq(value=True)
         if timeout:
-            fm_mongo = FMMongo()
-            station_config = fm_mongo.get_station_config()
+
+            with FMMongo() as fm_mongo:
+                station_config = fm_mongo.get_collection_from_fm_config("stations")
+
             dispatch_timeout = station_config["dispatch_timeout"]
             dispatch_mesg = rqm.DispatchButtonReq(value=True, timeout=dispatch_timeout)
 

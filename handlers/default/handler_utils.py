@@ -231,8 +231,9 @@ def delete_notifications(dbsession: DBSession):
 
 
 def check_sherpa_status(dbsession: DBSession):
-    fm_mongo = FMMongo()
-    comms_config = fm_mongo.get_comms_config()
+    with FMMongo() as fm_mongo:
+        comms_config = fm_mongo.get_collection_from_fm_config("comms")
+
     sherpa_heartbeat_interval = comms_config["sherpa_heartbeat_interval"]
     stale_sherpas_status: fm.SherpaStatus = dbsession.get_all_stale_sherpa_status(
         sherpa_heartbeat_interval

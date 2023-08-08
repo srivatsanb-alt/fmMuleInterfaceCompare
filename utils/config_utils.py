@@ -78,7 +78,7 @@ class ConfigValidator:
         },
     }
 
-    backup = {
+    data_backup = {
         "$jsonSchema": {
             "bsonType": "object",
             "required": [
@@ -223,13 +223,13 @@ class ConfigValidator:
     conditional_trips = {
         "$jsonSchema": {
             "bsonType": "object",
-            "required": ["trip_types", "idling_sherpas", "battery_swap"],
+            "required": ["trip_types", "idling_sherpa", "battery_swap"],
             "properties": {
                 "trip_types": {
                     "bsonType": "array",
                     "description": "list of all the conditional_trips that needs to be activated`",
                 },
-                "idling_sherpas": {
+                "idling_sherpa": {
                     "bsonType": "object",
                     "required": ["book", "max_trips", "threshold", "priority"],
                     "properties": {
@@ -330,7 +330,7 @@ class ConfigValidator:
                 },
                 "routes": {
                     "bsonType": "object",
-                    "description": 'Add keys(key name can be anything) with values like ["Station A", "Station B"], ["10", "2023-05-31 15:00:00", "2023-05-31 16:00:00"]',
+                    "description": 'Add keys(key name can be anything) with values like [["Station A", "Station B"], ["10", "2023-05-31 15:00:00", "2023-05-31 16:00:00"]]',
                 },
                 "initialize_sherpas_at": {
                     "bsonType": "object",
@@ -350,7 +350,7 @@ class ConfigDefaults:
         "max_trips_to_consider": 5,
         "permission_level": 1,
     }
-    backup = {"keep_size_mb": 1000}
+    data_backup = {"keep_size_mb": 1000}
     comms = {"sherpa_heartbeat_interval": 60}
     rq = {"default_job_timeout": 15, "generic_handler_job_timeout": 10}
     stations = {"dispatch_timeout": 10}
@@ -367,17 +367,19 @@ class ConfigDefaults:
         "api_key": "",
     }
     conditional_trips = {
-        "trip_types": ["battery_swap", "idling_sherpas"],
-        "idling_sherpas": {"book": False, "max_trips": 2, "threshold": 600, "priority": 1},
+        "trip_types": ["battery_swap", "idling_sherpa"],
+        "idling_sherpa": {"book": False, "max_trips": 2, "threshold": 600, "priority": 1},
         "battery_swap": {"book": False, "max_trips": 2, "threshold": 15, "priority": 3},
     }
     plugins = {"all_plugins": []}
     simulator = {
-        "simulate": False,
+        "simulate": True,
         "book_trips": False,
         "visa_handling": False,
         "speedup_factor": 1.0,
         "average_velocity": 0.8,
         "pause_at_station": 10,
         "conveyor_capacity": 6,
+        "initialize_sherpas_at": {},
+        "routes": {},
     }

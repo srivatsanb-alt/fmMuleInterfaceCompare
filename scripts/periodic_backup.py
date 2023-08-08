@@ -13,11 +13,14 @@ import json
 
 # ati code imports
 from core.db import get_engine
-from core.config import Config
+from models.mongo_client import FMMongo
 
 
 def backup_data():
-    backup_config = Config.get_backup_config()
+
+    with FMMongo() as fm_mongo:
+        backup_config = fm_mongo.get_collection_from_fm_config("data_backup")
+
     logging.getLogger().info("Starting periodic data_backup")
     fm_backup_path = os.path.join(os.getenv("FM_STATIC_DIR"), "data_backup")
     start_time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
@@ -102,7 +105,7 @@ def backup_data():
 
         try:
             # default keep size is 1000MB
-            keep_size_mb = backup_config.get("keep_size_mb", 1000)
+            keep_size_mb = backup_config["keep_size_mb"]
             cleanup_data(current_data, keep_size_mb)
 
         except Exception as e:
