@@ -931,6 +931,16 @@ class Handlers:
             # sherpa switched to fleet mode
             self.initialize_sherpa(sherpa)
 
+        if req.mode == "error":
+            sherpa_error_alert = f"{req.sherpa_name} in error, error_info: {req.error_info}"
+            utils_util.maybe_add_notification(
+                self.dbsession,
+                [sherpa.fleet.name],
+                sherpa_error_alert,
+                mm.NotificationLevels.alert,
+                mm.NotificationModules.generic,
+            )
+
         _, _ = self.should_assign_next_task(sherpa, ongoing_trip, pending_trip)
 
         if req.mode == status.mode:

@@ -340,6 +340,26 @@ class ConfigValidator:
         }
     }
 
+    alerts = {
+        "$jsonSchema": {
+            "bsonType": "object",
+            "required": [
+                "notifications",
+                "slack_webhook_url",
+            ],
+            "properties": {
+                "notifications": {
+                    "bsonType": "bool",
+                    "description": "Whether to send notifications/alert to the slack webhook",
+                },
+                "slack_webhook_url": {
+                    "bsonType": "string",
+                    "description": "slack slack webhook url",
+                },
+            },
+        }
+    }
+
 
 class ConfigDefaults:
     optimal_dispatch = {
@@ -382,4 +402,8 @@ class ConfigDefaults:
         "conveyor_capacity": 6,
         "initialize_sherpas_at": {},
         "routes": {},
+    }
+    alerts = {
+        "notifications": True,
+        "slack_webhook_url": "https://hooks.slack.com/services/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",
     }
