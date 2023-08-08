@@ -61,6 +61,7 @@ services:
       - fleet_manager
       - registry
       - grafana
+      - mongo-express
     network_mode: bridge
 
   registry:
@@ -106,10 +107,15 @@ services:
     restart: always
     ports:
       - "8081:8081"
+    expose:
+      - 8081
     environment:
       ME_CONFIG_MONGODB_ADMINUSERNAME: ati
       ME_CONFIG_MONGODB_ADMINPASSWORD: atiMongo
       ME_CONFIG_MONGODB_URL: mongodb://ati:atiMongo@mongo:27017
+      ME_CONFIG_SITE_BASEURL: "/config_editor"
+      ME_CONFIG_BASICAUTH_USERNAME: "ati_support"
+      ME_CONFIG_BASICAUTH_PASSWORD: "ati112"
     depends_on:
       - mongo
     links:
