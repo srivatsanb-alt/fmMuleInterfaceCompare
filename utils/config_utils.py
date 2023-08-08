@@ -100,9 +100,11 @@ class ConfigValidator:
                 "sherpa_heartbeat_interval",
             ],
             "properties": {
-                "mule_heartbeat_interval": {
+                "sherpa_heartbeat_interval": {
                     "bsonType": "int",
                     "description": "sherpa will be considered disconnected, if no sherpa_status message was received in the last sherpa_heartbeat_interval seconds",
+                    "minimum": 30,
+                    "maximum": 90,
                 }
             },
         }
