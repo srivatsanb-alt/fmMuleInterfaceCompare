@@ -26,7 +26,7 @@ class FMMongo:
     def create_database(self, db_name):
         if db_name not in self.list_database_names():
             db = self.mongo_client[db_name]
-            db.create_collection("dummy")
+            db.create_collection("dummy", capped=True, size=1, max=1)
             col = self.get_collection("dummy", db)
             col.insert_one({})
         return
@@ -39,9 +39,9 @@ class FMMongo:
     def add_validator(self, collection_name, db, validator={}):
         db.command("collMod", collection_name, validator=validator)
 
-    def create_collection(self, collection_name, db):
+    def create_collection(self, collection_name, db, **kwargs):
         try:
-            db.create_collection(collection_name)
+            db.create_collection(collection_name, **kwargs)
             return True
         except Exception as e:
             print(f"Unable to create collection {collection_name}, Exception: {e}")

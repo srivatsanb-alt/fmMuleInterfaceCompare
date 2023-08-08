@@ -407,3 +407,7 @@ class ConfigDefaults:
         "notifications": True,
         "slack_webhook_url": "https://hooks.slack.com/services/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",
     }
+
+
+class CreateColKwargs:
+    capped_default = {"capped": True, "max": 1, "size": 10}
