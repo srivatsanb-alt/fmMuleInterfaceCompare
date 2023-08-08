@@ -1,10 +1,19 @@
 import time
-from utils.rq_utils import Queues, enqueue
-from utils.util import generate_random_job_id
-from core.config import Config
 import requests
 import ast
 import redis
+import json
+import random
+import os
+from multiprocessing import Process
+import numpy as np
+from typing import List
+import threading
+
+# ati code
+import core.handler_configuration as hc
+from utils.rq_utils import Queues, enqueue
+from utils.util import generate_random_job_id
 from models.request_models import (
     SherpaStatusMsg,
     TripStatusMsg,
@@ -19,12 +28,6 @@ from models.request_models import (
 )
 from models.trip_models import OngoingTrip
 from models.trip_models import TripState as ts
-from typing import List
-import json
-import random
-import os
-from multiprocessing import Process
-import numpy as np
 from models.db_session import DBSession
 from models.fleet_models import Sherpa, Station
 from models.request_models import (
@@ -36,12 +39,15 @@ from models.request_models import (
     DirectionEnum,
 )
 from plugins.conveyor.conveyor_models import ToteStatus
-import threading
+from models.mongo_client import FMMongo
 
 LOOKAHEAD = 5.0
 PATH_DENSITY = 1000
 THETA_MAX = np.rad2deg(10)
-rq_params = Config.get_fleet_rq_params()
+
+with FMMongo() as fm_mongo:
+    rq_params = fm_mongo.get_collection_from_fm_config("rq")
+
 TIMEOUT = rq_params.get("generic_handler_job_timeout", 10)
 
 
@@ -202,10 +208,14 @@ class MuleWS:
 
 class FleetSimulator:
     def __init__(self):
-        self.handler_obj = Config.get_handler()
+        self.handler_obj = hc.HandlerConfiguration.get_handler()
         with DBSession() as dbsession:
             self.fleet_names = dbsession.get_all_fleet_names()
-        self.simulator_config = Config.get_simulator_config()
+
+        with FMMongo() as fm_mongo:
+            simulator_config = fm_mongo.get_collection_from_fm_config("simulator")
+
+        self.simulator_config = simulator_config
         self.should_book_trips = self.simulator_config.get("book_trips", False)
         self.conveyor_capacity = self.simulator_config.get("conveyor_capacity", 6)
         self.exclusion_zones = {}
