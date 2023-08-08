@@ -54,7 +54,10 @@ for url, details in all_path_details.items():
                             title = req_prop["title"]
                             temp_type = req_prop["type"]
                             print(f"\t\t{title}: {temp_type}")
-                        except:
+                        except Exception as e:
+                            # print(
+                            #     f"Unable to get title and type from request body, Exception: {e}"
+                            # )
                             pass
         print("\n\n\n")
         count += 1
