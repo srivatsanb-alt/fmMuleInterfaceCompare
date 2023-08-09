@@ -419,7 +419,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "\n\nSELECT\n  SUBSTRING(sherpa_name, 1, 6) AS Sherpa,\n  ROUND(SUM(EXTRACT(EPOCH FROM (end_time - start_time)))/((CASE WHEN $__timeFrom()::DATE = CURRENT_DATE THEN extract(epoch from current_timestamp::time) ELSE 86400 END/100)*COUNT(DISTINCT(start_time::DATE)))) AS Utilization\nFROM\n  trips\nWHERE\n  status = 'succeeded'\n  AND sherpa_name IS NOT NULL\n  AND start_time IS NOT NULL\n  AND end_time IS NOT NULL\n  AND DATE_TRUNC('day', start_time) = DATE_TRUNC('day', end_time)\n  AND start_time >= CAST($__timeFrom() AS timestamp with time zone) AND end_time <= CAST($__timeTo() AS timestamp with time zone)\n  AND fleet_name = '$fleetvar'\nGROUP BY\n  sherpa_name;",
+          "rawSql": "SELECT\n  SUBSTRING(sherpa_name, 1, 6) AS Sherpa,\n  ROUND(SUM(EXTRACT(EPOCH FROM (end_time - start_time)))*100/extract(epoch from (CAST($__timeTo() as timestamp with time zone) - CAST($__timeFrom() as timestamp with time zone))))\n AS Utilization\nFROM\n  trips\nWHERE\n  status = 'succeeded'\n  AND sherpa_name IS NOT NULL\n  AND start_time IS NOT NULL\n  AND end_time IS NOT NULL\n  AND start_time >= CAST($__timeFrom() AS timestamp with time zone) AND end_time <= CAST($__timeTo() AS timestamp with time zone)\n  AND fleet_name = '$fleetvar'\nGROUP BY\n  sherpa_name;",
           "refId": "A",
           "sql": {
             "columns": [
@@ -781,28 +781,28 @@
       {
         "current": {
           "selected": false,
-          "text": "master_fleet_map_superSet",
-          "value": "master_fleet_map_superSet"
+          "text": "all_hands_map",
+          "value": "all_hands_map"
         },
         "hide": 0,
         "label": "Fleet_Selector ",
         "name": "fleetvar",
         "options": [
           {
-            "selected": false,
+            "selected": true,
             "text": "all_hands_map",
             "value": "all_hands_map"
           }
         ],
-        "query": "master_fleet_map_superSet",
+        "query": "all_hands_map",
         "skipUrlSync": false,
         "type": "textbox"
       }
     ]
   },
   "time": {
-    "from": "now-90d",
-    "to": "now"
+    "from": "2023-08-08T07:30:00.000Z",
+    "to": "2023-08-08T08:29:59.000Z"
   },
   "timepicker": {},
   "timezone": "Asia/Kolkata",
