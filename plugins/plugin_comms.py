@@ -37,7 +37,7 @@ async def ws_reader(websocket, name, handler_obj, unique_id=None, api_key=None):
             logger.info(f"websocket connection with {name} disconnected")
             raise e
 
-        logger.info(f"Received msg: {msg_recv}")
+        logger.debug(f"Received msg: {msg_recv}")
         msg = msg_recv.replace("'", '"')
         count = 0
         while type(msg) is str:
@@ -75,7 +75,7 @@ async def ws_writer(websocket, name, format="json", unique_id=None):
     while True:
         message = await psub.get_message(ignore_subscribe_messages=True, timeout=5)
         if message:
-            logger.info(f"Got a message in {channel_name} ws_writer  {message}")
+            logger.debug(f"Got a message in {channel_name} ws_writer  {message}")
 
             if format == "json":
                 data = ast.literal_eval(message["data"])

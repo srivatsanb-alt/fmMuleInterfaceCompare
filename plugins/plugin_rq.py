@@ -57,8 +57,6 @@ def report_failure(job, connection, fail_type, value, traceback):
 
 
 def report_success(job, connection, result, *args, **kwargs):
-    logger = logging.getLogger("plugin_rq")
-    logger.info(f"job done successfully {job}")
     pass
 
 

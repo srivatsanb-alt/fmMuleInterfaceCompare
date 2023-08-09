@@ -56,6 +56,7 @@ class ConvInfo(Base):
 class ToteStatus(JsonMixin):
     num_totes: int
     compact_time: int
+    num_totes_to_transfer: int
     type: str
     name: str = None
 

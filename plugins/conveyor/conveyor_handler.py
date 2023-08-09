@@ -2,7 +2,8 @@ import logging
 from .conveyor_utils import book_trip, get_tote_trip_info
 from .conveyor_models import ConvInfo, DBSession, ToteStatus
 
-#handlers for the conveyor
+# handlers for the conveyor
+
 
 class CONV_HANDLER:
     def init_handler(self):
@@ -10,6 +11,13 @@ class CONV_HANDLER:
 
     def handle_tote_status(self, msg: dict):
         tote_status = ToteStatus.from_dict(msg)
+
+        if tote_status.num_totes_to_transfer != 0:
+            self.logger.warning(
+                f"{tote_status.name} is compacting, discarding tote status msg"
+            )
+            return
+
         conv_info: ConvInfo = (
             self.session.session.query(ConvInfo)
             .filter(ConvInfo.name == tote_status.name)
