@@ -98,3 +98,9 @@ class FMMongo:
         fu_db = self.mongo_client.get_database("frontend_users")
         col = self.get_collection("user_details", fu_db)
         return col.find_one(user_query)
+
+    def get_all_frontend_users(self):
+        fu_db = self.mongo_client.get_database("frontend_users")
+        col = self.get_collection("user_details", fu_db)
+        all_user_details = [r for r in col.find({}, {"_id": 0})]
+        return all_user_details

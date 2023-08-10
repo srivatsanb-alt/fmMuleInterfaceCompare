@@ -63,7 +63,6 @@ class Handlers:
 
         if fleet.status == cc.FleetStatus.PAUSED and msg.type not in [
             cc.MessageType.SHERPA_STATUS,
-            cc.MessageType.VERIFY_FLEET_FILES,
         ]:
             return False, f"fleet {fleet.name} is paused"
 
@@ -476,6 +475,7 @@ class Handlers:
             logging.getLogger(sherpa.name).info(
                 f"will not send conveyor msg to {ongoing_trip.sherpa_name}, reason: num_units is {num_units}"
             )
+            ongoing_trip.clear_states()
             return
 
         if not num_units:
@@ -590,7 +590,7 @@ class Handlers:
             ongoing_trip.add_state(conveyor_end_state)
 
             if direction == "send":
-                peripheral_msg = f"Resolving {req.error_device} error for {sherpa_name},transfer all the totes on the mule to the chute and press dispatch button"
+                peripheral_msg = f"Resolving {req.error_device} error for {sherpa_name}, transfer all the totes on the mule to the chute and press dispatch button"
             else:
                 peripheral_msg = f"Resolving {req.error_device} error for {sherpa_name},move {num_units} tote(s) to the mule and press dispatch button"
 
