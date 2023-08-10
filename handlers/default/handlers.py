@@ -64,7 +64,6 @@ class Handlers:
 
         if fleet.status == cc.FleetStatus.PAUSED and msg.type not in [
             cc.MessageType.SHERPA_STATUS,
-            cc.MessageType.VERIFY_FLEET_FILES,
         ]:
             return False, f"fleet {fleet.name} is paused"
 
@@ -452,7 +451,6 @@ class Handlers:
         conveyor_start_state = getattr(
             tm.TripState, f"WAITING_STATION_CONV_{direction.upper()}_START"
         )
-        ongoing_trip.add_state(conveyor_start_state)
 
         trip_metadata = ongoing_trip.trip.trip_metadata
         if direction == "receive":
@@ -476,10 +474,11 @@ class Handlers:
             raise ValueError(
                 f"{ongoing_trip.sherpa_name} has reached a {station_type} station, no tote info available in trip metadata"
             )
+
+        ongoing_trip.add_state(conveyor_start_state)
         conveyor_send_msg = rqm.PeripheralsReq(
             conveyor=rqm.ConveyorReq(direction=direction, num_units=num_units)
         )
-
         _ = utils_comms.send_req_to_sherpa(self.dbsession, sherpa, conveyor_send_msg)
 
     def do_post_actions(
