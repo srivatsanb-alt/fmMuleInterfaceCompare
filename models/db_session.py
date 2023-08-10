@@ -411,7 +411,6 @@ class DBSession:
                 .filter(tm.Trip.assign_sherpa.in_(sherpa_names))
                 .filter(tm.Trip.status.in_(filter_status))
                 .offset(page)
-                .limit(limit)
                 .count()
             )
         else:
@@ -431,7 +430,6 @@ class DBSession:
                 .filter(tm.Trip.booking_time < booked_till)
                 .filter(tm.Trip.status.in_(valid_status))
                 .offset(page)
-                .limit(limit)
                 .count()
             )
         trips = jsonable_encoder(trips)
