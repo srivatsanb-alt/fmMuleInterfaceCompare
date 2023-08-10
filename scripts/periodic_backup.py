@@ -9,7 +9,6 @@ import pandas as pd
 import datetime
 import shutil
 import redis
-import json
 
 # ati code imports
 from core.db import get_engine
@@ -41,18 +40,6 @@ def backup_data():
     redis_conn = redis.from_url(
         os.getenv("FM_REDIS_URI"), encoding="utf-8", decode_responses=True
     )
-
-    plugin_db_init = False
-    while not plugin_db_init:
-        plugin_db_init = (
-            False
-            if redis_conn.get("plugins_workers_db_init") is None
-            else json.loads(redis_conn.get("plugins_workers_db_init"))
-        )
-        if not plugin_db_init:
-            logging.info("Will wait for plugin db init")
-            time.sleep(20)
-
     # get all databases
     all_databases = [
         datnames[0]
