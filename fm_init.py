@@ -23,8 +23,23 @@ sys.path.append("/app/mule")
 from mule.ati.common.config import load_mule_config
 
 
+def maybe_add_default_admin_user(fm_mongo):
+    fm_mongo.create_database("frontend_users")
+    fu_db = fm_mongo.get_database("frontend_users")
+    fm_mongo.create_collection("user_details", fu_db)
+    fm_mongo.add_validator(
+        "user_details", fu_db, getattr(cu.FrontendUsersValidator, "user_details")
+    )
+    c = fm_mongo.get_collection("user_details", fu_db)
+    c.create_index("name", unique=True)
+    if c.count_documents(filter={}) == 0:
+        c.insert_one(cu.DefaultFrontendUser.admin)
+        print(f"Created default user")
+
+
 def setfm_mongo_config():
     with FMMongo() as fm_mongo:
+        maybe_add_default_admin_user(fm_mongo)
         fm_mongo.create_database("fm_config")
         fc_db = fm_mongo.get_database("fm_config")
         config_val_members = inspect.getmembers(cu.ConfigValidator)
@@ -41,11 +56,6 @@ def setfm_mongo_config():
             fm_mongo.create_collection(collection_name, fc_db, **create_col_kwargs)
             fm_mongo.add_validator(
                 collection_name, fc_db, getattr(cu.ConfigValidator, collection_name)
-            )
-            fc_db.command(
-                "collMod",
-                collection_name,
-                validator=getattr(cu.ConfigValidator, collection_name),
             )
             c = fm_mongo.get_collection(collection_name, fc_db)
             default_config = getattr(cu.ConfigDefaults, collection_name)

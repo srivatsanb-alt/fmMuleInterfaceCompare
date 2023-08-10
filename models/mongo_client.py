@@ -52,8 +52,8 @@ class FMMongo:
             return db[collection_name]
         raise Exception(f"Collection {collection_name} not yet created")
 
-    def create_index(var, collection, is_unique=True):
-        collection.create_index(var, unique=is_unique)
+    # def create_index(var, collection, is_unique=True):
+    #    collection.create_index(var, unique=is_unique)
 
     def add_permission_level(self, level, **kwargs):
         level_int = getattr(CONFIG_VIEW_PERMISSION_LEVELS, level.upper(), None)
@@ -93,3 +93,8 @@ class FMMongo:
         if temp is None:
             raise Exception(f"No {collection_name} config")
         return temp
+
+    def get_frontend_user_details(self, user_query):
+        fu_db = self.mongo_client.get_database("frontend_users")
+        col = self.get_collection("user_details", fu_db)
+        return col.find_one(user_query)

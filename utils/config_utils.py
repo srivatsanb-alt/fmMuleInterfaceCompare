@@ -4,11 +4,11 @@ class CONFIG_VIEW_PERMISSION_LEVELS:
     SUPPORT = 2
 
 
-class FrontendUsers:
-    users = {
+class FrontendUsersValidator:
+    user_details = {
         "$jsonSchema": {
             "bsonType": "object",
-            "required": ["name", "hashed_password", "role", "fleet_access"],
+            "required": ["name", "hashed_password", "role"],
             "properties": {
                 "name": {"bsonType": "string", "description": "login username"},
                 "hashed_password": {
@@ -19,9 +19,6 @@ class FrontendUsers:
                     "bsonType": "string",
                     "enum": ["operator", "supervisor", "support"],
                     "description": "Role based access would be provided in the frontend app",
-                },
-                "fleet_access": {
-                    "bsonType": "array",
                 },
             },
         }
@@ -360,6 +357,14 @@ class ConfigValidator:
                 },
             },
         }
+    }
+
+
+class DefaultFrontendUser:
+    admin = {
+        "name": "admin",
+        "hashed_password": "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4",
+        "role": "support",
     }
 
 
