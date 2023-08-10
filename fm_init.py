@@ -76,23 +76,6 @@ def regenerate_config():
     os.environ["ATI_CONFIG"] = os.environ["ATI_CONSOLIDATED_CONFIG"]
 
 
-def update_frontend_user_details(dbsession: DBSession):
-
-    fu.FrontendUserUtils.delete_all_frontend_users(dbsession)
-    dbsession.session.flush()
-
-    frontend_user_config = toml.load(
-        os.path.join(os.getenv("FM_CONFIG_DIR"), "frontend_users.toml")
-    )
-    logging.getLogger().info(f"frontend user details in config {frontend_user_config}")
-
-    for user_name, user_details in frontend_user_config["frontenduser"].items():
-        role = user_details.get("role", "operator")
-        fu.FrontendUserUtils.add_update_frontend_user(
-            dbsession, user_name, user_details["hashed_password"], role
-        )
-
-
 def populate_redis_with_basic_info(dbsession: DBSession):
     redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
     all_sherpas = dbsession.get_all_sherpas()
@@ -146,9 +129,6 @@ def main():
         fu.add_software_compatability(dbsession)
         fu.add_master_fm_data_upload(dbsession)
         fu.add_sherpa_metadata(dbsession)
-
-        # update frontenduser details
-        update_frontend_user_details(dbsession)
 
         # populate redis with basic info
         populate_redis_with_basic_info(dbsession)

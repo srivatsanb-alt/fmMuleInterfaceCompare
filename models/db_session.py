@@ -7,7 +7,6 @@ from fastapi.encoders import jsonable_encoder
 
 # ati code imports
 from core.db import get_session
-import models.frontend_models as fem
 import models.misc_models as mm
 import models.fleet_models as fm
 import models.trip_models as tm
@@ -179,16 +178,6 @@ class DBSession:
             available_sherpa_names.append(val[0])
 
         return available_sherpa_names
-
-    def get_frontend_user(self, name: str, hashed_password: str) -> fem.FrontendUser:
-        return (
-            self.session.query(fem.FrontendUser)
-            .filter(
-                fem.FrontendUser.name == name,
-                fem.FrontendUser.hashed_password == hashed_password,
-            )
-            .one_or_none()
-        )
 
     def get_all_sherpa_status(self) -> List[fm.SherpaStatus]:
         return self.session.query(fm.SherpaStatus).all()
@@ -385,12 +374,20 @@ class DBSession:
         )
 
     def get_trips_with_timestamp_and_status_pagination(
-        self, booked_from, booked_till, valid_status, sherpa_names,filter_status, order_by = "id", 
-            order_mode="desc", page=0, limit=50
+        self,
+        booked_from,
+        booked_till,
+        valid_status,
+        sherpa_names,
+        filter_status,
+        order_by="id",
+        order_mode="desc",
+        page=0,
+        limit=50,
     ):
         trips = {}
         count = 0
-        if sherpa_names and sherpa_names != "[]" :
+        if sherpa_names and sherpa_names != "[]":
             trips = (
                 self.session.query(tm.Trip)
                 .filter(tm.Trip.booking_time > booked_from)
@@ -398,7 +395,7 @@ class DBSession:
                 .filter(tm.Trip.status.in_(valid_status))
                 .filter(tm.Trip.assign_sherpa.in_(sherpa_names))
                 .filter(tm.Trip.status.in_(filter_status))
-                .order_by(text(f"{order_by} {order_mode}" ))
+                .order_by(text(f"{order_by} {order_mode}"))
                 .offset(page)
                 .limit(limit)
                 .limit.all()
@@ -419,7 +416,7 @@ class DBSession:
                 .filter(tm.Trip.booking_time > booked_from)
                 .filter(tm.Trip.booking_time < booked_till)
                 .filter(tm.Trip.status.in_(valid_status))
-                .order_by(text(f"{order_by} {order_mode}" ))
+                .order_by(text(f"{order_by} {order_mode}"))
                 .offset(page)
                 .limit(limit)
                 .all()
@@ -434,7 +431,13 @@ class DBSession:
                 .count()
             )
         trips = jsonable_encoder(trips)
-        trips = {"trips": trips, "count": count, "limit": limit, "order_by":order_by, "order_mode": order_mode}
+        trips = {
+            "trips": trips,
+            "count": count,
+            "limit": limit,
+            "order_by": order_by,
+            "order_mode": order_mode,
+        }
         return trips
 
     def get_trips_with_timestamp_and_status(self, booked_from, booked_till, valid_status):
@@ -491,37 +494,43 @@ class DBSession:
             .order_by(tm.TripAnalytics.trip_leg_id.desc())
             .all()
         )
-    def get_legs(
-            self, trip_id
-            ):
-        legs = (self.session.query(tm.TripAnalytics)
-                .filter(tm.TripAnalytics.trip_id == trip_id)
-                 .all()
+
+    def get_legs(self, trip_id):
+        legs = (
+            self.session.query(tm.TripAnalytics)
+            .filter(tm.TripAnalytics.trip_id == trip_id)
+            .all()
         )
         return jsonable_encoder(legs)
 
     def get_trip_analytics_with_pagination(
-        self, booked_from, booked_till, sherpa_names, order_by = "id", 
-            order_mode="desc", page=0, limit=50
+        self,
+        booked_from,
+        booked_till,
+        sherpa_names,
+        order_by="id",
+        order_mode="desc",
+        page=0,
+        limit=50,
     ):
-        #data validation
-        if(limit==0): 
-            limit =50
-        if(order_by==""):
-            order_by="id"
-        if (order_mode==""):
-            order_mode="desc"
-        #Data validation
+        # data validation
+        if limit == 0:
+            limit = 50
+        if order_by == "":
+            order_by = "id"
+        if order_mode == "":
+            order_mode = "desc"
+        # Data validation
 
         trip_analytics = {}
         count = 0
-        if sherpa_names and sherpa_names != "[]" :
+        if sherpa_names and sherpa_names != "[]":
             trips = (
                 self.session.query(tm.Trip)
                 .filter(tm.Trip.booking_time > booked_from)
                 .filter(tm.Trip.booking_time < booked_till)
                 .filter(tm.Trip.sherpa_name.in_(sherpa_names))
-                .order_by(text(f"{order_by} {order_mode}" ))
+                .order_by(text(f"{order_by} {order_mode}"))
                 .offset(page)
                 .limit(limit)
                 .all()
@@ -538,22 +547,28 @@ class DBSession:
                 self.session.query(tm.Trip)
                 .filter(tm.Trip.booking_time > booked_from)
                 .filter(tm.Trip.booking_time < booked_till)
-                .order_by(text(f"{order_by} {order_mode}" ))
+                .order_by(text(f"{order_by} {order_mode}"))
                 .offset(page)
                 .limit(limit)
                 .all()
             )
             count = (
-                 self.session.query(tm.Trip)
+                self.session.query(tm.Trip)
                 .filter(tm.Trip.booking_time > booked_from)
                 .filter(tm.Trip.booking_time < booked_till)
                 .count()
             )
-        
+
         trip_analytics = jsonable_encoder(trips)
         for item in trip_analytics:
             item["legs"] = self.get_legs(str(item["id"]))
-        trip_analytics = {"trips_analytics": trip_analytics, "count": count, "limit": limit, "order_by":order_by, "order_mode": order_mode}
+        trip_analytics = {
+            "trips_analytics": trip_analytics,
+            "count": count,
+            "limit": limit,
+            "order_by": order_by,
+            "order_mode": order_mode,
+        }
         return trip_analytics
 
     def get_trip_analytics(self, trip_leg_id):

@@ -22,7 +22,6 @@ import models.visa_models as vm
 import models.misc_models as mm
 import models.trip_models as tm
 import utils.util as utils_util
-from models.frontend_models import FrontendUser
 from models.base_models import StationProperties
 import utils.log_utils as lu
 
@@ -200,48 +199,6 @@ def add_sherpa_metadata(dbsession: DBSession):
         if sherpa_metadata is None:
             sm = fm.SherpaMetaData(sherpa_name=sherpa.name, info={"can_edit": "True"})
             dbsession.add_to_session(sm)
-
-
-class FrontendUserUtils:
-    @classmethod
-    def add_update_frontend_user(
-        cls, dbsession: DBSession, user_name: str, hashed_password: str, role: str
-    ) -> None:
-        user: FrontendUser = (
-            dbsession.session.query(FrontendUser)
-            .filter(FrontendUser.name == user_name)
-            .one_or_none()
-        )
-        if user:
-            user.hashed_password = hashed_password
-            user.role = role
-            logger.info(
-                f"updated FrontendUser {user_name}, with role: {role}, hashed_password: {hashed_password}"
-            )
-
-        else:
-            user = FrontendUser(name=user_name, hashed_password=hashed_password, role=role)
-            logger.info(
-                f"added FrontendUser {user_name}, with role: {role}, hashed_password: {hashed_password}"
-            )
-            dbsession.add_to_session(user)
-
-    @classmethod
-    def delete_frontend_user(cls, dbsession: DBSession, user_name: str):
-        user: FrontendUser = (
-            dbsession.session.query(FrontendUser)
-            .filter(FrontendUser.name == user_name)
-            .one_or_none()
-        )
-        if user:
-            dbsession.session.delete(user)
-            logger.info(f"deleted FrontendUser {user_name}")
-        else:
-            raise ValueError(f"FrontendUser {user_name} not found")
-
-    @classmethod
-    def delete_all_frontend_users(cls, dbsession: DBSession):
-        _ = dbsession.session.query(FrontendUser).delete()
 
 
 class FleetUtils:
