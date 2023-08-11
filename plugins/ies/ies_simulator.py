@@ -54,7 +54,9 @@ async def simulate_bookings(ip, id=0, num_req=1000, type="JobCreate", cancel_id=
             while count < num_req:
                 if random.random() > 0.0:
                     stn_id = random.randint(0, len(location_ids) - 1)
-                    print(f"creating JobCreate msg req: id = {id}, stn_id = {stn_id}")
+                    print(
+                        f"creating JobCreate msg req: id = {id}, destination = {location_ids[stn_id]}"
+                    )
                     deadline_time = datetime.datetime.now() + datetime.timedelta(hours=2)
                     deadline_time_str = datetime_to_str(deadline_time, ies_time_format)
 
