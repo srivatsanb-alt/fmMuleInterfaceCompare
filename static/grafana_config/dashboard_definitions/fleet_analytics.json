@@ -419,7 +419,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "\n\nSELECT\n  SUBSTRING(sherpa_name, 1, 6) AS Sherpa,\n  ROUND(SUM(EXTRACT(EPOCH FROM (end_time - start_time)))/((CASE WHEN CAST($__timeFrom() as timestamp with time zone)::DATE = CAST(current_timestamp as timestamp with time zone)::DATE THEN extract(epoch from CAST(current_timestamp as timestamp with time zone)::time) ELSE 86400 END/100)*COUNT(DISTINCT(start_time::DATE)))) AS Utilization\nFROM\n  trips\nWHERE\n  status = 'succeeded'\n  AND sherpa_name IS NOT NULL\n  AND start_time IS NOT NULL\n  AND end_time IS NOT NULL\n  AND DATE_TRUNC('day', start_time) = DATE_TRUNC('day', end_time)\n  AND start_time >= CAST($__timeFrom() AS timestamp with time zone) AND end_time <= CAST($__timeTo() AS timestamp with time zone)\n  AND fleet_name = '$fleetvar'\nGROUP BY\n  sherpa_name;",
+          "rawSql": "\nSELECT\n  SUBSTRING(sherpa_name, 1, 6) AS Sherpa,\n  ROUND(SUM(EXTRACT(EPOCH FROM (end_time - start_time)))/((CASE WHEN CAST($__timeFrom() as timestamp with time zone)::DATE = CAST(current_timestamp as timestamp with time zone)::DATE THEN extract(epoch from CAST($__timeTo() as timestamp with time zone) - CAST($__timeFrom() as timestamp with time zone)) ELSE 86400 END/100)*COUNT(DISTINCT(start_time::DATE)))) AS Utilization\nFROM\n  trips\nWHERE\n  status = 'succeeded'\n  AND sherpa_name IS NOT NULL\n  AND start_time IS NOT NULL\n  AND end_time IS NOT NULL\n  AND DATE_TRUNC('day', start_time) = DATE_TRUNC('day', end_time)\n  AND start_time >= CAST($__timeFrom() AS timestamp with time zone) AND end_time <= CAST($__timeTo() AS timestamp with time zone)\n  AND fleet_name = '$fleetvar'\nGROUP BY\n  sherpa_name;",
           "refId": "A",
           "sql": {
             "columns": [
@@ -591,7 +591,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               }
             ]
           },
@@ -696,7 +697,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -787,7 +789,7 @@
         "name": "fleetvar",
         "options": [
           {
-            "selected": false,
+            "selected": true,
             "text": "all_hands_map",
             "value": "all_hands_map"
           }
