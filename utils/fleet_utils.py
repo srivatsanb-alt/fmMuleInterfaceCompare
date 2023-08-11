@@ -438,10 +438,13 @@ class FleetUtils:
             cls.delete_invalid_booked_trips(st.name, st.fleet.name)
 
     @classmethod
-    def delete_invalid_booked_trips(dbsession, station_name, fleet_name):
+    def delete_invalid_booked_trips(cls, dbsession, station_name, fleet_name):
         p_trips = dbsession.get_pending_trips_with_fleet_name(fleet_name)
         for p_trip in p_trips:
             if station_name in p_trip.trip.route:
+                logger.info(
+                    f"deleted trip {p_trip.trip.id}, reason: Invalid route, {station_name} will be removed with the update"
+                )
                 dbsession.delete_pending_trip(p_trip)
                 p_trip.trip.status = tm.TripStatus.CANCELLED
 
