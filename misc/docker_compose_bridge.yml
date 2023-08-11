@@ -17,10 +17,8 @@ services:
       FM_MONGO_DATABASE_URI: mongodb://ati:atiMongo@mongo:27017
     ports:
      - "8001:8001"
-     - "8002:8002"
     expose:
      - 8001
-     - 8002
     volumes:
       - .:/app/static
     depends_on:
@@ -30,7 +28,6 @@ services:
       - db
       - mongo
     network_mode: bridge
-
   db:
     image: postgres:14.0
     container_name: fleet_db
@@ -62,6 +59,7 @@ services:
       - registry
       - grafana
       - mongo-express
+      - plugins
     network_mode: bridge
 
   registry:
@@ -87,7 +85,7 @@ services:
       -  ./grafana_config/dashboards:/etc/grafana/provisioning/dashboards
       -  ./grafana_config/dashboard_definitions/fleet_analytics.json:/var/lib/dashboards/fleet_analytics.json
     network_mode: bridge
-  
+
   mongo:
     image: mongo
     container_name: fm_mongo
@@ -116,6 +114,27 @@ services:
       ME_CONFIG_SITE_BASEURL: "/config_editor"
       ME_CONFIG_BASICAUTH_USERNAME: "ati_support"
       ME_CONFIG_BASICAUTH_PASSWORD: "ati112"
+    depends_on:
+      - mongo
+    links:
+      - mongo
+    network_mode: bridge
+
+  plugins:
+    image: plugin:dev
+    container_name: fm_plugins
+    restart: always
+    build: .
+    environment:
+      PGTZ: Asia/Kolkata
+      TZ: Asia/Kolkata
+      PLUGIN_MONGO_DATABASE_URI: mongodb://ati:atiMongo@mongo:27017
+    ports:
+     - "8002:8002"
+    expose:
+     - 8002
+    volumes:
+      - .:/app/static
     depends_on:
       - mongo
     links:

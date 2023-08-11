@@ -150,7 +150,7 @@ if [ $build_base == 1 ] ; then
   docker pull nginx:1.23.3
   docker pull postgres:14.0
   docker pull grafana/grafana:9.5.2
-  docker pull registry:2
+  docker pull registry:2   
 }
 else
 {
@@ -190,6 +190,9 @@ docker image build --build-arg FM_IMAGE_INFO="${FM_IMAGE_INFO}" \
 
 FM_IMAGE_ID=$(docker images --format {{.ID}} fleet_manager:dev)
 echo "Successfully built FM Image $FM_IMAGE_ID!"
+
+cd fm_plugins && bash scripts/build_images.sh
+echo "Built plugin docker images successfully"
 
 if [ $clean_static_dir == 1 ] ; then
 {
