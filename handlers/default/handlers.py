@@ -63,7 +63,7 @@ class Handlers:
             req_ctxt.fleet_names.append(sherpa.fleet.name)
 
         if fleet.status == cc.FleetStatus.PAUSED and msg.type not in [
-            cc.MessageType.SHERPA_STATUS,
+            cc.MessageType.SHERPA_STATUS
         ]:
             return False, f"fleet {fleet.name} is paused"
 
@@ -713,6 +713,10 @@ class Handlers:
         for trip_msg in req.trips:
             booking_id = self.dbsession.get_new_booking_id()
             all_stations: List[fm.Station] = []
+
+            if len(trip_msg.route) == 0:
+                raise ValueError("Cannot book trip with no route")
+
             for station_name in trip_msg.route:
                 try:
                     station = self.dbsession.get_station(station_name)

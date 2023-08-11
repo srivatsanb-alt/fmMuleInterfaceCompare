@@ -1,7 +1,13 @@
+from io import BytesIO
+import json
+import logging
 from typing import Union
 from fastapi import APIRouter, Depends
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm.attributes import flag_modified
 import asyncio
+import pandas as pd
 
 # ati code imports
 import app.routers.dependencies as dpd
@@ -244,6 +250,9 @@ async def trip_status_pg_with_type(
                 trip_status_req.booked_till,
                 valid_status,
                 trip_status_req.filter_sherpa_names,
+                trip_status_req.filter_status,
+                trip_status_req.order_by,
+                trip_status_req.order_mode,
                 trip_status_req.skip,
                 trip_status_req.limit,
             )
@@ -324,6 +333,8 @@ async def trip_analytics_pg(
             trip_analytics_req.booked_from,
             trip_analytics_req.booked_till,
             trip_analytics_req.filter_sherpa_names,
+            trip_analytics_req.order_by,
+            trip_analytics_req.order_mode,
             trip_analytics_req.skip,
             trip_analytics_req.limit,
         )
@@ -543,3 +554,61 @@ async def update_saved_route_metadata(
         flag_modified(saved_route, "other_info")
 
     return response
+
+
+@router.post("/export_analytics_data")
+async def export_analytics_data(
+    trip_analytics_req: rqm.TripStatusReq, user_name=Depends(dpd.get_user_from_header)
+):
+    response = {}
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    with DBSession() as dbsession:
+        if trip_analytics_req.booked_from and trip_analytics_req.booked_till:
+            trip_analytics_req.booked_from = str_to_dt(trip_analytics_req.booked_from)
+            trip_analytics_req.booked_till = str_to_dt(trip_analytics_req.booked_till)
+
+            all_trip_analytics = dbsession.get_trip_analytics_with_timestamp(
+                trip_analytics_req.booked_from, trip_analytics_req.booked_till
+            )
+
+        else:
+            if not trip_analytics_req.trip_ids:
+                return response
+                all_trip_analytics = dbsession.get_trip_analytics_with_trip_ids(
+                    trip_analytics_req.trip_ids
+                )
+
+        logging.getLogger("uvicorn").info(
+            f"normalised json: {jsonable_encoder(all_trip_analytics)}"
+        )
+
+        df = pd.DataFrame(
+            jsonable_encoder(all_trip_analytics),
+            columns=[
+                "sherpa_name",
+                "trip_id",
+                "trip_leg_id",
+                "start_time",
+                "end_time",
+                "from_station",
+                "to_station",
+                "cte",
+                "te",
+                "expected_trip_time",
+                "actual_trip_time",
+                "time_elapsed_obstacle_stoppages",
+                "time_elapsed_visa_stoppages",
+                "time_elapsed_other_stoppages",
+                "num_trip_msg",
+                "created_at",
+                "updated_at",
+            ],
+        )
+
+    return StreamingResponse(
+        iter([df.to_csv(index=False)]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename=detail_analytics.csv"},
+    )
