@@ -1,6 +1,6 @@
 [frontenduser.admin]
 hashed_password="03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4"
-role="operator"
+role="support"
 
 [frontenduser.operator]
 hashed_password="5a9b1a4e1af2ba1e0feb61942fce91600191981ad2b943b2fcc1ca48e2176e6c"
