@@ -1,11 +1,13 @@
-from plugins.plugin_comms import send_req_to_FM, create_fm_notification
 import logging
 import hashlib
 import secrets
 import redis
 import os
+
+# ati code imports
+from plugins.plugin_comms import send_req_to_FM, create_fm_notification
 from .conveyor_models import DBSession, ConvInfo, ConvTrips
-from models.trip_models import COMPLETED_TRIP_STATUS
+import models.trip_models as tm
 
 logger_name = "plugin_conveyor"
 
@@ -64,7 +66,7 @@ def has_sherpa_passed_conveyor(trip_id, conveyor_name, plugin_name):
             status = trip_details["status"]
 
             # trip is cancelled, failed, succeeded
-            if status in COMPLETED_TRIP_STATUS:
+            if status in tm.COMPLETED_TRIP_STATUS:
                 return True
 
             # Not an ongoing trip
@@ -74,6 +76,13 @@ def has_sherpa_passed_conveyor(trip_id, conveyor_name, plugin_name):
             # check for trips in progress
             route = trip_details["route"]
             if next_idx_aug > route.index(conveyor_name):
+                # sherpa could be in the receiving/dumping totes at the conveyor/chute station
+                if (
+                    next_idx_aug == route.index(conveyor_name) + 1
+                    and status == tm.TripStatus.WAITING_STATION
+                ):
+                    return False
+
                 return True
 
     return False
