@@ -573,7 +573,7 @@ class DBSession:
                 .filter(tm.TripLeg.id == ongoing_trip.trip_leg_id)
                 .one_or_none()
             )
-
+    
     def get_all_trip_legs(self, trip_id: int):
         temp = self.session.query(tm.TripLeg.id).filter(tm.TripLeg.trip_id == trip_id).all()
         trip_leg_ids = []

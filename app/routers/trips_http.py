@@ -462,7 +462,6 @@ async def get_saved_routes(
         dpd.raise_error("Unknown requester", 401)
 
     with DBSession() as dbsession:
-
         saved_routes = dbsession.get_saved_routes_fleet(fleet_name)
 
         for saved_route in saved_routes:

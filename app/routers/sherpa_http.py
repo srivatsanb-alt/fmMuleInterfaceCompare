@@ -213,7 +213,6 @@ async def upload_file(
     uploaded_file: UploadFile = File(...),
     sherpa_name: str = Depends(dpd.get_sherpa),
 ):
-
     logging.getLogger("uvicorn").info(f"{file_upload_req}")
 
     response = []
@@ -276,7 +275,6 @@ async def add_fm_incident(
         dpd.raise_error("Unknown requester", 401)
 
     with DBSession() as dbsession:
-
         if add_fm_incident_req.type not in mm.FMIncidentTypes:
             dpd.raise_error(
                 f"Will only accept incidents of type {mm.FMIncidentTypes}requester"
@@ -306,7 +304,6 @@ async def update_fm_incident_data_details(
     update_incident_data_details_req: rqm.UpdateIncidentDataDetailsReq,
     sherpa: str = Depends(dpd.get_sherpa),
 ):
-
     response = {}
 
     if not sherpa:
@@ -324,7 +321,6 @@ async def update_fm_incident_data_details(
 
         # update other info
         if update_incident_data_details_req.other_info:
-
             if fm_incident.other_info is None:
                 fm_incident.other_info = {}
 

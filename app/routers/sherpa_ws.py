@@ -110,7 +110,6 @@ async def sherpa_status(
     sherpa_name=Depends(dpd.get_sherpa),
     x_real_ip=Depends(dpd.get_real_ip_from_header),
 ):
-
     client_ip = websocket.client.host
     if x_real_ip is None:
         x_real_ip = client_ip

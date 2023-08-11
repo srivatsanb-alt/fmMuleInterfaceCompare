@@ -1,27 +1,24 @@
-import sys
-import os
-import time
-import redis
-import logging
-import json
-from typing import Dict
-from sqlalchemy import Integer, String, Column, ARRAY
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy import create_engine
 from dataclasses import dataclass
-from utils.util import str_to_dt, str_to_dt_UTC, dt_to_str
-from plugins.plugin_comms import send_req_to_FM
-from models.trip_models import TripStatus
-from utils.util import get_table_as_dict
+import json
+import os
+import logging
+import datetime
+from typing import List
+import redis
 
-sys.path.append("/app")
-from models.base_models import Base, TimestampMixin
 from models.base_models import JsonMixin
-from models.fleet_models import Sherpa, SherpaStatus, StationStatus, Fleet, Station
+from models.trip_models import TripStatus
+import plugins.plugin_comms as pcomms
+import plugins.ies.ies_models as im
 
 logger = logging.getLogger("plugin_ies")
 
+TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
+IES_TIME_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
+IES_TIME_FORMAT_QUERY = "%Y-%m-%dT%H:%M:%S.%f"
+
 IES_JOB_STATUS_MAPPING = {
+    "pending": "WAITING_FOR_CONSOLIDATION",
     TripStatus.BOOKED: "ACCEPTED",
     TripStatus.ASSIGNED: "SCHEDULED",
     TripStatus.EN_ROUTE: "IN_PROGRESS",
@@ -31,81 +28,102 @@ IES_JOB_STATUS_MAPPING = {
     TripStatus.CANCELLED: "CANCELLED",
 }
 
-locationID_station_mapper_path = os.path.join(
-    os.getenv("FM_STATIC_DIR"), "plugin_ies", "locationID_station_mapping.json"
-)
-with open(locationID_station_mapper_path, "r") as f:
-    locationID_station_mapping = json.load(f)
 
-ies_metadata_path = os.path.join(
-    os.getenv("FM_STATIC_DIR"), "plugin_ies", "ies_metadata.json"
-)
-with open(ies_metadata_path, "r") as f:
-    ies_metadata = json.load(f)
+def send_msg_to_ies(msg):
+    pub = redis.from_url(os.getenv("FM_REDIS_URI"), decode_responses=True)
+    pub.publish("channel:plugin_ies", str(msg))
 
 
-def get_locationID_station_mapping():
-    return locationID_station_mapping
+def populate_ies_info():
+    with im.DBSession() as dbsession:
+        info_db = dbsession.session.query(im.IESInfo).all()
+        if info_db == []:
+            info = im.IESInfo(consolidate=True, ies_version=2.0)
+            dbsession.session.add(info)
 
 
-def get_ati_station_name(bosch_station_name):
-    return locationID_station_mapping[bosch_station_name]["ati_name"]
+def get_ies_station(dbsession, ati_station_name=None, ies_station_name=None):
+    if ati_station_name:
+        return (
+            dbsession.session.query(im.IESStations)
+            .filter(im.IESStations.ati_name == ati_station_name)
+            .one_or_none()
+        )
+    elif ies_station_name:
+        return (
+            dbsession.session.query(im.IESStations)
+            .filter(im.IESStations.ies_name == ies_station_name)
+            .one_or_none()
+        )
+    return None
 
 
-def get_ati_pos_index(bosch_station_name):
-    return int(locationID_station_mapping[bosch_station_name]["pos_index"])
-
-
-def get_ati_station_details(bosch_station_name):
-    details = (
-        locationID_station_mapping[bosch_station_name]["ati_name"],
-        locationID_station_mapping[bosch_station_name]["pos_index"],
+def get_exclude_stations_sherpa(sherpa_name, fleet_name):
+    exclude_stations = []
+    status_code, all_saved_routes = pcomms.send_req_to_FM(
+        "plugin_ies", "get_saved_routes_backend", "get", query=fleet_name
     )
-    return details
+    if not status_code == 200:
+        logger.info(f"couldn't get saved routes for fleet {fleet_name}")
+
+    for route_tag, route_info in all_saved_routes.items():
+        if route_tag == f"exclude_stations_{sherpa_name}":
+            exclude_stations.extend(route_info["route"])
+    return exclude_stations
 
 
-def get_end_station(line_name):
-    if line_name.lower() == "ecfa":
-        line = "ecfa_line"
-    end_station = ies_metadata[line]["end_station"]
-    return end_station
-
-def get_sherpas_on_line(line_name):
-    if line_name.lower() == "ecfa":
-        line = "ecfa_line"
-    sherpas = ies_metadata[line]["sherpas"]
-    return sherpas
+def get_sherpa_summary_for_sherpa(sherpa_name):
+    status_code, sherpa_summary_response = pcomms.send_req_to_FM(
+        "plugin_ies", "sherpa_summary", req_type="get", query=sherpa_name
+    )
+    if status_code != 200:
+        raise ValueError(f"sherpa summary req. failed for sherpa {sherpa_name}")
+    return sherpa_summary_response
 
 
-def remove_from_pending_jobs_db(redis_db, ext_ref_id):
-    jobs_list = read_dict_var_from_redis_db(redis_db, "pending_jobs")
-    if ext_ref_id in jobs_list.keys():
-        jobs_list.pop(ext_ref_id)
-    redis_db.set("pending_jobs", json.dumps(jobs_list))
-    return
+def get_saved_route(route_tag):
+    status_code, saved_route = pcomms.send_req_to_FM(
+        "plugin_ies", "get_saved_route", "get", query=route_tag
+    )
+    if status_code != 200:
+        raise ValueError(f"can't get route from FM for tag {route_tag}")
+    route = im.IESRoutes(route_tag=route_tag, route=saved_route["route"])
+    return route
 
 
-def add_to_ongoing_trips_db(redis_db, trip_id, current_ext_ref_ids, destination_stations):
-    ongoing_trips = read_dict_var_from_redis_db(redis_db, "ongoing_trips")
-    ongoing_trips.update({trip_id: {"ref_ids": current_ext_ref_ids, "destination_stations": destination_stations}})
-    redis_db.set("ongoing_trips", json.dumps(ongoing_trips))
-    return
+def get_last_completed_task_msg(last_completed_task):
+    return {
+        "ActionName": "",
+        "LocationId": str(last_completed_task),
+    }
 
 
-@dataclass
-class AGVMsg(JsonMixin):
-    messageType: str
-    externalReferenceId: str
-    vehicleId: str
-    vehicleTypeID: str
-
-    def to_dict(self):
-        return {
-            "messageType": self.messageType,
-            "externalReferenceId": self.externalReferenceId,
-            "vehicleId": self.vehicleId,
-            "vehicleTypeID": self.vehicleTypeID,
+def compose_and_send_job_update_msg(ext_ref_id, status, route, next_idx_aug):
+    logger.info(f"sending JobUpdates...{ext_ref_id}")
+    msg_to_ies = MsgToIES("JobUpdate", ext_ref_id, IES_JOB_STATUS_MAPPING[status]).to_dict()
+    next_idx_aug = 0 if next_idx_aug == None else next_idx_aug
+    last_completed_task = None if next_idx_aug == 0 else route[next_idx_aug - 1]
+    msg_to_ies.update(
+        {
+            "ActionName": "",
+            "LocationId": str(last_completed_task),
         }
+    )
+    send_msg_to_ies(msg_to_ies)
+
+
+def dt_to_str(dt):
+    return datetime.datetime.strftime(dt, TIME_FORMAT)
+
+
+def str_to_dt(dt_str):
+    return datetime.datetime.strptime(dt_str, TIME_FORMAT)
+
+
+def str_to_dt_UTC(dt_str, query: bool = False):
+    if not query:
+        return datetime.datetime.strptime(dt_str, IES_TIME_FORMAT + " %z")
+    return datetime.datetime.strptime(dt_str, IES_TIME_FORMAT_QUERY + " %z")
 
 
 @dataclass
@@ -132,108 +150,42 @@ class JobCreate(JsonMixin):
 
 
 @dataclass
-class JobCancel(JsonMixin):
-    messageType: str
-    externalReferenceId: str
-    jobStatus: str
-
-
-@dataclass
 class JobQuery(JsonMixin):
     messageType: str
     since: str
     until: str
 
 
-# IES DB models
-class TripsIES(Base, TimestampMixin):
-    __tablename__ = "trips_ies"
-    __table_args__ = {"extend_existing": True}
-    id = Column(Integer, primary_key=True)
-    trip_id = Column(Integer, unique=True)
-    booking_id = Column(Integer, unique=True)
-    externalReferenceId = Column(String, unique=True)
-    status = Column(String)
-    actions = Column(ARRAY(String))
-    locations = Column(ARRAY(String))
+@dataclass
+class JobCancel(JsonMixin):
+    messageType: str
+    externalReferenceId: str
 
 
-class IESMessages:
-    # messages from IES to FM
-    job_query = "JobQuery"
-    job_create = "JobCreate"
-    job_update = "JobUpdate"
-    job_cancel = "JobCancel"
-    job_cancel_response = "JobCancelResponse"
-
-    # messages from FM to IES
-    agv_fault = "AgvFault"
-    agv_update = "AgvUpdate"
+@dataclass
+class JobCancelFromUser(JsonMixin):
+    messageType: str
+    externalReferenceIds: List[str]
 
 
-engine = create_engine(os.path.join(os.getenv("FM_DATABASE_URI"), "plugin_ies"))
-session_maker = sessionmaker(autocommit=False, autoflush=True, bind=engine)
-session = session_maker()
+@dataclass
+class StationIES(JsonMixin):
+    messageType: str
+    ati_name: str
+    ies_name: str
 
 
-def run_query(db_table, field, query):
-    return session.query(db_table).filter(field == query).one_or_none()
+@dataclass
+class AGVMsg(JsonMixin):
+    messageType: str
+    externalReferenceId: str
+    vehicleId: str
+    vehicleTypeID: str
 
-
-def read_dict_var_from_redis_db(db: redis.Redis, entry: str) -> Dict:
-    """Reads a list variable from redis db, returns default value if variable not exists or corrupted!"""
-    db_value = db.get(entry)
-    logger.info(f"got redis db_value {db_value} for {entry}!")
-    if (db_value is None) or (not db_value) or (db_value == b"null") or (db_value == b"[]"):
-        return {}
-    return json.loads(db_value)
-
-
-def get_fleet_status_msg(session, fleet):
-    msg = {}
-    all_station_status = session.get_all_station_status()
-    all_sherpa_status = session.get_all_sherpa_status()
-
-    sherpa_status_update = {}
-    station_status_update = {}
-
-    if all_sherpa_status:
-        logger.info(f"All sherpa status: {all_sherpa_status}")
-        for sherpa_status in all_sherpa_status:
-            logger.info(f"sherpa status: {sherpa_status}")
-            logger.info(f"fleet: {fleet.name}")
-            if sherpa_status.sherpa.fleet.name == fleet.name:
-                sherpa_status_update.update(
-                    {
-                        sherpa_status.sherpa_name: get_table_as_dict(
-                            SherpaStatus, sherpa_status
-                        )
-                    }
-                )
-
-                sherpa_status_update[sherpa_status.sherpa_name].update(
-                    get_table_as_dict(Sherpa, sherpa_status.sherpa)
-                )
-
-    if all_station_status:
-        for station_status in all_station_status:
-            if station_status.station.fleet.name == fleet.name:
-                station_status_update.update(
-                    {
-                        station_status.station_name: get_table_as_dict(
-                            StationStatus, station_status
-                        )
-                    }
-                )
-
-                station_status_update[station_status.station_name].update(
-                    get_table_as_dict(Station, station_status.station)
-                )
-
-    msg.update({"sherpa_status": sherpa_status_update})
-    msg.update({"station_status": station_status_update})
-    msg.update({"fleet_status": get_table_as_dict(Fleet, fleet)})
-    msg.update({"fleet_name": fleet.name})
-    msg.update({"type": "fleet_status"})
-    msg.update({"timestamp": time.time()})
-    return msg
+    def to_dict(self):
+        return {
+            "messageType": self.messageType,
+            "externalReferenceId": self.externalReferenceId,
+            "vehicleId": self.vehicleId,
+            "vehicleTypeID": self.vehicleTypeID,
+        }

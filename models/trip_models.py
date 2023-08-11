@@ -66,6 +66,7 @@ class TripAnalytics(Base, TimestampMixin):
     num_trip_msg = Column(Integer)
 
 
+
 class SavedRoutes(Base):
     __tablename__ = "saved_routes"
     tag = Column(String, primary_key=True, index=True)

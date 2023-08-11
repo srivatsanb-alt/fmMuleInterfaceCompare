@@ -11,7 +11,7 @@ from fastapi import WebSocketDisconnect
 # ati code imports
 from app.routers.dependencies import generate_jwt_token
 import redis
-from .plugin_rq import enqueue
+from plugins.plugin_rq import enqueue
 
 
 async def ws_reader(websocket, name, handler_obj, unique_id=None, api_key=None):
@@ -49,12 +49,11 @@ async def ws_reader(websocket, name, handler_obj, unique_id=None, api_key=None):
         if api_key:
             msg["api_key"] = api_key
 
-        logger.debug(f"Converted msg: {msg}, count: {count}")
+        logger.info(f"Converted msg: {msg}, count: {count}")
         enqueue(plugin_q, handler_obj.handle, msg)
 
 
 async def ws_writer(websocket, name, format="json", unique_id=None):
-
     log_conf_path = os.path.join(os.getenv("FM_MISC_DIR"), "plugin_logging.conf")
     logging.config.fileConfig(log_conf_path)
     logger = logging.getLogger(f"plugin_{name}")
@@ -109,7 +108,6 @@ def check_response(response):
 
 
 def send_req_to_FM(plugin_name, endpoint, req_type, req_json=None, query=""):
-
     url = get_fm_url(endpoint, query)
 
     logger = logging.getLogger(plugin_name)
@@ -162,6 +160,21 @@ def get_fm_url(endpoint, query):
         ),
         "create_generic_alerts": os.path.join(
             "http://", fm_ip, "api/v1/create_generic_alerts/", str(query)
+        ),
+        "sherpa_summary": os.path.join(
+            "http://", fm_ip, "api/v1/sherpa_summary/", str(query), str(0)
+        ),
+        "update_sherpa_metadata": os.path.join(
+            "http://", fm_ip, "api/v1/update_sherpa_metadata/"
+        ),
+        "update_saved_route_info": os.path.join(
+            "http://", fm_ip, "api/v1/trips/update_saved_route_info/"
+        ),
+        "get_saved_routes_backend": os.path.join(
+            "http://", fm_ip, "api/v1/trips/get_saved_routes/", str(query), "true"
+        ),
+        "get_saved_route": os.path.join(
+            "http://", fm_ip, "api/v1/trips/get_saved_route/", str(query)
         ),
     }
     return fm_endpoints.get(endpoint, None)
