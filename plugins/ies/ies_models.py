@@ -15,7 +15,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy import create_engine
-from sqlalchemy import Integer, String, Column, ARRAY
+from sqlalchemy import Integer, String, Column, ARRAY, text
 from sqlalchemy.orm.attributes import flag_modified
 from models.base_models import Base, TimestampMixin
 import plugins.plugin_comms as pcomms
@@ -59,7 +59,15 @@ class DBSession:
         return station.ati_name
 
     def get_consolidation_info(
-        self, start_station: str, route_tag: str, booked_from, booked_till
+        self,
+        start_station: str,
+        route_tag: str,
+        booked_from,
+        booked_till,
+        order_by="created_at",
+        order_mode="desc",
+        page_num=1,
+        reqs_per_page=50,
     ):
         all_ies_routes = self.get_all_ies_routes()
         if all_ies_routes != {}:
@@ -74,7 +82,9 @@ class DBSession:
                 .filter(IESBookingReq.combined_trip_id == None)
                 .filter(IESBookingReq.created_at > booked_from)
                 .filter(IESBookingReq.created_at < booked_till)
-                .order_by(IESBookingReq.created_at.desc())
+                .order_by(text(f"{order_by} {order_mode}"))
+                .offset((page_num - 1) * reqs_per_page)
+                .limit(reqs_per_page)
                 .all()
             )
         else:
@@ -121,34 +131,64 @@ class DBSession:
             self.add_to_session(route)
         return
 
-    def get_ongoing_jobs(self, booked_from, booked_till):
+    def get_ongoing_jobs(
+        self,
+        booked_from,
+        booked_till,
+        order_by="created_at",
+        order_mode="desc",
+        page_num=1,
+        reqs_per_page=50,
+    ):
         return (
             self.session.query(IESBookingReq)
             .filter(IESBookingReq.combined_trip_id != None)
             .filter(IESBookingReq.status.not_in(tm.COMPLETED_TRIP_STATUS))
             .filter(IESBookingReq.created_at > booked_from)
             .filter(IESBookingReq.created_at < booked_till)
-            .order_by(IESBookingReq.created_at.desc())
+            .order_by(text(f"{order_by} {order_mode}"))
+            .offset((page_num - 1) * reqs_per_page)
+            .limit(reqs_per_page)
             .all()
         )
 
-    def get_completed_jobs(self, booked_from, booked_till):
+    def get_completed_jobs(
+        self,
+        booked_from,
+        booked_till,
+        order_by="created_at",
+        order_mode="desc",
+        page_num=1,
+        reqs_per_page=50,
+    ):
         return (
             self.session.query(IESBookingReq)
             .filter(IESBookingReq.status.in_(tm.COMPLETED_TRIP_STATUS))
             .filter(IESBookingReq.created_at > booked_from)
             .filter(IESBookingReq.created_at < booked_till)
-            .order_by(IESBookingReq.created_at.desc())
+            .order_by(text(f"{order_by} {order_mode}"))
+            .offset((page_num - 1) * reqs_per_page)
+            .limit(reqs_per_page)
             .all()
         )
 
-    def get_pending_jobs(self, booked_from, booked_till):
+    def get_pending_jobs(
+        self,
+        booked_from,
+        booked_till,
+        order_by="created_at",
+        order_mode="desc",
+        page_num=1,
+        reqs_per_page=50,
+    ):
         return (
             self.session.query(IESBookingReq)
             .filter(IESBookingReq.status == "pending")
             .filter(IESBookingReq.created_at > booked_from)
             .filter(IESBookingReq.created_at < booked_till)
-            .order_by(IESBookingReq.created_at.desc())
+            .order_by(text(f"{order_by} {order_mode}"))
+            .offset((page_num - 1) * reqs_per_page)
+            .limit(reqs_per_page)
             .all()
         )
 

@@ -199,6 +199,7 @@ async def consolidation_info(
                         "kanban_id": booking.kanban_id,
                         "route": booking.route,
                         "requested_at": iu.dt_to_str(booking.created_at),
+                        "last_update_at": iu.dt_to_str(booking.updated_at),
                         "material_no": booking.other_info["material_no"],
                         "quantity": booking.other_info["quantity"],
                     }
@@ -243,7 +244,14 @@ async def get_pending_jobs(
     booked_from = iu.str_to_dt(pending_jobs_req.booked_from)
     response = {}
     with im.DBSession() as dbsession:
-        pending_jobs = dbsession.get_pending_jobs(booked_from, booked_till)
+        pending_jobs = dbsession.get_pending_jobs(
+            booked_from,
+            booked_till,
+            pending_jobs_req.order_by,
+            pending_jobs_req.order_mode,
+            pending_jobs_req.page_num,
+            pending_jobs_req.reqs_per_page,
+        )
         for job in pending_jobs:
             response.update(
                 {
@@ -252,6 +260,7 @@ async def get_pending_jobs(
                         "route_tag": job.route_tag,
                         "route": job.route,
                         "requested_at": iu.dt_to_str(job.created_at),
+                        "last_update_at": iu.dt_to_str(job.updated_at),
                         "material_no": job.other_info["material_no"],
                         "quantity": job.other_info["quantity"],
                     }
@@ -276,9 +285,23 @@ async def get_consolidated_jobs(
     response = {}
     with im.DBSession() as dbsession:
         if active:
-            jobs = dbsession.get_ongoing_jobs(booked_from, booked_till)
+            jobs = dbsession.get_ongoing_jobs(
+                booked_from,
+                booked_till,
+                consolidated_jobs_req.order_by,
+                consolidated_jobs_req.order_mode,
+                consolidated_jobs_req.page_num,
+                consolidated_jobs_req.reqs_per_page,
+            )
         else:
-            jobs = dbsession.get_completed_jobs(booked_from, booked_till)
+            jobs = dbsession.get_completed_jobs(
+                booked_from,
+                booked_till,
+                consolidated_jobs_req.order_by,
+                consolidated_jobs_req.order_mode,
+                consolidated_jobs_req.page_num,
+                consolidated_jobs_req.reqs_per_page,
+            )
             logging.getLogger("plugin_ies").info(f"len of resp. {len(jobs)}")
         for job in jobs:
             response.update(
@@ -288,6 +311,7 @@ async def get_consolidated_jobs(
                         "route_tag": job.route_tag,
                         "route": job.route,
                         "requested_at": iu.dt_to_str(job.created_at),
+                        "last_update_at": iu.dt_to_str(job.updated_at),
                         "status": job.status,
                         "trip_id": job.combined_trip_id,
                         "material_no": job.other_info["material_no"],

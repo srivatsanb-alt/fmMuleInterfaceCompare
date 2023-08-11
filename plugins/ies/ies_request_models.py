@@ -1,5 +1,5 @@
 from models.request_models import ClientReq
-from typing import List
+from typing import List, Optional
 
 
 class IesStation(ClientReq):
@@ -38,3 +38,7 @@ class CancelPendingReq(ClientReq):
 class JobsReq(ClientReq):
     booked_from: str
     booked_till: str
+    page_num: int
+    reqs_per_page: int
+    order_by: Optional[str] = "created_at"
+    order_mode: Optional[str] = "desc"
