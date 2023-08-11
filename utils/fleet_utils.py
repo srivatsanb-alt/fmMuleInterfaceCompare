@@ -435,7 +435,7 @@ class FleetUtils:
         for st in invalid_station:
             cls.delete_station_status(dbsession, st.name)
             cls.delete_station(dbsession, st.name)
-            cls.delete_invalid_booked_trips(st.name, st.fleet.name)
+            cls.delete_invalid_booked_trips(dbsession, st.name, st.fleet.name)
 
     @classmethod
     def delete_invalid_booked_trips(cls, dbsession, station_name, fleet_name):
@@ -443,7 +443,7 @@ class FleetUtils:
         for p_trip in p_trips:
             if station_name in p_trip.trip.route:
                 logger.info(
-                    f"deleted trip {p_trip.trip.id}, reason: Invalid route, {station_name} will be removed with the update"
+                    f"deleted trip {p_trip.trip.id}, reason: Invalid route, {station_name} will be removed with the map change"
                 )
                 dbsession.delete_pending_trip(p_trip)
                 p_trip.trip.status = tm.TripStatus.CANCELLED
