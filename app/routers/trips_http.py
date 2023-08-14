@@ -218,7 +218,6 @@ async def trip_status_with_type(
 
 # returns trip status, i.e. the time slot of the trip booking and the trip status with timestamp.
 
-
 @router.post("/status_pg/{type}")
 async def trip_status_pg_with_type(
     type: str,
@@ -240,6 +239,10 @@ async def trip_status_pg_with_type(
     else:
         dpd.raise_error("Query sent for an invalid trip type")
 
+    logging.getLogger("uvicorn").info(
+            f"trip_status_req: {jsonable_encoder(trip_status_req)}"
+        )
+    
     with DBSession() as dbsession:
         if trip_status_req.booked_from and trip_status_req.booked_till:
             trip_status_req.booked_from = str_to_dt(trip_status_req.booked_from)
@@ -251,14 +254,14 @@ async def trip_status_pg_with_type(
                 valid_status,
                 trip_status_req.filter_sherpa_names,
                 trip_status_req.filter_status,
+                trip_status_req.search_txt,
                 trip_status_req.order_by,
                 trip_status_req.order_mode,
-                trip_status_req.skip,
-                trip_status_req.limit,
+                trip_status_req.page_no,
+                trip_status_req.rec_limit,
             )
 
     return response
-
 
 @router.post("/status")
 async def trip_status(
