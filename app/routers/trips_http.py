@@ -255,8 +255,8 @@ async def trip_status_pg_with_type(
                 trip_status_req.filter_sherpa_names,
                 trip_status_req.filter_status,
                 trip_status_req.search_txt,
-                trip_status_req.order_by,
-                trip_status_req.order_mode,
+                trip_status_req.sort_field,
+                trip_status_req.sort_order,
                 trip_status_req.page_no,
                 trip_status_req.rec_limit,
             )
@@ -336,10 +336,10 @@ async def trip_analytics_pg(
             trip_analytics_req.booked_from,
             trip_analytics_req.booked_till,
             trip_analytics_req.filter_sherpa_names,
-            trip_analytics_req.order_by,
-            trip_analytics_req.order_mode,
-            trip_analytics_req.skip,
-            trip_analytics_req.limit,
+            trip_analytics_req.sort_field,
+            trip_analytics_req.sort_order,
+            trip_analytics_req.page_no,
+            trip_analytics_req.rec_limit,
         )
         response = trip_analytics
 

@@ -373,8 +373,8 @@ class TripStatusReq_pg(ClientReq):
     filter_status: Optional[List[str]]
     booked_from: Optional[str]
     booked_till: Optional[str]
-    order_by: Optional[str]
-    order_mode: Optional[str]
+    sort_field: Optional[str]
+    sort_order: Optional[str]
     search_txt: Optional[str]
 
 class TripStatusReq(ClientReq):
