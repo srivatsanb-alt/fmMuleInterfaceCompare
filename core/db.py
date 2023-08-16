@@ -14,9 +14,6 @@ def connect():
     }
 
     return psycopg2.connect(
-        host=os.getenv("PGHOST"),
-        user=os.getenv("PGUSER"),
-        password=os.getenv("PGPASSWORD"),
         **keepalive_kwargs,
     )
 
