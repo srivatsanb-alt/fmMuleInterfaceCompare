@@ -369,6 +369,7 @@ class SherpaImgUpdateCtrlReq(ClientReq):
 class TripStatusReq_pg(ClientReq):
     page_no: int
     rec_limit: int
+    filter_fleets: Optional[List[str]]
     filter_sherpa_names: Optional[List[str]]
     filter_status: Optional[List[str]]
     booked_from: Optional[str]

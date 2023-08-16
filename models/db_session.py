@@ -386,7 +386,7 @@ class DBSession:
     
 
     def get_trips_with_timestamp_and_status_pagination(
-        self, booked_from, booked_till, valid_status, sherpa_names,filter_status, search_text, sort_field="id", sort_order="desc", page=0, limit=50):
+        self, booked_from, booked_till,filter_fleets, valid_status, sherpa_names,filter_status, search_text, sort_field="id", sort_order="desc", page=0, limit=50):
             skip = page*limit
             trips = {}
             count = 0
@@ -395,9 +395,17 @@ class DBSession:
                         .filter(tm.Trip.booking_time > booked_from)
                         .filter(tm.Trip.booking_time < booked_till)
                         .filter(tm.Trip.status.in_(valid_status)))
-                        
+            
+            if filter_fleets and filter_fleets != "[]":
+                base_query = base_query.filter(tm.Trip.assign_sherpa.in_(filter_fleets))
+            
+
             if sherpa_names and sherpa_names != "[]":
                 base_query = base_query.filter(tm.Trip.assign_sherpa.in_(sherpa_names))
+            
+            #having to filter again due to filter in UI that overrides above filter
+            if filter_status and filter_status != "[]":
+                base_query = base_query.filter(tm.Trip.status.in_(filter_status))
             
             if search_text and search_text != "":
                 columns_to_search = [
@@ -486,59 +494,47 @@ class DBSession:
         return jsonable_encoder(legs)
 
     def get_trip_analytics_with_pagination(
-        self, booked_from, booked_till, sherpa_names, order_by = "id", 
-            order_mode="desc", page=0, limit=50
+        self, booked_from, booked_till, filter_fleets, sherpa_names, sort_field = "id", 
+            sort_order="desc", page=0, limit=50
     ):
         #data validation
         if(limit==0): 
             limit =50
-        if(order_by==""):
-            order_by="id"
-        if (order_mode==""):
-            order_mode="desc"
+        if(sort_field==""):
+            sort_field="id"
+        if (sort_order==""):
+            sort_order="desc"
         #Data validation
-
+        skip = page*limit
         trip_analytics = {}
         count = 0
-        if sherpa_names and sherpa_names != "[]" :
-            trips = (
-                self.session.query(tm.Trip)
-                .filter(tm.Trip.booking_time > booked_from)
-                .filter(tm.Trip.booking_time < booked_till)
-                .filter(tm.Trip.sherpa_name.in_(sherpa_names))
-                .order_by(text(f"{order_by} {order_mode}" ))
-                .offset(page)
-                .limit(limit)
-                .all()
-            )
-            count = (
-                self.session.query(tm.Trip)
-                .filter(tm.Trip.booking_time > booked_from)
-                .filter(tm.Trip.booking_time < booked_till)
-                .filter(tm.Trip.sherpa_name.in_(sherpa_names))
-                .count()
-            )
-        else:
-            trips = (
-                self.session.query(tm.Trip)
-                .filter(tm.Trip.booking_time > booked_from)
-                .filter(tm.Trip.booking_time < booked_till)
-                .order_by(text(f"{order_by} {order_mode}" ))
-                .offset(page)
-                .limit(limit)
-                .all()
-            )
-            count = (
-                 self.session.query(tm.Trip)
-                .filter(tm.Trip.booking_time > booked_from)
-                .filter(tm.Trip.booking_time < booked_till)
-                .count()
-            )
+
+        base_query = (self.session.query(tm.Trip)
+                    .filter(tm.Trip.booking_time > booked_from)
+                    .filter(tm.Trip.booking_time < booked_till)
+                    )
+        
+        if filter_fleets and filter_fleets != "[]":
+            base_query = base_query.filter(tm.Trip.assign_sherpa.in_(filter_fleets))
+        
+        if sherpa_names and sherpa_names != "[]":
+            base_query = base_query.filter(tm.Trip.assign_sherpa.in_(sherpa_names))
+        
+        count = base_query.count()
+
+
+        base_query = (base_query.order_by(text(f"{sort_field} {sort_order}" ))
+                        .offset(skip)
+                        .limit(limit))
+            
+        trips = base_query.all()
+            
+        pages = int(count/limit) if (count%limit == 0) else int(count/limit + 1)
         
         trip_analytics = jsonable_encoder(trips)
         for item in trip_analytics:
             item["legs"] = self.get_legs(str(item["id"]))
-        trip_analytics = {"trips_analytics": trip_analytics, "count": count, "limit": limit, "order_by":order_by, "order_mode": order_mode}
+        trip_analytics = {"trips_analytics": trip_analytics,"count": count, "limit": limit,"total_pages": pages, "sort_field":sort_field, "sort_order": sort_order}
         return trip_analytics
 
     def get_trip_analytics(self, trip_leg_id):

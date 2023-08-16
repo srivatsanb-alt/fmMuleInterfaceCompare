@@ -236,6 +236,8 @@ async def trip_status_pg_with_type(
         valid_status = tm.COMPLETED_TRIP_STATUS
     elif type == "ongoing":
         valid_status = tm.ONGOING_TRIP_STATUS
+    elif type == "active":
+        valid_status = tm.ACTIVE_TRIP_STATUS
     else:
         dpd.raise_error("Query sent for an invalid trip type")
 
@@ -251,6 +253,7 @@ async def trip_status_pg_with_type(
             response = dbsession.get_trips_with_timestamp_and_status_pagination(
                 trip_status_req.booked_from,
                 trip_status_req.booked_till,
+                trip_status_req.filter_fleets,
                 valid_status,
                 trip_status_req.filter_sherpa_names,
                 trip_status_req.filter_status,
@@ -335,6 +338,7 @@ async def trip_analytics_pg(
         trip_analytics = dbsession.get_trip_analytics_with_pagination(
             trip_analytics_req.booked_from,
             trip_analytics_req.booked_till,
+            trip_analytics_req.filter_fleets,
             trip_analytics_req.filter_sherpa_names,
             trip_analytics_req.sort_field,
             trip_analytics_req.sort_order,

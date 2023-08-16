@@ -32,7 +32,7 @@ class TripLegStatus:
 COMPLETED_TRIP_STATUS = [TripStatus.SUCCEEDED, TripStatus.FAILED, TripStatus.CANCELLED]
 ONGOING_TRIP_STATUS = [TripStatus.WAITING_STATION, TripStatus.EN_ROUTE]
 YET_TO_START_TRIP_STATUS = [TripStatus.BOOKED, TripStatus.ASSIGNED]
-
+ACTIVE_TRIP_STATUS = [TripStatus.WAITING_STATION, TripStatus.EN_ROUTE, TripStatus.BOOKED, TripStatus.ASSIGNED]
 
 class TripState:
     WAITING_STATION_AUTO_HITCH_START = "waiting_station_auto_hitch_start"
