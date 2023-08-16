@@ -99,6 +99,11 @@ class FMMongo:
         col = self.get_collection("user_details", fu_db)
         return col.find_one(user_query)
 
+    def get_hashed_plugin_api_key(self):
+        fu_db = self.mongo_client.get_database("frontend_users")
+        col = self.get_collection("plugin_auth", fu_db)
+        return col.find_one({})["hashed_api_key"]
+
     def get_all_frontend_users(self):
         fu_db = self.mongo_client.get_database("frontend_users")
         col = self.get_collection("user_details", fu_db)

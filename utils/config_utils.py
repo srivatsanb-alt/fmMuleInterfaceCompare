@@ -23,6 +23,18 @@ class FrontendUsersValidator:
             },
         }
     }
+    plugin_auth = {
+        "$jsonSchema": {
+            "bsonType": "object",
+            "required": ["hashed_api_key"],
+            "properties": {
+                "hashed_api_key": {
+                    "bsonType": "string",
+                    "description": "plugin hashed_api_key",
+                },
+            },
+        }
+    }
 
 
 class ConfigValidator:
@@ -353,6 +365,12 @@ class DefaultFrontendUser:
         "name": "admin",
         "hashed_password": "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4",
         "role": "support",
+    }
+
+
+class PluginAuth:
+    plugin_admin = {
+        "hashed_api_key": "a6a333480615e7339fbac0fa699559ce950a90df85d93a1f114a0c79dfc0750b"
     }
 
 

@@ -1,5 +1,6 @@
 import hashlib
 import os
+import redis
 from fastapi import APIRouter, Depends
 
 # ati code imports
@@ -37,6 +38,24 @@ async def login(user_login: rqm.UserLogin):
                 "password": os.getenv("ATI_STATIC_AUTH_PASSWORD"),
             },
         }
+
+    return response
+
+
+@router.get("/get_fm_secret/plugin/{plugin_api_key}")
+async def get_fm_secret(
+    plugin_api_key: str,
+):
+    response = {}
+    with FMMongo() as fm_mongo:
+        hashed_api_key = hashlib.sha256(plugin_api_key.encode("utf-8")).hexdigest()
+        hashed_api_key_db = fm_mongo.get_hashed_plugin_api_key()
+
+        if hashed_api_key_db != hashed_api_key:
+            dpd.raise_error("Unknown requester", 401)
+
+        redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
+        response["FM_SECRET_TOKEN"] = redis_conn.get("FM_SECRET_TOKEN")
 
     return response
 
