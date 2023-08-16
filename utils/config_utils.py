@@ -141,18 +141,6 @@ class ConfigValidator:
         }
     }
 
-    plugins = {
-        "$jsonSchema": {
-            "bsonType": "object",
-            "properties": {
-                "all_plugins": {
-                    "bsonType": "array",
-                    "description": "list of all the plugins that needs to be activated`",
-                }
-            },
-        }
-    }
-
     master_fm = {
         "$jsonSchema": {
             "bsonType": "object",
@@ -398,7 +386,6 @@ class ConfigDefaults:
         "auto_park": {"book": False, "max_trips": 2, "threshold": 600, "priority": 1},
         "battery_swap": {"book": False, "max_trips": 2, "threshold": 15, "priority": 3},
     }
-    plugins = {"all_plugins": []}
     simulator = {
         "simulate": True,
         "book_trips": False,
