@@ -16,6 +16,8 @@ from sqlalchemy import inspect as sql_inspect
 from sqlalchemy import or_
 from sqlalchemy.sql import not_
 from sqlalchemy.orm.attributes import flag_modified
+
+# ati code imports
 from models.db_session import DBSession
 import models.fleet_models as fm
 import models.visa_models as vm
