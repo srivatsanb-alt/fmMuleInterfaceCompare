@@ -42,7 +42,7 @@ async def login(user_login: rqm.UserLogin):
     return response
 
 
-@router.get("/get_fm_secret/plugin/{plugin_api_key}")
+@router.get("/plugin/{plugin_api_key}")
 async def get_fm_secret(
     plugin_api_key: str,
 ):

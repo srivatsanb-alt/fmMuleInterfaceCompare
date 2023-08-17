@@ -138,8 +138,10 @@ services:
       - .:/app/static
     depends_on:
       - mongo
-      - db 
+      - db
+      - fleet_manager 
     links:
       - mongo
       - db
+      - fleet_manager
     network_mode: bridge
