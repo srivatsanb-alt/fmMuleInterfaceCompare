@@ -128,6 +128,7 @@ services:
     environment:
       PGTZ: Asia/Kolkata
       TZ: Asia/Kolkata
+      PLUGIN_DATABASE_URI: postgresql://postgres:postgres@db
       PLUGIN_MONGO_DATABASE_URI: mongodb://ati:atiMongo@mongo:27017
     ports:
      - "8002:8002"
@@ -137,6 +138,8 @@ services:
       - .:/app/static
     depends_on:
       - mongo
+      - db 
     links:
       - mongo
+      - db
     network_mode: bridge
