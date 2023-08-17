@@ -397,7 +397,7 @@ class DBSession:
                         .filter(tm.Trip.status.in_(valid_status)))
             
             if filter_fleets and filter_fleets != "[]":
-                base_query = base_query.filter(tm.Trip.assign_sherpa.in_(filter_fleets))
+                base_query = base_query.filter(tm.Trip.fleet_name.in_(filter_fleets))
             
 
             if sherpa_names and sherpa_names != "[]":
@@ -515,7 +515,7 @@ class DBSession:
                     )
         
         if filter_fleets and filter_fleets != "[]":
-            base_query = base_query.filter(tm.Trip.assign_sherpa.in_(filter_fleets))
+            base_query = base_query.filter(tm.Trip.fleet_name.in_(filter_fleets))
         
         if sherpa_names and sherpa_names != "[]":
             base_query = base_query.filter(tm.Trip.assign_sherpa.in_(sherpa_names))
