@@ -7,15 +7,16 @@ from fastapi import Header
 from fastapi.param_functions import Query
 from rq.job import Job
 from rq import Retry
-from utils.rq_utils import enqueue, enqueue_at, Queues
 import redis
 import os
 import json
-from models.request_models import SherpaReq
-from models.db_session import DBSession
 
 # ati code imports
 import core.handler_configuration as hc
+from utils.rq_utils import enqueue, enqueue_at, Queues
+from models.request_models import SherpaReq
+from models.db_session import DBSession
+
 
 # upon assignment of a task, it gets added into the job queue
 def add_job_to_queued_jobs(job_id, source, redis_conn=None):
