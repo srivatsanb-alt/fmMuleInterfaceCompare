@@ -8,7 +8,6 @@ copy_static=1
 server=0
 build_base=1
 cert_reqd=1
-run_docker_as_host=0
 
 # Set variables
 IP_ADDRESS="localhost"
@@ -34,8 +33,6 @@ do
       echo $IP_ADDRESS;server=1;;
     b) # WILL NOT create base image
       build_base=0;;
-    v) # connect to master_fm via VPN
-      run_docker_as_host=1;; 
     ?/) # Invalid option
       echo "Error: Invalid option"
       exit;;
@@ -117,8 +114,6 @@ if [ $server == 1 ] ; then
   create_static_backup $IP_ADDRESS # function defined in push_utils
 else
   cp misc/docker_compose_host.yml static/
-  cp misc/docker_compose_bridge.yml static/
-
 fi
 
 if [ $cert_reqd == 1 ]; then
@@ -158,23 +153,10 @@ else
 }
 fi
 
-
-if [ $run_docker_as_host == 1 ] ; then 
-{
-   conf_file="nginx_host.conf"
-   echo "set nginx conf file to $conf_file"
-}
-else
-{
-  conf_file="nginx_bridge.conf"
-  echo "set nginx conf file to $conf_file" 
-}
-fi
-
+conf_file="nginx_host.conf"
 docker image build --build-arg CONF="${conf_file}" -t fm_nginx:1.23.3 -f docker_files/nginx.Dockerfile .
+
 echo "Successfully built nginx image"
-
-
 MULE_IMAGE_ID=$(docker images --format {{.ID}} localhost:$DOCKER_REGISTRY_PORT/mule)
 echo "MULE_IMAGE_ID $MULE_IMAGE_ID"
 

@@ -17,6 +17,7 @@ import asyncio
 import utils.log_utils as lu
 import utils.util as utils_util
 import core.constants as cc
+from models.mongo_client import FMMongo
 from models.fleet_models import SherpaEvent
 from models.fleet_models import Sherpa, Station
 from models.request_models import FMReq, MoveReq
@@ -183,14 +184,23 @@ def cancel_jobs_from_user(user, event):
         time.sleep(0.05)
 
 
-def send_msg_to_conveyor(msg, conveyor_name):
+def send_msg_to_plugin(msg_to_forward, channel_name):
+    msg = {
+        "msg_to_forward": msg_to_forward,
+        "channel_name": channel_name,
+        "type": "forward_to_plugin_redis",
+    }
     pub = redis.from_url(os.getenv("FM_REDIS_URI"), decode_responses=True)
-    pub.publish(f"channel:plugin_conveyor_{conveyor_name}", str(msg))
+    pub.publish(f"channel:plugin_comms", str(msg))
 
 
 def get_num_units_converyor(conveyor_name):
-    plugin_port = os.getenv("PLUGIN_PORT")
-    plugin_ip = "127.0.0.1"
+
+    with FMMongo() as fm_mongo:
+        plugin_info = fm_mongo.get_plugin_info()
+        plugin_port = plugin_info["plugin_port"]
+        plugin_ip = plugin_info["plugin_ip"]
+
     plugin_ip = plugin_ip + ":" + plugin_port
     endpoint = os.path.join(
         "http://", plugin_ip, f"plugin/conveyor/tote_trip_info/{conveyor_name}"

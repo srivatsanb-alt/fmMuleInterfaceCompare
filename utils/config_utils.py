@@ -4,6 +4,10 @@ class CONFIG_VIEW_PERMISSION_LEVELS:
     SUPPORT = 2
 
 
+class CreateColKwargs:
+    capped_default = {"capped": True, "max": 1, "size": 10}
+
+
 class FrontendUsersValidator:
     user_details = {
         "$jsonSchema": {
@@ -19,18 +23,6 @@ class FrontendUsersValidator:
                     "bsonType": "string",
                     "enum": ["operator", "supervisor", "support"],
                     "description": "Role based access would be provided in the frontend app",
-                },
-            },
-        }
-    }
-    plugin_auth = {
-        "$jsonSchema": {
-            "bsonType": "object",
-            "required": ["hashed_api_key"],
-            "properties": {
-                "hashed_api_key": {
-                    "bsonType": "string",
-                    "description": "plugin hashed_api_key",
                 },
             },
         }
@@ -360,17 +352,26 @@ class ConfigValidator:
     }
 
 
-class DefaultFrontendUser:
-    admin = {
-        "name": "admin",
-        "hashed_password": "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4",
-        "role": "support",
-    }
-
-
-class PluginAuth:
-    plugin_admin = {
-        "hashed_api_key": "a6a333480615e7339fbac0fa699559ce950a90df85d93a1f114a0c79dfc0750b"
+class PluginConfigValidator:
+    plugin_info = {
+        "$jsonSchema": {
+            "bsonType": "object",
+            "required": ["plugin_ip", "plugin_port", "hashed_api_key"],
+            "properties": {
+                "hashed_api_key": {
+                    "bsonType": "string",
+                    "description": "plugin hashed_api_key",
+                },
+                "plugin_ip": {
+                    "bsonType": "string",
+                    "description": "plugin app IP",
+                },
+                "plugin_port": {
+                    "bsonType": "string",
+                    "description": "plugin app port",
+                },
+            },
+        }
     }
 
 
@@ -421,5 +422,17 @@ class ConfigDefaults:
     }
 
 
-class CreateColKwargs:
-    capped_default = {"capped": True, "max": 1, "size": 10}
+class DefaultFrontendUser:
+    admin = {
+        "name": "admin",
+        "hashed_password": "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4",
+        "role": "support",
+    }
+
+
+class PluginConfigDefaults:
+    plugin_info = {
+        "plugin_ip": "127.0.0.1",
+        "plugin_port": "8002",
+        "hashed_api_key": "a6a333480615e7339fbac0fa699559ce950a90df85d93a1f114a0c79dfc0750b",
+    }

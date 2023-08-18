@@ -1363,10 +1363,13 @@ class Handlers:
             logging.getLogger().info(transfer_tote_msg)
 
             if req.num_units == 2:
-                msg = "transfer_2totes"
+                msg_to_forward = "transfer_2totes"
             elif req.num_units == 1:
-                msg = "transfer_tote"
-            utils_comms.send_msg_to_conveyor(msg, curr_station.name)
+                msg_to_forward = "transfer_tote"
+
+            utils_comms.send_msg_to_plugin(
+                msg_to_forward, f"plugin_conveyor_{curr_station.name}"
+            )
 
             self.dbsession.add_notification(
                 [fleet_name, curr_station.name],

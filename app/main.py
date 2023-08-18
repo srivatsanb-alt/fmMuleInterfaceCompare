@@ -22,6 +22,7 @@ from app.routers import (
     notifications,
     configure_fleet,
     version_control,
+    plugin_ws,
 )
 import utils.log_utils as lu
 
@@ -72,6 +73,7 @@ app.include_router(station_http.router)
 app.include_router(notifications.router)
 app.include_router(configure_fleet.router)
 app.include_router(version_control.router)
+app.include_router(plugin_ws.router)
 
 
 def get_uvicorn_config():

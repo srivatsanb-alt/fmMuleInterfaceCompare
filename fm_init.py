@@ -23,18 +23,24 @@ sys.path.append("/app/mule")
 from mule.ati.common.config import load_mule_config
 
 
+def maybe_add_plugin_user(fm_mongo, fu_db):
+    create_col_kwargs = getattr(cu.CreateColKwargs, "capped_default")
+    fm_mongo.create_collection("plugin_info", fu_db, **create_col_kwargs)
+    fm_mongo.add_validator(
+        "plugin_info", fu_db, getattr(cu.PluginConfigValidator, "plugin_info")
+    )
+    c = fm_mongo.get_collection("plugin_info", fu_db)
+    if c.count_documents(filter={}) == 0:
+        c.insert_one(cu.PluginConfigDefaults.plugin_info)
+        print(f"Created default plugin auth details")
+
+
 def maybe_add_default_admin_user(fm_mongo):
     fm_mongo.create_database("frontend_users")
     fu_db = fm_mongo.get_database("frontend_users")
     fm_mongo.create_collection("user_details", fu_db)
-    create_col_kwargs = getattr(cu.CreateColKwargs, "capped_default")
-    fm_mongo.create_collection("plugin_auth", fu_db, **create_col_kwargs)
-
     fm_mongo.add_validator(
         "user_details", fu_db, getattr(cu.FrontendUsersValidator, "user_details")
-    )
-    fm_mongo.add_validator(
-        "plugin_auth", fu_db, getattr(cu.FrontendUsersValidator, "plugin_auth")
     )
     c = fm_mongo.get_collection("user_details", fu_db)
     c.create_index("name", unique=True)
@@ -42,10 +48,7 @@ def maybe_add_default_admin_user(fm_mongo):
         c.insert_one(cu.DefaultFrontendUser.admin)
         print(f"Created default user")
 
-    c = fm_mongo.get_collection("plugin_auth", fu_db)
-    if c.count_documents(filter={}) == 0:
-        c.insert_one(cu.PluginAuth.plugin_admin)
-        print(f"Created default plugin auth details")
+    maybe_add_plugin_user(fm_mongo, fu_db)
 
 
 def setfm_mongo_config():
@@ -73,12 +76,7 @@ def setfm_mongo_config():
 
             if create_col_kwargs["capped"]:
                 c.insert_one(default_config)
-
-            # else:
-            #    query = {}
-            #    c.find_one_and_replace(query, default_config)
-
-            logging.getLogger().info(f"updated {collection_name}")
+            logging.getLogger("configure_fleet").info(f"updated {collection_name}")
 
 
 def regenerate_config():
