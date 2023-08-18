@@ -384,22 +384,18 @@ class DBSession:
             .all()
         )
     
-
     def get_trips_with_timestamp_and_status_pagination(
         self, booked_from, booked_till,filter_fleets, valid_status, sherpa_names,filter_status, search_text, sort_field="id", sort_order="desc", page=0, limit=50):
             skip = page*limit
             trips = {}
             count = 0
-
-            base_query = (self.session.query(tm.Trip)
-                        .filter(tm.Trip.booking_time > booked_from)
-                        .filter(tm.Trip.booking_time < booked_till)
-                        .filter(tm.Trip.status.in_(valid_status)))
-            
+            base_query = (self.session.query(tm.Trip).filter(tm.Trip.status.in_(valid_status)))
+            if(booked_from and booked_from !=""):
+                 base_query = base_query.filter(tm.Trip.booking_time > booked_from)
+            if(booked_till and booked_till !=""):
+                 base_query = base_query.filter(tm.Trip.booking_time < booked_till)
             if filter_fleets and filter_fleets != "[]":
                 base_query = base_query.filter(tm.Trip.fleet_name.in_(filter_fleets))
-            
-
             if sherpa_names and sherpa_names != "[]":
                 base_query = base_query.filter(tm.Trip.sherpa_name.in_(sherpa_names))
             

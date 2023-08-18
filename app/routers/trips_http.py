@@ -250,19 +250,19 @@ async def trip_status_pg_with_type(
             trip_status_req.booked_from = str_to_dt(trip_status_req.booked_from)
             trip_status_req.booked_till = str_to_dt(trip_status_req.booked_till)
 
-            response = dbsession.get_trips_with_timestamp_and_status_pagination(
-                trip_status_req.booked_from,
-                trip_status_req.booked_till,
-                trip_status_req.filter_fleets,
-                valid_status,
-                trip_status_req.filter_sherpa_names,
-                trip_status_req.filter_status,
-                trip_status_req.search_txt,
-                trip_status_req.sort_field,
-                trip_status_req.sort_order,
-                trip_status_req.page_no,
-                trip_status_req.rec_limit,
-            )
+        response = dbsession.get_trips_with_timestamp_and_status_pagination(
+            trip_status_req.booked_from,
+            trip_status_req.booked_till,
+            trip_status_req.filter_fleets,
+            valid_status,
+            trip_status_req.filter_sherpa_names,
+            trip_status_req.filter_status,
+            trip_status_req.search_txt,
+            trip_status_req.sort_field,
+            trip_status_req.sort_order,
+            trip_status_req.page_no,
+            trip_status_req.rec_limit,
+        )
 
     return response
 
