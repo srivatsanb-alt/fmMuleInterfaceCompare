@@ -401,7 +401,7 @@ class DBSession:
             
 
             if sherpa_names and sherpa_names != "[]":
-                base_query = base_query.filter(tm.Trip.assign_sherpa.in_(sherpa_names))
+                base_query = base_query.filter(tm.Trip.sherpa_name.in_(sherpa_names))
             
             #having to filter again due to filter in UI that overrides above filter
             if filter_status and filter_status != "[]":
@@ -518,7 +518,7 @@ class DBSession:
             base_query = base_query.filter(tm.Trip.fleet_name.in_(filter_fleets))
         
         if sherpa_names and sherpa_names != "[]":
-            base_query = base_query.filter(tm.Trip.assign_sherpa.in_(sherpa_names))
+            base_query = base_query.filter(tm.Trip.sherpa_name.in_(sherpa_names))
         
         count = base_query.count()
 
