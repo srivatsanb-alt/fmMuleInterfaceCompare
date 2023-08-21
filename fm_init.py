@@ -100,13 +100,12 @@ def populate_redis_with_basic_info(dbsession: DBSession):
     lu.set_log_config_dict(sherpa_names)
 
     # redis_expire_timeout
-    fleet_config = toml.load(os.path.join(os.getenv("FM_CONFIG_DIR"), "fleet_config.toml"))
+    with FMMongo() as fm_mongo:
+        rq_params = fm_mongo.get_collection_from_fm_config("rq")
 
     # store default job timeout
-    default_job_timeout = fleet_config["fleet"]["rq"].get("default_job_timeout", 15)
-    generic_handler_job_timeout = fleet_config["fleet"]["rq"].get(
-        "generic_handler_job_timeout", 10
-    )
+    default_job_timeout = rq_params["default_job_timeout"]
+    generic_handler_job_timeout = rq_params["generic_handler_job_timeout"]
 
     redis_conn.set("default_job_timeout_ms", default_job_timeout * 1000)
     redis_conn.set("generic_handler_job_timeout_ms", generic_handler_job_timeout * 1000)

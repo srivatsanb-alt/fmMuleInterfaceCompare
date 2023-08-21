@@ -173,6 +173,10 @@ docker image build --build-arg FM_IMAGE_INFO="${FM_IMAGE_INFO}" \
 FM_IMAGE_ID=$(docker images --format {{.ID}} fleet_manager:dev)
 echo "Successfully built FM Image $FM_IMAGE_ID!"
 
+docker image build -t fm_grafana:9.5.2 -f docker_files/grafana.Dockerfile .
+echo "Successfully built grafana Image"
+
+
 cd fm_plugins && bash scripts/build_images.sh
 echo "Built plugin docker images successfully"
 

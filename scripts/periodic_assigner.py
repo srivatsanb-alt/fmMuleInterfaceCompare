@@ -47,7 +47,7 @@ def assign_next_task():
     with FMMongo() as fm_mongo:
         rq_params = fm_mongo.get_collection_from_fm_config("rq")
 
-    job_timeout = rq_params.get("generic_handler_job_timeout", 10)
+    job_timeout = rq_params["generic_handler_job_timeout"]
 
     while True:
         schdeuled_job_id = []
