@@ -287,7 +287,6 @@ class ConfigValidator:
                 "speedup_factor",
                 "average_velocity",
                 "pause_at_station",
-                "conveyor_capacity",
             ],
             "properties": {
                 "simulate": {
@@ -314,9 +313,6 @@ class ConfigValidator:
                     "maximum": 1.5,
                 },
                 "pause_at_station": {
-                    "bsonType": "int",
-                },
-                "conveyor_capacity": {
                     "bsonType": "int",
                 },
                 "routes": {
@@ -412,7 +408,6 @@ class ConfigDefaults:
         "speedup_factor": 1.0,
         "average_velocity": 0.8,
         "pause_at_station": 10,
-        "conveyor_capacity": 6,
         "initialize_sherpas_at": {},
         "routes": {},
     }

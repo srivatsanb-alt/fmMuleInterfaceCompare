@@ -14,6 +14,7 @@ from pydantic import BaseModel
 import asyncio
 
 # ati code imports
+import app.routers.dependencies as dpd
 import utils.log_utils as lu
 import utils.util as utils_util
 import core.constants as cc
@@ -34,7 +35,6 @@ def convert_to_dict(msg):
         body = msg
     else:
         raise Exception("Cannot convert to dict")
-
     for key, val in body.items():
         if isinstance(val, BaseModel):
             body[key] = convert_to_dict(val)
@@ -191,7 +191,7 @@ def send_msg_to_plugin(msg_to_forward, channel_name):
         "type": "forward_to_plugin_redis",
     }
     pub = redis.from_url(os.getenv("FM_REDIS_URI"), decode_responses=True)
-    pub.publish(f"channel:plugin_comms", str(msg))
+    pub.publish("channel:plugin_comms", str(msg))
 
 
 def get_num_units_converyor(conveyor_name):
@@ -202,21 +202,29 @@ def get_num_units_converyor(conveyor_name):
         plugin_ip = plugin_info["plugin_ip"]
 
     plugin_ip = plugin_ip + ":" + plugin_port
+
     endpoint = os.path.join(
         "http://", plugin_ip, f"plugin/conveyor/tote_trip_info/{conveyor_name}"
     )
-
+    logging.getLogger().info(f"Sending request to plugin_conveyor: endpoint: {endpoint}")
     event = threading.Event()
-
     t = threading.Thread(
         target=cancel_jobs_from_user, args=[f"plugin_conveyor_{conveyor_name}", event]
     )
     t.start()
 
-    response = requests.get(endpoint)
+    username = "fm_to_conveyor"
+    user_token = dpd.generate_jwt_token(username)
+    kwargs = {"headers": {"X-User-Token": user_token}}
+    response = requests.get(endpoint, **kwargs)
 
     if response.status_code == 200:
         response_json = response.json()
+        logging.getLogger().info(f"Got response from plugin conveyor: {response_json}")
+    else:
+        raise Exception(
+            f"Unable to get response from conveyor, response_code: {response.status_code}"
+        )
 
     # close the cancel_jobs_from_user thread
     event.set()
