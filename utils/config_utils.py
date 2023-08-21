@@ -347,6 +347,8 @@ class ConfigValidator:
         }
     }
 
+    mule_config = {"$jsonSchema": {"bsonType": "object", "required": ["mule_site_config"]}}
+
 
 class PluginConfigValidator:
     plugin_info = {
@@ -414,6 +416,20 @@ class ConfigDefaults:
     alerts = {
         "notifications": True,
         "slack_webhook_url": "https://hooks.slack.com/services/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",
+    }
+
+    mule_config = {
+        "mule_site_config": {
+            "parent": "/app/mule/std_configs/site_configs/default_tug.toml",
+            "control.policy": {"enforce_visa": False},
+            "fleet": {
+                "ws_url": "xyz",
+                "fm_ip": "xyz",
+                "data_url": "xyz",
+                "api_key": "xyz",
+                "chassis_number": "xyz",
+            },
+        }
     }
 
 

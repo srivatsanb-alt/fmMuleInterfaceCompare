@@ -13,6 +13,7 @@ RUN echo "server ip $FM_SERVER_IP"
 
 ENV FM_INSTALL_DIR="/app" REDIS_PORT=$REDIS_PORT FM_PORT=$FM_PORT PLUGIN_PORT=$PLUGIN_PORT FM_SERVER_IP=$FM_SERVER_IP
 
+RUN mkdir /app/mule_config
 
 ENV FM_REDIS_URI="redis://localhost:$REDIS_PORT" \
     FM_STATIC_DIR="/app/static" \
@@ -20,8 +21,8 @@ ENV FM_REDIS_URI="redis://localhost:$REDIS_PORT" \
     FM_MISC_DIR="/app/misc/" \
     FM_CONFIG_DIR="/app/static/fleet_config/" \
     MULE_ROOT="$FM_INSTALL_DIR/mule" \
-    ATI_CONFIG="/app/static/mule_config/config.toml" \
-    ATI_CONSOLIDATED_CONFIG="/app/static/mule_config/consolidated.toml" \
+    ATI_CONFIG="/app/mule_config/config.toml" \
+    ATI_CONSOLIDATED_CONFIG="/app/mule_config/consolidated.toml" \
     ATI_STATIC_AUTH_USERNAME="ati_static_files" \
     ATI_STATIC_AUTH_PASSWORD="atiStatic112" \
     FM_IMAGE_INFO=$FM_IMAGE_INFO \

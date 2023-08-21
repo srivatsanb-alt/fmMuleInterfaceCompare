@@ -63,6 +63,7 @@ def setfm_mongo_config():
                 all_collection_names.append(val[0])
 
         for collection_name in all_collection_names:
+            print(collection_name)
             create_col_kwargs = getattr(cu.CreateColKwargs, collection_name, None)
             if create_col_kwargs is None:
                 create_col_kwargs = getattr(cu.CreateColKwargs, "capped_default")
@@ -79,10 +80,19 @@ def setfm_mongo_config():
             logging.getLogger("configure_fleet").info(f"updated {collection_name}")
 
 
-def regenerate_config():
-    with open(os.getenv("ATI_CONSOLIDATED_CONFIG"), "w") as f:
-        toml.dump(load_mule_config(os.getenv("ATI_CONFIG")), f)
+def regenerate_mule_config():
+    with open(os.getenv("ATI_CONFIG"), "w") as ac:
+        with FMMongo() as fm_mongo:
+            mule_config = fm_mongo.get_collection_from_fm_config("mule_config")
+        toml.dump(mule_config["mule_site_config"], ac)
+
+    with open(os.getenv("ATI_CONSOLIDATED_CONFIG"), "w") as acc:
+        toml.dump(load_mule_config(os.getenv("ATI_CONFIG")), acc)
+
     os.environ["ATI_CONFIG"] = os.environ["ATI_CONSOLIDATED_CONFIG"]
+
+    config_path = os.environ["ATI_CONSOLIDATED_CONFIG"]
+    logging.getLogger().info(f"Regenerated mule config, saved to: {config_path}")
 
 
 def populate_redis_with_basic_info(dbsession: DBSession):
@@ -112,10 +122,6 @@ def populate_redis_with_basic_info(dbsession: DBSession):
 
 
 def main():
-    # regenerate_mule_config for routing
-    regenerate_config()
-    config_path = os.environ["ATI_CONFIG"]
-    logging.getLogger().info(f"will use {config_path} as ATI_CONFIG")
     time.sleep(5)
 
     DB_UP = False
@@ -132,6 +138,9 @@ def main():
             time.sleep(5)
 
     setfm_mongo_config()
+
+    # regenerate_mule_config for routing
+    regenerate_mule_config()
 
     with DBSession() as dbsession:
         fu.add_software_compatability(dbsession)
