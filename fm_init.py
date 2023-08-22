@@ -63,11 +63,9 @@ def setfm_mongo_config():
                 all_collection_names.append(val[0])
 
         for collection_name in all_collection_names:
-            print(collection_name)
-            create_col_kwargs = getattr(cu.CreateColKwargs, collection_name, None)
-            if create_col_kwargs is None:
-                create_col_kwargs = getattr(cu.CreateColKwargs, "capped_default")
-
+            # create_col_kwargs = getattr(cu.CreateColKwargs, collection_name, None)
+            # if create_col_kwargs is None:
+            create_col_kwargs = getattr(cu.CreateColKwargs, "capped_default")
             fm_mongo.create_collection(collection_name, fc_db, **create_col_kwargs)
             fm_mongo.add_validator(
                 collection_name, fc_db, getattr(cu.ConfigValidator, collection_name)
@@ -75,9 +73,16 @@ def setfm_mongo_config():
             c = fm_mongo.get_collection(collection_name, fc_db)
             default_config = getattr(cu.ConfigDefaults, collection_name)
 
-            if create_col_kwargs["capped"]:
+            query = {}
+            if c.find_one(query) is None:
                 c.insert_one(default_config)
-            logging.getLogger("configure_fleet").info(f"updated {collection_name}")
+                logging.getLogger("configure_fleet").info(
+                    f"Set config: {collection_name} to defaults"
+                )
+            else:
+                logging.getLogger("configure_fleet").info(
+                    f"Retaining config: {collection_name} as it is"
+                )
 
 
 def regenerate_mule_config():
