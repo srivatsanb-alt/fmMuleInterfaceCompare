@@ -29,6 +29,29 @@ class FrontendUsersValidator:
     }
 
 
+class PluginConfigValidator:
+    plugin_info = {
+        "$jsonSchema": {
+            "bsonType": "object",
+            "required": ["plugin_ip", "plugin_port", "hashed_api_key"],
+            "properties": {
+                "hashed_api_key": {
+                    "bsonType": "string",
+                    "description": "plugin hashed_api_key",
+                },
+                "plugin_ip": {
+                    "bsonType": "string",
+                    "description": "plugin app IP",
+                },
+                "plugin_port": {
+                    "bsonType": "string",
+                    "description": "plugin app port",
+                },
+            },
+        }
+    }
+
+
 class ConfigValidator:
     optimal_dispatch = {
         "$jsonSchema": {
@@ -94,6 +117,7 @@ class ConfigValidator:
             },
         },
     }
+
     comms = {
         "$jsonSchema": {
             "bsonType": "object",
@@ -348,29 +372,6 @@ class ConfigValidator:
     }
 
     mule_config = {"$jsonSchema": {"bsonType": "object", "required": ["mule_site_config"]}}
-
-
-class PluginConfigValidator:
-    plugin_info = {
-        "$jsonSchema": {
-            "bsonType": "object",
-            "required": ["plugin_ip", "plugin_port", "hashed_api_key"],
-            "properties": {
-                "hashed_api_key": {
-                    "bsonType": "string",
-                    "description": "plugin hashed_api_key",
-                },
-                "plugin_ip": {
-                    "bsonType": "string",
-                    "description": "plugin app IP",
-                },
-                "plugin_port": {
-                    "bsonType": "string",
-                    "description": "plugin app port",
-                },
-            },
-        }
-    }
 
 
 class ConfigDefaults:

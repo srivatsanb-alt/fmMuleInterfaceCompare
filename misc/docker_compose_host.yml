@@ -23,39 +23,7 @@ services:
       - db
       - mongo
     network_mode: host
-
-  db:
-    image: postgres:14.0
-    container_name: fleet_db
-    restart: always
-    environment:
-      - TZ=Asia/Kolkata
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=ati_fleet
-    expose:
-      - 5432
-    volumes:
-      - ./psql/psql_backup:/var/lib/postgresql/data:rw
-    network_mode: host
-
-  registry:
-    restart: always
-    image: registry:2
-    container_name: fm_docker_registry
-    expose:
-      - 5000
-    network_mode: host
-
-  grafana:
-    image: fm_grafana:9.5.2
-    container_name: fm_grafana
-    restart: always
-    user: "root:root"
-    expose:
-      - 3000
-    network_mode: host
-
+  
   plugins:
     image: plugin:dev
     container_name: fm_plugins
@@ -73,6 +41,30 @@ services:
     depends_on:
       - db
       - mongo
+    network_mode: host
+  
+  db:
+    image: postgres:14.0
+    container_name: fleet_db
+    restart: always
+    environment:
+      - TZ=Asia/Kolkata
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=ati_fleet
+    expose:
+      - 5432
+    volumes:
+      - ./psql/psql_backup:/var/lib/postgresql/data:rw
+    network_mode: host
+ 
+  grafana:
+    image: fm_grafana:9.5.2
+    container_name: fm_grafana
+    restart: always
+    user: "root:root"
+    expose:
+      - 3000
     network_mode: host
 
   mongo:
@@ -120,4 +112,12 @@ services:
       - grafana
       - registry
       - mongo-express
+    network_mode: host
+
+  registry:
+    restart: always
+    image: registry:2
+    container_name: fm_docker_registry
+    expose:
+      - 5000
     network_mode: host
