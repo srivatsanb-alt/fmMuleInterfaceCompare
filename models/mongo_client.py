@@ -52,9 +52,6 @@ class FMMongo:
             return db[collection_name]
         raise Exception(f"Collection {collection_name} not yet created")
 
-    # def create_index(var, collection, is_unique=True):
-    #    collection.create_index(var, unique=is_unique)
-
     def add_permission_level(self, level, **kwargs):
         level_int = getattr(CONFIG_VIEW_PERMISSION_LEVELS, level.upper(), None)
         if level_int is None:
@@ -102,15 +99,18 @@ class FMMongo:
     def get_hashed_plugin_api_key(self):
         fu_db = self.mongo_client.get_database("frontend_users")
         col = self.get_collection("plugin_info", fu_db)
-        return col.find_one({})["hashed_api_key"]
+        display_filter = {"_id": 0}
+        return col.find_one({}, display_filter)["hashed_api_key"]
 
     def get_plugin_info(self):
         fu_db = self.mongo_client.get_database("frontend_users")
         col = self.get_collection("plugin_info", fu_db)
-        return col.find_one({})
+        display_filter = {"_id": 0}
+        return col.find_one({}, display_filter)
 
     def get_all_frontend_users(self):
         fu_db = self.mongo_client.get_database("frontend_users")
         col = self.get_collection("user_details", fu_db)
-        all_user_details = [r for r in col.find({}, {"_id": 0})]
+        display_filter = {"_id": 0}
+        all_user_details = [r for r in col.find({}, display_filter)]
         return all_user_details

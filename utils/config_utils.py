@@ -372,6 +372,7 @@ class ConfigValidator:
     }
 
     mule_config = {"$jsonSchema": {"bsonType": "object", "required": ["mule_site_config"]}}
+    trip_metadata = {"$jsonSchema": {"bsonType": "object", "required": ["metadata"]}}
 
 
 class ConfigDefaults:
@@ -432,6 +433,8 @@ class ConfigDefaults:
             },
         }
     }
+
+    trip_metadata = {"metadata": {"description": []}}
 
 
 class DefaultFrontendUser:
