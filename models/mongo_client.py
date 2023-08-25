@@ -86,7 +86,8 @@ class FMMongo:
 
     def get_collection_from_fm_config(self, collection_name):
         fc_db = self.mongo_client.get_database("fm_config")
-        temp = self.get_collection(collection_name, fc_db).find_one()
+        display_filter = {"_id": 0}
+        temp = self.get_collection(collection_name, fc_db).find_one({}, display_filter)
         if temp is None:
             raise Exception(f"No {collection_name} config")
         return temp
@@ -94,7 +95,8 @@ class FMMongo:
     def get_frontend_user_details(self, user_query):
         fu_db = self.mongo_client.get_database("frontend_users")
         col = self.get_collection("user_details", fu_db)
-        return col.find_one(user_query)
+        display_filter = {"_id": 0}
+        return col.find_one(user_query, display_filter)
 
     def get_hashed_plugin_api_key(self):
         fu_db = self.mongo_client.get_database("frontend_users")
