@@ -2,6 +2,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
 from sqlalchemy.pool import NullPool
 import psycopg2
+import os
 
 
 def connect():
@@ -13,6 +14,10 @@ def connect():
     }
 
     return psycopg2.connect(
+        database=os.getenv("PGDATABASE"),
+        user=os.getenv("PGUSER"),
+        password=os.getenv("PGPASSWORD"),
+        host=os.getenv("PGHOST"),
         **keepalive_kwargs,
     )
 
