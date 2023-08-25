@@ -1,4 +1,5 @@
-from sqlalchemy import Boolean, Column, ForeignKey, String, ARRAY
+from sqlalchemy.ext.mutable import MutableDict
+from sqlalchemy import Boolean, Column, ForeignKey, String, ARRAY, JSON
 from sqlalchemy.orm import relationship
 
 from models.base_models import Base, TimestampMixin
@@ -36,3 +37,5 @@ class VisaAssignment(Base, TimestampMixin):
     __tablename__ = "visa_assignments"
     zone_id = Column(String, ForeignKey("exclusion_zones.zone_id"), primary_key=True)
     sherpa_name = Column(String, ForeignKey("sherpas.name"), primary_key=True)
+    waiting_sherpas = Column(MutableDict.as_mutable(JSON), nullable=True)
+

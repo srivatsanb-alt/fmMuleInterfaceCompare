@@ -1,6 +1,8 @@
 import json
 import os
 import asyncio
+
+from fastapi.encoders import jsonable_encoder
 import aioredis
 import subprocess
 import redis
@@ -333,18 +335,16 @@ async def get_fm_incidents(
 @router.get("/get_visa_assignments")
 async def get_visa_assignments(user_name=Depends(dpd.get_user_from_header)):
     response = []
-
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
-
     with DBSession() as dbsession:
-        all_visa_assignments = dbsession.session.query(vm.VisaAssignment).all()
-        for visa_assignment in all_visa_assignments:
-            temp = utils_util.get_table_as_dict(vm.VisaAssignment, visa_assignment)
-            response.append(temp)
-
+        zone_ids = dbsession.session.query(vm.VisaAssignment.zone_id).all()
+        response = jsonable_encoder(zone_ids)
+        for item in response:
+            visa_assignments = dbsession.get_all_visa_assignments_as_dict(item["zone_id"])
+            item["resident_sherpas"] = visa_assignments["resident_sherpas"]  if(visa_assignments["resident_sherpas"]) else [] 
+            item["waiting_sherpas"] = visa_assignments["waiting_sherpas"] if(visa_assignments["waiting_sherpas"]) else [] 
     return response
-
 
 @router.post("/get_sherpa_oee/{sherpa_name}")
 async def get_sherpa_oee(

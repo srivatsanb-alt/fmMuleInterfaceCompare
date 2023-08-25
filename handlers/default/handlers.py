@@ -1373,7 +1373,22 @@ class Handlers:
             return self.handle_visa_request(req, sherpa)
         elif access_type == rqm.AccessType.RELEASE:
             return self.handle_visa_release(req, sherpa)
-
+        
+    def update_visa_status (self, sherpa_name, zone_id, reason):
+        row = (
+                self.dbsession.session.query(vm.VisaAssignment)
+               .filter(zone_id==zone_id)
+               .filter(sherpa_name==sherpa_name)
+               .first()
+              )
+        if row:
+            waiting_sherpas = dict(row.waiting_sherpas) if (row.waiting_sherpas) else { }
+            if sherpa_name not in waiting_sherpas.keys(): #update only when it is not already present
+                waiting_sherpas[f"{sherpa_name}"] = dict({"denied_time": (datetime.datetime.now()).strftime("%Y-%m-%dT%H:%M:%S"), "reason": reason  })
+                row.waiting_sherpas = waiting_sherpas
+                self.dbsession.session.commit()
+                logging.getLogger("visa").info("waiting sherpa " + sherpa_name+ ": "+ reason)
+    
     def handle_visa_request(self, req: rqm.VisaReq, sherpa: fm.Sherpa):
         # query db
         granted, reason, reqd_ezones = utils_visa.can_grant_visa(
@@ -1392,12 +1407,13 @@ class Handlers:
         if granted:
             for ezone in set(reqd_ezones):
                 utils_visa.lock_exclusion_zone(ezone, sherpa)
+        else:
+            self.update_visa_status(sherpa.name, reqd_ezones,  reason)
 
         granted_message = "granted" if granted else "not granted"
         visa_log = f"{sherpa.name} {granted_message} {req.visa_type} type visa to zone {req.zone_name}, reason: {reason}"
-
-        logging.getLogger("visa").info(visa_log)
         logging.getLogger("visa").info(f"visa {granted_message} to {sherpa.name}")
+        
 
         response: rqm.ResourceResp = rqm.ResourceResp(
             granted=granted, visa=req, access_type=rqm.AccessType.REQUEST
@@ -1409,8 +1425,10 @@ class Handlers:
             mm.NotificationLevels.info,
             mm.NotificationModules.visa,
         )
-        return response.to_json()
 
+        return response.to_json()
+    
+    
     def handle_visa_release(self, req: rqm.VisaReq, sherpa: fm.Sherpa):
         # query db
         visas_to_release = utils_visa.get_visas_to_release(self.dbsession, sherpa, req)

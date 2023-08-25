@@ -1,4 +1,5 @@
 import datetime
+import json
 import os
 from typing import List
 from sqlalchemy import func, inspect, or_, and_, extract, text
@@ -745,3 +746,29 @@ class DBSession:
             .subquery()
         )
         return self.session.query(func.avg(subquery.c.actual_trip_time)).scalar()
+    
+    def get_all_visa_assignments_as_dict(self, zone_id):
+        response = []
+        sherpas = (
+            self.session.query(
+            vm.VisaAssignment.sherpa_name, vm.VisaAssignment.created_at.label("granted_time"))
+            .filter(vm.VisaAssignment.zone_id==zone_id)
+            .all()
+        )
+        waiting_sherpas = (
+            self.session.query(
+                vm.VisaAssignment.waiting_sherpas.label("waiting")
+            )
+            .filter(vm.VisaAssignment.zone_id==zone_id)
+            .filter(vm.VisaAssignment.waiting_sherpas.isnot(None))
+            .all()
+        )
+        resident_sherpas =  jsonable_encoder(sherpas)
+
+        waiting_sherpas_dict = {'waiting_sherpas':[]}
+        for item in waiting_sherpas:
+            temp = jsonable_encoder(item)
+            waiting_sherpas_dict['waiting_sherpas'].append(temp["waiting"])
+ 
+        response = {"resident_sherpas": resident_sherpas, "waiting_sherpas": waiting_sherpas_dict["waiting_sherpas"] }
+        return response
