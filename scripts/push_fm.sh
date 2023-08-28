@@ -129,13 +129,13 @@ echo "Building fleet manager docker image"
 if [ $build_base == 1 ] ; then
 {
   echo "Will build base image!"
-  #docker image build -t fleet_manager_base:dev -f docker_files/Dockerfile.base .
+  docker image build -t fleet_manager_base:dev -f docker_files/Dockerfile.base .
   cd fm_plugins && bash scripts/build_base_image.sh
   cd ../
-  #docker pull nginx:1.23.3
-  #docker pull postgres:14.0
-  #docker pull grafana/grafana:9.5.2
-  #docker pull registry:2   
+  docker pull nginx:1.23.3
+  docker pull postgres:14.0
+  docker pull grafana/grafana:9.5.2
+  docker pull registry:2   
 }
 else
 {
@@ -154,7 +154,6 @@ docker image build --build-arg FM_IMAGE_INFO="${FM_IMAGE_INFO}" \
                    --build-arg FM_TAG="${GIT_TAG}" \
 	           --build-arg MULE_IMAGE_ID="${MULE_IMAGE_ID}" \
 		   --build-arg FM_SERVER_USERNAME="${FM_SERVER_USERNAME}" \
-		   --build-arg FM_SERVER_IP="${FM_SERVER_IP}" \
 		   --build-arg FM_PORT="${FM_PORT}" \
 		   --build-arg REDIS_PORT="${REDIS_PORT}" \
 		   --build-arg PLUGIN_PORT="${PLUGIN_PORT}" \
