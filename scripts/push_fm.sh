@@ -7,7 +7,6 @@ clean_static_dir=0
 copy_static=1
 server=0
 build_base=1
-cert_reqd=1
 
 # Set variables
 IP_ADDRESS="localhost"
@@ -116,17 +115,6 @@ else
   cp misc/docker_compose_host.yml static/
 fi
 
-if [ $cert_reqd == 1 ]; then
-   echo "Checking if cert files are present"
-   if [[ -f "static/certs/fm_rev_proxy_cert.pem" ]]; then
-      echo "FM cert files present"
-   else
-      echo "cert files not present at either at static/certs or dashboard/static"
-      echo "Please update server ip in fleet_config.toml, run cd utils && python3 setup_certs.py ../static/fleet_config/fleet_config.toml ../static"
-      echo "Generated cert files need to be copied to the sherpas"
-      exit
-   fi
-fi
 
 BRANCH=$(git rev-parse --abbrev-ref HEAD)
 GIT_COMMIT="$(git rev-parse HEAD)"
@@ -141,11 +129,13 @@ echo "Building fleet manager docker image"
 if [ $build_base == 1 ] ; then
 {
   echo "Will build base image!"
-  docker image build -t fleet_manager_base:dev -f docker_files/Dockerfile.base .
-  docker pull nginx:1.23.3
-  docker pull postgres:14.0
-  docker pull grafana/grafana:9.5.2
-  docker pull registry:2   
+  #docker image build -t fleet_manager_base:dev -f docker_files/Dockerfile.base .
+  cd fm_plugins && bash scripts/build_base_image.sh
+  cd ../
+  #docker pull nginx:1.23.3
+  #docker pull postgres:14.0
+  #docker pull grafana/grafana:9.5.2
+  #docker pull registry:2   
 }
 else
 {
@@ -177,7 +167,8 @@ docker image build -t fm_grafana:9.5.2 -f docker_files/grafana.Dockerfile .
 echo "Successfully built grafana Image"
 
 
-cd fm_plugins && bash scripts/build_images.sh
+cd fm_plugins && bash scripts/build_final_image.sh
+cd ../
 echo "Built plugin docker images successfully"
 
 if [ $clean_static_dir == 1 ] ; then
