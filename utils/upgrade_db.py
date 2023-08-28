@@ -5,7 +5,7 @@ from core.db import get_session, get_engine
 from models.misc_models import FMVersion
 
 
-AVAILABLE_UPGRADES = ["2.2", "3.0", "3.01", "3.1", "3.2", "3.3"]
+AVAILABLE_UPGRADES = ["2.2", "3.0", "3.01", "3.1", "3.2", "3.3", "4.0"]
 NO_SCHEMA_CHANGES = ["3.0", "3.01", "3.1"]
 
 
@@ -49,6 +49,35 @@ class DBUpgrade:
                 print("stoppage_reason column added trip_legs table")
             else:
                 print("stoppage_reason column already present need not be added again")
+
+    def upgrade_to_4_0(self):
+        with get_engine(os.getenv("FM_DATABASE_URI")).connect() as conn:
+            conn.execute("commit")
+            result = conn.execute(
+                "SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='trip_analytics'"
+            )
+            column_names = [row[0] for row in result]
+            if "route_length" not in column_names:
+                conn.execute('ALTER TABLE "trip_analytics" ADD COLUMN "route_length" FLOAT')
+                print("column route_length added trip_analytics table")
+            else:
+                print("column route_length already present in trip_analytics table")
+
+            if "progress" not in column_names:
+                conn.execute('ALTER TABLE "trip_analytics" ADD COLUMN "progress" FLOAT')
+                print("column progress added trip_analytics table")
+            else:
+                print("column progress already present in trip_analytics table")
+
+            result = conn.execute(
+                "SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='trips'"
+            )
+            column_names = [row[0] for row in result]
+            if "route_lengths" not in column_names:
+                conn.execute('ALTER TABLE "trips" ADD COLUMN "route_lengths" FLOAT[]')
+                print("column route_lengths added trips table")
+            else:
+                print("column route_lengths already present in trips table")
 
 
 def upgrade_db_schema():

@@ -18,6 +18,8 @@ def get_trip_status(trip: Trip):
         start_time = None
         updated_at = None
         trip_leg = None
+        trip_analytics = None
+
         if trip.booking_time:
             booking_time = util.dt_to_str(trip.booking_time)
         if trip.start_time:
@@ -29,9 +31,13 @@ def get_trip_status(trip: Trip):
 
         if ongoing_trip:
             trip_leg = dbsession.get_trip_leg(ongoing_trip.sherpa_name)
+            trip_analytics: TripAnalytics = dbsession.get_trip_analytics(
+                ongoing_trip.trip_leg_id
+            )
 
         trip_details = {
             "status": trip.status,
+            "route_lengths": trip.route_lengths,
             "etas_at_start": trip.etas_at_start,
             "etas": trip.etas,
             "trip_leg_id": trip_leg.id if trip_leg else None,
@@ -56,6 +62,8 @@ def get_trip_status(trip: Trip):
         trip_leg_details = {
             "id": trip_leg.id if trip_leg else None,
             "status": trip_leg.status if trip_leg else None,
+            "progress": trip_analytics.progress if trip_analytics else None,
+            "route_length": trip_analytics.route_length if trip_analytics else None,
             "from_station": trip_leg.from_station if trip_leg else None,
             "to_station": trip_leg.to_station if trip_leg else None,
             "stoppage_reason": trip_leg.stoppage_reason if trip_leg else None,

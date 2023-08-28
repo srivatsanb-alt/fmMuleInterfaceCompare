@@ -53,8 +53,11 @@ def start_trip(
 
     redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
     etas_at_start = []
+    route_lengths = []
+    start_station_name = None
     for station in all_stations:
         end_pose = station.pose
+        end_station_name = station.name
         route_length = utils_util.get_route_length(
             start_pose, end_pose, fleet_name, redis_conn
         )
@@ -62,7 +65,6 @@ def start_trip(
             reason = f"no route from {start_pose} to {end_pose}"
             trip_failed_log = f"trip {ongoing_trip.trip_id} failed, sherpa_name: {ongoing_trip.sherpa_name} , reason: {reason}"
             logging.getLogger(ongoing_trip.sherpa_name).warning(trip_failed_log)
-
             dbsession.add_notification(
                 [sherpa.name, sherpa.fleet.name],
                 trip_failed_log,
@@ -72,11 +74,22 @@ def start_trip(
             end_trip(dbsession, ongoing_trip, sherpa, False)
             return
 
-        etas_at_start.append(route_length)
-        start_pose = station.pose
+        eta = (
+            0
+            if route_length == 0
+            else dbsession.get_expected_trip_time(start_station_name, end_station_name)
+        )
+        if eta is None:
+            eta = route_length
 
+        route_lengths.append(route_length)
+        etas_at_start.append(eta)
+        start_pose = station.pose
+        start_station_name = station.name
+
+    ongoing_trip.trip.route_lengths = route_lengths
     ongoing_trip.trip.etas_at_start = etas_at_start
-    ongoing_trip.trip.etas = ongoing_trip.trip.etas_at_start
+    ongoing_trip.trip.etas = etas_at_start
 
     ongoing_trip.trip.start()
     logging.getLogger(ongoing_trip.sherpa_name).info(f"trip {ongoing_trip.trip_id} started")

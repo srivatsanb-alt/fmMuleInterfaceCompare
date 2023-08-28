@@ -321,6 +321,7 @@ class Handlers:
             trip_analytics.end_time = datetime.datetime.now()
             time_delta = datetime.datetime.now() - ongoing_trip.trip_leg.start_time
             trip_analytics.actual_trip_time = time_delta.seconds
+            trip_analytics.progress = 1.0
             trip_analytics_log = f"{sherpa_name} finished leg of trip {trip.id} trip_analytics: {utils_util.get_table_as_dict(tm.TripAnalytics, trip_analytics)}"
             logging.getLogger(sherpa_name).info(trip_analytics_log)
 
@@ -1007,6 +1008,7 @@ class Handlers:
         if trip_analytics:
             trip_analytics.cte = req.trip_info.cte
             trip_analytics.te = req.trip_info.te
+            trip_analytics.progress = req.trip_info.progress
             trip_analytics.time_elapsed_visa_stoppages = (
                 req.stoppages.extra_info.time_elapsed_visa_stoppages
             )
@@ -1029,6 +1031,8 @@ class Handlers:
                 expected_trip_time=ongoing_trip.trip.etas_at_start[
                     ongoing_trip.next_idx_aug
                 ],
+                progress=0.0,
+                route_length=ongoing_trip.trip.route_lengths[ongoing_trip.next_idx_aug],
                 actual_trip_time=None,
                 cte=req.trip_info.cte,
                 te=req.trip_info.te,
