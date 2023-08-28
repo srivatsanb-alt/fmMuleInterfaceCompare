@@ -61,17 +61,6 @@ if [[ $copy_static == 1 ]] && [[ $server == 1 ]] ; then
 {
   printf "\n \n \n"
 
-  if rsync -azP --no-o --no-g --no-perms $IP_ADDRESS:static/fleet_config static ; then
-  {
-      echo "Copied fleet_config dir from FM server successfully"
-  }
-  else
-  {
-      echo "Unable to copy fleet_config dir from FM server"
-      exit
-  }
-  fi
-
   if rsync -azP --no-o --no-g --no-perms $IP_ADDRESS:static/certs static/ ; then
   {
       echo "Copied certs dir from FM server successfully"
@@ -79,17 +68,6 @@ if [[ $copy_static == 1 ]] && [[ $server == 1 ]] ; then
   else
   {
       echo "Unable to copy certs dir from FM server"
-      exit
-  }
-  fi
-
-  if rsync -azP --no-o --no-g --no-perms $IP_ADDRESS:static/plugin_*["ies"] static/ ; then
-  {
-      echo "Copied plugin dirs from server successfully"
-  }
-  else
-  {
-      echo "Unable to copy plugin dirs from FM server"
       exit
   }
   fi
