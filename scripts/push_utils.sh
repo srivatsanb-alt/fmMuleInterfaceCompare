@@ -35,8 +35,8 @@ create_static_backup()
     echo "Directory static already exists"
   fi
 
-  ssh $usr_name@$ip_address "rsync -aP --exclude={data_backup,psql} /home/$usr_name/static/. /home/$usr_name/static_old/."
-  rsync -azP --no-o --no-g --no-perms --exclude={data_backup,psql} ./static/* $usr_name@$ip_address:/home/$usr_name/static/.
+  ssh $usr_name@$ip_address "rsync -aP --exclude={data_backup,psql,mongo} /home/$usr_name/static/. /home/$usr_name/static_old/."
+  rsync -azP --no-o --no-g --no-perms --exclude={data_backup,psql,mongo} ./static/* $usr_name@$ip_address:/home/$usr_name/static/.
   rsync -azP ./misc/docker_compose_host.yml $usr_name@$ip_address:/home/$usr_name/static/.
 
   echo "setting env variable FM_SERVER_IP $FM_SERVER_IP"
