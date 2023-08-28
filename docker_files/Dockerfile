@@ -41,6 +41,7 @@ RUN echo "alias apihw='poetry run python /app/utils/api_key_gen.py --hw_id'" >> 
 RUN echo "alias apind='poetry run python utils/gen_api_keys_n_devices.py --num_devices'" >> ~/.bashrc
 RUN echo "alias sip='psql -c \"select sherpas.name, sherpas.ip_address, fleets.name from sherpas join fleets on fleet_id=fleets.id;\"'" >> ~/.bashrc
 RUN echo "alias hashpass='poetry run python utils/gen_hashed_password.py --password'" >> ~/.bashrc 
+RUN echo "alias create_certs='poetry run python utils/create_certs.py --ips'" >> ~/.bashrc
 
 COPY . /app/
 RUN echo "Copying messages_pb2.py to mule/ati/schema on the docker"

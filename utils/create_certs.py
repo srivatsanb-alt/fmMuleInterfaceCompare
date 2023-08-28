@@ -1,6 +1,7 @@
 import os
 from datetime import datetime, timedelta
 import ipaddress
+import click
 
 # Copyright 2018 Simon Davy
 #
@@ -111,11 +112,23 @@ def gen_ssl_cert(hostname: str, ip_addresses: list, key=None):
     return cert_pem, key_pem
 
 
+@click.command()
+@click.option(
+    "--ips",
+    default="127.0.0.1",
+    help="all ip_addr/domain_names of the server with comma seperation",
+)
 def generate_cert_for_server(
-    certs_save_path,
-    all_server_ips=["127.0.0.1"],
-    hostname="fm_rev_proxy",
+    ips, hostname="fm_rev_proxy", certs_save_path="/app/static/certs"
 ):
-    print(f"Will create cert with name: {hostname}, ips: {all_server_ips}")
+    temp = ips.split(",")
+    all_server_ips = [ip.replace(" ", "") for ip in temp]
+    print(
+        f"Will create cert with name: {hostname}, ips: {all_server_ips}, save_path: {certs_save_path}"
+    )
     cert_pem, key_pem = gen_ssl_cert(hostname, all_server_ips)
     save_certs(cert_pem, key_pem, "fm_rev_proxy", certs_save_path)
+
+
+if __name__ == "__main__":
+    generate_cert_for_server()
