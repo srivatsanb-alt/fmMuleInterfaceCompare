@@ -68,7 +68,7 @@ services:
     network_mode: host
 
   mongo:
-    image: mongo
+    image: mongo:7.0
     container_name: fm_mongo
     restart: always
     expose:
@@ -81,7 +81,7 @@ services:
     network_mode: host
 
   mongo-express:
-    image: mongo-express
+    image: mongo-express:1.0.0-alpha
     container_name: fm_mongo_express
     restart: always
     expose:

@@ -111,6 +111,8 @@ if [ $build_base == 1 ] ; then
   cd fm_plugins && bash scripts/build_base_image.sh
   cd ../
   docker pull nginx:1.23.3
+  docker pull mongo-express:1.0.0-alpha
+  docker pull mongo:7.0
   docker pull postgres:14.0
   docker pull grafana/grafana:9.5.2
   docker pull registry:2   
