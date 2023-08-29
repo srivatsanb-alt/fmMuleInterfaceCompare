@@ -7,8 +7,6 @@ clean_static_dir=0
 copy_static=1
 server=0
 build_base=1
-cert_reqd=1
-run_docker_as_host=0
 
 # Set variables
 IP_ADDRESS="localhost"
@@ -34,8 +32,6 @@ do
       echo $IP_ADDRESS;server=1;;
     b) # WILL NOT create base image
       build_base=0;;
-    v) # connect to master_fm via VPN
-      run_docker_as_host=1;; 
     ?/) # Invalid option
       echo "Error: Invalid option"
       exit;;
@@ -65,17 +61,6 @@ if [[ $copy_static == 1 ]] && [[ $server == 1 ]] ; then
 {
   printf "\n \n \n"
 
-  if rsync -azP --no-o --no-g --no-perms $IP_ADDRESS:static/fleet_config static ; then
-  {
-      echo "Copied fleet_config dir from FM server successfully"
-  }
-  else
-  {
-      echo "Unable to copy fleet_config dir from FM server"
-      exit
-  }
-  fi
-
   if rsync -azP --no-o --no-g --no-perms $IP_ADDRESS:static/certs static/ ; then
   {
       echo "Copied certs dir from FM server successfully"
@@ -83,17 +68,6 @@ if [[ $copy_static == 1 ]] && [[ $server == 1 ]] ; then
   else
   {
       echo "Unable to copy certs dir from FM server"
-      exit
-  }
-  fi
-
-  if rsync -azP --no-o --no-g --no-perms $IP_ADDRESS:static/plugin_*["ies"] static/ ; then
-  {
-      echo "Copied plugin dirs from server successfully"
-  }
-  else
-  {
-      echo "Unable to copy plugin dirs from FM server"
       exit
   }
   fi
@@ -117,21 +91,8 @@ if [ $server == 1 ] ; then
   create_static_backup $IP_ADDRESS # function defined in push_utils
 else
   cp misc/docker_compose_host.yml static/
-  cp misc/docker_compose_bridge.yml static/
-
 fi
 
-if [ $cert_reqd == 1 ]; then
-   echo "Checking if cert files are present"
-   if [[ -f "static/certs/fm_rev_proxy_cert.pem" ]]; then
-      echo "FM cert files present"
-   else
-      echo "cert files not present at either at static/certs or dashboard/static"
-      echo "Please update server ip in fleet_config.toml, run cd utils && python3 setup_certs.py ../static/fleet_config/fleet_config.toml ../static"
-      echo "Generated cert files need to be copied to the sherpas"
-      exit
-   fi
-fi
 
 BRANCH=$(git rev-parse --abbrev-ref HEAD)
 GIT_COMMIT="$(git rev-parse HEAD)"
@@ -147,10 +108,14 @@ if [ $build_base == 1 ] ; then
 {
   echo "Will build base image!"
   docker image build -t fleet_manager_base:dev -f docker_files/Dockerfile.base .
+  cd fm_plugins && bash scripts/build_base_image.sh
+  cd ../
   docker pull nginx:1.23.3
+  docker pull mongo-express:1.0.0-alpha
+  docker pull mongo:7.0
   docker pull postgres:14.0
   docker pull grafana/grafana:9.5.2
-  docker pull registry:2
+  docker pull registry:2   
 }
 else
 {
@@ -158,23 +123,10 @@ else
 }
 fi
 
-
-if [ $run_docker_as_host == 1 ] ; then 
-{
-   conf_file="nginx_host.conf"
-   echo "set nginx conf file to $conf_file"
-}
-else
-{
-  conf_file="nginx_bridge.conf"
-  echo "set nginx conf file to $conf_file" 
-}
-fi
-
+conf_file="nginx_host.conf"
 docker image build --build-arg CONF="${conf_file}" -t fm_nginx:1.23.3 -f docker_files/nginx.Dockerfile .
+
 echo "Successfully built nginx image"
-
-
 MULE_IMAGE_ID=$(docker images --format {{.ID}} localhost:$DOCKER_REGISTRY_PORT/mule)
 echo "MULE_IMAGE_ID $MULE_IMAGE_ID"
 
@@ -182,7 +134,6 @@ docker image build --build-arg FM_IMAGE_INFO="${FM_IMAGE_INFO}" \
                    --build-arg FM_TAG="${GIT_TAG}" \
 	           --build-arg MULE_IMAGE_ID="${MULE_IMAGE_ID}" \
 		   --build-arg FM_SERVER_USERNAME="${FM_SERVER_USERNAME}" \
-		   --build-arg FM_SERVER_IP="${FM_SERVER_IP}" \
 		   --build-arg FM_PORT="${FM_PORT}" \
 		   --build-arg REDIS_PORT="${REDIS_PORT}" \
 		   --build-arg PLUGIN_PORT="${PLUGIN_PORT}" \
@@ -190,6 +141,14 @@ docker image build --build-arg FM_IMAGE_INFO="${FM_IMAGE_INFO}" \
 
 FM_IMAGE_ID=$(docker images --format {{.ID}} fleet_manager:dev)
 echo "Successfully built FM Image $FM_IMAGE_ID!"
+
+docker image build -t fm_grafana:9.5.2 -f docker_files/grafana.Dockerfile .
+echo "Successfully built grafana Image"
+
+
+cd fm_plugins && bash scripts/build_final_image.sh
+cd ../
+echo "Built plugin docker images successfully"
 
 if [ $clean_static_dir == 1 ] ; then
 {

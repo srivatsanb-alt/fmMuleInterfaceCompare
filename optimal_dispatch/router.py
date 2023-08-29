@@ -108,6 +108,7 @@ def start_router_module():
             rm = all_router_modules.get_router_module(fleet_name)
 
             route_length = 0
+            dp_rl_result = [[], [], [], 0]
             if not are_poses_close(pose_1, pose_2):
                 try:
                     final_route, visa_obj, rl = rm.get_route(pose_1, pose_2)
@@ -117,7 +118,6 @@ def start_router_module():
                     logger.info(
                         f"unable to find route between {pose_1} and {pose_2} of {fleet_name} \n Exception {e}"
                     )
-                    dp_rl_result = [[], [], [], 0]
 
             redis_conn.setex(
                 f"result_dp_rl_job_{job_id}",

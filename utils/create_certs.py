@@ -1,7 +1,7 @@
 import os
-import toml
 from datetime import datetime, timedelta
 import ipaddress
+import click
 
 # Copyright 2018 Simon Davy
 #
@@ -112,16 +112,23 @@ def gen_ssl_cert(hostname: str, ip_addresses: list, key=None):
     return cert_pem, key_pem
 
 
-def generate_cert_for_fm(fleet_config_path, fleet_static_path):
-    config = toml.load(fleet_config_path)
-    FLEET_CONFIG = config["fleet"]
-    all_server_ips = FLEET_CONFIG["all_server_ips"]
-    nginx_hostname = FLEET_CONFIG.get("nginx_hostname", "fm_rev_proxy")
-    print(f"Will create cert with name: {nginx_hostname}, ips: {all_server_ips}")
-    cert_pem, key_pem = gen_ssl_cert(nginx_hostname, all_server_ips)
-    save_certs(cert_pem, key_pem, "fm_rev_proxy", os.path.join(fleet_static_path, "certs"))
+@click.command()
+@click.option(
+    "--ips",
+    default="127.0.0.1",
+    help="all ip_addr/domain_names of the server with comma seperation",
+)
+def generate_cert_for_server(
+    ips, hostname="fm_rev_proxy", certs_save_path="/app/static/certs"
+):
+    temp = ips.split(",")
+    all_server_ips = [ip.replace(" ", "") for ip in temp]
+    print(
+        f"Will create cert with name: {hostname}, ips: {all_server_ips}, save_path: {certs_save_path}"
+    )
+    cert_pem, key_pem = gen_ssl_cert(hostname, all_server_ips)
+    save_certs(cert_pem, key_pem, "fm_rev_proxy", certs_save_path)
 
 
-def generate_certs_for_sherpa(sherpa_hostname, sherpa_ip_address, save_path):
-    cert_pem, key_pem = gen_ssl_cert(sherpa_hostname, [sherpa_ip_address, "127.0.0.1"])
-    save_certs(cert_pem, key_pem, sherpa_hostname, save_path)
+if __name__ == "__main__":
+    generate_cert_for_server()

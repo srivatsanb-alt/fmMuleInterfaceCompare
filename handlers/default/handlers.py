@@ -14,13 +14,12 @@ import models.trip_models as tm
 import models.visa_models as vm
 from models.base_models import StationProperties
 from models.db_session import DBSession
-
+from models.mongo_client import FMMongo
 import utils.log_utils as lu
 import utils.comms as utils_comms
 import utils.util as utils_util
 import utils.visa_utils as utils_visa
 import core.constants as cc
-from core.config import Config
 
 from optimal_dispatch.dispatcher import OptimalDispatch
 import handlers.default.handler_utils as hutils
@@ -63,7 +62,7 @@ class Handlers:
             req_ctxt.fleet_names.append(sherpa.fleet.name)
 
         if fleet.status == cc.FleetStatus.PAUSED and msg.type not in [
-            cc.MessageType.SHERPA_STATUS
+            cc.MessageType.SHERPA_STATUS,
         ]:
             return False, f"fleet {fleet.name} is paused"
 
@@ -322,6 +321,7 @@ class Handlers:
             trip_analytics.end_time = datetime.datetime.now()
             time_delta = datetime.datetime.now() - ongoing_trip.trip_leg.start_time
             trip_analytics.actual_trip_time = time_delta.seconds
+            trip_analytics.progress = 1.0
             trip_analytics_log = f"{sherpa_name} finished leg of trip {trip.id} trip_analytics: {utils_util.get_table_as_dict(tm.TripAnalytics, trip_analytics)}"
             logging.getLogger(sherpa_name).info(trip_analytics_log)
 
@@ -365,9 +365,12 @@ class Handlers:
 
     # run optimal_dispatch
     def run_optimal_dispatch(self, fleet_names):
-        optimal_dispatch_config = Config.get_optimal_dispatch_config()
-        optimal_dispatch = OptimalDispatch(optimal_dispatch_config)
+        with FMMongo() as fm_mongo:
+            optimal_dispatch_config = fm_mongo.get_collection_from_fm_config(
+                "optimal_dispatch"
+            )
 
+        optimal_dispatch = OptimalDispatch(optimal_dispatch_config)
         optimal_dispatch.run(self.dbsession, fleet_names)
 
     def do_pre_actions(self, ongoing_trip: tm.OngoingTrip):
@@ -413,7 +416,11 @@ class Handlers:
         ongoing_trip.add_state(tm.TripState.WAITING_STATION_DISPATCH_START)
         dispatch_mesg = rqm.DispatchButtonReq(value=True)
         if timeout:
-            dispatch_timeout = Config.get_dispatch_timeout()
+
+            with FMMongo() as fm_mongo:
+                station_config = fm_mongo.get_collection_from_fm_config("stations")
+
+            dispatch_timeout = station_config["dispatch_timeout"]
             dispatch_mesg = rqm.DispatchButtonReq(value=True, timeout=dispatch_timeout)
 
         sherpa_action_msg = rqm.PeripheralsReq(
@@ -468,6 +475,7 @@ class Handlers:
             logging.getLogger(sherpa.name).info(
                 f"will not send conveyor msg to {ongoing_trip.sherpa_name}, reason: num_units is {num_units}"
             )
+            ongoing_trip.clear_states()
             return
 
         if not num_units:
@@ -583,7 +591,7 @@ class Handlers:
             ongoing_trip.add_state(conveyor_end_state)
 
             if direction == "send":
-                peripheral_msg = f"Resolving {req.error_device} error for {sherpa_name},transfer all the totes on the mule to the chute and press dispatch button"
+                peripheral_msg = f"Resolving {req.error_device} error for {sherpa_name}, transfer all the totes on the mule to the chute and press dispatch button"
             else:
                 peripheral_msg = f"Resolving {req.error_device} error for {sherpa_name},move {num_units} tote(s) to the mule and press dispatch button"
 
@@ -924,6 +932,16 @@ class Handlers:
             # sherpa switched to fleet mode
             self.initialize_sherpa(sherpa)
 
+        if req.mode == "error":
+            sherpa_error_alert = f"{req.sherpa_name} in error, error_info: {req.error_info}"
+            utils_util.maybe_add_notification(
+                self.dbsession,
+                [sherpa.fleet.name],
+                sherpa_error_alert,
+                mm.NotificationLevels.alert,
+                mm.NotificationModules.generic,
+            )
+
         _, _ = self.should_assign_next_task(sherpa, ongoing_trip, pending_trip)
 
         if req.mode == status.mode:
@@ -990,6 +1008,7 @@ class Handlers:
         if trip_analytics:
             trip_analytics.cte = req.trip_info.cte
             trip_analytics.te = req.trip_info.te
+            trip_analytics.progress = req.trip_info.progress
             trip_analytics.time_elapsed_visa_stoppages = (
                 req.stoppages.extra_info.time_elapsed_visa_stoppages
             )
@@ -1012,6 +1031,8 @@ class Handlers:
                 expected_trip_time=ongoing_trip.trip.etas_at_start[
                     ongoing_trip.next_idx_aug
                 ],
+                progress=0.0,
+                route_length=ongoing_trip.trip.route_lengths[ongoing_trip.next_idx_aug],
                 actual_trip_time=None,
                 cte=req.trip_info.cte,
                 te=req.trip_info.te,
@@ -1346,10 +1367,13 @@ class Handlers:
             logging.getLogger().info(transfer_tote_msg)
 
             if req.num_units == 2:
-                msg = "transfer_2totes"
+                msg_to_forward = "transfer_2totes"
             elif req.num_units == 1:
-                msg = "transfer_tote"
-            utils_comms.send_msg_to_conveyor(msg, curr_station.name)
+                msg_to_forward = "transfer_tote"
+
+            utils_comms.send_msg_to_plugin(
+                msg_to_forward, f"plugin_conveyor_{curr_station.name}"
+            )
 
             self.dbsession.add_notification(
                 [fleet_name, curr_station.name],
@@ -1373,22 +1397,33 @@ class Handlers:
             return self.handle_visa_request(req, sherpa)
         elif access_type == rqm.AccessType.RELEASE:
             return self.handle_visa_release(req, sherpa)
-        
-    def update_visa_status (self, sherpa_name, zone_id, reason):
+
+    def update_visa_status(self, sherpa_name, zone_id, reason):
         row = (
-                self.dbsession.session.query(vm.VisaAssignment)
-               .filter(zone_id==zone_id)
-               .filter(sherpa_name==sherpa_name)
-               .first()
-              )
+            self.dbsession.session.query(vm.VisaAssignment)
+            .filter(zone_id == zone_id)
+            .filter(sherpa_name == sherpa_name)
+            .first()
+        )
         if row:
-            waiting_sherpas = dict(row.waiting_sherpas) if (row.waiting_sherpas) else { }
-            if sherpa_name not in waiting_sherpas.keys(): #update only when it is not already present
-                waiting_sherpas[f"{sherpa_name}"] = dict({"denied_time": (datetime.datetime.now()).strftime("%Y-%m-%dT%H:%M:%S"), "reason": reason  })
+            waiting_sherpas = dict(row.waiting_sherpas) if (row.waiting_sherpas) else {}
+            if (
+                sherpa_name not in waiting_sherpas.keys()
+            ):  # update only when it is not already present
+                waiting_sherpas[f"{sherpa_name}"] = dict(
+                    {
+                        "denied_time": (datetime.datetime.now()).strftime(
+                            "%Y-%m-%dT%H:%M:%S"
+                        ),
+                        "reason": reason,
+                    }
+                )
                 row.waiting_sherpas = waiting_sherpas
                 self.dbsession.session.commit()
-                logging.getLogger("visa").info("waiting sherpa " + sherpa_name+ ": "+ reason)
-    
+                logging.getLogger("visa").info(
+                    "waiting sherpa " + sherpa_name + ": " + reason
+                )
+
     def handle_visa_request(self, req: rqm.VisaReq, sherpa: fm.Sherpa):
         # query db
         granted, reason, reqd_ezones = utils_visa.can_grant_visa(
@@ -1408,12 +1443,11 @@ class Handlers:
             for ezone in set(reqd_ezones):
                 utils_visa.lock_exclusion_zone(ezone, sherpa)
         else:
-            self.update_visa_status(sherpa.name, reqd_ezones,  reason)
+            self.update_visa_status(sherpa.name, reqd_ezones, reason)
 
         granted_message = "granted" if granted else "not granted"
         visa_log = f"{sherpa.name} {granted_message} {req.visa_type} type visa to zone {req.zone_name}, reason: {reason}"
         logging.getLogger("visa").info(f"visa {granted_message} to {sherpa.name}")
-        
 
         response: rqm.ResourceResp = rqm.ResourceResp(
             granted=granted, visa=req, access_type=rqm.AccessType.REQUEST
@@ -1427,8 +1461,7 @@ class Handlers:
         )
 
         return response.to_json()
-    
-    
+
     def handle_visa_release(self, req: rqm.VisaReq, sherpa: fm.Sherpa):
         # query db
         visas_to_release = utils_visa.get_visas_to_release(self.dbsession, sherpa, req)

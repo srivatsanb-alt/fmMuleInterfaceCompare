@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm.attributes import flag_modified
 
 # ati code imports
+from models.mongo_client import FMMongo
 import models.visa_models as vm
 import models.request_models as rqm
 import models.fleet_models as fm
@@ -45,6 +46,18 @@ async def site_info(user_name=Depends(dpd.get_user_from_header)):
     }
 
     return response
+
+
+@router.get("/get_trip_metadata")
+async def get_trip_metadata(user_name=Depends(dpd.get_user_from_header)):
+
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    with FMMongo() as fm_mongo:
+        trip_metadata = fm_mongo.get_collection_from_fm_config("trip_metadata")
+
+    return trip_metadata
 
 
 # returns info about all the sherpas, stations and their corresponding status(initialized, inducted, disabled, idle, etc.).

@@ -1,13 +1,12 @@
 # python module imports
 import datetime
 import time
-import os
-import toml
 import logging
 from sqlalchemy.sql import not_
 
 # ati code imports
 from models.db_session import DBSession
+from models.mongo_client import FMMongo
 import models.trip_models as tm
 import models.fleet_models as fm
 import models.request_models as rqm
@@ -15,15 +14,13 @@ import app.routers.dependencies as dpd
 
 
 def get_conditional_trip_config():
-    conf_path = os.path.join(os.getenv("FM_CONFIG_DIR"), "conditional_trips.toml")
 
-    if not os.path.exists(conf_path):
-        logging.getLogger("misc").error(f"conditional trip config : {conf_path} not found")
-        return
+    with FMMongo() as fm_mongo:
+        conditional_trips_config = fm_mongo.get_collection_from_fm_config(
+            "conditional_trips"
+        )
 
-    config = toml.load(conf_path)
-
-    return config.get("conditional_trips", {})
+    return conditional_trips_config
 
 
 def enqueue_trip_msg(sherpa_name: str, route: list, trip_type: str, priority: float):
@@ -111,7 +108,7 @@ class BookConditionalTrip:
         )
         return True if len(trips) != 0 else False
 
-    def was_last_trip_an_idling_trip(self, sherpa_name: str):
+    def was_last_trip_a_parking_trip(self, sherpa_name: str):
         was_idling_trip = False
         last_trip = (
             self.dbsession.session.query(tm.Trip)
@@ -124,7 +121,7 @@ class BookConditionalTrip:
 
         if last_trip is None:
             pass
-        elif last_trip.booked_by == f"idling_sherpa_{sherpa_name}":
+        elif last_trip.booked_by == f"auto_park_{sherpa_name}":
             was_idling_trip = True
 
         return was_idling_trip
@@ -156,7 +153,7 @@ class BookConditionalTrip:
         )
         return len(trips)
 
-    def book_idling_sherpa_trips(self, config: dict, trip_type: str):
+    def book_auto_park_trips(self, config: dict, trip_type: str):
         idling_thresh = config["threshold"]
         trip_priority = config["priority"]
         max_trips = config["max_trips"]
@@ -173,7 +170,7 @@ class BookConditionalTrip:
             saved_route = self.dbsession.get_saved_route(f"parking_{sherpa_name}")
 
             if saved_route is None:
-                logging.getLogger("misc").warning(f"No idling route for {sherpa_name}")
+                logging.getLogger("misc").warning(f"No parking route for {sherpa_name}")
                 continue
 
             already_booked = self.is_trip_already_booked(sherpa_name, trip_type)
@@ -184,7 +181,7 @@ class BookConditionalTrip:
                 )
                 continue
 
-            was_idling_trip = self.was_last_trip_an_idling_trip(sherpa_name)
+            was_idling_trip = self.was_last_trip_a_parking_trip(sherpa_name)
             if was_idling_trip:
                 logging.getLogger("misc").info(
                     f"last trip was a conditional trip of type {trip_type}, need not book again"

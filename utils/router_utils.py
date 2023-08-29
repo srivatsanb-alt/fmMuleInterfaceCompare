@@ -1,6 +1,5 @@
 import sys
 import os
-from core.config import Config
 
 sys.path.append(os.environ["MULE_ROOT"])
 from mule.ati.control.bridge.router_planner_interface import RoutePlannerInterface

@@ -38,4 +38,3 @@ class VisaAssignment(Base, TimestampMixin):
     zone_id = Column(String, ForeignKey("exclusion_zones.zone_id"), primary_key=True)
     sherpa_name = Column(String, ForeignKey("sherpas.name"), primary_key=True)
     waiting_sherpas = Column(MutableDict.as_mutable(JSON), nullable=True)
-

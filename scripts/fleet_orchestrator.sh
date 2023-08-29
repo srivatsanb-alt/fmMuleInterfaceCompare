@@ -5,7 +5,6 @@ LOGS=$FM_LOG_DIR
 TS=$(date +'%H%M%S')
 
 start() {
-
     echo "starting control_module router"
     poetry run python /app/optimal_dispatch/router.py &
 
@@ -14,12 +13,6 @@ start() {
 
     echo "starting fleet manager uvicorn, listening on port $FM_PORT"
     poetry run python /app/app/main.py 2>&1 &
-
-    echo "starting plugins uvicorn, listening on port $PLUGIN_PORT"
-    poetry run python /app/plugins/plugin_app.py 2>&1 &
-
-    echo "starting plugins worker"
-    poetry run python plugins/plugin_rq.py 2>&1 &
 }
 
 fm_init() {

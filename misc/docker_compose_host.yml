@@ -14,15 +14,35 @@ services:
       PGTZ: Asia/Kolkata
       TZ: Asia/Kolkata
       FM_DATABASE_URI: postgresql://postgres:postgres@localhost
+      FM_MONGO_DATABASE_URI: mongodb://ati:atiMongo@localhost:27017
     expose:
      - 8001
+    volumes:
+      - .:/app/static
+    depends_on:
+      - db
+      - mongo
+    network_mode: host
+  
+  plugins:
+    image: plugin:dev
+    container_name: fm_plugins
+    restart: always
+    build: .
+    environment:
+      PGTZ: Asia/Kolkata
+      TZ: Asia/Kolkata
+      PLUGIN_DATABASE_URI: postgresql://postgres:postgres@localhost
+      PLUGIN_MONGO_DATABASE_URI: mongodb://ati:atiMongo@localhost:27017
+    expose:
      - 8002
     volumes:
       - .:/app/static
     depends_on:
       - db
+      - mongo
     network_mode: host
-
+  
   db:
     image: postgres:14.0
     container_name: fleet_db
@@ -37,6 +57,45 @@ services:
     volumes:
       - ./psql/psql_backup:/var/lib/postgresql/data:rw
     network_mode: host
+ 
+  grafana:
+    image: fm_grafana:9.5.2
+    container_name: fm_grafana
+    restart: always
+    user: "root:root"
+    expose:
+      - 3000
+    network_mode: host
+
+  mongo:
+    image: mongo:7.0
+    container_name: fm_mongo
+    restart: always
+    expose:
+      - 27017
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ati
+      MONGO_INITDB_ROOT_PASSWORD: atiMongo
+    volumes:
+     - ./mongo:/data/db:rw
+    network_mode: host
+
+  mongo-express:
+    image: mongo-express:1.0.0-alpha
+    container_name: fm_mongo_express
+    restart: always
+    expose:
+      - 8081
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: ati
+      ME_CONFIG_MONGODB_ADMINPASSWORD: atiMongo
+      ME_CONFIG_MONGODB_URL: mongodb://ati:atiMongo@localhost:27017
+      ME_CONFIG_SITE_BASEURL: "/config_editor"
+      ME_CONFIG_BASICAUTH_USERNAME: "ati_support"
+      ME_CONFIG_BASICAUTH_PASSWORD: "ati112"
+    depends_on:
+      - mongo
+    network_mode: host
 
   reverseproxy:
     image: fm_nginx:1.23.3
@@ -47,6 +106,12 @@ services:
       - 443
     volumes:
       - ./certs:/certs
+    depends_on:
+      - fleet_manager
+      - plugins
+      - grafana
+      - registry
+      - mongo-express
     network_mode: host
 
   registry:
@@ -55,18 +120,4 @@ services:
     container_name: fm_docker_registry
     expose:
       - 5000
-    network_mode: host
-
-  grafana:
-    image: grafana/grafana:9.5.2
-    container_name: fm_grafana
-    restart: always
-    user: "root:root"
-    expose:
-      - 3000
-    volumes:
-      -  ./grafana_config/grafana.ini:/etc/grafana/grafana.ini
-      -  ./grafana_config/datasources:/etc/grafana/provisioning/datasources
-      -  ./grafana_config/dashboards:/etc/grafana/provisioning/dashboards
-      -  ./grafana_config/dashboard_definitions/fleet_analytics.json:/var/lib/dashboards/fleet_analytics.json
     network_mode: host

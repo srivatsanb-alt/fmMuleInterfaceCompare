@@ -270,6 +270,12 @@ class UserLogin(ClientReq):
     password: str
 
 
+class FrontendUserDetails(ClientReq):
+    name: str
+    password: str
+    role: str
+
+
 class AddEditSherpaReq(ClientReq):
     api_key: str
     hwid: str
@@ -377,6 +383,7 @@ class TripStatusReq_pg(ClientReq):
     sort_field: Optional[str]
     sort_order: Optional[str]
     search_txt: Optional[str]
+
 
 class TripStatusReq(ClientReq):
     booked_from: Optional[str]

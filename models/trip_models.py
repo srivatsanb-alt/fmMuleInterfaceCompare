@@ -58,6 +58,8 @@ class TripAnalytics(Base, TimestampMixin):
     to_station = Column(String, index=True)
     cte = Column(Float)
     te = Column(Float)
+    route_length = Column(Float)
+    progress = Column(Float)
     expected_trip_time = Column(Float)
     actual_trip_time = Column(Float)
     time_elapsed_obstacle_stoppages = Column(Float)
@@ -104,6 +106,7 @@ class Trip(Base, TimestampMixin):
 
     # BOOKED, ASSIGNED, WAITING_STATION, EN_ROUTE, SUCCEEDED, FAILED
     status = Column(String, index=True)
+    route_lengths = Column(ARRAY(Float))
     etas_at_start = Column(ARRAY(Float))
     etas = Column(ARRAY(Float))
 

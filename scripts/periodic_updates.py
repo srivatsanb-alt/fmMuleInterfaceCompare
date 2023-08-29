@@ -1,11 +1,13 @@
+import logging
+import time
+
+# ati code imports
 from utils.comms import send_status_update, send_notification
 from utils.util import get_table_as_dict
 import utils.trip_utils as tu
-import logging
 from models.db_session import DBSession
 from models.fleet_models import SherpaStatus, Sherpa, Fleet, Station, StationStatus
 from models.misc_models import Notifications
-import time
 
 
 def get_fleet_status_msg(dbsession, fleet):

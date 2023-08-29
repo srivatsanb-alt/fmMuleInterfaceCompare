@@ -6,10 +6,13 @@ import logging
 import logging.config
 import redis
 import json
+import inspect
 
 # ati code imports
 import utils.log_utils as lu
 import utils.fleet_utils as fu
+import utils.config_utils as cu
+from models.mongo_client import FMMongo
 from utils.upgrade_db import upgrade_db_schema, maybe_drop_tables
 from models.db_session import DBSession
 
@@ -20,27 +23,81 @@ sys.path.append("/app/mule")
 from mule.ati.common.config import load_mule_config
 
 
-def regenerate_config():
-    with open(os.getenv("ATI_CONSOLIDATED_CONFIG"), "w") as f:
-        toml.dump(load_mule_config(os.getenv("ATI_CONFIG")), f)
+def maybe_add_plugin_user(fm_mongo, fu_db):
+    create_col_kwargs = getattr(cu.CreateColKwargs, "capped_default")
+    fm_mongo.create_collection("plugin_info", fu_db, **create_col_kwargs)
+    fm_mongo.add_validator(
+        "plugin_info", fu_db, getattr(cu.PluginConfigValidator, "plugin_info")
+    )
+    c = fm_mongo.get_collection("plugin_info", fu_db)
+    if c.count_documents(filter={}) == 0:
+        c.insert_one(cu.PluginConfigDefaults.plugin_info)
+        print(f"Created default plugin auth details")
+
+
+def maybe_add_default_admin_user(fm_mongo):
+    fm_mongo.create_database("frontend_users")
+    fu_db = fm_mongo.get_database("frontend_users")
+    fm_mongo.create_collection("user_details", fu_db)
+    fm_mongo.add_validator(
+        "user_details", fu_db, getattr(cu.FrontendUsersValidator, "user_details")
+    )
+    c = fm_mongo.get_collection("user_details", fu_db)
+    c.create_index("name", unique=True)
+    if c.count_documents(filter={}) == 0:
+        c.insert_one(cu.DefaultFrontendUser.admin)
+        print(f"Created default user")
+
+    maybe_add_plugin_user(fm_mongo, fu_db)
+
+
+def setfm_mongo_config():
+    with FMMongo() as fm_mongo:
+        maybe_add_default_admin_user(fm_mongo)
+        fm_mongo.create_database("fm_config")
+        fc_db = fm_mongo.get_database("fm_config")
+        config_val_members = inspect.getmembers(cu.ConfigValidator)
+        all_collection_names = []
+        for val in config_val_members:
+            if not val[0].startswith("__"):
+                all_collection_names.append(val[0])
+
+        for collection_name in all_collection_names:
+            # create_col_kwargs = getattr(cu.CreateColKwargs, collection_name, None)
+            # if create_col_kwargs is None:
+            create_col_kwargs = getattr(cu.CreateColKwargs, "capped_default")
+            fm_mongo.create_collection(collection_name, fc_db, **create_col_kwargs)
+            fm_mongo.add_validator(
+                collection_name, fc_db, getattr(cu.ConfigValidator, collection_name)
+            )
+            c = fm_mongo.get_collection(collection_name, fc_db)
+            default_config = getattr(cu.ConfigDefaults, collection_name)
+
+            query = {}
+            if c.find_one(query) is None:
+                c.insert_one(default_config)
+                logging.getLogger("configure_fleet").info(
+                    f"Set config: {collection_name} to defaults"
+                )
+            else:
+                logging.getLogger("configure_fleet").info(
+                    f"Retaining config: {collection_name} as it is"
+                )
+
+
+def regenerate_mule_config():
+    with open(os.getenv("ATI_CONFIG"), "w") as ac:
+        with FMMongo() as fm_mongo:
+            mule_config = fm_mongo.get_collection_from_fm_config("mule_config")
+        toml.dump(mule_config["mule_site_config"], ac)
+
+    with open(os.getenv("ATI_CONSOLIDATED_CONFIG"), "w") as acc:
+        toml.dump(load_mule_config(os.getenv("ATI_CONFIG")), acc)
+
     os.environ["ATI_CONFIG"] = os.environ["ATI_CONSOLIDATED_CONFIG"]
 
-
-def update_frontend_user_details(dbsession: DBSession):
-
-    fu.FrontendUserUtils.delete_all_frontend_users(dbsession)
-    dbsession.session.flush()
-
-    frontend_user_config = toml.load(
-        os.path.join(os.getenv("FM_CONFIG_DIR"), "frontend_users.toml")
-    )
-    logging.getLogger().info(f"frontend user details in config {frontend_user_config}")
-
-    for user_name, user_details in frontend_user_config["frontenduser"].items():
-        role = user_details.get("role", "operator")
-        fu.FrontendUserUtils.add_update_frontend_user(
-            dbsession, user_name, user_details["hashed_password"], role
-        )
+    config_path = os.environ["ATI_CONSOLIDATED_CONFIG"]
+    logging.getLogger().info(f"Regenerated mule config, saved to: {config_path}")
 
 
 def populate_redis_with_basic_info(dbsession: DBSession):
@@ -58,23 +115,18 @@ def populate_redis_with_basic_info(dbsession: DBSession):
     lu.set_log_config_dict(sherpa_names)
 
     # redis_expire_timeout
-    fleet_config = toml.load(os.path.join(os.getenv("FM_CONFIG_DIR"), "fleet_config.toml"))
+    with FMMongo() as fm_mongo:
+        rq_params = fm_mongo.get_collection_from_fm_config("rq")
 
     # store default job timeout
-    default_job_timeout = fleet_config["fleet"]["rq"].get("default_job_timeout", 15)
-    generic_handler_job_timeout = fleet_config["fleet"]["rq"].get(
-        "generic_handler_job_timeout", 10
-    )
+    default_job_timeout = rq_params["default_job_timeout"]
+    generic_handler_job_timeout = rq_params["generic_handler_job_timeout"]
 
     redis_conn.set("default_job_timeout_ms", default_job_timeout * 1000)
     redis_conn.set("generic_handler_job_timeout_ms", generic_handler_job_timeout * 1000)
 
 
 def main():
-    # regenerate_mule_config for routing
-    regenerate_config()
-    config_path = os.environ["ATI_CONFIG"]
-    logging.getLogger().info(f"will use {config_path} as ATI_CONFIG")
     time.sleep(5)
 
     DB_UP = False
@@ -90,13 +142,15 @@ def main():
             )
             time.sleep(5)
 
+    setfm_mongo_config()
+
+    # regenerate_mule_config for routing
+    regenerate_mule_config()
+
     with DBSession() as dbsession:
         fu.add_software_compatability(dbsession)
         fu.add_master_fm_data_upload(dbsession)
         fu.add_sherpa_metadata(dbsession)
-
-        # update frontenduser details
-        update_frontend_user_details(dbsession)
 
         # populate redis with basic info
         populate_redis_with_basic_info(dbsession)

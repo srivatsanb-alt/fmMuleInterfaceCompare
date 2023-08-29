@@ -7,11 +7,13 @@ from fastapi import Header
 from fastapi.param_functions import Query
 from rq.job import Job
 from rq import Retry
-from utils.rq_utils import enqueue, enqueue_at, Queues
-from core.config import Config
 import redis
 import os
 import json
+
+# ati code imports
+import core.handler_configuration as hc
+from utils.rq_utils import enqueue, enqueue_at, Queues
 from models.request_models import SherpaReq
 from models.db_session import DBSession
 
@@ -128,7 +130,7 @@ def process_req(queue, req, user, redis_conn=None, dt=None):
     job = None
     req.source = user
 
-    handler_obj = Config.get_handler()
+    handler_obj = hc.HandlerConfiguration.get_handler()
     args = [handler_obj, req]
     kwargs = {}
 

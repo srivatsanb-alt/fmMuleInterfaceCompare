@@ -7,7 +7,6 @@ import redis
 from rq import Connection, Worker
 
 # ati code imports
-from core.config import Config
 from utils.rq_utils import Queues
 from scripts.periodic_updates import send_periodic_updates
 from scripts.periodic_backup import backup_data
@@ -18,12 +17,6 @@ from scripts.alerts import send_slack_alerts
 from scripts.conditional_trips import book_conditional_trips
 from master_fm_comms.send_updates_to_mfm import send_mfm_updates
 from master_fm_comms.send_ws_updates_to_mfm import send_ws_msgs_to_mfm
-
-
-def init_fleet_manager(config):
-    if Config.get_fleet_mode() == "flipkart":
-        # TODO: load globals
-        pass
 
 
 def start_worker(queue):
@@ -41,9 +34,6 @@ def start_worker(queue):
 
 if __name__ == "__main__":
     redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
-
-    config = Config.read_config()
-    init_fleet_manager(config)
 
     logging.info(f"all queues {Queues.get_queues()}")
 

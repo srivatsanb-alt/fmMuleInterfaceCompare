@@ -7,7 +7,6 @@ import shutil
 # ati code imports
 from utils import fleet_utils as fu
 from models.db_session import DBSession
-from models.frontend_models import FrontendUser
 import models.fleet_models as fm
 import models.misc_models as mm
 import models.request_models as rqm
@@ -332,40 +331,3 @@ async def update_map(
                 raise e
 
     return response
-
-
-@router.get("/all_user_info")
-async def all_user_info(user_name=Depends(dpd.get_user_from_header)):
-
-    if not user_name:
-        dpd.raise_error("Unknown requester", 401)
-
-    response = {}
-    with DBSession() as dbsession:
-        all_frontend_user = dbsession.session.query(FrontendUser).all()
-        for frontenduser in all_frontend_user:
-            response.update({frontenduser.name: {"role": frontenduser.role}})
-
-    return response
-
-
-# @router.get("/delete_user/{name}")
-# def delete_user(name: str, user_name=Depends(get_user_from_header)):
-#
-#     if not user_name:
-#         raise_error("Unknown requester", 401)
-#
-#     response = {}
-#     with DBSession() as dbsession:
-#         frontenduser = (
-#             dbsession.session.query(FrontendUser)
-#             .filter(FrontendUser.name == name)
-#             .one_or_none()
-#         )
-#
-#         if not frontenduser:
-#             raise ValueError("User not found")
-#
-#         dbsession.session.delete(frontenduser)
-#
-#     return response

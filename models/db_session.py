@@ -1,14 +1,12 @@
 import datetime
-import json
 import os
 from typing import List
-from sqlalchemy import func, inspect, or_, and_, extract, text
+from sqlalchemy import func, or_, and_, extract, text
 from sqlalchemy.orm import Session
 from fastapi.encoders import jsonable_encoder
 
 # ati code imports
-from core.db import get_engine, get_session
-import models.frontend_models as fem
+from core.db import get_session
 import models.misc_models as mm
 import models.fleet_models as fm
 import models.trip_models as tm
@@ -180,16 +178,6 @@ class DBSession:
             available_sherpa_names.append(val[0])
 
         return available_sherpa_names
-
-    def get_frontend_user(self, name: str, hashed_password: str) -> fem.FrontendUser:
-        return (
-            self.session.query(fem.FrontendUser)
-            .filter(
-                fem.FrontendUser.name == name,
-                fem.FrontendUser.hashed_password == hashed_password,
-            )
-            .one_or_none()
-        )
 
     def get_all_sherpa_status(self) -> List[fm.SherpaStatus]:
         return self.session.query(fm.SherpaStatus).all()
@@ -384,48 +372,71 @@ class DBSession:
             .filter(tm.SavedRoutes.fleet_name == fleet_name)
             .all()
         )
-    
+
     def get_trips_with_timestamp_and_status_pagination(
-        self, booked_from, booked_till,filter_fleets, valid_status, sherpa_names,filter_status, search_text, sort_field="id", sort_order="desc", page=0, limit=50):
-            skip = page*limit
-            trips = {}
-            count = 0
-            base_query = (self.session.query(tm.Trip).filter(tm.Trip.status.in_(valid_status)))
-            if(booked_from and booked_from !=""):
-                 base_query = base_query.filter(tm.Trip.booking_time > booked_from)
-            if(booked_till and booked_till !=""):
-                 base_query = base_query.filter(tm.Trip.booking_time < booked_till)
-            if filter_fleets and filter_fleets != "[]":
-                base_query = base_query.filter(tm.Trip.fleet_name.in_(filter_fleets))
-            if sherpa_names and sherpa_names != "[]":
-                base_query = base_query.filter(tm.Trip.sherpa_name.in_(sherpa_names))
-            
-            #having to filter again due to filter in UI that overrides above filter
-            if filter_status and filter_status != "[]":
-                base_query = base_query.filter(tm.Trip.status.in_(filter_status))
-            
-            if search_text and search_text != "":
-                columns_to_search = [
-                        tm.Trip.sherpa_name,
-                        tm.Trip.status,
-                        tm.Trip.booked_by,
-                    ]
-                conditions = or_(*[column.ilike(f"%{search_text}%") for column in columns_to_search])
-                base_query = base_query.filter(conditions)
-            
-            count = base_query.count()
+        self,
+        booked_from,
+        booked_till,
+        filter_fleets,
+        valid_status,
+        sherpa_names,
+        filter_status,
+        search_text,
+        sort_field="id",
+        sort_order="desc",
+        page=0,
+        limit=50,
+    ):
+        skip = page * limit
+        trips = {}
+        count = 0
+        base_query = self.session.query(tm.Trip).filter(tm.Trip.status.in_(valid_status))
+        if booked_from and booked_from != "":
+            base_query = base_query.filter(tm.Trip.booking_time > booked_from)
+        if booked_till and booked_till != "":
+            base_query = base_query.filter(tm.Trip.booking_time < booked_till)
+        if filter_fleets and filter_fleets != "[]":
+            base_query = base_query.filter(tm.Trip.fleet_name.in_(filter_fleets))
+        if sherpa_names and sherpa_names != "[]":
+            base_query = base_query.filter(tm.Trip.sherpa_name.in_(sherpa_names))
 
-            base_query = (base_query.order_by(text(f"{sort_field} {sort_order}" ))
-                        .offset(skip)
-                        .limit(limit))
-            
-            trips = base_query.all()
-            
-            pages = int(count/limit) if (count%limit == 0) else int(count/limit + 1)
+        # having to filter again due to filter in UI that overrides above filter
+        if filter_status and filter_status != "[]":
+            base_query = base_query.filter(tm.Trip.status.in_(filter_status))
 
-            trips = jsonable_encoder(trips)
-            trips = {"trips": trips, "count": count, "limit": limit,"total_pages": pages, "sort_field":sort_field, "sort_order": sort_order}
-            return trips
+        if search_text and search_text != "":
+            columns_to_search = [
+                tm.Trip.sherpa_name,
+                tm.Trip.status,
+                tm.Trip.booked_by,
+            ]
+            conditions = or_(
+                *[column.ilike(f"%{search_text}%") for column in columns_to_search]
+            )
+            base_query = base_query.filter(conditions)
+
+        count = base_query.count()
+
+        base_query = (
+            base_query.order_by(text(f"{sort_field} {sort_order}"))
+            .offset(skip)
+            .limit(limit)
+        )
+
+        trips = base_query.all()
+
+        pages = int(count / limit) if (count % limit == 0) else int(count / limit + 1)
+
+        trips = jsonable_encoder(trips)
+        trips = {
+            "trips": trips,
+            "count": count,
+            "limit": limit,
+            "total_pages": pages,
+            "sort_field": sort_field,
+            "sort_order": sort_order,
+        }
+        return trips
 
     def get_trips_with_timestamp_and_status(self, booked_from, booked_till, valid_status):
         return (
@@ -481,57 +492,73 @@ class DBSession:
             .order_by(tm.TripAnalytics.trip_leg_id.desc())
             .all()
         )
-    def get_legs(
-            self, trip_id
-            ):
-        legs = (self.session.query(tm.TripAnalytics)
-                .filter(tm.TripAnalytics.trip_id == trip_id)
-                 .all()
+
+    def get_legs(self, trip_id):
+        legs = (
+            self.session.query(tm.TripAnalytics)
+            .filter(tm.TripAnalytics.trip_id == trip_id)
+            .all()
         )
         return jsonable_encoder(legs)
 
     def get_trip_analytics_with_pagination(
-        self, booked_from, booked_till, filter_fleets, sherpa_names, sort_field = "id", 
-            sort_order="desc", page=0, limit=50
+        self,
+        booked_from,
+        booked_till,
+        filter_fleets,
+        sherpa_names,
+        sort_field="id",
+        sort_order="desc",
+        page=0,
+        limit=50,
     ):
-        #data validation
-        if(limit==0): 
-            limit =50
-        if(sort_field==""):
-            sort_field="id"
-        if (sort_order==""):
-            sort_order="desc"
-        #Data validation
-        skip = page*limit
+        # data validation
+        if limit == 0:
+            limit = 50
+        if sort_field == "":
+            sort_field = "id"
+        if sort_order == "":
+            sort_order = "desc"
+        # Data validation
+        skip = page * limit
         trip_analytics = {}
         count = 0
 
-        base_query = (self.session.query(tm.Trip)
-                    .filter(tm.Trip.booking_time > booked_from)
-                    .filter(tm.Trip.booking_time < booked_till)
-                    )
-        
+        base_query = (
+            self.session.query(tm.Trip)
+            .filter(tm.Trip.booking_time > booked_from)
+            .filter(tm.Trip.booking_time < booked_till)
+        )
+
         if filter_fleets and filter_fleets != "[]":
             base_query = base_query.filter(tm.Trip.fleet_name.in_(filter_fleets))
-        
+
         if sherpa_names and sherpa_names != "[]":
             base_query = base_query.filter(tm.Trip.sherpa_name.in_(sherpa_names))
-        
+
         count = base_query.count()
 
+        base_query = (
+            base_query.order_by(text(f"{sort_field} {sort_order}"))
+            .offset(skip)
+            .limit(limit)
+        )
 
-        base_query = (base_query.order_by(text(f"{sort_field} {sort_order}" ))
-                        .offset(skip)
-                        .limit(limit))
-            
         trips = base_query.all()
-            
-        pages = int(count/limit) if (count%limit == 0) else int(count/limit + 1)
-        
+
+        pages = int(count / limit) if (count % limit == 0) else int(count / limit + 1)
+
         trip_analytics = jsonable_encoder(trips)
         for item in trip_analytics:
             item["legs"] = self.get_legs(str(item["id"]))
-        trip_analytics = {"trips_analytics": trip_analytics,"count": count, "limit": limit,"total_pages": pages, "sort_field":sort_field, "sort_order": sort_order}
+        trip_analytics = {
+            "trips_analytics": trip_analytics,
+            "count": count,
+            "limit": limit,
+            "total_pages": pages,
+            "sort_field": sort_field,
+            "sort_order": sort_order,
+        }
         return trip_analytics
 
     def get_trip_analytics(self, trip_leg_id):
@@ -552,7 +579,7 @@ class DBSession:
                 .filter(tm.TripLeg.id == ongoing_trip.trip_leg_id)
                 .one_or_none()
             )
-    
+
     def get_all_trip_legs(self, trip_id: int):
         temp = self.session.query(tm.TripLeg.id).filter(tm.TripLeg.trip_id == trip_id).all()
         trip_leg_ids = []
@@ -746,29 +773,32 @@ class DBSession:
             .subquery()
         )
         return self.session.query(func.avg(subquery.c.actual_trip_time)).scalar()
-    
+
     def get_all_visa_assignments_as_dict(self, zone_id):
         response = []
         sherpas = (
             self.session.query(
-            vm.VisaAssignment.sherpa_name, vm.VisaAssignment.created_at.label("granted_time"))
-            .filter(vm.VisaAssignment.zone_id==zone_id)
+                vm.VisaAssignment.sherpa_name,
+                vm.VisaAssignment.created_at.label("granted_time"),
+            )
+            .filter(vm.VisaAssignment.zone_id == zone_id)
             .all()
         )
         waiting_sherpas = (
-            self.session.query(
-                vm.VisaAssignment.waiting_sherpas.label("waiting")
-            )
-            .filter(vm.VisaAssignment.zone_id==zone_id)
+            self.session.query(vm.VisaAssignment.waiting_sherpas.label("waiting"))
+            .filter(vm.VisaAssignment.zone_id == zone_id)
             .filter(vm.VisaAssignment.waiting_sherpas.isnot(None))
             .all()
         )
-        resident_sherpas =  jsonable_encoder(sherpas)
+        resident_sherpas = jsonable_encoder(sherpas)
 
-        waiting_sherpas_dict = {'waiting_sherpas':[]}
+        waiting_sherpas_dict = {"waiting_sherpas": []}
         for item in waiting_sherpas:
             temp = jsonable_encoder(item)
-            waiting_sherpas_dict['waiting_sherpas'].append(temp["waiting"])
- 
-        response = {"resident_sherpas": resident_sherpas, "waiting_sherpas": waiting_sherpas_dict["waiting_sherpas"] }
+            waiting_sherpas_dict["waiting_sherpas"].append(temp["waiting"])
+
+        response = {
+            "resident_sherpas": resident_sherpas,
+            "waiting_sherpas": waiting_sherpas_dict["waiting_sherpas"],
+        }
         return response

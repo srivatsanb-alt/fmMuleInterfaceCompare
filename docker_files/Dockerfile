@@ -13,6 +13,7 @@ RUN echo "server ip $FM_SERVER_IP"
 
 ENV FM_INSTALL_DIR="/app" REDIS_PORT=$REDIS_PORT FM_PORT=$FM_PORT PLUGIN_PORT=$PLUGIN_PORT FM_SERVER_IP=$FM_SERVER_IP
 
+RUN mkdir /app/mule_config
 
 ENV FM_REDIS_URI="redis://localhost:$REDIS_PORT" \
     FM_STATIC_DIR="/app/static" \
@@ -20,8 +21,8 @@ ENV FM_REDIS_URI="redis://localhost:$REDIS_PORT" \
     FM_MISC_DIR="/app/misc/" \
     FM_CONFIG_DIR="/app/static/fleet_config/" \
     MULE_ROOT="$FM_INSTALL_DIR/mule" \
-    ATI_CONFIG="/app/static/mule_config/config.toml" \
-    ATI_CONSOLIDATED_CONFIG="/app/static/mule_config/consolidated.toml" \
+    ATI_CONFIG="/app/mule_config/config.toml" \
+    ATI_CONSOLIDATED_CONFIG="/app/mule_config/consolidated.toml" \
     ATI_STATIC_AUTH_USERNAME="ati_static_files" \
     ATI_STATIC_AUTH_PASSWORD="atiStatic112" \
     FM_IMAGE_INFO=$FM_IMAGE_INFO \
@@ -39,6 +40,8 @@ RUN echo "alias rqe='grep -e rq -C 5 /app/logs/fleet_manager.log'" >> ~/.bashrc
 RUN echo "alias apihw='poetry run python /app/utils/api_key_gen.py --hw_id'" >> ~/.bashrc
 RUN echo "alias apind='poetry run python utils/gen_api_keys_n_devices.py --num_devices'" >> ~/.bashrc
 RUN echo "alias sip='psql -c \"select sherpas.name, sherpas.ip_address, fleets.name from sherpas join fleets on fleet_id=fleets.id;\"'" >> ~/.bashrc
+RUN echo "alias hashpass='poetry run python utils/gen_hashed_password.py --password'" >> ~/.bashrc 
+RUN echo "alias create_certs='poetry run python utils/create_certs.py --ips'" >> ~/.bashrc
 
 COPY . /app/
 RUN echo "Copying messages_pb2.py to mule/ati/schema on the docker"
