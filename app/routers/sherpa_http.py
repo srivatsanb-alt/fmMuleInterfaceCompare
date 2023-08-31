@@ -1,3 +1,4 @@
+from datetime import datetime
 import redis
 import json
 import os
@@ -46,6 +47,7 @@ async def basic_info(sherpa_name: str = Depends(dpd.get_sherpa)):
             "customer": sherpa.fleet.customer,
             "site": sherpa.fleet.site,
             "location": sherpa.fleet.location,
+            "fm_time": (datetime.now()).strftime("%A, %d %b %Y %X %Z"),
         }
 
     return response
