@@ -108,7 +108,7 @@ if [ $build_base == 1 ] ; then
 {
   echo "Will build base image!"
   docker image build -t fleet_manager_base:dev -f docker_files/Dockerfile.base .
-  cd fm_plugins && bash scripts/build_base_image.sh
+  cd fm_plugins && bash scripts/build_base_image.sh dev
   cd ../
   docker pull nginx:1.23.3
   docker pull mongo-express:1.0.0-alpha
@@ -146,7 +146,7 @@ docker image build -t fm_grafana:9.5.2 -f docker_files/grafana.Dockerfile .
 echo "Successfully built grafana Image"
 
 
-cd fm_plugins && bash scripts/build_final_image.sh
+cd fm_plugins && bash scripts/build_final_image.sh dev
 cd ../
 echo "Built plugin docker images successfully"
 

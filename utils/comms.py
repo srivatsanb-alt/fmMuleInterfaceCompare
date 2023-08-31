@@ -204,7 +204,7 @@ def get_num_units_converyor(conveyor_name):
     plugin_ip = plugin_ip + ":" + plugin_port
 
     endpoint = os.path.join(
-        "http://", plugin_ip, f"plugin/conveyor/tote_trip_info/{conveyor_name}"
+        "http://", plugin_ip, f"plugin/api/v1/conveyor/tote_trip_info/{conveyor_name}"
     )
     logging.getLogger().info(f"Sending request to plugin_conveyor: endpoint: {endpoint}")
     event = threading.Event()
