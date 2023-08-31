@@ -402,11 +402,11 @@ class ConfigDefaults:
     }
     conditional_trips = {
         "trip_types": ["battery_swap", "auto_park"],
-        "auto_park": {"book": False, "max_trips": 2, "threshold": 600, "priority": 1},
-        "battery_swap": {"book": False, "max_trips": 2, "threshold": 15, "priority": 3},
+        "auto_park": {"book": True, "max_trips": 2, "threshold": 600, "priority": 1},
+        "battery_swap": {"book": True, "max_trips": 2, "threshold": 15, "priority": 3},
     }
     simulator = {
-        "simulate": True,
+        "simulate": False,
         "book_trips": False,
         "visa_handling": False,
         "speedup_factor": 1.0,
