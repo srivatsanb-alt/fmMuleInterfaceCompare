@@ -14,6 +14,7 @@
 11. [Use saved routes](#use-saved-routes)
 12. [Setup master FM comms](#setup-master-fm-comms)
 13. [Debug FM](#debug-fm)
+14. [Config editor](#config-editor)
 
 # FM Installation #
 
@@ -45,29 +46,12 @@
     git submodule update 
     ```
 
-3. Setup cert files - You will need python installed in your machine to carry out this step
-
-    3.1 *Update all_server_ips, http_scheme in static/fleet_config/fleet_config.toml, add wireguard ip of the server as well if wg access is present*
-    ```markdown
-    for example:
-        all_server_ips=["192.168.6.11", "10.9.0.168", "127.0.0.1"]
-        http_scheme="https"
-    ```
-
-    3.2 *Install toml, crytography in your machine(not server)- these packages are required to generate cert files*
-    ```markdown
-    pip install toml cryptography
-    ```
-
-    3.3 *Upon successful installation of the above mentioned packages, run setup_certs.py to generate FM cert file*
-   ```markdown
-   cd utils && python3 setup_certs.py ../static/fleet_config/fleet_config.toml ../static
-   ```
-
-   3.4 *Copy the cert file(static/certs/fm_rev_proxy_cert.pem) to all the sherpas(/opt/ati/config/fm_rev_proxy_cert.pem)*
+3. If you are using Linux, the FM software would work right away. If you are using MAC or windows -apply the diff run_docker_with_bridge_net.diff. This will ensure that the FM microservices run with docker bridge network. Plugins wouldn't work with bridge network
+```
+git apply run_docker_with_bridge_net.diff
+```
 
 4. Update static directory with map_files
-
     4.1. *Create map folders for each of the fleets*
 
     ```markdown
@@ -77,130 +61,99 @@
     mkdir static/fleet_2/map/
     copy all the map files of fleet_2 to static/fleet_2/map/
     ```  
+5. Make sure default cert files were copied to the server. fm_rev_proxy_cert.pem, fm_rev_proxy_key.pem files have to be present. Create appropriate certs for the server post FM installation following step. The default certs files have been created with IP (127.0.0.1)
+    ```
+    ls static/certs
+    ```
 
 5. Check all the options available in push_fm script, use them according to your requirements
 ```
 Program to push fleet_manager repo to the FM server!
-Args: [-i/W|c|h|v]
+Args: [-i/W|c|h]
 options:
 i     Give IP address of the FM server, default is localhost
 W     Copies the contents of static folder on local machine directly to the FM server, else the static folder on server will be retained
 c     Checksout the local directory static to its current git commit after the push is successful
 b     WILL NOT build the base image
-v     Will run docker as host, useful if fm has to communicate with master fm via vpn connection
 h     Display help
 ```
 
-6. If server has internet, allows you to download open-source packages (Recommended to use step 6 instead of this step)
+6. Use built base images if possible, the built images will be updated to data@192.168.10.21:/atidata/datasets and master fm docker registry
 
-    a. If you want to setup fm on a remote location, run push_fm script to create all the docker images on the server
-    ```markdown
-    ./scripts/push_fm.sh -Wi username@ip
-     ```
 
-    b. If you want to setup fm on your machine, run push_fm script to create all the docker images on your machine
-    ```markdown
-    ./scripts/push_fm.sh -W
-     ```
+7. [Setup plugins](#setup-plugin) if any.
 
-7. If server doesn't have internet access, copy built docker images to the server from Ati server(data@192.168.10.21:/atidata/datasets/FM_v<fm_version>_docker_images), run the following commands
+8. [Setup sherpas](#setup-sherpas).
 
-    a. Load base images on server/localhost
-    ```markdown
-    ssh username@ip
-    cd FM_v<fm_version>_docker_images
-    bash load_docker_images.sh <docker_network> # recommended to set docker_network to bridge
-    exit
-    ```
+9. [Setup optimal dispatch config](#setup-optimal-dispatch-config)
 
-    b. If you want to setup fm on a remote location, run push_fm script from your machine to create all the docker images on the server
-    ```markdown
-    ./scripts/push_fm.sh -Wbi username@ip
-     ```
+10. [Push mule docker image to local docker registry](#push-mule-docker-image-to-local-docker-registry)
 
-    c. If you want to setup fm on your machine, run push_fm script from your machine to create all the docker images on your machine
-    ```markdown
-    ./scripts/push_fm.sh -Wb
-
-8. [Setup plugins](#setup-plugin) if any.
-
-9. [Setup sherpas](#setup-sherpas).
-
-10. [Setup optimal dispatch config](#setup-optimal-dispatch-config)
-
-11. [Push mule docker image to local docker registry](#push-mule-docker-image-to-local-docker-registry)
-
-12. To start using fleet_manager, follow [Start or Restart FM](#start-or-restart-fm)
+11. To start using fleet_manager, follow [Start or Restart FM](#start-or-restart-fm)
 
 
 # Setup FM by copying built docker images #
 
 1. Copy built docker images to the FM server from Ati server(data@192.168.10.21:/atidata/datasets/FM_v<fm_version>_docker_images) 
 
-2. Load docker images, with arg docker network(host, bridge), recommended to set docker_network to bridge
+2. Load docker images
 ```markdown
 cd FM_v<fm_version>_docker_images
-bash load_docker_images.sh <docker_network>
+bash load_docker_images.sh
 ```
 
-3. Backup the current fleet_config directory present in the FM server. Copy the updated fleet_config directory from FM_v<fm_version>_docker_images folder to the FM server static dir, update it with the info from fleet_config backup . With updates, config parameters change, redoing config will help.  Static dir should contain updated fleet_config, mule_config, certs, all the required map_folders etc.
-    
-4. Copy docker_compose_host.yml,docker_compose_bridge.yml  from <fm_repository>/misc/ or FM_v<fm_version>_docker_images folder to the static folder.
+3. Copy docker_compose_host.yml from <fm_repository>/misc/ or FM_v<fm_version>_docker_images folder to the static folder.
 
-5. Create cert files if not already present by following [Setup FM with push_fm script](#setup-fm-with-push_fm-script) steps 1-3.
+4. Follow steps 7-10 in [Setup FM with push_fm script](#setup-fm-with-push_fm-script)
 
-6. Copy the cert files generated (fm_rev_proxy_cert.pem, fm_rev_proxy_key.pem) to the static/certs/ directory in the FM server
-
-7. Follow steps 7-10 in [Setup FM with push_fm script](#setup-fm-with-push_fm-script)
-
-8. To start using fleet_manager, follow [Start or Restart FM](#start-or-restart-fm)
+5. To start using fleet_manager, follow [Start or Restart FM](#start-or-restart-fm)
 
 
 # Start or Restart FM #
 
-   1. Modify timezone if required by setting environment variables TZ, PGTZ in services fleet_manager, db enlisted in static/<docker_compose_file>, docker_compose_file can be docker_compose_host.yml(to access master_fm via VPN) or docker_compose_bridge.yml based on the conf you choose, recommended to set docker_network to bridge
+   1. Modify timezone if required by setting environment variables TZ, PGTZ in services fleet_manager, db enlisted in static/docker_compose_host.yml 
 
-   2. If docker is going to be run in host network mode, modify below mentioned parameters in static/grafana_config/datasources/default.yml 
-   ```
-   url: localhost:5432
-   ```
 
-   3. Start FM
+   2. Start FM
    ```markdown
    cd static
-   docker-compose -p fm -f <docker_compose_file> down
-   docker-compose -p fm -f <docker_compose_file> up
+   docker-compose -p fm -f docker_compose_host.yml down
+   docker-compose -p fm -f docker_compose_host.yml up
    ```
 
-   4. Use FM through UI, if running FM on localhost use ip as 127.0.0.1
+   3. Use FM through UI, if running FM on localhost use ip as 127.0.0.1
    ```markdown
    https://<ip>/fm/
    username: <username>
    password: <password>
    ```
 
-   5. Addition/Deletion of fleets, sherpas should be done through Configure page on the dashboard. Adding it to fleet_config.toml will have no effect. Fleets names have to be same as map_names. Copy the map files to the static directory on FM server by following [Setup FM with push_fm script](#setup-fm-with-push_fm-script) step 4 before trying to add it through dashboard.
+   4. Please restart FM using restart_fleet_manager button on the maintenance page, after adding sherpas/fleets.  
 
-   6. Please restart FM using restart_fleet_manager button on the maintenance page, after adding sherpas/fleets.  
-
-   7. Induct all the sherpas that you want to use   
+   5. Induct all the sherpas that you want to use   
       a. Press enable for trips button from sherpa card   
       b. Only those sherpas that has been enabled for trips will get assigned with a trip 
     
-   8. Follow [Fleet maintenance](#fleet-maintenance) if needs be 
+   6. Follow [Fleet maintenance](#fleet-maintenance) if needs be 
+
+   7. Create cert files if not already done
+   ```
+   docker exec -it fleet_manager bash 
+   create_certs "127.0.0.1, 192.168.6.10, 10.9.0.168"
+   ```
 
 
 # Run FM Simulator #
   a. Follow [Setup FM with push_fm script](#setup-fm-with-push_fm-script) , steps 1-2
 
-  b. Set simulate in static/fleet_config/fleet_config.toml
+  b. Set simulate to true in https://fm_ip/config_editor/db/fm_config/simulator
 
   ```markdown
   [fleet.simulator]
   simulate=true
   ```
 
-  c. To get trip bookings done automatically add routes(list of station names), trip booking frequency(seconds) to fleet_config. route1 will be a scheduled trip, route2 would be booked as a normal one time trip
+  c. To get trip bookings done automatically add routes(list of station names), trip booking frequency(seconds) to https://<fm_ip>/config_editor/db/fm_config/simulator. route1 will be a scheduled trip, route2 would be booked as a normal one time trip
   ```markdown
   [fleet.simulator.routes]
   route1 = [["Station A", "Station B"], ["10", "2023-05-31 15:00:00", "2023-05-31 16:00:00"]]
@@ -233,41 +186,22 @@ bash load_docker_images.sh <docker_network>
 
 # Setup sherpas #
 
-a. Copy fm cert file(fm_rev_proxy_cert.pem) generated in [Setup FM with push_fm script](#setup-fm-with-push_fm-script) step 3 to sherpa's /opt/ati/config directory
+a. Copy fm cert file(fm_rev_proxy_cert.pem) generated in [Start or Restart FM](#start-or-restart-fm)step 8 to sherpa's /opt/ati/config directory
 
 b. Add this patch to /opt/ati/config/config.toml in the mule
 ```markdown
 [fleet]
 api_key = " "
 chassis_number = " "
-data_url = "https://<fm_ip_address>:443/api/static"
-http_url = "https://<fm_ip_address>:443"
-ws_url = "wss://<fm_ip_address>:443/ws/api/v1/sherpa/"
+ip = <fm_ip_address>
+port = <fm_port>
 fm_cert_file="/app/config/fm_rev_proxy_cert.pem"
 ```
 
 # Setup Plugin #
-a. [Setup IES](#setup-ies)
+Plugins needs to be activated using config_editor 
+1. Once the fm is up go to https://<fm_server_ip>/config_editor -> choose plugin_config -> choose the plugin you want to activate and set activate plugin to True. 
 
-b. Summon button, conveyor plugins can be configured through UI (maintenance/Plugin Editor). Add the required plugins to static/fleet_config/plugin_config.toml. Restart would be required after you add a new plugin,post restart you would see a plugin editor page in UI.
-```markdown
-all_plugins=["summon_button", "conveyor"]
-```
-
-# Setup IES #
-a. Add IES plugin to static/fleet_config/plugin_config.toml
-```markdown
-all_plugins=["ies"]
-```
-
-b. Modify static/plugin_ies/locationID_station_mapping.json file. Map IES station names to corresponding ati station names as the template indicates.
-```markdown
-{
-    "Warehouse_Pick": "ECFA start",
-    "HP02_FA02": "ECFA-2",
-    "HP03_FA01": "ECFA-1",
-}
-```
 
 # Setup optimal dispatch config #
 
@@ -372,40 +306,6 @@ python3 utils/gen_api_keys_n_devices.py --num_devices 10
 ```
 
 
-## Add/Remove frontendusers ##
-1. Run utils/gen_hashed_password.py in utils directory in fleet_manager - You will need fleet_manager repository access, python installed in your machine to run this. Python dependecies required: hashlib, click
-```markdown
-cd <path_to_fleet_manager_repository>/utils
-python3 utils/gen_hashed_password.py --password <password>
-```
-
-2. The generated hasshed password can be added to <fm_static_directory>/fleet_config/frontend_users.toml
-```markdown
-[frontenduser.<new_user>]
-hashed_password=<hashed password>
-```
-
-3. Remove unwanted entries from <fm_static_directory>/fleet_config/frontend_users.toml if any, restart FM for the changes to take effect.
-
-4. Default FM login credentials
-```markdown
-username: ati_support 
-password: atiSupport112 
-role: support
-
-username: admin 
-password: 1234
-role: support
-
-username: supervisor 
-password: ati1234
-role: supervisor
-
-username: operator 
-password: 1234
-role: operator
-```
-
 # Flash summon button firmware #
 
 a. Connect summon button to your laptop via USB to flash firmware
@@ -494,7 +394,7 @@ python3 api_key_gen.py --hw_id <customer_name>
 2.Use add client functionality in client configuration page (requires customer name, api key generated in the previous step)
 ```
 
-3. If the FM server has direct access to sanjaya.atimotors.com then make sure mfm_ip, port, cert_files are set as given below in static/fleet_config/master_fm_config.toml
+3. If the FM server has direct access to sanjaya.atimotors.com then make sure mfm_ip, port, cert_files are set as given below in https://<fm_ip>/config_editor/db/fm_config/master_fm
 ```
 mfm_ip="sanjaya.atimotors.com"
 mfm_port="443"
@@ -503,7 +403,7 @@ http_scheme="https"
 ws_scheme="wss"
 ```
 
-4. If the FM server doesn't have direct access to sanjaya.atimotors.com but the FM server can be accessed via ssh then set mfm_ip, port, schemes are set as given below in static/fleet_config/master_fm_config.toml. We will have to setup reverse tunnel to sanjaya.atimotors.com
+4. If the FM server doesn't have direct access to sanjaya.atimotors.com but the FM server can be accessed via ssh then set mfm_ip, port, schemes are set as given below in https://<fm_ip>/config_editor/db/fm_config/master_fm. We will have to setup reverse tunnel to sanjaya.atimotors.com
 ```
 mfm_ip="127.0.0.1"
 mfm_port="9010"
@@ -518,7 +418,7 @@ cd mfm_rev_tunnel
 bash mfm_rev_tunnel.sh
 ```
 
-4. Edit params in static/fleet_config/master_fm_config.toml in the FM server and restart the same
+4. Edit params in https://<fm_ip>/config_editor/db/fm_config/master_fm and restart the same
 ```
 [master_fm.comms]
 send_updates=true
@@ -545,6 +445,19 @@ rqe
 docker logs fleet_manager 
 docker logs fleet_db
 ```
+
+# Config editor # 
+
+1. All the config can be accessed at https://<fm_ip>/config_editor/db/fm_config/master_fm
+
+2. Credential can be found in docker-compose file 
+```
+ ME_CONFIG_BASICAUTH_USERNAME: "ati_support"
+ ME_CONFIG_BASICAUTH_PASSWORD: "ati112"
+```
+
+
+
 
 
 
