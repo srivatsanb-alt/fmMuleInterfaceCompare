@@ -447,7 +447,7 @@ class DefaultFrontendUser:
 
 class PluginConfigDefaults:
     plugin_info = {
-        "plugin_ip": "127.0.0.1",
+        "plugin_ip": "plugin_alias",
         "plugin_port": "8002",
         "hashed_api_key": "a6a333480615e7339fbac0fa699559ce950a90df85d93a1f114a0c79dfc0750b",
     }

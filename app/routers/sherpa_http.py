@@ -279,7 +279,7 @@ async def add_fm_incident(
     with DBSession() as dbsession:
         if add_fm_incident_req.type not in mm.FMIncidentTypes:
             dpd.raise_error(
-                f"Will only accept incidents of type {mm.FMIncidentTypes}requester"
+                f"Will only accept incidents of type {mm.FMIncidentTypes} requester"
             )
 
         fm_incident = mm.FMIncidents(

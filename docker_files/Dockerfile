@@ -2,21 +2,11 @@ FROM fleet_manager_base:dev
 
 ARG FM_IMAGE_INFO
 ARG FM_TAG
-ARG MULE_IMAGE_ID
-ARG FM_SERVER_USERNAME
-ARG FM_SERVER_IP
-ARG FM_PORT
-ARG REDIS_PORT
-ARG PLUGIN_PORT
-
-RUN echo "server ip $FM_SERVER_IP"
-
-ENV FM_INSTALL_DIR="/app" REDIS_PORT=$REDIS_PORT FM_PORT=$FM_PORT PLUGIN_PORT=$PLUGIN_PORT FM_SERVER_IP=$FM_SERVER_IP
 
 RUN mkdir /app/mule_config
+ENV FM_INSTALL_DIR="/app" 
 
-ENV FM_REDIS_URI="redis://localhost:$REDIS_PORT" \
-    FM_STATIC_DIR="/app/static" \
+ENV FM_STATIC_DIR="/app/static" \
     FM_LOG_DIR="/app/logs" \
     FM_MISC_DIR="/app/misc/" \
     FM_CONFIG_DIR="/app/static/fleet_config/" \
@@ -27,9 +17,7 @@ ENV FM_REDIS_URI="redis://localhost:$REDIS_PORT" \
     ATI_STATIC_AUTH_PASSWORD="atiStatic112" \
     FM_IMAGE_INFO=$FM_IMAGE_INFO \
     FM_TAG=$FM_TAG \
-    FM_SERVER_USERNAME=$FM_SERVER_USERNAME \
-    PYTHONPATH="/app" \
-    MULE_IMAGE_ID=$MULE_IMAGE_ID
+    PYTHONPATH="/app" 
 
 RUN ln -fs /usr/share/zoneinfo/Asia/Kolkata /etc/localtime && \
        dpkg-reconfigure -f noninteractive tzdata
