@@ -40,6 +40,7 @@ tar_images() {
       touch static/fm_v$FM_VERSION/load_images.sh
       cp static/docker_compose_v$FM_VERSION.yml static/fm_v$FM_VERSION/docker_compose_v$FM_VERSION.yml
       docker-compose -f static/docker_compose_v$FM_VERSION.yml config | grep image | awk '{print $2}' | xargs -I % echo "docker load -i" %.tar >> static/fm_v$FM_VERSION/load_images.sh
+      cp -r misc/default_certs static/fm_v$FM_VERSION/.
    }
   fi
 }

@@ -14,8 +14,8 @@ fi
 
 echo "FM Version: $FM_VERSION"
 
-build_base_images 
-build_final_images 
+#build_base_images 
+#build_final_images 
 
 copy_default_certs="n"
 if [ "$remote_server" = "y" ]; then
@@ -28,8 +28,7 @@ if [ "$remote_server" = "y" ]; then
    if [ $copy_default_certs = "y" ]; then {
         echo "copying default certs to $static_data_path/certs/"
         ssh $remote_server_addr "mkdir -p $static_data_path/certs"
-	rsync -azvP  misc/default_certs/fm_rev_proxy_cert.pem $remote_server_addr:$static_data_path/certs/fm_rev_proxy_cert.pem
-        rsync -azvP misc/default_certs/fm_rev_proxy_key.pem $remote_server_addr:$static_data_path/certs/fm_rev_proxy_key.pem
+	rsync -azvP  misc/default_certs/* $remote_server_addr:$static_data_path/certs/.
    }
    fi
 }
@@ -38,8 +37,7 @@ else {
    ls -l static/certs/fm_rev_proxy_key.pem || copy_default_certs="y"
    if [ $copy_default_certs = "y" ]; then {
    	echo "copying default certs to static/certs dir"
-	cp misc/default_certs/fm_rev_proxy_cert.pem static/certs/fm_rev_proxy_cert.pem
-	cp misc/default_certs/fm_rev_proxy_key.pem static/certs/fm_rev_proxy_key.pem
+	cp -r misc/default_certs static/certs
    }
    fi
    echo $IS_DIRTY
