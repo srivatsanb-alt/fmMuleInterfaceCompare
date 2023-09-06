@@ -32,14 +32,14 @@ tar_images() {
    {
       rm -rf static/fm_v$FM_VERSION || true
       mkdir static/fm_v$FM_VERSION
-      touch fm_v$FM_VERSION/save_images.sh
-      docker-compose -f docker_compose_v$FM_VERSION.yml config | grep image | awk '{print $2}' | xargs -I % echo "docker save" % ">" %.tar >> fm_v$FM_VERSION/save_images.sh
-      cd fm_v$FM_VERSION && bash save_images.sh
-      rm save_images.sh
-      cd ../
-      touch fm_v$FM_VERSION/load_images.sh
-      cp docker_compose_v$FM_VERSION.yml fm_v$FM_VERSION/.
-      docker-compose -f docker_compose_v$FM_VERSION.yml config | grep image | awk '{print $2}' | xargs -I % echo "docker load -i" %.tar >> fm_v$FM_VERSION/load_images.sh
+      touch static/fm_v$FM_VERSION/save_images.sh
+      docker-compose -f static/docker_compose_v$FM_VERSION.yml config | grep image | awk '{print $2}' | xargs -I % echo "docker save" % ">" %.tar >> static/fm_v$FM_VERSION/save_images.sh
+      cd static/fm_v$FM_VERSION && bash save_images.sh 
+      cd ../../
+      rm static/fm_v$FM_VERSION/save_images.sh
+      touch static/fm_v$FM_VERSION/load_images.sh
+      cp static/docker_compose_v$FM_VERSION.yml static/fm_v$FM_VERSION/docker_compose_v$FM_VERSION.yml
+      docker-compose -f static/docker_compose_v$FM_VERSION.yml config | grep image | awk '{print $2}' | xargs -I % echo "docker load -i" %.tar >> static/fm_v$FM_VERSION/load_images.sh
    }
   fi
 }
