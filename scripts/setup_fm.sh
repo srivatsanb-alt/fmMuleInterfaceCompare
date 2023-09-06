@@ -1,6 +1,7 @@
 #!/bin/bash
 set -e 
 source scripts/build_fm_images.sh
+source scripts/upload_images.sh 
 
 read -p "Want to build images on a remote server? (y/n) - " remote_server
 if [ "$remote_server" = "y" ]; then
@@ -41,6 +42,18 @@ else {
 	cp misc/default_certs/fm_rev_proxy_key.pem static/certs/fm_rev_proxy_key.pem
    }
    fi
+   echo $IS_DIRTY
+   if [ "$IS_DIRTY" = "dirty" ]; then
+   {
+     echo "Code is dirty, cannot upload to master fm, exiting"
+     exit
+   }
+   else {
+      upload_to_sanjaya
+      tar_images
+   }
+   fi
+
 }
 fi
 
