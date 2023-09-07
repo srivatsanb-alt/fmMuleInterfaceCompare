@@ -54,6 +54,7 @@ build_final_images()
    echo "Built plugin docker images successfully"
 
    # set fm version in docker_compose file
+   mkdir -p static
    cp misc/docker_compose_untagged.yml static/docker_compose_v$FM_VERSION.yml 
    sed -i "s/fm_version/$FM_VERSION/g" static/docker_compose_v$FM_VERSION.yml
 }
