@@ -14,8 +14,8 @@ fi
 
 echo "FM Version: $FM_VERSION"
 
-#build_base_images 
-#build_final_images 
+build_base_images 
+build_final_images 
 
 copy_default_certs="n"
 if [ "$remote_server" = "y" ]; then

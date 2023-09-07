@@ -1,11 +1,16 @@
 #!/bin/bash
 set -e
-BRANCH=$(git rev-parse --abbrev-ref HEAD)
 GIT_COMMIT="$(git rev-parse HEAD)"
 GIT_TAG=$(git describe --all | awk '{split($0,a,"/"); print a[2];}')
+GIT_DES=$(git describe --all)
 IS_DIRTY="$(git diff --quiet || echo 'dirty')"
-FM_IMAGE_INFO="FM image built on $USER@$(hostname) branch $BRANCH $GIT_COMMIT (tags $GIT_TAG) IS_DIRTY $IS_DIRTY $(date)"
-FM_VERSION=$GIT_TAG 
+LAST_COMMIT_DT="$(git log -1 --format=%cd)"
+FM_IMAGE_INFO="FM image built on $USER@$(hostname) branch $GIT_TAG $GIT_COMMIT (tags $GIT_TAG) IS_DIRTY $IS_DIRTY $LAST_COMMIT_DT)"
+FM_VERSION=$GIT_TAG
+GIT_TAGGED="False"
+if [[ $git_des =~ "tags/" ]] ; then
+   GIT_TAGGED="True"
+fi
 
 
 build_base_images() 
@@ -37,6 +42,8 @@ build_final_images()
    docker image build --build-arg CONF="${conf_file}" -t fm_nginx:$FM_VERSION -f docker_files/nginx.Dockerfile .
    docker image build --build-arg FM_IMAGE_INFO="${FM_IMAGE_INFO}" \
                       --build-arg FM_TAG="${GIT_TAG}" \
+		      --build-arg GIT_TAGGED="${GIT_TAGGED}" \
+		      --build-arg LAST_COMMIT_DT="${LAST_COMMIT_DT}" \
 		      -t fleet_manager:$FM_VERSION -f docker_files/Dockerfile .
 
    docker image build -t fm_grafana:$FM_VERSION -f docker_files/grafana.Dockerfile .

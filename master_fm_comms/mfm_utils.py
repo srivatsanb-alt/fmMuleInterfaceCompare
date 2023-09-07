@@ -68,6 +68,11 @@ def get_mfm_url(mfm_context: MFMContext, endpoint, query=""):
             mfm_url, "api/v1/master_fm/fm_client/update_sherpa_oee"
         ),
         "upload_file": os.path.join(mfm_url, "api/v1/master_fm/fm_client/upload_file"),
+        "get_available_updates": os.path.join(
+            mfm_url, "api/v1/master_fm/fm_client/get_available_updates", str(query)
+        ),
+        "download_file": os.path.join(mfm_url, "api/static/downloads", str(query)),
+        "get_basic_auth": os.path.join(mfm_url, "api/v1/get_basic_auth"),
     }
     return fm_endpoints.get(endpoint, None)
 
@@ -75,7 +80,11 @@ def get_mfm_url(mfm_context: MFMContext, endpoint, query=""):
 def check_response(response):
     response_json = None
     if response.status_code == 200:
-        response_json = response.json()
+        try:
+            response_json = response.json()
+        except:
+            # could be downloadable file
+            response_json = response.content
     return response.status_code, response_json
 
 

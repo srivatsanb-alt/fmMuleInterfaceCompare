@@ -2,6 +2,8 @@ FROM fleet_manager_base:dev
 
 ARG FM_IMAGE_INFO
 ARG FM_TAG
+ARG GIT_TAGGED
+ARG LAST_COMMIT_DT 
 
 RUN mkdir /app/mule_config
 ENV FM_INSTALL_DIR="/app" 
@@ -17,6 +19,8 @@ ENV FM_STATIC_DIR="/app/static" \
     ATI_STATIC_AUTH_PASSWORD="atiStatic112" \
     FM_IMAGE_INFO=$FM_IMAGE_INFO \
     FM_TAG=$FM_TAG \
+    GIT_TAGGED=$GIT_TAGGED \
+    LAST_COMMIT_DT=$LAST_COMMIT_DT \
     PYTHONPATH="/app" 
 
 RUN ln -fs /usr/share/zoneinfo/Asia/Kolkata /etc/localtime && \
