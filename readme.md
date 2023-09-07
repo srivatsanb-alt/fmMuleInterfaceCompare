@@ -63,7 +63,7 @@ create_certs "127.0.0.1,<ip_1>,<ip2>,...,<ip_n>"
 
 4. Post creating the certs, exit the docker container and [Restart FM](#restart-fm)
 
-5. You should be able to access fm in the url https://<fm_ip>/fm
+5. You should be able to access fm in the url <https://<fm_ip>/fm>
 
 ## Clone fleet_manager repository ##
   1. Clone fm repo
