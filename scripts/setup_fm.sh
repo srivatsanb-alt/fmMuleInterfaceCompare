@@ -37,7 +37,8 @@ else {
    ls -l static/certs/fm_rev_proxy_key.pem || copy_default_certs="y"
    if [ $copy_default_certs = "y" ]; then {
    	echo "copying default certs to static/certs dir"
-	cp -r misc/default_certs static/certs
+	mkdir -p static/certs
+	cp misc/default_certs/* static/certs/.
    }
    fi
    echo $IS_DIRTY

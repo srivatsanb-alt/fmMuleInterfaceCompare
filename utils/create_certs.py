@@ -127,6 +127,7 @@ def generate_cert_for_server(
     print(cert_desc)
     cert_pem, key_pem = gen_ssl_cert(hostname, all_server_ips)
     save_certs(cert_pem, key_pem, "fm_rev_proxy", certs_save_path)
+
     with open(os.path.join(certs_save_path, f"cert_decription.log"), "w") as f:
         f.write(cert_desc)
 
