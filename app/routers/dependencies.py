@@ -1,4 +1,5 @@
 import hashlib
+import logging
 import time
 import jwt
 import asyncio
@@ -183,6 +184,8 @@ async def process_req_with_response(queue, req, user: str):
 
         if status == "finished":
             response = job.result
+            if response is None:
+                logging.getLogger().warning(f"Returning a null response, req: {req}")
             break
 
         if status == "failed":
