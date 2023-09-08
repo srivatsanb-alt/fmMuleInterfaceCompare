@@ -99,7 +99,7 @@ async def async_send_ws_msgs_to_mfm():
     logging.getLogger("mfm_updates").info("started async_send_ws_msgs_to_mfm script")
     mfm_context: mu.MFMContext = mu.get_mfm_context()
 
-    if mfm_context is None:
+    if mfm_context.send_updates is False:
         return
 
     while True:

@@ -485,7 +485,7 @@ def send_mfm_updates():
     logging.getLogger().info("starting send_updates_to_mfm script")
 
     mfm_context: mu.MFMContext = mu.get_mfm_context()
-    if mfm_context is None:
+    if mfm_context.send_updates is False:
         return
 
     update_fm_version_info(mfm_context)

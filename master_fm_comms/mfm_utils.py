@@ -18,6 +18,7 @@ class MFMContext:
     cert_file: str
     update_freq: int
     ws_update_freq: int
+    send_updates: bool
 
 
 def get_mfm_ws_url(mfm_context: MFMContext):
@@ -130,10 +131,6 @@ def get_mfm_context():
     with FMMongo() as fm_mongo:
         mfm_config = fm_mongo.get_collection_from_fm_config("master_fm")
 
-    if not mfm_config["send_updates"]:
-        logging.getLogger("mfm_updates").info("Send updates set/default to False")
-        return
-
     mfm_context = MFMContext(
         http_scheme=mfm_config["http_scheme"],
         server_ip=mfm_config["mfm_ip"],
@@ -144,7 +141,11 @@ def get_mfm_context():
         x_api_key=mfm_config["api_key"],
         update_freq=mfm_config["update_freq"],
         ws_update_freq=mfm_config["ws_update_freq"],
+        send_updates=mfm_config["send_updates"],
     )
+
+    if mfm_context.send_updates is False:
+        logging.getLogger("mfm_updates").info("Send updates set/default to False")
 
     return mfm_context
 

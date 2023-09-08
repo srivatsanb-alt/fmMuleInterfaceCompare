@@ -19,5 +19,5 @@ static_file_auth_password=$(echo $resp | jq .static_files_auth.password | sed -e
 
 echo "Got all the credentials to update"
 
-download_pull_fm_update $MASTER_FM_IP $MASTER_FM_PORT $HTTP_SCHEME $FM_VERSION $resgitry_username $registry_password $static_file_auth_username $static_file_auth_password
+download_pull_fm_update $MASTER_FM_IP $MASTER_FM_PORT $HTTP_SCHEME $FM_VERSION $registry_username $registry_password $static_file_auth_username $static_file_auth_password
 
