@@ -7,7 +7,7 @@ from utils.util import get_table_as_dict
 import utils.trip_utils as tu
 from models.db_session import DBSession
 from models.fleet_models import SherpaStatus, Sherpa, Fleet, Station, StationStatus
-from models.misc_models import Notifications
+import models.misc_models as mm
 
 
 def get_fleet_status_msg(dbsession, fleet):
@@ -87,16 +87,42 @@ def get_visas_held_msg(dbsession):
     return visa_msg
 
 
-def get_notifications(dbsession):
-    all_notifications = dbsession.get_notifications()
-    notification_msg = {}
-    notification_msg["type"] = "notifications"
-    for notification in all_notifications:
-        notification_msg.update(
-            {notification.id: get_table_as_dict(Notifications, notification)}
-        )
+def get_all_alerts(dbsession):
+    all_alerts = dbsession.get_notifications_filter_with_log_level(
+        mm.NotificationLevels.alert
+    )
+    alert_msg = {}
+    alert_msg["type"] = "alerts"
+    for alert in all_alerts:
+        alert_msg.update({alert.id: get_table_as_dict(mm.Notifications, alert)})
 
-    return notification_msg
+    return alert_msg
+
+
+def get_grouped_notifications(dbsession, fleet_name):
+    notification_gen = dbsession.yield_notifications_grouped_by_log_level_and_modules(
+        fleet_name
+    )
+    fleet_level_notifications = {}
+    fleet_level_notifications["fleet_name"] = fleet_name
+    while True:
+        notifications = []
+        try:
+            log_level, module, notifications = next(notification_gen)
+            if log_level == mm.NotificationLevels.alert:
+                continue
+        except:
+            ## generator would stop iterating
+            break
+
+        fleet_level_notifications[log_level] = {}
+        fleet_level_notifications[module] = {}
+        for notification in notifications:
+            fleet_level_notifications[log_level][module].update(
+                {notification.id: get_table_as_dict(mm.Notifications, notification)}
+            )
+
+    return fleet_level_notifications
 
 
 def send_periodic_updates():
@@ -113,11 +139,16 @@ def send_periodic_updates():
                         ongoing_trip_msg = get_ongoing_trips_status(dbsession, fleet)
                         send_status_update(ongoing_trip_msg)
 
+                        fleet_level_notifications = get_grouped_notifications(
+                            dbsession, fleet.name
+                        )
+                        send_notification(fleet_level_notifications)
+
                     visa_msg = get_visas_held_msg(dbsession)
                     send_status_update(visa_msg)
-                    notification_msg = get_notifications(dbsession)
 
-                    send_notification(notification_msg)
+                    all_alerts = get_all_alerts(dbsession)
+                    send_notification(all_alerts)
 
                     # force refresh of all objects
                     dbsession.session.expire_all()

@@ -1,7 +1,7 @@
 import datetime
 import os
 from typing import List
-from sqlalchemy import func, or_, and_, extract, text
+from sqlalchemy import func, any_, or_, and_, extract, text
 from sqlalchemy.orm import Session
 from fastapi.encoders import jsonable_encoder
 
@@ -617,6 +617,29 @@ class DBSession:
 
     def get_notifications(self):
         return self.session.query(mm.Notifications).all()
+
+    def get_notifications_filter_with_log_level(self, log_level):
+        return (
+            self.session.query(mm.Notifications)
+            .filter(mm.Notifications.log_level == log_level)
+            .all()
+        )
+
+    def yield_notifications_grouped_by_log_level_and_modules(self, fleet_name):
+        all_distinct_modules = self.session.query(
+            func.distinct(mm.Notifications.module)
+        ).all()
+        all_log_levels = self.session.query(func.distinct(mm.Notifications.log_level)).all()
+        for log_level in all_log_levels:
+            for mod in all_distinct_modules:
+                temp = (
+                    self.session.query(mm.Notifications)
+                    .filter(any_(mm.Notifications.entity_names) == fleet_name)
+                    .filter(mm.Notifications.log_level == log_level[0])
+                    .filter(mm.Notifications.module == mod[0])
+                    .all()
+                )
+                yield log_level[0], mod[0], temp
 
     def delete_all_notifications(self):
         return self.session.query(mm.Notifications).delete()
