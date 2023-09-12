@@ -18,7 +18,7 @@ from models.mongo_client import FMMongo
 def backup_data():
 
     with FMMongo() as fm_mongo:
-        backup_config = fm_mongo.get_collection_from_fm_config("data_backup")
+        backup_config = fm_mongo.get_document_from_fm_config("data_backup")
 
     logging.getLogger().info("Starting periodic data_backup")
     fm_backup_path = os.path.join(os.getenv("FM_STATIC_DIR"), "data_backup")

@@ -11,7 +11,7 @@ from fleet_simulator import FleetSimulator, MuleWS
 if __name__ == "__main__":
 
     with FMMongo() as fm_mongo:
-        simulator_config = fm_mongo.get_collection_from_fm_config("simulator")
+        simulator_config = fm_mongo.get_document_from_fm_config("simulator")
 
     if sys.argv[1] == "establish_all_sherpa_ws" and simulator_config["simulate"]:
         mule_ws = MuleWS()

@@ -44,7 +44,7 @@ PATH_DENSITY = 1000
 THETA_MAX = np.rad2deg(10)
 
 with FMMongo() as fm_mongo:
-    rq_params = fm_mongo.get_collection_from_fm_config("rq")
+    rq_params = fm_mongo.get_document_from_fm_config("rq")
 
 TIMEOUT = rq_params.get("generic_handler_job_timeout", 10)
 
@@ -211,7 +211,7 @@ class FleetSimulator:
             self.fleet_names = dbsession.get_all_fleet_names()
 
         with FMMongo() as fm_mongo:
-            simulator_config = fm_mongo.get_collection_from_fm_config("simulator")
+            simulator_config = fm_mongo.get_document_from_fm_config("simulator")
 
         self.simulator_config = simulator_config
         self.should_book_trips = self.simulator_config.get("book_trips", False)

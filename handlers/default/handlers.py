@@ -366,7 +366,7 @@ class Handlers:
     # run optimal_dispatch
     def run_optimal_dispatch(self, fleet_names):
         with FMMongo() as fm_mongo:
-            optimal_dispatch_config = fm_mongo.get_collection_from_fm_config(
+            optimal_dispatch_config = fm_mongo.get_document_from_fm_config(
                 "optimal_dispatch"
             )
 
@@ -418,7 +418,7 @@ class Handlers:
         if timeout:
 
             with FMMongo() as fm_mongo:
-                station_config = fm_mongo.get_collection_from_fm_config("stations")
+                station_config = fm_mongo.get_document_from_fm_config("stations")
 
             dispatch_timeout = station_config["dispatch_timeout"]
             dispatch_mesg = rqm.DispatchButtonReq(value=True, timeout=dispatch_timeout)

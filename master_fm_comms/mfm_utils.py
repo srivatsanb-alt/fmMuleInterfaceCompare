@@ -129,7 +129,7 @@ def send_http_req_to_mfm(
 
 def get_mfm_context():
     with FMMongo() as fm_mongo:
-        mfm_config = fm_mongo.get_collection_from_fm_config("master_fm")
+        mfm_config = fm_mongo.get_document_from_fm_config("master_fm")
 
     mfm_context = MFMContext(
         http_scheme=mfm_config["http_scheme"],

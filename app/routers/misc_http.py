@@ -55,7 +55,7 @@ async def get_trip_metadata(user_name=Depends(dpd.get_user_from_header)):
         dpd.raise_error("Unknown requester", 401)
 
     with FMMongo() as fm_mongo:
-        trip_metadata = fm_mongo.get_collection_from_fm_config("trip_metadata")
+        trip_metadata = fm_mongo.get_document_from_fm_config("trip_metadata")
 
     return trip_metadata
 

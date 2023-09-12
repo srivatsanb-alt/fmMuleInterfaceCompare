@@ -16,7 +16,7 @@ import app.routers.dependencies as dpd
 def get_conditional_trip_config():
 
     with FMMongo() as fm_mongo:
-        conditional_trips_config = fm_mongo.get_collection_from_fm_config(
+        conditional_trips_config = fm_mongo.get_document_from_fm_config(
             "conditional_trips"
         )
 

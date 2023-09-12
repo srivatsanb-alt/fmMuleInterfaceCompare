@@ -88,7 +88,7 @@ def setfm_mongo_config():
 def regenerate_mule_config():
     with open(os.getenv("ATI_CONFIG"), "w") as ac:
         with FMMongo() as fm_mongo:
-            mule_config = fm_mongo.get_collection_from_fm_config("mule_config")
+            mule_config = fm_mongo.get_document_from_fm_config("mule_config")
         toml.dump(mule_config["mule_site_config"], ac)
 
     with open(os.getenv("ATI_CONSOLIDATED_CONFIG"), "w") as acc:
@@ -116,7 +116,7 @@ def populate_redis_with_basic_info(dbsession: DBSession):
 
     # redis_expire_timeout
     with FMMongo() as fm_mongo:
-        rq_params = fm_mongo.get_collection_from_fm_config("rq")
+        rq_params = fm_mongo.get_document_from_fm_config("rq")
 
     # store default job timeout
     default_job_timeout = rq_params["default_job_timeout"]

@@ -84,7 +84,7 @@ class FMMongo:
                 all_types.append(temp)
         return temp
 
-    def get_collection_from_fm_config(self, collection_name):
+    def get_document_from_fm_config(self, collection_name):
         fc_db = self.mongo_client.get_database("fm_config")
         display_filter = {"_id": 0}
         temp = self.get_collection(collection_name, fc_db).find_one({}, display_filter)

@@ -68,7 +68,7 @@ async def forward_alerts(alert_config):
 def send_slack_alerts():
 
     with FMMongo() as fm_mongo:
-        alert_config = fm_mongo.get_collection_from_fm_config("alerts")
+        alert_config = fm_mongo.get_document_from_fm_config("alerts")
 
     notifications = alert_config["notifications"]
     logger.info(f"Started send_slack_alerts script")
