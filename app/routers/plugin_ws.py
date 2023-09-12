@@ -19,7 +19,7 @@ router = APIRouter()
 
 
 @router.websocket("/ws/api/v1/plugin_comms/{token}")
-async def update_ws(websocket: WebSocket, user_name=Depends(dpd.get_user_from_query)):
+async def plugin_comms_ws(websocket: WebSocket, user_name=Depends(dpd.get_user_from_query)):
 
     if not user_name:
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
@@ -48,7 +48,7 @@ async def reader(websocket):
         try:
             _ = await websocket.receive_json()
         except WebSocketDisconnect as e:
-            logger.info("websocket connection disconnected")
+            logger.info("websocket connection with plugin disconnected")
             raise e
 
 
@@ -65,5 +65,5 @@ async def writer(websocket):
             try:
                 await websocket.send_json(data)
             except WebSocketDisconnect as e:
-                logger.info("websocket connection disconnected")
+                logger.info("websocket connection with plugin disconnected")
                 raise e
