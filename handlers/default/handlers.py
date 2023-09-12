@@ -1454,7 +1454,7 @@ class Handlers:
         )
         utils_util.maybe_add_notification(
             self.dbsession,
-            [sherpa.name],
+            [sherpa.name, sherpa.fleet.name],
             visa_log,
             mm.NotificationLevels.info,
             mm.NotificationModules.visa,
@@ -1479,7 +1479,7 @@ class Handlers:
             granted=True, visa=req, access_type=rqm.AccessType.RELEASE
         )
         self.dbsession.add_notification(
-            [sherpa.name],
+            [sherpa.name, sherpa.fleet.name],
             visa_log,
             mm.NotificationLevels.info,
             mm.NotificationModules.visa,
