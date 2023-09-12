@@ -66,7 +66,7 @@ def start_trip(
             trip_failed_log = f"trip {ongoing_trip.trip_id} failed, sherpa_name: {ongoing_trip.sherpa_name} , reason: {reason}"
             logging.getLogger(ongoing_trip.sherpa_name).warning(trip_failed_log)
             dbsession.add_notification(
-                [sherpa.name, sherpa.fleet.name],
+                [sherpa.name, sherpa.fleet.name, sherpa.fleet.customer],
                 trip_failed_log,
                 mm.NotificationLevels.alert,
                 mm.NotificationModules.trip,
@@ -267,7 +267,11 @@ def check_sherpa_status(dbsession: DBSession):
         if stale_sherpa_status.trip_id:
             utils_util.maybe_add_notification(
                 dbsession,
-                [stale_sherpa_status.sherpa_name, stale_sherpa_status.sherpa.fleet.name],
+                [
+                    stale_sherpa_status.sherpa_name,
+                    stale_sherpa_status.sherpa.fleet.name,
+                    stale_sherpa_status.sherpa.fleet.customer,
+                ],
                 f"Lost connection to {stale_sherpa_status.sherpa_name}, sherpa doing trip: {stale_sherpa_status.trip_id}",
                 mm.NotificationLevels.alert,
                 mm.NotificationModules.generic,

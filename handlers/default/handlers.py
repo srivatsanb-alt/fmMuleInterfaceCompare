@@ -295,7 +295,7 @@ class Handlers:
         )
 
         self.dbsession.add_notification(
-            [sherpa.name, fleet.name],
+            [sherpa.name, fleet.name, fleet.customer],
             started_leg_log,
             mm.NotificationLevels.info,
             mm.NotificationModules.trip,
@@ -327,7 +327,7 @@ class Handlers:
 
         self.do_post_actions(ongoing_trip, sherpa, curr_station)
         self.dbsession.add_notification(
-            [fleet_name, sherpa_name],
+            [sherpa.name, sherpa.fleet.name, sherpa.fleet.customer],
             end_leg_log,
             mm.NotificationLevels.info,
             mm.NotificationModules.trip,
@@ -510,19 +510,16 @@ class Handlers:
             timeout = StationProperties.DISPATCH_OPTIONAL in curr_station.properties
             self.add_dispatch_start_to_ongoing_trip(ongoing_trip, sherpa, timeout)
             if StationProperties.DISPATCH_OPTIONAL in curr_station.properties:
-                self.dbsession.add_notification(
-                    [ongoing_trip.trip.fleet_name, sherpa.name],
-                    f"Need a dispatch button press on {sherpa.name} which is parked at {curr_station.name}",
-                    mm.NotificationLevels.info,
-                    mm.NotificationModules.dispatch_button,
-                )
+                log_level = mm.NotificationLevels.info
             else:
-                self.dbsession.add_notification(
-                    [ongoing_trip.trip.fleet_name, sherpa.name],
-                    f"Need a dispatch button press on {sherpa.name} which is parked at {curr_station.name}",
-                    mm.NotificationLevels.action_request,
-                    mm.NotificationModules.dispatch_button,
-                )
+                log_level = mm.NotificationLevels.action_request
+
+            self.dbsession.add_notification(
+                [sherpa.name, sherpa.fleet.name, sherpa.fleet.customer],
+                f"Need a dispatch button press on {sherpa.name} which is parked at {curr_station.name}",
+                log_level,
+                mm.NotificationModules.dispatch_button,
+            )
 
         if any(
             prop in curr_station.properties
@@ -541,7 +538,6 @@ class Handlers:
         req: rqm.SherpaPeripheralsReq,
     ):
         sherpa_name = req.source
-        fleet_name = ongoing_trip.trip.fleet_name
         peripheral_info = req.auto_hitch
 
         # AUTO UNHITCH
@@ -552,7 +548,7 @@ class Handlers:
                 logging.getLogger().warning(peripheral_msg)
                 self.add_dispatch_start_to_ongoing_trip(ongoing_trip, sherpa)
                 self.dbsession.add_notification(
-                    [fleet_name, sherpa_name],
+                    [sherpa.name, sherpa.fleet.name, sherpa.fleet.customer],
                     peripheral_msg,
                     mm.NotificationLevels.action_request,
                     mm.NotificationModules.peripheral_devices,
@@ -576,7 +572,6 @@ class Handlers:
         req: rqm.SherpaPeripheralsReq,
     ):
         sherpa_name = req.source
-        fleet_name = ongoing_trip.trip.fleet_name
         direction = req.conveyor.direction
 
         conveyor_start_state = getattr(
@@ -597,7 +592,7 @@ class Handlers:
 
             logging.getLogger().info(peripheral_msg)
             self.dbsession.add_notification(
-                [fleet_name, sherpa_name],
+                [sherpa.name, sherpa.fleet.name, sherpa.fleet.customer],
                 peripheral_msg,
                 mm.NotificationLevels.action_request,
                 mm.NotificationModules.peripheral_devices,
@@ -936,7 +931,7 @@ class Handlers:
             sherpa_error_alert = f"{req.sherpa_name} in error, error_info: {req.error_info}"
             utils_util.maybe_add_notification(
                 self.dbsession,
-                [sherpa.fleet.name],
+                [sherpa.name, sherpa.fleet.name, sherpa.fleet.customer],
                 sherpa_error_alert,
                 mm.NotificationLevels.alert,
                 mm.NotificationModules.generic,
@@ -1072,7 +1067,7 @@ class Handlers:
                     logging.getLogger().warning(trip_error_msg_e)
                     utils_util.maybe_add_notification(
                         self.dbsession,
-                        [sherpa.fleet.name],
+                        [sherpa.name, sherpa.fleet.name, sherpa.fleet.customer],
                         trip_error_msg,
                         mm.NotificationLevels.alert,
                         mm.NotificationModules.generic,
@@ -1376,7 +1371,7 @@ class Handlers:
             )
 
             self.dbsession.add_notification(
-                [fleet_name, curr_station.name],
+                [sherpa.name, curr_station.name, sherpa.fleet.name, sherpa.fleet.customer],
                 transfer_tote_msg,
                 mm.NotificationLevels.info,
                 mm.NotificationModules.peripheral_devices,
@@ -1454,7 +1449,7 @@ class Handlers:
         )
         utils_util.maybe_add_notification(
             self.dbsession,
-            [sherpa.name, sherpa.fleet.name],
+            [sherpa.name, sherpa.fleet.name, sherpa.fleet.customer],
             visa_log,
             mm.NotificationLevels.info,
             mm.NotificationModules.visa,
@@ -1479,7 +1474,7 @@ class Handlers:
             granted=True, visa=req, access_type=rqm.AccessType.RELEASE
         )
         self.dbsession.add_notification(
-            [sherpa.name, sherpa.fleet.name],
+            [sherpa.name, sherpa.fleet.name, sherpa.fleet.customer],
             visa_log,
             mm.NotificationLevels.info,
             mm.NotificationModules.visa,
