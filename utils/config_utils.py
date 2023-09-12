@@ -187,10 +187,6 @@ class ConfigValidator:
             "properties": {
                 "mfm_ip": {
                     "bsonType": "string",
-                    "enum": [
-                        "sanjaya.atimotors.com",
-                        "^([0-9]{1,3})\.([0-9]{1,3})\.([0-9]{1,3})\.([0-9]{1,3})$",
-                    ],
                     "description": "domain name or ip for accessing sanjaya/master_fm",
                 },
                 "mfm_port": {
@@ -412,7 +408,7 @@ class ConfigDefaults:
         "simulate": False,
         "book_trips": False,
         "visa_handling": False,
-        "speedup_factor": 1.0,
+        "speedup_factor": 1.01,
         "average_velocity": 0.8,
         "pause_at_station": 10,
         "initialize_sherpas_at": {},
