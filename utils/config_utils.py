@@ -187,7 +187,10 @@ class ConfigValidator:
             "properties": {
                 "mfm_ip": {
                     "bsonType": "string",
-                    "enum": ["sanjaya.atimotors.com", "localhost"],
+                    "enum": [
+                        "sanjaya.atimotors.com",
+                        "^([0-9]{1,3})\.([0-9]{1,3})\.([0-9]{1,3})\.([0-9]{1,3})$",
+                    ],
                     "description": "domain name or ip for accessing sanjaya/master_fm",
                 },
                 "mfm_port": {
