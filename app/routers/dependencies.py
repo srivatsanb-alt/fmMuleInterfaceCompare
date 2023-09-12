@@ -95,6 +95,10 @@ def get_real_ip_from_header(x_real_ip: str = Header(None)):
     return x_real_ip
 
 
+def get_forwarded_for_from_header(x_forwarded_for: str = Header(None)):
+    return x_forwarded_for
+
+
 def decode_token(token: str):
     redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
     try:
