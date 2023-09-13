@@ -21,13 +21,15 @@
 1. Copy fm cert file(fm_rev_proxy_cert.pem) from <static_dir>/certs to sherpa's /opt/ati/config directory
 
 2. Add this patch to /opt/ati/config/config.toml in the mule
+
+```
 [fleet]
 api_key = <api_key>
 chassis_number = <chassis_number>
 ip="<fm_ip_address>"
 port="443"
 fm_cert_file="/app/config/fm_rev_proxy_cert.pem"
-
+```
 
 ## Access Config Editor ## 
 
