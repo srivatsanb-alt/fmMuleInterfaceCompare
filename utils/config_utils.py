@@ -62,7 +62,6 @@ class ConfigValidator:
                 "eta_power_factor",
                 "priority_power_factor",
                 "max_trips_to_consider",
-                "permission_level",
             ],
             "properties": {
                 "method": {
@@ -91,12 +90,6 @@ class ConfigValidator:
                     "minimum": 1,
                     "maximum": 20,
                     "description": "Max number of trips that will be considered for optimal dispatch, decrease to lessen conputational cost",
-                },
-                "permission_level": {
-                    "bsonType": "int",
-                    "minimum": 1,
-                    "maximum": 3,
-                    "description": "For role based access",
                 },
             },
         },
@@ -187,6 +180,7 @@ class ConfigValidator:
             "properties": {
                 "mfm_ip": {
                     "bsonType": "string",
+                    "pattern": "^(\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3})|(sanjaya.atimotors.com)$",
                     "description": "domain name or ip for accessing sanjaya/master_fm",
                 },
                 "mfm_port": {
@@ -381,7 +375,6 @@ class ConfigDefaults:
         "eta_power_factor": 0.1,
         "priority_power_factor": 0.7,
         "max_trips_to_consider": 5,
-        "permission_level": 1,
     }
     data_backup = {"keep_size_mb": 1000}
     comms = {"sherpa_heartbeat_interval": 60}
@@ -418,7 +411,6 @@ class ConfigDefaults:
         "notifications": True,
         "slack_webhook_url": "https://hooks.slack.com/services/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",
     }
-
     mule_config = {
         "mule_site_config": {
             "parent": "/app/mule/std_configs/site_configs/default_tug.toml",
@@ -432,7 +424,6 @@ class ConfigDefaults:
             },
         }
     }
-
     trip_metadata = {"metadata": {"description": []}}
 
 

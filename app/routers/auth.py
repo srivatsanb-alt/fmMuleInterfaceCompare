@@ -1,6 +1,7 @@
 import hashlib
 import os
 import redis
+import logging
 from fastapi import APIRouter, Depends
 
 # ati code imports
@@ -75,9 +76,9 @@ async def add_edit_user_details(
             "name": frontend_user_details.name,
         }
         user_details_db = fm_mongo.get_frontend_user_details(user_query)
+        db = fm_mongo.get_database("frontend_users")
+        collection = fm_mongo.get_collection("user_details", db)
         if user_details_db is None:
-            db = fm_mongo.get_database("frontend_users")
-            collection = fm_mongo.get_collection("user_details", db)
             temp = {
                 "hashed_password": hashlib.sha256(
                     frontend_user_details.password.encode("utf-8")
@@ -86,11 +87,18 @@ async def add_edit_user_details(
                 "role": frontend_user_details.role,
             }
             collection.insert_one(temp)
+            logging.getLogger("configure_fleet").info(
+                f"Inserted a new frontend user {frontend_user_details.name}"
+            )
         else:
             user_details_db["hashed_password"] = hashlib.sha256(
                 frontend_user_details.password.encode("utf-8")
             ).hexdigest()
             user_details_db["role"] = frontend_user_details.role
+            collection.find_one_and_replace(user_query, user_details_db)
+            logging.getLogger("configure_fleet").info(
+                f"Modified frontend user details: {frontend_user_details.name}"
+            )
 
     return response
 
