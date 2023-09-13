@@ -54,8 +54,9 @@ ping sanjaya.atimotors.com
     
 4. If you are be able to ssh to FM server via another machine which has access to sanjaya.atimotors.com, then a reverse tunnel can be setup to access sanjaya.atimotors.com
 
-5. To setup reverse tunnel, copy the folder mfm_rev_tunnel from fm_v<fm_version>_setup folder to the machine, which has access sanjaya.atimotors.com(pingable) and has ssh access to the FM server, do the following
+5. To setup reverse tunnel, get mfm_rev_tunnel.tar from downloads section on the dashboard and copy the same to the machine which has access sanjaya.atimotors.com(pingable) and has ssh access to the FM server, do the following
 ```
+tar -xvf mfm_rev_tunnel.tar ## This is for Linux, something similar has to be done for other os
 cd mfm_rev_tunnel
 bash mfm_rev_tunnel.sh <user@fm_server_ip> <client_name>
 ```
@@ -204,7 +205,7 @@ activate_plugin: true
 
 1. Connect summon button to your laptop via USB to flash firmware
 
-2. Copy FlashTool_SB.tar from fm_v<fm_version>_setup to your laptop, run the same.
+2.  Download FlashTool_SB.tar from downloads section on the dashboard and run the same
 ```
 tar -xvf FlashTool_SB.tar (This is for Linux, use similar commands to extract files in other os)
 cd FlashTool_SB
