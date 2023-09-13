@@ -1,13 +1,13 @@
 import json
 import os
 import asyncio
-
 from fastapi.encoders import jsonable_encoder
 import aioredis
 import subprocess
 import redis
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm.attributes import flag_modified
+from fastapi.responses import FileResponse
 
 # ati code imports
 from models.mongo_client import FMMongo
@@ -355,9 +355,18 @@ async def get_visa_assignments(user_name=Depends(dpd.get_user_from_header)):
         response = jsonable_encoder(zone_ids)
         for item in response:
             visa_assignments = dbsession.get_all_visa_assignments_as_dict(item["zone_id"])
-            item["resident_sherpas"] = visa_assignments["resident_sherpas"]  if(visa_assignments["resident_sherpas"]) else [] 
-            item["waiting_sherpas"] = visa_assignments["waiting_sherpas"] if(visa_assignments["waiting_sherpas"]) else [] 
+            item["resident_sherpas"] = (
+                visa_assignments["resident_sherpas"]
+                if (visa_assignments["resident_sherpas"])
+                else []
+            )
+            item["waiting_sherpas"] = (
+                visa_assignments["waiting_sherpas"]
+                if (visa_assignments["waiting_sherpas"])
+                else []
+            )
     return response
+
 
 @router.post("/get_sherpa_oee/{sherpa_name}")
 async def get_sherpa_oee(

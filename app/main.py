@@ -92,6 +92,7 @@ def get_uvicorn_config():
 
 def main():
     app.mount("/api/static", StaticFiles(directory="/app/static"), name="static")
+    app.mount("/api/manuals", StaticFiles(directory="/app/manuals"), name="manuals")
     config = get_uvicorn_config()
     server = uvicorn.Server(config)
     server.run()

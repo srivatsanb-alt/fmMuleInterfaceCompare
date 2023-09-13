@@ -6,6 +6,8 @@ ARG GIT_TAGGED
 ARG LAST_COMMIT_DT 
 
 RUN mkdir /app/mule_config
+RUN mkdir /app/manuals
+
 ENV FM_INSTALL_DIR="/app" 
 
 ENV FM_STATIC_DIR="/app/static" \
@@ -38,6 +40,7 @@ RUN echo "alias create_certs='poetry run python utils/create_certs.py --ips'" >>
 COPY . /app/
 RUN echo "Copying messages_pb2.py to mule/ati/schema on the docker"
 COPY ./misc/messages_pb2.py /app/mule/ati/schema/
+COPY ./docs/support_manual.pdf /app/manuals/.
 RUN mkdir /app/logs
 RUN cd /app
 RUN chmod +x scripts/fleet_orchestrator.sh
