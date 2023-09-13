@@ -24,11 +24,20 @@ logger = logging.getLogger("uvicorn")
 router = APIRouter(tags=["notifications"], responses={404: {"description": "Not found"}})
 
 
-@router.get("/api/v1/notification/all_notification_modules")
+@router.get("/api/v1/notification/basic_info")
 async def get_all_notification_modules(user_name=Depends(dpd.get_user_from_query)):
-    response = [
+    response = {}
+
+    all_notif_mods = [
         i for i in list(mm.NotificationModules.__dict__.keys()) if not i.startswith("__")
     ]
+    all_notif_levels = [
+        i for i in list(mm.NotificationLevels.__dict__.keys()) if not i.startswith("__")
+    ]
+
+    response.update({"notification_modules": all_notif_mods})
+    response.update({"notification_levels": all_notif_levels})
+
     return response
 
 
