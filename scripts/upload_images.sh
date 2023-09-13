@@ -46,8 +46,6 @@ tar_images() {
       docker-compose -f static/docker_compose_v$FM_VERSION.yml config | grep image | awk '{print $2}' | xargs -I % echo "docker load -i" %.tar >> static/fm_setup_v$FM_VERSION/load_images.sh
       cp readme.pdf static/fm_setup_v$FM_VERSION/readme_v$FM_VERSION.pdf
       cp -r misc/default_certs static/fm_setup_v$FM_VERSION/.
-      cp -r misc/FlashTool_SB.tar static/fm_setup_v$FM_VERSION/. 
-      cp -r master_fm_comms/mfm_rev_tunnel static/fm_setup_v$FM_VERSION/.
    }
   fi
 }

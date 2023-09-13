@@ -7,8 +7,7 @@ download_pull_fm_update()
    HTTP_SCHEME=$3
    FM_VERSION=$4
 
-   ## not mapping auth to vars, facing some issue in docker login ## 
-
+   ## not mapping auth to vars 
    #MASTER_FM_REGISTRY_USERNAME=$5
    #MASTER_FM_REGISTRY_PASSWORD=$6
    #STATIC_FILE_AUTH_USERNAME=$7

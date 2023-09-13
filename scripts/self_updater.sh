@@ -6,7 +6,7 @@ MASTER_FM_PORT=$2
 HTTP_SCHEME=$3
 FM_VERSION=$4
 
-# not mapping creds to vars - facing some issues in docker login 
+# not mapping creds to vars 
 #MASTER_FM_REGISTRY_USERNAME=$5
 #MASTER_FM_REGISTRY_PASSWORD=$6
 #STATIC_FILE_AUTH_USERNAME=$7

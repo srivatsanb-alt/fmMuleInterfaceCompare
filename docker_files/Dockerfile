@@ -3,12 +3,12 @@ FROM fleet_manager_base:dev
 ARG FM_IMAGE_INFO
 ARG FM_TAG
 ARG GIT_TAGGED
-ARG LAST_COMMIT_DT 
+ARG LAST_COMMIT_DT
 
 RUN mkdir /app/mule_config
-RUN mkdir /app/manuals
+RUN mkdir /app/downloads
 
-ENV FM_INSTALL_DIR="/app" 
+ENV FM_INSTALL_DIR="/app"
 
 ENV FM_STATIC_DIR="/app/static" \
     FM_LOG_DIR="/app/logs" \
@@ -23,7 +23,7 @@ ENV FM_STATIC_DIR="/app/static" \
     FM_TAG=$FM_TAG \
     GIT_TAGGED=$GIT_TAGGED \
     LAST_COMMIT_DT=$LAST_COMMIT_DT \
-    PYTHONPATH="/app" 
+    PYTHONPATH="/app"
 
 RUN ln -fs /usr/share/zoneinfo/Asia/Kolkata /etc/localtime && \
        dpkg-reconfigure -f noninteractive tzdata
@@ -34,13 +34,18 @@ RUN echo "alias rqe='grep -e rq -C 5 /app/logs/fleet_manager.log'" >> ~/.bashrc
 RUN echo "alias apihw='poetry run python /app/utils/api_key_gen.py --hw_id'" >> ~/.bashrc
 RUN echo "alias apind='poetry run python utils/gen_api_keys_n_devices.py --num_devices'" >> ~/.bashrc
 RUN echo "alias sip='psql -c \"select sherpas.name, sherpas.ip_address, fleets.name from sherpas join fleets on fleet_id=fleets.id;\"'" >> ~/.bashrc
-RUN echo "alias hashpass='poetry run python utils/gen_hashed_password.py --password'" >> ~/.bashrc 
+RUN echo "alias hashpass='poetry run python utils/gen_hashed_password.py --password'" >> ~/.bashrc
 RUN echo "alias create_certs='poetry run python utils/create_certs.py --ips'" >> ~/.bashrc
 
 COPY . /app/
 RUN echo "Copying messages_pb2.py to mule/ati/schema on the docker"
 COPY ./misc/messages_pb2.py /app/mule/ati/schema/
-COPY ./docs/support_manual.pdf /app/manuals/.
+
+# expose downloads
+COPY ./docs/support_manual.pdf /app/downloads/.
+COPY ./misc/FlashTool_SB.tar /app/downloads/.
+COPY ./master_fm_comms/mfm_rev_tunnel.tar /app/downloads/.
+
 RUN mkdir /app/logs
 RUN cd /app
 RUN chmod +x scripts/fleet_orchestrator.sh
