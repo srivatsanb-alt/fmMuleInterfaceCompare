@@ -87,7 +87,7 @@ def get_visas_held_msg(dbsession):
     return visa_msg
 
 
-def get_all_alerts(dbsession):
+def get_all_alert_notifications(dbsession):
     all_alerts = dbsession.get_notifications_filter_with_log_level(
         mm.NotificationLevels.alert
     )
@@ -99,20 +99,19 @@ def get_all_alerts(dbsession):
     return alert_msg
 
 
-def get_grouped_notifications(dbsession, fleet_name):
+def get_fleet_level_notifications(dbsession, fleet_name):
     notification_gen = dbsession.yield_notifications_grouped_by_log_level_and_modules(
-        fleet_name
+        fleet_name, skip_log_levels=[mm.NotificationLevels.alert], skip_modules=[]
     )
     fleet_level_notifications = {}
+    fleet_level_notifications["type"] = "non_alert_notifications"
     fleet_level_notifications["fleet_name"] = fleet_name
     while True:
         notifications = []
+
         try:
             log_level, module, notifications = next(notification_gen)
-            if log_level == mm.NotificationLevels.alert:
-                continue
-        except:
-            ## generator would stop iterating
+        except StopIteration:
             break
 
         fleet_level_notifications[log_level] = {}
@@ -139,7 +138,7 @@ def send_periodic_updates():
                         ongoing_trip_msg = get_ongoing_trips_status(dbsession, fleet)
                         send_status_update(ongoing_trip_msg)
 
-                        fleet_level_notifications = get_grouped_notifications(
+                        fleet_level_notifications = get_fleet_level_notifications(
                             dbsession, fleet.name
                         )
                         send_notification(fleet_level_notifications)
@@ -147,7 +146,7 @@ def send_periodic_updates():
                     visa_msg = get_visas_held_msg(dbsession)
                     send_status_update(visa_msg)
 
-                    all_alerts = get_all_alerts(dbsession)
+                    all_alerts = get_all_alert_notifications(dbsession)
                     send_notification(all_alerts)
 
                     # force refresh of all objects

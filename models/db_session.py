@@ -625,13 +625,19 @@ class DBSession:
             .all()
         )
 
-    def yield_notifications_grouped_by_log_level_and_modules(self, fleet_name):
+    def yield_notifications_grouped_by_log_level_and_modules(
+        self, fleet_name, skip_log_levels=[], skip_modules=[]
+    ):
         all_distinct_modules = self.session.query(
             func.distinct(mm.Notifications.module)
         ).all()
         all_log_levels = self.session.query(func.distinct(mm.Notifications.log_level)).all()
         for log_level in all_log_levels:
+            if log_level in skip_log_levels:
+                continue
             for mod in all_distinct_modules:
+                if mod in skip_modules:
+                    continue
                 temp = (
                     self.session.query(mm.Notifications)
                     .filter(any_(mm.Notifications.entity_names) == fleet_name)
