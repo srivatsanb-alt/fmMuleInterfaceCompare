@@ -18,9 +18,9 @@
 
 ## Setup sherpas ##
 
-a. Copy fm cert file(fm_rev_proxy_cert.pem) from <static_dir>/certs to sherpa's /opt/ati/config directory
+1. Copy fm cert file(fm_rev_proxy_cert.pem) from <static_dir>/certs to sherpa's /opt/ati/config directory
 
-b. Add this patch to /opt/ati/config/config.toml in the mule
+2. Add this patch to /opt/ati/config/config.toml in the mule
 [fleet]
 api_key = <api_key>
 chassis_number = <chassis_number>
