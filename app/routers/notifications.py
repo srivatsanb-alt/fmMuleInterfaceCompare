@@ -11,6 +11,7 @@ from sqlalchemy.orm.attributes import flag_modified
 import app.routers.dependencies as dpd
 from models.db_session import DBSession
 import utils.log_utils as lu
+import models.misc_models as mm
 
 # module regarding the http and websocket notifications(read, write, delete)
 
@@ -21,6 +22,14 @@ logger = logging.getLogger("uvicorn")
 
 
 router = APIRouter(tags=["notifications"], responses={404: {"description": "Not found"}})
+
+
+@router.get("/api/v1/notification/all_notification_modules")
+async def get_all_notification_modules(user_name=Depends(dpd.get_user_from_query)):
+    response = [
+        i for i in list(mm.NotificationModules.__dict__.keys()) if not i.startswith("__")
+    ]
+    return response
 
 
 @router.delete("/api/v1/notification/clear/{id}/{token}")
