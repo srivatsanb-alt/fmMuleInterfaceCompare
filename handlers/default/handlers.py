@@ -3,6 +3,7 @@ import datetime
 import logging
 import logging.config
 from typing import List
+import redis
 from requests import Response
 from sqlalchemy.orm.attributes import flag_modified
 
@@ -103,8 +104,10 @@ class Handlers:
         # have not seperated queries and DB - Need to be done
         hutils.check_sherpa_status(self.dbsession)
         hutils.delete_notifications(self.dbsession)
-        hutils.record_cpu_perf()
-        hutils.record_rq_perf()
+        redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
+        current_data_folder = redis_conn.get("current_data_folder").decode()
+        hutils.record_cpu_perf(current_data_folder)
+        hutils.record_rq_perf(current_data_folder)
         logging.getLogger("status_updates").info("Ran a FM health check")
 
     def run_misc_processes(self):

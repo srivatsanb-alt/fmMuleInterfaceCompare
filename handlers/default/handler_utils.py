@@ -171,11 +171,9 @@ def is_sherpa_available_for_new_trip(sherpa_status):
 
 
 # FM HEALTH CHECK #
-def record_rq_perf():
-    redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
+def record_rq_perf(current_data_folder):
     fm_backup_path = os.path.join(os.getenv("FM_STATIC_DIR"), "data_backup")
-    current_data = redis_conn.get("current_data_folder").decode()
-    csv_save_path = os.path.join(fm_backup_path, current_data, "rq_perf.csv")
+    csv_save_path = os.path.join(fm_backup_path, current_data_folder, "rq_perf.csv")
     column_names, data = utils_util.rq_perf()
     data = data
     df = pd.DataFrame(data, columns=column_names)
@@ -183,18 +181,12 @@ def record_rq_perf():
     df.to_csv(csv_save_path, mode="a", index=False, header=header)
 
 
-def record_cpu_perf():
-
-    redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
+def record_cpu_perf(current_data_folder):
     fm_backup_path = os.path.join(os.getenv("FM_STATIC_DIR"), "data_backup")
-    current_data = redis_conn.get("current_data_folder").decode()
-    csv_save_path = os.path.join(fm_backup_path, current_data, "sys_perf.csv")
-
+    csv_save_path = os.path.join(fm_backup_path, current_data_folder, "sys_perf.csv")
     column_names, data = utils_util.sys_perf()
     data = [data]
-
     df = pd.DataFrame(data, columns=column_names)
-
     header = True if not os.path.exists(csv_save_path) else False
     df.to_csv(csv_save_path, mode="a", index=False, header=header)
 
