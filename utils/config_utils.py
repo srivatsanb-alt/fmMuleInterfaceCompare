@@ -366,6 +366,18 @@ class ConfigValidator:
 
     mule_config = {"$jsonSchema": {"bsonType": "object", "required": ["mule_site_config"]}}
     trip_metadata = {"$jsonSchema": {"bsonType": "object", "required": ["metadata"]}}
+    fm_version = {
+        "$jsonSchema": {
+            "bsonType": "object",
+            "required": ["version"],
+            "properties": {
+                "version": {
+                    "bsonType": "double",
+                    "description": "FM version like 4.0, 4.1 etc",
+                },
+            },
+        }
+    }
 
 
 class ConfigDefaults:
@@ -425,6 +437,7 @@ class ConfigDefaults:
         }
     }
     trip_metadata = {"metadata": {"description": []}}
+    fm_version = {"version": 3.3}
 
 
 class DefaultFrontendUser:

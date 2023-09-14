@@ -13,6 +13,8 @@ import utils.db_utils as dbu
 import utils.fleet_utils as fu
 from models.mongo_client import FMMongo
 from utils.upgrade_db import upgrade_db_schema, maybe_drop_tables
+from utils.upgrade_mongo import upgrade_mongo_schema
+
 from models.db_session import DBSession
 
 # get log config
@@ -81,6 +83,8 @@ def main():
 
     with FMMongo() as fm_mongo:
         dbu.setfm_mongo_config(fm_mongo)
+
+    upgrade_mongo_schema()
 
     # regenerate_mule_config for routing
     regenerate_mule_config()
