@@ -5,14 +5,9 @@ import secrets
 import logging
 import logging.config
 import json
-import glob
-import importlib
 import datetime
 from typing import List, Dict
-from core.db import get_engine
 from core.constants import FleetStatus
-
-from sqlalchemy import inspect as sql_inspect
 from sqlalchemy import or_
 from sqlalchemy.sql import not_
 from sqlalchemy.orm.attributes import flag_modified
@@ -38,32 +33,6 @@ sys.path.append(os.environ["MULE_ROOT"])
 
 def gen_api_key(hwid: str) -> str:
     return secrets.token_urlsafe(32) + "_" + hwid
-
-
-def create_all_tables() -> None:
-    all_files = glob.glob("models/*.py")
-    for file in all_files:
-        module = file.split(".")[0]
-        module = module.replace("/", ".")
-        print(f"looking for models in module: {module}")
-        try:
-            models = importlib.import_module(module)
-            models.Base.metadata.create_all(bind=get_engine(os.getenv("FM_DATABASE_URI")))
-            print(f"created tables from {module}")
-        except Exception as e:
-            print(f"failed to create tables from {module}, {e}")
-    return
-
-
-def create_table(model) -> None:
-    model.__table__.metadata(bind=get_engine(os.getenv("FM_DATABASE_URI")))
-    return
-
-
-def get_all_table_names():
-    inspector = sql_inspect(get_engine(os.getenv("FM_DATABASE_URI")))
-    all_table_names = inspector.get_table_names("public")
-    return all_table_names
 
 
 def compute_sha1_hash(fpath: str) -> str:
