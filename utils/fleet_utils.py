@@ -436,7 +436,7 @@ class SherpaUtils:
             sherpa.hashed_api_key = hashed_api_key
             if sherpa.fleet_id != fleet_id:
                 raise ValueError(
-                    "Cannot edit fleet_id for sherpa object. Delete sherpa,  add it to a different fleet"
+                    f"Cannot duplicate sherpas across fleet, {sherpa.name} is already present in {sherpa.fleet.name}"
                 )
             logger.info(
                 f"updated sherpa {sherpa_name}, with hwid: {hwid}, api_key: {api_key}"
