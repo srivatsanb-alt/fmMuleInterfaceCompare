@@ -7,7 +7,7 @@
 4. [Setup auto parking feature](#setup-auto-parking-feature)
 5. [Setup battery swap trips](#setup-battery-swap-trips)
 6. [Setup optimal dispatch config](#setup-optimal-dispatch-config)
-7. [Generate api keys and hashed passwords](#generate-api-keys-and-hashed-passwords)
+7. [Generate api keys](#generate-api-keys)
 8. [Setup plugin conveyor](#setup-plugin-conveyor)
 9. [Setup plugin summon buttons](#setup-plugin-summon-buttons)
 10. [Flash summon buttons](#flash-summon-buttons)
@@ -15,6 +15,8 @@
 12. [Restart FM](#restart-fm)
 13. [Debug FM](#debug-fm)
 14. [Access Postgres DB](#access-postgres-db)
+15. [Some docker commands](#some-docker-commands)
+
 
 
 ## Setup sherpas ##
@@ -162,7 +164,7 @@ max_trips_to_consider: 5,
 max_trips_to_consider=<number_of_sherpas per fleet>
 ```
  
-## Generate api keys and hashed passwords ## 
+## Generate api keys ## 
 
 1. To generate api key with hardware id (sherpa or other smart devices)
 ```
@@ -289,10 +291,22 @@ docker exec -it fleet_manager bash
 psql $FM_DATABASE_URI
 ```
 
-3. Access db inside FM 
+3. Access db inside fm_plugins
 ```
 docker exec -it fm_plugins bash
 psql $PLUGIN_DATABSE_URI
+```
+
+## Some docker commands ## 
+
+1. Useful docker commands (run outside container)
+```
+docker stats  
+docker system df 
+docker image prune
+docker rmi <image_name>
+docker stop <container_name>
+docker rm <container_name>
 ```
 
 
