@@ -8,6 +8,7 @@ import os
 import psutil
 import redis
 import json
+import yaml
 import time
 from rq import Worker
 
@@ -241,3 +242,11 @@ def get_closest_station(dbsession, pose, fleet_name):
             break
 
     return temp
+
+
+def read_docker_compose_yml():
+    fm_version = os.getenv("FM_TAG")
+    with open(f"/app/static/docker_compose_v{fm_version}.yml") as f:
+        data = yaml.safe_load(f)
+
+    return data

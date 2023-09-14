@@ -54,6 +54,9 @@ services:
     ports:
       - "8002:8002"
     environment:
+      PLUGIN_PORT: 8002
+      REDIS_PORT: 6390
+      PLUGIN_REDIS_URI: redis://localhost:6390
       PGTZ: Asia/Kolkata
       TZ: Asia/Kolkata
       PLUGIN_DATABASE_URI: postgresql://postgres:postgres@db

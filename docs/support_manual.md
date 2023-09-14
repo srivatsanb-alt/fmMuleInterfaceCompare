@@ -14,6 +14,7 @@
 11. [Setup plugin IES](#setup-plugin-ies)
 12. [Restart FM](#restart-fm)
 13. [Debug FM](#debug-fm)
+14. [Access Postgres DB](#access-postgres-db)
 
 
 ## Setup sherpas ##
@@ -272,5 +273,26 @@ docker logs fleet_manager
 docker logs fleet_db
 ```
 
+## Access Postgres DB ## 
+
+1. Get a dump and copy it to the host machine, db_names can be ati_fleet, plugin_conveyor, plugin_summon_button, plugin_ies etc
+```
+docker exec -it fleet_db bash
+pg_dump -U postgres <db_name> > /home/<db_name>.dump
+exit
+docker cp fleet_db:/home/<db_name>.dump .
+```
+
+2. Access db inside FM 
+```
+docker exec -it fleet_manager bash
+psql $FM_DATABASE_URI
+```
+
+3. Access db inside FM 
+```
+docker exec -it fm_plugins bash
+psql $PLUGIN_DATABSE_URI
+```
 
 

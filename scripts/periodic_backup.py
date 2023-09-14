@@ -16,7 +16,6 @@ from models.mongo_client import FMMongo
 
 
 def backup_data():
-
     with FMMongo() as fm_mongo:
         backup_config = fm_mongo.get_document_from_fm_config("data_backup")
 
@@ -24,22 +23,19 @@ def backup_data():
     fm_backup_path = os.path.join(os.getenv("FM_STATIC_DIR"), "data_backup")
     start_time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
     current_data = f"{start_time}_data"
-
     redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
     redis_conn.set("current_data_folder", current_data)
-
+    run_backup_path = os.path.join(fm_backup_path, current_data)
     if not os.path.exists(fm_backup_path):
         os.mkdir(fm_backup_path)
-    os.mkdir(os.path.join(fm_backup_path, current_data))
-
-    logs_save_path = os.path.join(fm_backup_path, current_data, "logs")
-
-    with open(os.path.join(fm_backup_path, current_data, "info.txt"), "w") as info_file:
+    os.mkdir(run_backup_path)
+    logs_save_path = os.path.join(run_backup_path, "logs")
+    with open(os.path.join(run_backup_path, "info.txt"), "w") as info_file:
         info_file.write(os.getenv("FM_IMAGE_INFO"))
 
-    redis_conn = redis.from_url(
-        os.getenv("FM_REDIS_URI"), encoding="utf-8", decode_responses=True
-    )
+    # wait for plugin init
+    time.sleep(45)
+
     # get all databases
     all_databases = [
         datnames[0]
@@ -87,6 +83,12 @@ def backup_data():
         except:
             pass
 
+        docker_cp_returncod = os.system(
+            f"docker cp fm_plugins:/app/plugin_logs {run_backup_path}"
+        )
+        if docker_cp_returncod != 0:
+            logging.getLogger("misc").warning(f"Unable to copy fm_plugin logs")
+
         shutil.copytree(os.getenv("FM_LOG_DIR"), logs_save_path)
         logging.getLogger("misc").info(f"Backed up data")
 
@@ -99,7 +101,7 @@ def backup_data():
             logging.getLogger("misc").error(
                 f"couldn't cleanup old backed up data, exception: {e}"
             )
-        time.sleep(10)
+        time.sleep(30)
 
 
 def get_directory_size(directory):
