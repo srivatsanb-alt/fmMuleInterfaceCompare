@@ -10,7 +10,6 @@ import json
 from utils import fleet_utils as fu
 from models.db_session import DBSession
 import models.fleet_models as fm
-import models.misc_models as mm
 import models.request_models as rqm
 import app.routers.dependencies as dpd
 from utils.comms import close_websocket_for_sherpa
