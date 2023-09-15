@@ -88,17 +88,26 @@ async def notifications(
     websocket: WebSocket,
     token: str,
     user_name=Depends(dpd.get_user_from_query),
+    x_real_ip=Depends(dpd.get_real_ip_from_header),
 ):
+
+    client_ip = websocket.client.host
+    if x_real_ip is None:
+        x_real_ip = client_ip
+
     if not user_name:
+        logger.info(
+            f"websocket connection(notifications) request from (ip: {x_real_ip}) will be turned down, Unknown user"
+        )
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
 
     await websocket.accept()
 
     rw = [
-        asyncio.create_task(reader(websocket, token)),
+        asyncio.create_task(reader(websocket, token, x_real_ip)),
         asyncio.create_task(
-            writer(websocket, token),
+            writer(websocket, token, x_real_ip),
         ),
     ]
 
@@ -110,17 +119,17 @@ async def notifications(
         [t.cancel() for t in rw]
 
 
-async def reader(websocket, token):
+async def reader(websocket, token, x_real_ip):
     while True:
         try:
             _ = await websocket.receive_json()
             pass
         except WebSocketDisconnect as e:
-            logger.info(f"websocket with {websocket.client.host} disconnected")
+            logger.info(f"websocket(notifications) with {x_real_ip} disconnected")
             raise e
 
 
-async def writer(websocket, token):
+async def writer(websocket, token, x_real_ip):
     redis = aioredis.Redis.from_url(
         os.getenv("FM_REDIS_URI"), max_connections=10, decode_responses=True
     )
@@ -134,11 +143,11 @@ async def writer(websocket, token):
                 notification = {}
                 data = ast.literal_eval(message["data"])
                 for id, details in data.items():
-
                     # to handles key-val pair like {"type": "notifications"} in the notification msg
                     if not isinstance(details, dict):
                         notification.update({id: details})
 
+                    # assuming that all the dicts in the message correspond a a notification
                     elif token not in details.get("cleared_by", []):
                         notification.update({id: details})
                         num_actions = len(notification[id]["cleared_by"])
@@ -148,6 +157,6 @@ async def writer(websocket, token):
                 await websocket.send_json(notification)
             except Exception as e:
                 logger.error(
-                    f"Exception in notification webSocket writer for {websocket.client.host}, Exception: {e}"
+                    f"Exception in notification webSocket writer for {x_real_ip}, Exception: {e}"
                 )
                 raise e

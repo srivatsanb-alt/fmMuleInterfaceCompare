@@ -19,20 +19,30 @@ router = APIRouter()
 
 
 @router.websocket("/ws/api/v1/plugin_comms/{token}")
-async def plugin_comms_ws(websocket: WebSocket, user_name=Depends(dpd.get_user_from_query)):
+async def plugin_comms_ws(
+    websocket: WebSocket,
+    user_name=Depends(dpd.get_user_from_query),
+    x_real_ip=Depends(dpd.get_real_ip_from_header),
+):
+
+    client_ip = websocket.client.host
+    if x_real_ip is None:
+        x_real_ip = client_ip
 
     if not user_name:
+        logger.info(
+            f"websocket connection(plugin) request from (ip: {x_real_ip}) will be turned down, Unknown user"
+        )
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
 
     await websocket.accept()
-
-    logger.info(f"websocket connection started for {user_name}")
+    logger.info(f"websocket connection(plugin) accepeted client_ip: {x_real_ip}")
 
     rw = [
-        asyncio.create_task(reader(websocket)),
+        asyncio.create_task(reader(websocket, x_real_ip)),
         asyncio.create_task(
-            writer(websocket),
+            writer(websocket, x_real_ip),
         ),
     ]
     try:
@@ -43,16 +53,16 @@ async def plugin_comms_ws(websocket: WebSocket, user_name=Depends(dpd.get_user_f
         [t.cancel() for t in rw]
 
 
-async def reader(websocket):
+async def reader(websocket, x_real_ip):
     while True:
         try:
             _ = await websocket.receive_json()
         except WebSocketDisconnect as e:
-            logger.info("websocket connection with plugin disconnected")
+            logger.info(f"websocket connection(plugin) disconnected client_ip: {x_real_ip}")
             raise e
 
 
-async def writer(websocket):
+async def writer(websocket, x_real_ip):
     redis = aioredis.Redis.from_url(
         os.getenv("FM_REDIS_URI"), max_connections=10, decode_responses=True
     )
@@ -65,5 +75,7 @@ async def writer(websocket):
             try:
                 await websocket.send_json(data)
             except WebSocketDisconnect as e:
-                logger.info("websocket connection with plugin disconnected")
+                logger.info(
+                    f"websocket connection(plugin) disconnected client_ip: {x_real_ip}"
+                )
                 raise e

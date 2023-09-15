@@ -62,8 +62,11 @@ def start_trip(
             start_pose, end_pose, fleet_name, redis_conn
         )
         if route_length == np.inf:
-            reason = f"no route from {start_pose} to {end_pose}"
-            trip_failed_log = f"trip {ongoing_trip.trip_id} failed, sherpa_name: {ongoing_trip.sherpa_name} , reason: {reason}"
+            start_station_info = (
+                start_station_name if start_station_name is not None else start_pose
+            )
+            reason = f"no route from {start_station_info} to {end_station_name}"
+            trip_failed_log = f"{ongoing_trip.sherpa_name} failed to do trip with trip_id: {ongoing_trip.trip.id}) , reason: {reason}"
             logging.getLogger(ongoing_trip.sherpa_name).warning(trip_failed_log)
             dbsession.add_notification(
                 [sherpa.name, sherpa.fleet.name, sherpa.fleet.customer],

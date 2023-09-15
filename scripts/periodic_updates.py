@@ -99,29 +99,40 @@ def get_all_alert_notifications(dbsession):
     return alert_msg
 
 
-def get_fleet_level_notifications(dbsession, fleet_name):
+def send_fleet_level_notifications(dbsession, fleet_name):
     notification_gen = dbsession.yield_notifications_grouped_by_log_level_and_modules(
         fleet_name, skip_log_levels=[mm.NotificationLevels.alert], skip_modules=[]
     )
-    fleet_level_notifications = {}
-    fleet_level_notifications["type"] = "non_alert_notifications"
-    fleet_level_notifications["fleet_name"] = fleet_name
+    action_requests = {
+        "type": mm.NotificationLevels.action_request,
+        "fleet_name": fleet_name,
+    }
     while True:
+        module_level_info = {}
+        module_level_info["type"] = "non_alert_notifications"
+        module_level_info["fleet_name"] = fleet_name
         notifications = []
-
         try:
             log_level, module, notifications = next(notification_gen)
         except StopIteration:
             break
 
-        fleet_level_notifications[log_level] = {}
-        fleet_level_notifications[module] = {}
-        for notification in notifications:
-            fleet_level_notifications[log_level][module].update(
-                {notification.id: get_table_as_dict(mm.Notifications, notification)}
-            )
+        if log_level == mm.NotificationLevels.action_request:
+            for notification in notifications:
+                action_requests.update(
+                    {notification.id: get_table_as_dict(mm.Notifications, notification)}
+                )
+        else:
+            module_level_info["log_level"] = log_level
+            module_level_info["module"] = module
+            for notification in notifications:
+                module_level_info.update(
+                    {notification.id: get_table_as_dict(mm.Notifications, notification)}
+                )
 
-    return fleet_level_notifications
+            send_notification(module_level_info)
+
+    send_notification(action_requests)
 
 
 def send_periodic_updates():
@@ -138,10 +149,7 @@ def send_periodic_updates():
                         ongoing_trip_msg = get_ongoing_trips_status(dbsession, fleet)
                         send_status_update(ongoing_trip_msg)
 
-                        fleet_level_notifications = get_fleet_level_notifications(
-                            dbsession, fleet.name
-                        )
-                        send_notification(fleet_level_notifications)
+                        send_fleet_level_notifications(dbsession, fleet.name)
 
                     visa_msg = get_visas_held_msg(dbsession)
                     send_status_update(visa_msg)

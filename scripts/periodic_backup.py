@@ -47,7 +47,9 @@ def backup_data():
     valid_dbs = []
     for database_name in all_databases:
         if not any(excludable in database_name for excludable in ["postgres", "template"]):
-            db_backup_path = os.path.join(fm_backup_path, current_data, database_name)
+            db_backup_path = os.path.join(
+                fm_backup_path, current_data, f"{database_name}_db"
+            )
             os.mkdir(os.path.join(db_backup_path))
             logging.info(f"Will periodically backup {database_name} db")
             valid_dbs.append(database_name)
@@ -70,7 +72,7 @@ def backup_data():
                     data = session.query(model).all()
                     df = pd.DataFrame(data, columns=column_names)
                     csv_save_path = os.path.join(
-                        fm_backup_path, current_data, db_name, f"{model}.csv"
+                        fm_backup_path, current_data, f"{db_name}_db", f"{model}.csv"
                     )
                     df.to_csv(csv_save_path, index=False)
                 except:
