@@ -76,21 +76,26 @@ async def add_edit_sherpa(
                 api_key=add_edit_sherpa.api_key,
                 fleet_id=fleet.id,
             )
-
-            if sherpa_name not in all_sherpa_names:
-                action_request = f"New sherpa {sherpa_name} has been added to {fleet.name}, please restart FM software using restart fleet manager button in the maintenance page"
-                dbsession.add_notification(
-                    [fleet.name],
-                    action_request,
-                    mm.NotificationLevels.alert,
-                    mm.NotificationModules.generic,
-                )
-
         except Exception as e:
             if isinstance(e, ValueError):
                 dpd.raise_error(str(e))
             else:
                 raise e
+
+        if sherpa_name not in all_sherpa_names:
+            import utils.rq_utils as rqu
+            from multiprocessing import Process
+
+            all_sherpa_names.append(sherpa_name)
+            lu.set_log_config_dict(all_sherpa_names)
+            redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
+            redis_conn.set("all_sherpas", json.dumps(all_sherpa_names))
+
+            new_qs = [f"{sherpa_name}_update_handler", f"{sherpa_name}_trip_update_handler"]
+            for new_q in new_qs:
+                rqu.Queues.add_queue(new_q)
+                process = Process(target=rqu.start_worker, args=(new_q,))
+                process.start()
 
     return {}
 
