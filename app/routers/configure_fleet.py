@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends
 import shutil
 import redis
 import json
+from rq.command import send_shutdown_command
 
 # ati code imports
 from utils import fleet_utils as fu
@@ -125,6 +126,16 @@ async def delete_sherpa(
 
         close_websocket_for_sherpa(sherpa_name)
         fu.SherpaUtils.delete_sherpa(dbsession, sherpa_name)
+
+    all_sherpa_names = dbsession.get_all_sherpa_names()
+    redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
+    redis_conn.set("all_sherpas", json.dumps(all_sherpa_names))
+    queues_to_delete = [
+        f"{sherpa_name}_update_handler",
+        f"{sherpa_name}_trip_update_handler",
+    ]
+    for q_name in queues_to_delete:
+        send_shutdown_command(redis_conn, q_name)
 
     return {}
 
