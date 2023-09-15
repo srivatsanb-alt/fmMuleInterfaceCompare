@@ -3,6 +3,8 @@ import logging
 import glob
 from fastapi import APIRouter, Depends
 import shutil
+import redis
+import json
 
 # ati code imports
 from utils import fleet_utils as fu
@@ -203,19 +205,17 @@ async def add_fleet(
             fu.ExclusionZoneUtils.add_exclusion_zones(dbsession, fleet.name)
             fu.ExclusionZoneUtils.add_linked_gates(dbsession, fleet.name)
 
-            if new_fleet:
-                action_request = f"New fleet {fleet.name} has been added, please restart FM software using restart fleet manager button in the maintenance page"
-                dbsession.add_notification(
-                    [fleet.name],
-                    action_request,
-                    mm.NotificationLevels.action_request,
-                    mm.NotificationModules.generic,
-                )
         except Exception as e:
             if isinstance(e, ValueError):
                 dpd.raise_error(str(e))
             else:
                 raise e
+
+        if new_fleet:
+            redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
+            all_fleet_names = dbsession.get_all_fleet_names()
+            redis_conn.set("all_fleet_names", json.dumps(all_fleet_names))
+            redis_conn.set("reinit_router", json.dumps(True))
 
     return response
 
@@ -313,21 +313,13 @@ async def update_map(
             for sherpa in all_fleet_sherpas:
                 close_websocket_for_sherpa(sherpa.name)
 
-            restart_fm_notification = (
-                f"Map files of fleet: {fleet_name} updated! Please restart fleet manager"
-            )
-
-            dbsession.add_notification(
-                [fleet_name],
-                restart_fm_notification,
-                mm.NotificationLevels.alert,
-                mm.NotificationModules.generic,
-            )
-
         except Exception as e:
             if isinstance(e, ValueError):
                 dpd.raise_error(str(e))
             else:
                 raise e
+
+        redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
+        redis_conn.set("reinit_router", json.dumps(True))
 
     return response

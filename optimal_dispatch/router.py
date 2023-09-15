@@ -25,16 +25,28 @@ from utils.util import are_poses_close
 from utils.router_utils import AllRouterModules
 
 
-def start_router_module():
-    redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
+def init_routers():
     with DBSession() as dbsession:
         fleet_names = dbsession.get_all_fleet_names()
-
     all_router_modules = AllRouterModules(fleet_names)
+    return all_router_modules
 
+
+def start_router_module():
+    redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
     logger = logging.getLogger("control_module_router")
+    all_router_modules = init_routers()
+    logger.info(f"Intialized the router modules")
 
     while True:
+        restart_router = redis_conn.get("reinit_router")
+        if restart_router is not None:
+            restart_router = json.loads(restart_router)
+            if restart_router:
+                all_router_modules = init_routers()
+                redis_conn.delete("reinit_router")
+                logger.info(f"Reinitialized the router modules")
+
         for key in redis_conn.keys("control_router_rl_job_*"):
             str_job = redis_conn.get(key)
             logger.info(f"Got a route length estimation job {str_job}")
