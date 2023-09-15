@@ -72,7 +72,7 @@ def start_trip(
                 [sherpa.name, sherpa.fleet.name, sherpa.fleet.customer],
                 trip_failed_log,
                 mm.NotificationLevels.alert,
-                mm.NotificationModules.trip,
+                mm.NotificationModules.errors,
             )
             end_trip(dbsession, ongoing_trip, sherpa, False)
             return
@@ -269,7 +269,7 @@ def check_sherpa_status(dbsession: DBSession):
                 ],
                 f"Lost connection to {stale_sherpa_status.sherpa_name}, sherpa doing trip: {stale_sherpa_status.trip_id}",
                 mm.NotificationLevels.alert,
-                mm.NotificationModules.generic,
+                mm.NotificationModules.errors,
             )
 
         # set mode change - reflects in sherpa_oee

@@ -188,12 +188,15 @@ async def sherpa_alerts(
         sherpa_obj = dbsession.get_sherpa(sherpa)
         alert = f"Got an alert from {sherpa}, "
 
+        module = mm.NotificationModules.generic
         if alert_msg.trolley_load_cell:
             alert = alert + alert_msg.trolley_load_cell
+            module = mm.NotificationModules.trolley
         elif alert_msg.low_battery_alarm:
             alert = alert + alert_msg.low_battery_alarm
         elif alert_msg.obstructed:
             alert = alert + alert_msg.obstructed
+            module = mm.NotificationModules.stoppages
         elif alert_msg.emergency_button:
             alert = alert + alert_msg.emergency_button
         elif alert_msg.user_pause:
@@ -205,7 +208,7 @@ async def sherpa_alerts(
             [sherpa_obj.name, sherpa_obj.fleet.name],
             alert,
             mm.NotificationLevels.alert,
-            mm.NotificationModules.generic,
+            module,
         )
 
 

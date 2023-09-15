@@ -321,7 +321,7 @@ async def update_map(
                 [fleet_name],
                 restart_fm_notification,
                 mm.NotificationLevels.alert,
-                mm.NotificationModules.map_file_check,
+                mm.NotificationModules.generic,
             )
 
         except Exception as e:

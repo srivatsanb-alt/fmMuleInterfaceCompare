@@ -9,11 +9,12 @@ ConditionalTripTags = ["exclude_stations", "battery_swap", "parking"]
 
 class NotificationModules:
     generic = "generic"
+    errors = "errors"
     trip = "trip"
     visa = "visa"
-    obstructed = "obstructed"
-    peripheral_devices = "peripheral_devices"
-    map_file_check = "map_file_check"
+    conveyor = "conveyor"
+    trolley = "trolley"
+    stoppages = "stoppages"
     dispatch_button = "dispatch_button"
 
 

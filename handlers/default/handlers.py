@@ -313,7 +313,6 @@ class Handlers:
     ):
         trip: tm.Trip = ongoing_trip.trip
         sherpa_name = trip.sherpa_name
-        fleet_name = ongoing_trip.trip.fleet_name
 
         end_leg_log = f"{sherpa_name} finished a trip leg of trip (trip_id: {trip.id}) from {ongoing_trip.trip_leg.from_station} to {ongoing_trip.trip_leg.to_station}"
         logging.getLogger(sherpa_name).info(end_leg_log)
@@ -325,8 +324,6 @@ class Handlers:
             time_delta = datetime.datetime.now() - ongoing_trip.trip_leg.start_time
             trip_analytics.actual_trip_time = time_delta.seconds
             trip_analytics.progress = 1.0
-            trip_analytics_log = f"{sherpa_name} finished leg of trip {trip.id} trip_analytics: {utils_util.get_table_as_dict(tm.TripAnalytics, trip_analytics)}"
-            logging.getLogger(sherpa_name).info(trip_analytics_log)
 
         self.do_post_actions(ongoing_trip, sherpa, curr_station)
         self.dbsession.add_notification(
@@ -554,7 +551,7 @@ class Handlers:
                     [sherpa.name, sherpa.fleet.name, sherpa.fleet.customer],
                     peripheral_msg,
                     mm.NotificationLevels.action_request,
-                    mm.NotificationModules.peripheral_devices,
+                    mm.NotificationModules.trolley,
                 )
 
             else:
@@ -591,14 +588,14 @@ class Handlers:
             if direction == "send":
                 peripheral_msg = f"Resolving {req.error_device} error for {sherpa_name}, transfer all the totes on the mule to the chute and press dispatch button"
             else:
-                peripheral_msg = f"Resolving {req.error_device} error for {sherpa_name},move {num_units} tote(s) to the mule and press dispatch button"
+                peripheral_msg = f"Resolving {req.error_device} error for {sherpa_name}, move {num_units} tote(s) to the mule from the conveyor and press dispatch button"
 
             logging.getLogger().info(peripheral_msg)
             self.dbsession.add_notification(
                 [sherpa.name, sherpa.fleet.name, sherpa.fleet.customer],
                 peripheral_msg,
                 mm.NotificationLevels.action_request,
-                mm.NotificationModules.peripheral_devices,
+                mm.NotificationModules.conveyor,
             )
             self.add_dispatch_start_to_ongoing_trip(ongoing_trip, sherpa)
         else:
@@ -931,13 +928,13 @@ class Handlers:
             self.initialize_sherpa(sherpa)
 
         if req.mode == "error":
-            sherpa_error_alert = f"{req.sherpa_name} in error, error_info: {req.error_info}"
+            sherpa_error_alert = f"{req.sherpa_name} in error mode"
             utils_util.maybe_add_notification(
                 self.dbsession,
                 [sherpa.name, sherpa.fleet.name, sherpa.fleet.customer],
                 sherpa_error_alert,
                 mm.NotificationLevels.alert,
-                mm.NotificationModules.generic,
+                mm.NotificationModules.errors,
             )
 
         _, _ = self.should_assign_next_task(sherpa, ongoing_trip, pending_trip)
@@ -1065,7 +1062,7 @@ class Handlers:
                     station: fm.Station = self.dbsession.get_station(station_name)
                     all_stations.append(station)
                 except Exception as e:
-                    trip_error_msg = f"Cancel the trip: {pending_trip.trip_id}, invalid station ({station_name}) in trip route"
+                    trip_error_msg = f"Cancel the trip: {pending_trip.trip_id}, invalid station ({station_name}) in the trip route"
                     trip_error_msg_e = trip_error_msg + f", exception: {e}"
                     logging.getLogger().warning(trip_error_msg_e)
                     utils_util.maybe_add_notification(
@@ -1073,7 +1070,7 @@ class Handlers:
                         [sherpa.name, sherpa.fleet.name, sherpa.fleet.customer],
                         trip_error_msg,
                         mm.NotificationLevels.alert,
-                        mm.NotificationModules.generic,
+                        mm.NotificationModules.errors,
                     )
                     return
 
@@ -1377,7 +1374,7 @@ class Handlers:
                 [sherpa.name, curr_station.name, sherpa.fleet.name, sherpa.fleet.customer],
                 transfer_tote_msg,
                 mm.NotificationLevels.info,
-                mm.NotificationModules.peripheral_devices,
+                mm.NotificationModules.conveyor,
             )
 
     def handle_resource_access(self, req: rqm.ResourceReq):
@@ -1471,7 +1468,7 @@ class Handlers:
         for ezone in set(visas_to_release):
             utils_visa.unlock_exclusion_zone(self.dbsession, ezone, sherpa)
 
-        visa_log = f"{sherpa.name} released {req.visa_type} visa to zone {req.zone_name}"
+        visa_log = f"{sherpa.name} released {req.visa_type} visa of zone {req.zone_name}"
         logging.getLogger("visa").info(visa_log)
         response: rqm.ResourceResp = rqm.ResourceResp(
             granted=True, visa=req, access_type=rqm.AccessType.RELEASE
