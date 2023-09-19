@@ -133,6 +133,16 @@ class DBSession:
     def get_sherpa(self, name: str) -> fm.Sherpa:
         return self.session.query(fm.Sherpa).filter(fm.Sherpa.name == name).one_or_none()
 
+    def get_sherpa_with_hwid(self, hwid: str) -> fm.Sherpa:
+        return self.session.query(fm.Sherpa).filter(fm.Sherpa.hwid == hwid).one_or_none()
+
+    def get_sherpa_with_hashed_api_key(self, hashed_api_key: str) -> fm.Sherpa:
+        return (
+            self.session.query(fm.Sherpa)
+            .filter(fm.Sherpa.hashed_api_key == hashed_api_key)
+            .one_or_none()
+        )
+
     def get_all_sherpa_names(self) -> List[str]:
         all_sherpas = self.session.query(fm.Sherpa).all()
         sherpa_names = []
@@ -149,13 +159,6 @@ class DBSession:
             .join(fm.Sherpa.fleet)
             .filter(fm.Fleet.name == fleet_name)
             .all()
-        )
-
-    def get_sherpa_by_api_key(self, hashed_api_key: str) -> fm.Sherpa:
-        return (
-            self.session.query(fm.Sherpa)
-            .filter(fm.Sherpa.hashed_api_key == hashed_api_key)
-            .one_or_none()
         )
 
     def get_sherpa_availability(self, sherpa_name: str):

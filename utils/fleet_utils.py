@@ -442,6 +442,18 @@ class SherpaUtils:
                 f"updated sherpa {sherpa_name}, with hwid: {hwid}, api_key: {api_key}"
             )
         else:
+            temp = dbsession.get_sherpa_with_hwid(hwid)
+            if temp:
+                raise ValueError(
+                    f"Cannot duplicate hwid {temp.name} already has the inputted hwid"
+                )
+
+            temp = dbsession.get_sherpa_with_hashed_api_key(hashed_api_key)
+            if temp:
+                raise ValueError(
+                    f"Cannot duplicate api_key {temp.name} already has the inputted api key"
+                )
+
             sherpa: fm.Sherpa = fm.Sherpa(
                 name=sherpa_name,
                 hwid=hwid,
