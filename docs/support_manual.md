@@ -255,11 +255,14 @@ X-API-Key:<api_key_generated_with_summon_button_id>
 Will be added soon
 
 ## Restart FM ## 
-1. Run the following command from the static directory
+1. If there were code changes/updates, run the following command from the static directory
 ```
 docker-compose -p fm -f docker_compose_v<fm_version> down
 docker-compose -p fm -f docker_compose_v<fm_version> up
 ```
+
+2. If there were only config changes, restart FM from the dashboard maintenance page
+
 
 ## Debug FM ## 
 
@@ -319,7 +322,7 @@ docker rm <container_name>
 
 1.  Run the script mentioned below, . You would need login credentials to sanjaya.atimotors.com to complete the update
 ```
- ./scripts/update_with_master_fm_cred.sh
+ bash ./scripts/update_with_master_fm_cred.sh
 ```
 
 2. There will be prompts to help you pull the images
@@ -328,3 +331,5 @@ Sanjaya Username: ### Enter master fm username ###
 Sanjaya Password: ### Enter master fm password ###
 FM version: ### Enter fm version like fm_dev, FM_v3.2 ###
 ```
+
+3. [Restart FM](#restart-fm)
