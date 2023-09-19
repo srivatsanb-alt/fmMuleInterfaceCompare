@@ -39,13 +39,20 @@ def start_router_module():
     logger.info(f"Intialized the router modules")
 
     while True:
-        restart_router = redis_conn.get("reinit_router")
-        if restart_router is not None:
-            restart_router = json.loads(restart_router)
-            if restart_router:
-                all_router_modules = init_routers()
-                redis_conn.delete("reinit_router")
-                logger.info(f"Reinitialized the router modules")
+        add_router_for = redis_conn.get("add_router_for")
+        update_router_for = redis_conn.get("update_router_for")
+
+        if add_router_for is not None:
+            fleet_name = add_router_for.decode()
+            all_router_modules.add_router_module(fleet_name)
+            redis_conn.delete("add_router_for")
+            logger.info(f"Added router module for {fleet_name}")
+
+        if update_router_for is not None:
+            fleet_name = update_router_for.decode()
+            all_router_modules.add_router_module(fleet_name)
+            redis_conn.delete("update_router_for")
+            logger.info(f"Updated router module for {fleet_name}")
 
         for key in redis_conn.keys("control_router_rl_job_*"):
             str_job = redis_conn.get(key)

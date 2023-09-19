@@ -230,7 +230,7 @@ async def add_fleet(
             redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
             all_fleet_names = dbsession.get_all_fleet_names()
             redis_conn.set("all_fleet_names", json.dumps(all_fleet_names))
-            redis_conn.set("reinit_router", json.dumps(True))
+            redis_conn.set("add_router_for", fleet_name)
 
     return response
 
@@ -335,6 +335,6 @@ async def update_map(
                 raise e
 
         redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
-        redis_conn.set("reinit_router", json.dumps(True))
+        redis_conn.set("update_router_for", fleet_name)
 
     return response
