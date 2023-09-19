@@ -45,7 +45,6 @@ def lock_exclusion_zone(ezone: vm.ExclusionZone, sherpa: fm.Sherpa, exclusive: b
         ezone.sherpas = []
 
     ezone.sherpas.append(sherpa)
-    ezone.exlusive = exclusive
 
 
 def can_lock_exclusion_zone(
@@ -106,8 +105,6 @@ def unlock_exclusion_zone(dbsession: DBSession, ezone: vm.ExclusionZone, sherpa:
         return False, reason
 
     ezone.sherpas.remove(sherpa)
-    if len(ezone.sherpas) == 0:
-        ezone.exclusivity = None
 
     reason = f"{sherpa.name} doesn't hold {ezone.zone_id} anymore, visa release done"
     logging.getLogger("visa").info(reason)
@@ -146,6 +143,9 @@ def can_grant_visa(
     for reqd_zone_type in reqd_zone_types:
         for lz in all_lzs:
             lz_zone_name, lz_zone_type = split_zone_id(lz.zone_id)
+            # linked gates always need exlusive access
+            exclusive = True
+
             granted, reason = can_lock_exclusion_zone(
                 dbsession,
                 lz,
