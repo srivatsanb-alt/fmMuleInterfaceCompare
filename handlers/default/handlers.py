@@ -1414,7 +1414,6 @@ class Handlers:
                     }
                 )
                 row.waiting_sherpas = waiting_sherpas
-                self.dbsession.session.commit()
                 logging.getLogger("visa").info(
                     "waiting sherpa " + sherpa_name + ": " + reason
                 )
