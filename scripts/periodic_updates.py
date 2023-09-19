@@ -92,7 +92,7 @@ def get_all_alert_notifications(dbsession):
         mm.NotificationLevels.alert
     )
     alert_msg = {}
-    alert_msg["type"] = "alerts"
+    alert_msg["type"] = mm.NotificationLevels.alert
     for alert in all_alerts:
         alert_msg.update({alert.id: get_table_as_dict(mm.Notifications, alert)})
 
