@@ -38,7 +38,7 @@ fm_cert_file="/app/config/fm_rev_proxy_cert.pem"
 
 1. The config editor should be accessible at <https://<fm_ip>/config_editor>
 
-2. Credentials for login to config editor can be obtained from docker-compose_v<fm_version>.yml file (would be available in the static folder on the FM server). 
+2. Credentials for login in to config editor can be obtained from docker-compose_v<fm_version>.yml file (would be available in the static folder on the FM server). 
 ```
 ME_CONFIG_BASICAUTH_USERNAME: ****
 ME_CONFIG_BASICAUTH_PASSWORD: ****
@@ -54,16 +54,16 @@ ping sanjaya.atimotors.com
 
 2. Use config editor, select the database fm_config, select the collection master_fm, click on the document to edit it
 
-3. If sanajaya.atimotors.com is accessible
+3. If sanajaya.atimotors.com is accessible, you don't have to follow the remaining steps(steps 4-6)
     a. Change the below mentioned parameters in the document, save the same
     ```
     api_key: '<api_key generated for the customer>'
     send_updates: true
     ```
     
-4. If you are be able to ssh to FM server via another machine which has access to sanjaya.atimotors.com, then a reverse tunnel can be setup to access sanjaya.atimotors.com
+4. If sanajaya.atimotors.com is not accessible but you are be able to ssh to FM server via another machine which has access to sanjaya.atimotors.com, then a reverse tunnel can be setup to access sanjaya.atimotors.com
 
-5. To setup reverse tunnel, get mfm_rev_tunnel.tar from downloads section on the dashboard and copy the same to the machine which has access sanjaya.atimotors.com(pingable) and has ssh access to the FM server, do the following
+5. To setup reverse tunnel, get mfm_rev_tunnel.tar from the downloads section on the dashboard and copy the same to the machine which has access sanjaya.atimotors.com(pingable) and has ssh access to the FM server, do the following
 ```
 tar -xvf mfm_rev_tunnel.tar ## This is for Linux, something similar has to be done for other os
 cd mfm_rev_tunnel
@@ -81,6 +81,8 @@ mfm_ip: '<fm_server_ip>'
 mfm_ip: '9010'
 http_scheme: 'http'
 ws_scheme: 'ws'
+api_key: '<api_key generated for the customer>'
+send_updates: true
 ```
 
 ## Setup auto parking feature ##
