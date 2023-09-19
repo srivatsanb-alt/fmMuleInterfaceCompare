@@ -554,11 +554,14 @@ class ExclusionZoneUtils:
         with open(ez_path, "r") as f:
             ez_gates = json.load(f)
 
-        for gate in ez_gates["ez_gates"].values():
-            gate_name = gate["name"]
+        for gate, gate_details in ez_gates["ez_gates"].items():
+            gate_name = gate_details["name"]
             zone_ids_to_add = [f"{gate_name}_lane", f"{gate_name}_station"]
-            # exclusivity = gate["exclusive_parking"]
             for zone_id in zone_ids_to_add:
+                exclusivity = True
+                if zone_id.endswith("_lane"):
+                    exclusivity = False
+
                 ezone: vm.ExclusionZone = (
                     dbsession.session.query(vm.ExclusionZone)
                     .filter_by(zone_id=zone_id)
@@ -572,9 +575,10 @@ class ExclusionZoneUtils:
                         ezone.fleets.append(fleet_name)
                         logger.info(f"ExclusionZone serving fleets {ezone.fleets}")
                         flag_modified(ezone, "fleets")
+                    ezone.exclusivity = exclusivity
                 else:
                     ezone: vm.ExclusionZone = vm.ExclusionZone(
-                        zone_id=zone_id, fleets=[fleet_name]
+                        zone_id=zone_id, exclusivity=exclusivity, fleets=[fleet_name]
                     )
                     dbsession.add_to_session(ezone)
                     logger.info(f"Added exclusionZone {zone_id}")
@@ -589,18 +593,45 @@ class ExclusionZoneUtils:
             ez_gates = json.load(f)
 
         gates_dict = ez_gates["ez_gates"]
-        for gate in gates_dict.values():
-            gate_name = gate["name"]
-            if not gate["linked_gate"]:
+        for gate, gate_details in ez_gates["ez_gates"].items():
+            gate_name = gate_details["name"]
+
+            if gate_details.get("exclusive_parking", True) is True:
+                cls.create_internal_link_between_station_and_lane(dbsession, gate_name)
+
+            if not gate_details["linked_gate"]:
                 logger.info(f"Gate {gate_name} has no linked gates")
                 continue
 
-            linked_gates = gate["linked_gates_ids"]
+            linked_gates = gate_details["linked_gates_ids"]
             logger.info(f"Gate {gate_name} has linked gates: {linked_gates}")
             prev_zone = gate_name
             for linked_gate in linked_gates:
                 next_zone = gates_dict[str(linked_gate)]["name"]
                 cls.create_links_between_zones(dbsession, prev_zone, next_zone)
+
+    @classmethod
+    def create_internal_link_between_station_and_lane(
+        cls, dbsession: DBSession, ezone_name
+    ):
+        ezone_st = ezone_name + "_station"
+        ezone_lane = ezone_name + "_lane"
+
+        internal_link = (
+            dbsession.session.query(vm.LinkedGates)
+            .filter(vm.LinkedGates.prev_zone_id == ezone_st)
+            .filter(vm.LinkedGates.next_zone_id == ezone_lane)
+            .one_or_none()
+        )
+        if internal_link:
+            logger.info(
+                f"Internal Link between {ezone_name} station and lane already exsists"
+            )
+
+        else:
+            internal_link = vm.LinkedGates(prev_zone_id=ezone_st, next_zone_id=ezone_lane)
+            dbsession.add_to_session(internal_link)
+            logger.info(f"Created a internal link between {ezone_st} and {ezone_lane}")
 
     @classmethod
     def create_links_between_zones(cls, dbsession: DBSession, prev_zone, next_zone):

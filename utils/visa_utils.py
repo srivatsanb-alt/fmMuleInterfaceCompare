@@ -131,8 +131,7 @@ def can_grant_visa(
         for ez in get_linked_gates(ezone):
             all_lzs.append(ez)
 
-        # if zone_type == vm.ZoneType.LANE and ezone.exclusivity is False:
-        #    exclusive = False
+        exclusive = ezone.exclusivity
 
         granted, reason = can_lock_exclusion_zone(
             dbsession, ezone, sherpa, ezone.zone_id, zone_name, zone_type, exclusive
