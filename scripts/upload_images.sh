@@ -20,7 +20,7 @@ upload_to_sanjaya()
       echo "Software was last updated at: $LAST_COMMIT_DT" > static/release.dt
       echo "Images were created at: $(date)" > static/release.dt
       curl -H "X-User-Token: $access_token" -d @static/release.dt $HTTP_SCHEME://$MASTER_FM_IP:$MASTER_FM_PORT/upload/fm/$FM_VERSION
-      curl -H "X-User-Token: $access_token" -d @static/docker_compose_$FM_VERSION.yml $HTTP_SCHEME://$MASTER_FM_IP:$MASTER_FM_PORT/upload/fm/$FM_VERSION 
+      curl -H "X-User-Token: $access_token" -d @static/docker_compose_v$FM_VERSION.yml $HTTP_SCHEME://$MASTER_FM_IP:$MASTER_FM_PORT/upload/fm/$FM_VERSION 
       rm static/release.dt
       docker login --username $registry_username --password $registry_password $MASTER_FM_IP:$MASTER_FM_PORT
       docker-compose -f static/docker_compose_v$FM_VERSION.yml config | grep image | awk '{print $2}' | xargs -I % docker tag % "$MASTER_FM_IP:$MASTER_FM_PORT/"%

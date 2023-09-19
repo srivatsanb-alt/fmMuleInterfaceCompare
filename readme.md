@@ -26,13 +26,13 @@ CORES: 4
 
 ## Setup FM on air-gapped servers ## 
 
-1. Built docker images would be available in data server (data@192.168.10.21), at the location : /atidata/datasets/fm_v<fm_version> 
+1. Built docker images would be available in data server (data@192.168.10.21), at the location : /atidata/datasets/fm_setup_v<fm_version> 
 
-2. Copy the entire fm_v<fm_version> folder to the respective air-gapped server 
+2. Copy the entire fm_setup_v<fm_version> folder to the respective air-gapped server 
 
 3. ssh to the remote server, do the following - This would build the required docker images on the air-gapped server
 ```
-cd fm_v<fm_version>
+cd fm_setup_v<fm_version>
 bash load_images.sh
 ```
 
