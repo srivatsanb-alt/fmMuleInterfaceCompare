@@ -83,6 +83,27 @@ async def clear_notifications(token: str, user_name=Depends(dpd.get_user_from_qu
     return response
 
 
+@router.get("/api/v1/notifications/clear_log_level/{log_level}/{token}")
+async def clear_notifications_log_level(
+    token: str, log_level: str, user_name=Depends(dpd.get_user_from_query)
+):
+    response = {}
+    if not user_name:
+        dpd.raise_error("Unknown requeter")
+
+    with DBSession() as dbsession:
+        all_notifications = dbsession.get_notifications_filter_with_log_level(log_level)
+        for notification in all_notifications:
+
+            if notification.cleared_by is None:
+                notification.cleared_by = []
+
+            notification.cleared_by.append(token)
+            flag_modified(notification, "cleared_by")
+
+    return response
+
+
 @router.websocket("/ws/api/v1/notifications/{token}")
 async def notifications(
     websocket: WebSocket,
