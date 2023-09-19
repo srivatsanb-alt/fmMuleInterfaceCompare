@@ -21,6 +21,8 @@ download_pull_fm_update()
    docker-compose -f /app/static/docker_compose_v$FM_VERSION.yml config | grep image | awk -v repository="$MASTER_FM_IP:$MASTER_FM_PORT/" '{print repository$2}' | xargs -I % docker pull %
    docker-compose -f /app/static/docker_compose_v$FM_VERSION.yml config | grep image | awk '{print $2}' | xargs -I % docker tag "$MASTER_FM_IP:$MASTER_FM_PORT/"% % 
    docker logout $MASTER_FM_IP:$MASTER_FM_PORT
+   
+   echo "Update Done!"
 
 }
 

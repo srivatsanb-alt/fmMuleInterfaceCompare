@@ -16,7 +16,7 @@
 13. [Debug FM](#debug-fm)
 14. [Access Postgres DB](#access-postgres-db)
 15. [Some docker commands](#some-docker-commands)
-
+16. [Update FM with master FM credentials](#update-fm-with-master-fm-credentials)
 
 
 ## Setup sherpas ##
@@ -38,7 +38,11 @@ fm_cert_file="/app/config/fm_rev_proxy_cert.pem"
 
 1. The config editor should be accessible at <https://<fm_ip>/config_editor>
 
-2. Credentials for login to config editor can be obtained from docker-compose_v<fm_version>.yml file (would be available in the static folder on the FM server)
+2. Credentials for login to config editor can be obtained from docker-compose_v<fm_version>.yml file (would be available in the static folder on the FM server). 
+```
+ME_CONFIG_BASICAUTH_USERNAME: ****
+ME_CONFIG_BASICAUTH_PASSWORD: ****
+```
 
 
 ## Send updates to master fm ## 
@@ -309,4 +313,16 @@ docker stop <container_name>
 docker rm <container_name>
 ```
 
+## Update FM with master FM credentials ## 
 
+1.  Run the script mentioned below, . You would need login credentials to sanjaya.atimotors.com to complete the update
+```
+ ./scripts/update_with_master_fm_cred.sh
+```
+
+2. There will be prompts to help you pull the images
+```
+Sanjaya Username: ### Enter master fm username ###
+Sanjaya Password: ### Enter master fm password ###
+FM version: ### Enter fm version like fm_dev, FM_v3.2 ###
+```
