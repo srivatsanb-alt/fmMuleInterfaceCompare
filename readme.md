@@ -87,7 +87,7 @@ git submodule init
 
    3. Update submodules
 ```
-git submodule update  
+git submodule update --recursive
 ```
 
 ## Build fleet_manager docker images ## 
