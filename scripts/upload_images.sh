@@ -18,7 +18,7 @@ upload_to_sanjaya()
       echo "Registry username: $registry_username"
       echo "Registry password: $registry_password"
       echo "Software was last updated at: $LAST_COMMIT_DT" > static/release.dt
-      echo "Images were created at: $(date)" > static/release.dt
+      echo "Images were created at: $(date)" >> static/release.dt
       curl -H "X-User-Token: $access_token" -d @static/release.dt $HTTP_SCHEME://$MASTER_FM_IP:$MASTER_FM_PORT/upload/fm/$FM_VERSION
       curl -H "X-User-Token: $access_token" -d @static/docker_compose_v$FM_VERSION.yml $HTTP_SCHEME://$MASTER_FM_IP:$MASTER_FM_PORT/upload/fm/$FM_VERSION 
       rm static/release.dt
