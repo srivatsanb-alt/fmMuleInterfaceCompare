@@ -14,10 +14,10 @@ def connect():
     }
 
     return psycopg2.connect(
-        database=os.getenv("POSTGRES_DB"),
-        user=os.getenv("POSTGRES_USER"),
-        password=os.getenv("POSTGRES_PASSWORD"),
-        host=os.getenv("POSTGRES_HOST"),
+        database=os.getenv("PGDATABASE"),
+        host=os.getenv("PGHOST"),
+        user=os.getenv("PGUSER"),
+        password=os.getenv("PGPASSWORD"),
         **keepalive_kwargs,
     )
 

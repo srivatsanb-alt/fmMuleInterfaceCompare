@@ -25,10 +25,11 @@ services:
       FM_SERVER_USERNAME: "ati"
       REDIS_PORT: 6379
       FM_REDIS_URI: redis://localhost:6379
-      POSTGRES_HOST: db
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DATABASE: ati_fleet
+      PGHOST: db
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: ati_fleet
       PGTZ: Asia/Kolkata
       TZ: Asia/Kolkata
       FM_DATABASE_URI: postgresql://postgres:postgres@db:5432
