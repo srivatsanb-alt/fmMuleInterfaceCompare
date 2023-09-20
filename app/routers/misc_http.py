@@ -38,11 +38,15 @@ async def site_info(user_name=Depends(dpd.get_user_from_header)):
     timezone = os.environ["PGTZ"]
     fm_tag = os.environ["FM_TAG"]
 
+    with FMMongo() as fm_mongo:
+        simulator_config = fm_mongo.get_document_from_fm_config("simulator")
+
     response = {
         "fleet_names": fleet_names,
         "timezone": timezone,
         "software_version": fm_tag,
         "compatible_sherpa_versions": compatible_sherpa_versions,
+        "simulator": simulator_config["simulate"],
     }
 
     return response
