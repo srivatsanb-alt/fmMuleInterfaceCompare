@@ -140,4 +140,6 @@ async def update_fm(
     await redis_conn.delete("updating_to")
     await redis_conn.delete("update_done")
 
+    os.system("rm /app/static/fm_update_progress.log")
+
     return response
