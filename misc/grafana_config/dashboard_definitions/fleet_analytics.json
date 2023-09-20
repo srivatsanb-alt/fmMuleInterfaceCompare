@@ -167,7 +167,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "\nSELECT\n  SUBSTRING(sherpa_name, 1, 6) AS Sherpa,\n  ROUND(SUM((SELECT SUM(s) FROM UNNEST(etas_at_start) s))) AS Distance\nFROM\n  trips\nWHERE\n  fleet_name = '$fleetvar'\n  AND sherpa_name IS NOT NULL\n  AND start_time >= CAST($__timeFrom() AS timestamp with time zone) AND end_time <= CAST($__timeTo() AS timestamp with time zone)\nGROUP BY\n  sherpa_name;",
+          "rawSql": "\nSELECT\n  SUBSTRING(sherpa_name, 1, 6) AS Sherpa,\n  ROUND(SUM((SELECT SUM(s) FROM UNNEST(route_lengths) s))) AS Distance\nFROM\n  trips\nWHERE\n  fleet_name = '$fleetvar'\n  AND sherpa_name IS NOT NULL\n  AND start_time >= CAST($__timeFrom() AS timestamp with time zone) AND end_time <= CAST($__timeTo() AS timestamp with time zone)\nGROUP BY\n  sherpa_name;",
           "refId": "A",
           "sql": {
             "columns": [
@@ -338,7 +338,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  SUM(subquery.distance) AS Distance,\n  subquery.start_date AS Date\nFROM\n  (\n    SELECT\n      start_time::DATE AS start_date,\n      (SELECT SUM(s) FROM UNNEST(etas_at_start) s) AS distance\n    FROM\n      trips\n    WHERE\n      start_time >= CAST($__timeFrom() AS timestamp with time zone) AND end_time <= CAST($__timeTo() AS timestamp with time zone) AND\n      fleet_name = '$fleetvar'\n  ) AS subquery\nGROUP BY\n  subquery.start_date;\n",
+          "rawSql": "SELECT\n  SUM(subquery.distance) AS Distance,\n  subquery.start_date AS Date\nFROM\n  (\n    SELECT\n      start_time::DATE AS start_date,\n      (SELECT SUM(s) FROM UNNEST(route_lengths) s) AS distance\n    FROM\n      trips\n    WHERE\n      start_time >= CAST($__timeFrom() AS timestamp with time zone) AND end_time <= CAST($__timeTo() AS timestamp with time zone) AND\n      fleet_name = '$fleetvar'\n  ) AS subquery\nGROUP BY\n  subquery.start_date;\n",
           "refId": "A",
           "sql": {
             "columns": [
@@ -781,8 +781,8 @@
       {
         "current": {
           "selected": false,
-          "text": "JNTata_corridor",
-          "value": "JNTata_corridor"
+          "text": "",
+          "value": ""
         },
         "hide": 0,
         "label": "Fleet_Selector ",
@@ -790,11 +790,11 @@
         "options": [
           {
             "selected": true,
-            "text": "all_hands_map",
-            "value": "all_hands_map"
+            "text": "",
+            "value": ""
           }
         ],
-        "query": "JNTata_corridor",
+        "query": "",
         "skipUrlSync": false,
         "type": "textbox"
       }

@@ -1347,8 +1347,6 @@ class Handlers:
         req: rqm.ConveyorReq,
     ):
 
-        fleet_name = ongoing_trip.trip.fleet_name
-
         conveyor_start_state = getattr(
             tm.TripState, f"WAITING_STATION_CONV_{req.direction.upper()}_START"
         )
