@@ -14,13 +14,21 @@ upload_to_sanjaya()
       access_token=$(echo $resp | jq .access_token | sed -e 's/^"//' -e 's/"$//')
       registry_username=$(echo $resp | jq .static_files_auth.username | sed -e 's/^"//' -e 's/"$//')
       registry_password=$(echo $resp | jq .static_files_auth.password | sed -e 's/^"//' -e 's/"$//')
+
+      read -p "is this a production release? (y/n) - " prod_release 
+      prod=false
+      if [ "$prod_release" = "y" ]; then
+      {
+        prod=true
+      }
+      fi	      
       echo "Access token: $access_token"
       echo "Registry username: $registry_username"
       echo "Registry password: $registry_password"
       echo "Software was last updated at: $LAST_COMMIT_DT" > static/release.dt
       echo "Images were created at: $(date)" >> static/release.dt
-      curl -H "X-User-Token: $access_token" -d @static/release.dt $HTTP_SCHEME://$MASTER_FM_IP:$MASTER_FM_PORT/upload/fm/$FM_VERSION
-      curl -H "X-User-Token: $access_token" -d @static/docker_compose_v$FM_VERSION.yml $HTTP_SCHEME://$MASTER_FM_IP:$MASTER_FM_PORT/upload/fm/$FM_VERSION 
+      curl -H "X-User-Token: $access_token" -d @static/release.dt $HTTP_SCHEME://$MASTER_FM_IP:$MASTER_FM_PORT/upload/fm/$FM_VERSION/$prod
+      curl -H "X-User-Token: $access_token" -d @static/docker_compose_v$FM_VERSION.yml $HTTP_SCHEME://$MASTER_FM_IP:$MASTER_FM_PORT/upload/fm/$FM_VERSION/$prod
       rm static/release.dt
       docker login --username $registry_username --password $registry_password $MASTER_FM_IP:$MASTER_FM_PORT
       docker-compose -f static/docker_compose_v$FM_VERSION.yml config | grep image | awk '{print $2}' | xargs -I % docker tag % "$MASTER_FM_IP:$MASTER_FM_PORT/"%
