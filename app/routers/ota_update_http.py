@@ -1,7 +1,12 @@
 import os
+import aioredis
+import json
+import asyncio
 from fastapi import APIRouter, Depends
 
 # ati code imports
+import master_fm_comms.mfm_utils as mu
+
 import app.routers.dependencies as dpd
 
 
@@ -13,10 +18,9 @@ router = APIRouter(
 
 
 @router.get("/fm/get_available_updates")
-def get_available_updates(
+async def get_available_updates(
     user_name=Depends(dpd.get_user_from_header),
 ):
-    import master_fm_comms.mfm_utils as mu
 
     mfm_context = mu.get_mfm_context()
 
@@ -62,13 +66,30 @@ def get_available_updates(
 
 
 @router.get("/fm/update_to/{fm_version}")
-def update_fm(
+async def update_fm(
     fm_version: str,
     user_name=Depends(dpd.get_user_from_header),
 ):
-    response = {}
 
-    import master_fm_comms.mfm_utils as mu
+    response = {}
+    redis_conn = aioredis.Redis.from_url(
+        os.getenv("FM_REDIS_URI"), max_connections=10, decode_responses=True
+    )
+
+    update_wait_time_ms = int(300e3)
+    update_started = await redis_conn.get("update_started")
+
+    if update_started is None:
+        await redis_conn.setex("update_started", update_wait_time_ms, json.dumps(True))
+        await redis_conn.set("updating_to", fm_version)
+        await redis_conn.set("update_done", json.dumps(False))
+    else:
+        updating_to = await redis_conn.get("updating_to")
+        if updating_to:
+            updating_to = updating_to.decode()
+        dpd.raise_error(
+            f"Already updating to version: {updating_to}, please wait for the update to get completed"
+        )
 
     mfm_context = mu.get_mfm_context()
 
@@ -107,5 +128,16 @@ def update_fm(
 
     if return_code != 0:
         dpd.raise_error("Unable to start update process")
+
+    update_done = False
+    while not update_done:
+        update_done = await redis_conn.get("update_done")
+        if update_done is not None:
+            update_done = json.loads(update_done)
+        await asyncio.sleep(5)
+
+    await redis_conn.delete("update_started")
+    await redis_conn.delete("updating_to")
+    await redis_conn.delete("update_done")
 
     return response
