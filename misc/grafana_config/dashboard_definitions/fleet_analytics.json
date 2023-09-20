@@ -419,7 +419,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "\nSELECT\n  SUBSTRING(sherpa_name, 1, 6) AS Sherpa,\n  ROUND(SUM(EXTRACT(EPOCH FROM (end_time - start_time)))/((CASE WHEN CAST($__timeFrom() as timestamp with time zone)::DATE = CAST(current_timestamp as timestamp with time zone)::DATE THEN extract(epoch from CAST($__timeTo() as timestamp with time zone) - CAST($__timeFrom() as timestamp with time zone)) ELSE 86400 END/100)*COUNT(DISTINCT(start_time::DATE)))) AS Utilization\nFROM\n  trips\nWHERE\n  status = 'succeeded'\n  AND sherpa_name IS NOT NULL\n  AND start_time IS NOT NULL\n  AND end_time IS NOT NULL\n  AND DATE_TRUNC('day', start_time) = DATE_TRUNC('day', end_time)\n  AND start_time >= CAST($__timeFrom() AS timestamp with time zone) AND end_time <= CAST($__timeTo() AS timestamp with time zone)\n  AND fleet_name = '$fleetvar'\nGROUP BY\n  sherpa_name;",
+          "rawSql": "WITH Numerator AS (\n  SELECT\n    sherpa_name,\n    SUM(\n      EXTRACT(\n        EPOCH\n        FROM\n          (end_time - start_time)\n      )\n    ) as trip_time\n  FROM\n    trips\n  WHERE\n    start_time >= CAST($__timeFrom() AS timestamp) \n    AND end_time <= CAST($__timeTo() AS timestamp)\n    AND fleet_name = '$fleetvar'\n  GROUP BY\n    sherpa_name\n),\nDenominator AS (\n  SELECT\n    t.sherpa_name,\n    (\n      SELECT MAX(t2.end_time)\n      FROM trips t2\n      WHERE t2.fleet_name = '$fleetvar'\n        AND t2.start_time >= CAST($__timeFrom() AS timestamp) \n        AND t2.end_time <= CAST($__timeTo() AS timestamp)\n        AND t2.sherpa_name = t.sherpa_name\n    ) - (\n      SELECT MIN(t3.start_time)\n      FROM trips t3\n      WHERE t3.fleet_name = '$fleetvar'\n        AND t3.start_time >= CAST($__timeFrom() AS timestamp)\n        AND t3.end_time <= CAST($__timeTo() AS timestamp) \n        AND t3.sherpa_name = t.sherpa_name\n    ) AS total_denominator\n  FROM trips t\n  WHERE t.fleet_name = '$fleetvar'\n    AND t.start_time >= CAST($__timeFrom() AS timestamp)\n    AND t.end_time <= CAST($__timeTo() AS timestamp)\n  GROUP BY t.sherpa_name\n)\nSELECT\n  n.sherpa_name AS Sherpa,\n  ROUND(n.trip_time / EXTRACT(EPOCH FROM d.total_denominator) * 100) AS Utilization\nFROM\n  Numerator n\n  JOIN Denominator d ON n.sherpa_name = d.sherpa_name\nWHERE\n  n.trip_time > 0;",
           "refId": "A",
           "sql": {
             "columns": [
@@ -591,8 +591,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               }
             ]
           },
@@ -697,8 +696,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -801,7 +799,7 @@
     ]
   },
   "time": {
-    "from": "now-6h",
+    "from": "now-24h",
     "to": "now"
   },
   "timepicker": {},
