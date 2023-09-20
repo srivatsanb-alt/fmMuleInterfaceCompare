@@ -13,28 +13,34 @@ if [[ $git_des =~ "tags/" ]] ; then
 fi
 
 
+build_base_images_interactive()
+{
+   read -p "Should build base images? (y/n) - " build_base_images
+   if [ "$build_base_images" = "y" ]; then 
+   {
+        build_base_images 
+   }
+   else
+   {
+       echo "Not building base images"
+   }
+   fi
+}
+
 build_base_images() 
 {
-    read -p "Should build base images? (y/n) - " build_base_images
-    if [ "$build_base_images" = "y" ]; then
-    {
-       echo "Will build base image!"
-       docker image build -t fleet_manager_base:dev -f docker_files/Dockerfile.base .
-       cd fm_plugins && bash scripts/build_base_image.sh dev
-       cd ../
-       docker pull nginx:1.23.3
-       docker pull mongo-express:1.0.0-alpha
-       docker pull mongo:7.0
-       docker pull postgres:14.0
-       docker pull grafana/grafana:9.5.2
-       docker pull registry:2   
-    }
-    else
-    {
-       echo "Not building base images"
-    }
-    fi
+   echo "Will build base image!"
+   docker image build -t fleet_manager_base:dev -f docker_files/Dockerfile.base .
+   cd fm_plugins && bash scripts/build_base_image.sh dev
+   cd ../
+   docker pull nginx:1.23.3
+   docker pull mongo-express:1.0.0-alpha
+   docker pull mongo:7.0
+   docker pull postgres:14.0
+   docker pull grafana/grafana:9.5.2
+   docker pull registry:2   
 }
+
 
 build_final_images() 
 {

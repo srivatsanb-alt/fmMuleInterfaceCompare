@@ -85,8 +85,6 @@ async def update_fm(
         await redis_conn.set("update_done", json.dumps(False))
     else:
         updating_to = await redis_conn.get("updating_to")
-        if updating_to:
-            updating_to = updating_to.decode()
         dpd.raise_error(
             f"Already updating to version: {updating_to}, please wait for the update to get completed"
         )

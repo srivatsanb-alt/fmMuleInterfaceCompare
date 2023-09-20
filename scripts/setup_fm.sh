@@ -14,7 +14,7 @@ fi
 
 echo "FM Version: $FM_VERSION"
 
-build_base_images 
+build_base_images_interactive
 build_final_images 
 
 copy_default_certs="n"
@@ -48,7 +48,7 @@ else {
      exit
    }
    else {
-      upload_to_sanjaya
+      upload_to_sanjaya_interactive
       tar_images
    }
    fi
