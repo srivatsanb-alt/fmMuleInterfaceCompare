@@ -111,6 +111,7 @@ async def update_fm(
     registry_password = "atiStatic112"
     static_files_auth_username = "a"
     static_files_auth_password = "b"
+    prod = "prod"
 
     os.system("rm /app/static/fm_update_progress.log")
 
@@ -118,6 +119,7 @@ async def update_fm(
         f"cd /app && bash scripts/self_updater.sh \
         {mfm_context.server_ip} {mfm_context.server_port} \
         {mfm_context.http_scheme} {fm_version} \
+        {prod} \
         {registry_username} {registry_password} \
         {static_files_auth_username} \
         {static_files_auth_password} \
