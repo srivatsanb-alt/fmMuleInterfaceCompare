@@ -19,8 +19,8 @@ download_pull_fm_update()
    docker login --username $5 --password $6  $MASTER_FM_IP:$MASTER_FM_PORT
    curl -X "GET" $HTTP_SCHEME://$7:$8@$MASTER_FM_IP:$MASTER_FM_PORT/api/static/downloads/fm/$FM_VERSION/docker_compose_$FM_VERSION.yml > /app/static/docker_compose_$FM_VERSION.yml
 
-   docker-compose -f /app/static/docker_compose_v$FM_VERSION.yml config | grep image | awk -v repository="$MASTER_FM_IP:$MASTER_FM_PORT/" '{print repository$2}' | xargs -I % echo "will download %"
-   docker-compose -f /app/static/docker_compose_v$FM_VERSION.yml config | grep image | awk -v repository="$MASTER_FM_IP:$MASTER_FM_PORT/" '{print repository$2}' | xargs -I % docker pull %
+   docker-compose -f /app/static/docker_compose_v$FM_VERSION.yml config | grep image | awk -v registry="$MASTER_FM_IP:$MASTER_FM_PORT/" '{print registry$2}' | xargs -I % echo "will download %"
+   docker-compose -f /app/static/docker_compose_v$FM_VERSION.yml config | grep image | awk -v registry="$MASTER_FM_IP:$MASTER_FM_PORT/" '{print registry$2}' | xargs -I % docker pull %
    docker-compose -f /app/static/docker_compose_v$FM_VERSION.yml config | grep image | awk '{print $2}' | xargs -I % docker tag "$MASTER_FM_IP:$MASTER_FM_PORT/"% %
    docker logout $MASTER_FM_IP:$MASTER_FM_PORT
 
