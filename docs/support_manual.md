@@ -17,7 +17,8 @@
 14. [Access Postgres DB](#access-postgres-db)
 15. [Some docker commands](#some-docker-commands)
 16. [Update FM with master FM credentials](#update-fm-with-master-fm-credentials)
-
+17. [Setup optimal dispatch config](#setup-optimal-dispatch-config)
+18. [Clean up disk space in FM server](#clean-up-disk-space-in-fm-server)
 
 ## Setup sherpas ##
 
@@ -333,3 +334,14 @@ FM version: ### Enter fm version like fm_dev, FM_v3.2 ###
 ```
 
 3. [Restart FM](#restart-fm)
+
+
+## Clean up disk space in FM server ## 
+
+1. Set backup config in FM config editor appropriately 
+
+2. Use the config editor, select the database fm_config, select the collection data_backup, click on the document to edit it
+
+3. Edit keep_size_mb, FM will try to restrict the data inside static/data_backup folder to keep_size_mb only. The contents in the data backup folder will sorted and deleted based on their time of creation, older data will be deleted first. The default is set to 1000MB
+
+4. Use can also set prune_ununsed_images to true or false based on whether you want to clean up old docker images. Set prune_images_used_until_h accordingly, all the images that were unused in the last prune_images_used_until_h hours will be deleted.
