@@ -15,6 +15,15 @@ from core.db import get_engine
 from models.mongo_client import FMMongo
 
 
+def prune_unused_images(backup_config):
+    if backup_config["prune_unused_images"] is True:
+        temp = backup_config["prune_images_used_until_h"]
+        if os.system(f"docker image prune -f --filter 'until={temp}h'") == 0:
+            logging.getLogger("misc").info(f"Pruned old({temp}h) docker images")
+        else:
+            logging.getLogger("misc").warning(f"Unable to prune old({temp}h) docker images")
+
+
 def backup_data():
     with FMMongo() as fm_mongo:
         backup_config = fm_mongo.get_document_from_fm_config("data_backup")
@@ -54,6 +63,8 @@ def backup_data():
             logging.info(f"Will periodically backup {database_name} db")
             valid_dbs.append(database_name)
 
+    freq = 60
+    last_prune_time = time.time()
     while True:
         for db_name in valid_dbs:
             path_to_db = os.path.join(os.getenv("FM_DATABASE_URI"), db_name)
@@ -91,6 +102,11 @@ def backup_data():
         if docker_cp_returncod != 0:
             logging.getLogger("misc").warning(f"Unable to copy fm_plugin logs")
 
+        # prune images every 30 minutes
+        if time.time() - last_prune_time > 1800:
+            prune_unused_images(backup_config)
+            last_prune_time = time.time()
+
         shutil.copytree(os.getenv("FM_LOG_DIR"), logs_save_path)
         logging.getLogger("misc").info(f"Backed up data")
 
@@ -103,7 +119,7 @@ def backup_data():
             logging.getLogger("misc").error(
                 f"couldn't cleanup old backed up data, exception: {e}"
             )
-        time.sleep(30)
+        time.sleep(freq)
 
 
 def get_directory_size(directory):

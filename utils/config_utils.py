@@ -100,13 +100,25 @@ class ConfigValidator:
             "bsonType": "object",
             "required": [
                 "keep_size_mb",
+                "prune_unused_images",
+                "prune_images_used_until_h",
             ],
             "properties": {
                 "keep_size_mb": {
                     "bsonType": "int",
                     "minimum": 100,
                     "description": "Will try make sure disk space used by static/data_backup folder size(MB) is less than keep_size_mb",
-                }
+                },
+                "prune_unused_images": {
+                    "bsonType": "bool",
+                    "description": "Whether to prune unused docker images",
+                },
+                "prune_images_used_until_h": {
+                    "bsonType": "int",
+                    "minimum": 2,
+                    "maximum": 1000,
+                    "description": "Prune unused docker images that were used prune_images_used_until_h hours back",
+                },
             },
         },
     }
@@ -388,7 +400,11 @@ class ConfigDefaults:
         "priority_power_factor": 0.7,
         "max_trips_to_consider": 5,
     }
-    data_backup = {"keep_size_mb": 1000}
+    data_backup = {
+        "keep_size_mb": 1000,
+        "prune_unused_images": True,
+        "prune_images_used_until_h": 48,
+    }
     comms = {"sherpa_heartbeat_interval": 60}
     rq = {"default_job_timeout": 15, "generic_handler_job_timeout": 10}
     stations = {"dispatch_timeout": 10}
