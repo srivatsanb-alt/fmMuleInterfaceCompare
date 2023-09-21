@@ -45,13 +45,13 @@ else {
    if [ "$IS_DIRTY" = "dirty" ]; then
    {
      echo "Code is dirty, cannot upload to master fm, exiting"
-     exit
    }
    else {
       upload_to_sanjaya_interactive
       tar_images
    }
    fi
+   upload_to_sanjaya_interactive
 
 }
 fi

@@ -73,7 +73,7 @@ def get_mfm_url(mfm_context: MFMContext, endpoint, query=""):
             mfm_url, "api/v1/master_fm/fm_client/get_available_updates", str(query)
         ),
         "download_file": os.path.join(mfm_url, "api/static/downloads", str(query)),
-        "get_basic_auth": os.path.join(mfm_url, "api/v1/get_basic_auth"),
+        "get_basic_auth": os.path.join(mfm_url, "api/v1/master_fm/user/get_basic_auth"),
     }
     return fm_endpoints.get(endpoint, None)
 
@@ -90,7 +90,14 @@ def check_response(response):
 
 
 def send_http_req_to_mfm(
-    mfm_context, endpoint, req_type, req_json=None, files=None, params=None, query=""
+    mfm_context,
+    endpoint,
+    req_type,
+    req_json=None,
+    files=None,
+    params=None,
+    query="",
+    auth=None,
 ):
     response_json = None
     url = get_mfm_url(mfm_context, endpoint, query)
@@ -107,6 +114,9 @@ def send_http_req_to_mfm(
 
     if params:
         kwargs.update({"params": params})
+
+    if auth:
+        kwargs.update({"auth": auth})
 
     if mfm_context.http_scheme == "https":
         kwargs.update({"verify": mfm_context.cert_file})

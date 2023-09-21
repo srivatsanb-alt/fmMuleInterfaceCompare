@@ -8,7 +8,7 @@ HTTP_SCHEME="https"
 read -p "Sanjaya Username: " master_fm_username
 read -p "Sanjaya Password: " master_fm_password
 read -p "FM version: " FM_VERSION
-read -p "Is this build in production: " prod_release
+read -p "Is this build in production? (y/n) " prod_release
 
 prod="non_prod"
 if [ "$prod_release" = "y" ]; then
@@ -20,8 +20,8 @@ fi
 resp=$(curl -X "POST" -H "Content-Type: application/json" -d '{"name": "'$master_fm_username'", "password": "'$master_fm_password'"}' https://sanjaya.atimotors.com/api/v1/master_fm/user/login)
 
 access_token=$(echo $resp | jq .access_token | sed -e 's/^"//' -e 's/"$//')
-registry_username=$(echo $resp | jq .static_files_auth.username | sed -e 's/^"//' -e 's/"$//')
-registry_password=$(echo $resp | jq .static_files_auth.password | sed -e 's/^"//' -e 's/"$//')
+registry_username=$(echo $resp | jq .registry_auth.username | sed -e 's/^"//' -e 's/"$//')
+registry_password=$(echo $resp | jq .registry_auth.password | sed -e 's/^"//' -e 's/"$//')
 static_file_auth_username=$(echo $resp | jq .static_files_auth.username | sed -e 's/^"//' -e 's/"$//')
 static_file_auth_password=$(echo $resp | jq .static_files_auth.password | sed -e 's/^"//' -e 's/"$//')
 

@@ -6,7 +6,7 @@ upload_to_sanjaya_interactive() {
       read -p "is this a production release? (y/n) - " prod_release
       read -p "Sanjaya Username: " master_fm_username
       read -p "Sanjaya Password: " master_fm_password
-      upload_to_sanjaya prod_release master_fm_username master_fm_password
+      upload_to_sanjaya $prod_release $master_fm_username $master_fm_password
    }
    fi
 }
@@ -20,9 +20,10 @@ upload_to_sanjaya()
    MASTER_FM_PORT="443"
    HTTP_SCHEME="https"
    resp=$(curl -X "POST" -H "Content-Type: application/json" -d '{"name": "'$master_fm_username'", "password": "'$master_fm_password'"}' https://sanjaya.atimotors.com/api/v1/master_fm/user/login)
+   echo $resp
    access_token=$(echo $resp | jq .access_token | sed -e 's/^"//' -e 's/"$//')
-   registry_username=$(echo $resp | jq .static_files_auth.username | sed -e 's/^"//' -e 's/"$//')
-   registry_password=$(echo $resp | jq .static_files_auth.password | sed -e 's/^"//' -e 's/"$//')
+   registry_username=$(echo $resp | jq .registry_auth.username | sed -e 's/^"//' -e 's/"$//')
+   registry_password=$(echo $resp | jq .registry_auth.password | sed -e 's/^"//' -e 's/"$//')
    prod=false
    if [ "$prod_release" = "y" ]; then
    {
@@ -33,9 +34,9 @@ upload_to_sanjaya()
    echo "Registry username: $registry_username"
    echo "Registry password: $registry_password"
    echo "Software was last updated at: $LAST_COMMIT_DT" > static/release.dt
-   echo "Images were created at: $(date)" >> static/release.dt
-   curl -H "X-User-Token: $access_token" -d @static/release.dt $HTTP_SCHEME://$MASTER_FM_IP:$MASTER_FM_PORT/upload/fm/$FM_VERSION/$prod
-   curl -H "X-User-Token: $access_token" -d @static/docker_compose_v$FM_VERSION.yml $HTTP_SCHEME://$MASTER_FM_IP:$MASTER_FM_PORT/upload/fm/$FM_VERSION/$prod
+   echo "Images were created at: $(date)" >> static/release.dt 
+   curl -H "X-User-Token: $access_token" -F "uploaded_file=@static/docker_compose_v$FM_VERSION.yml" $HTTP_SCHEME://$MASTER_FM_IP:$MASTER_FM_PORT/api/v1/master_fm/fm_client/upload/fm/$FM_VERSION/$prod
+   curl -H "X-User-Token: $access_token" -F "uploaded_file=@static/release.dt" $HTTP_SCHEME://$MASTER_FM_IP:$MASTER_FM_PORT/api/v1/master_fm/fm_client/upload/fm/$FM_VERSION/$prod
    rm static/release.dt
    docker login --username $registry_username --password $registry_password $MASTER_FM_IP:$MASTER_FM_PORT
    docker-compose -f static/docker_compose_v$FM_VERSION.yml config | grep image | awk '{print $2}' | xargs -I % docker tag % "$MASTER_FM_IP:$MASTER_FM_PORT/"%

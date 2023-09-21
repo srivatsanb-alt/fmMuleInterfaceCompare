@@ -3,6 +3,7 @@ import aioredis
 import json
 import asyncio
 from fastapi import APIRouter, Depends
+from requests.auth import HTTPBasicAuth
 
 # ati code imports
 import master_fm_comms.mfm_utils as mu
@@ -23,17 +24,28 @@ async def get_available_updates(
 ):
 
     mfm_context = mu.get_mfm_context()
+    status_code, available_updates_json = mu.send_http_req_to_mfm(
+        mfm_context=mfm_context,
+        endpoint="get_available_updates",
+        req_type="get",
+        query="fm",
+    )
+    if status_code != 200:
+        dpd.raise_error("Unable to fetch info on available_updates")
 
-    # status_code, available_updates_json = mu.send_http_req_to_mfm(
-    #     mfm_context=mfm_context,
-    #     endpoint="get_available_updates",
-    #     req_type="get",
-    #     query="fm",
-    # )
-    # if status_code != 200:
-    #     dpd.raise_error("Unable to fetch info on available_updates")
+    status_code, auth_json = mu.send_http_req_to_mfm(
+        mfm_context=mfm_context,
+        endpoint="get_basic_auth",
+        req_type="get",
+    )
+    if status_code != 200:
+        dpd.raise_error(
+            f"Unable access master_fm: {mfm_context.mfm_ip}:{mfm_context.mfm_port}"
+        )
+    static_files_auth_username = auth_json["static_files_auth"]["username"]
+    static_files_auth_password = auth_json["static_files_auth"]["password"]
+    auth = HTTPBasicAuth(static_files_auth_username, static_files_auth_password)
 
-    available_updates_json = {"available_updates": ["fm_dev"]}
     available_updates = {}
     for available_update_version in available_updates_json["available_updates"]:
         available_updates.update({available_update_version: {}})
@@ -41,25 +53,25 @@ async def get_available_updates(
             mfm_context=mfm_context,
             endpoint="download_file",
             req_type="get",
-            query=f"fm/{available_update_version}/release.notes",
+            query=f"prod/fm/{available_update_version}/release.notes",
+            auth=auth,
         )
         if status_code == 200:
             temp = None
             if release_notes is not None:
                 temp = release_notes.decode()
-            available_updates.update(
-                {available_update_version.update({"release_notes": temp})}
-            )
+            available_updates[available_update_version].update({"release_notes": temp})
 
         status_code, release_dt = mu.send_http_req_to_mfm(
             mfm_context=mfm_context,
             endpoint="download_file",
             req_type="get",
-            query=f"fm/{available_update_version}/release.dt",
+            query=f"prod/fm/{available_update_version}/release.dt",
+            auth=auth,
         )
         if status_code == 200:
-            available_updates.update(
-                {available_update_version.update({"release_dt": release_dt.decode()})}
+            available_updates[available_update_version].update(
+                {"release_dt": release_dt.decode()}
             )
 
     return available_updates
@@ -97,20 +109,15 @@ async def update_fm(
         req_type="get",
     )
 
-    # if status_code != 200:
-    #    dpd.raise_error(
-    #        f"Unable access master_fm: {mfm_context.mfm_ip}:{mfm_context.mfm_port}"
-    #    )
+    if status_code != 200:
+        dpd.raise_error(
+            f"Unable access master_fm: {mfm_context.mfm_ip}:{mfm_context.mfm_port}"
+        )
 
-    # registry_username = auth_json["registry_auth"]["username"]
-    # registry_username = auth_json["registry_auth"]["password"]
-    # static_files_auth_username = auth_json["static_files_auth"]["password"]
-    # static_files_auth_password = auth_json["static_files_auth"]["password"]
-
-    registry_username = "ati_static_files"
-    registry_password = "atiStatic112"
-    static_files_auth_username = "a"
-    static_files_auth_password = "b"
+    registry_username = auth_json["registry_auth"]["username"]
+    registry_password = auth_json["registry_auth"]["password"]
+    static_files_auth_username = auth_json["static_files_auth"]["username"]
+    static_files_auth_password = auth_json["static_files_auth"]["password"]
     prod = "prod"
 
     os.system("rm /app/static/fm_update_progress.log")
