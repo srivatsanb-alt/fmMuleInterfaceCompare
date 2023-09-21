@@ -419,7 +419,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH Numerator AS (\n  SELECT\n    sherpa_name,\n    SUM(\n      EXTRACT(\n        EPOCH\n        FROM\n          (end_time - start_time)\n      )\n    ) as trip_time\n  FROM\n    trips\n  WHERE\n    start_time >= CAST($__timeFrom() AS timestamp) \n    AND end_time <= CAST($__timeTo() AS timestamp)\n    AND fleet_name = '$fleetvar'\n  GROUP BY\n    sherpa_name\n),\nDenominator AS (\n  SELECT\n    t.sherpa_name,\n    (\n      SELECT MAX(t2.end_time)\n      FROM trips t2\n      WHERE t2.fleet_name = '$fleetvar'\n        AND t2.start_time >= CAST($__timeFrom() AS timestamp) \n        AND t2.end_time <= CAST($__timeTo() AS timestamp)\n        AND t2.sherpa_name = t.sherpa_name\n    ) - (\n      SELECT MIN(t3.start_time)\n      FROM trips t3\n      WHERE t3.fleet_name = '$fleetvar'\n        AND t3.start_time >= CAST($__timeFrom() AS timestamp)\n        AND t3.end_time <= CAST($__timeTo() AS timestamp) \n        AND t3.sherpa_name = t.sherpa_name\n    ) AS total_denominator\n  FROM trips t\n  WHERE t.fleet_name = '$fleetvar'\n    AND t.start_time >= CAST($__timeFrom() AS timestamp)\n    AND t.end_time <= CAST($__timeTo() AS timestamp)\n  GROUP BY t.sherpa_name\n)\nSELECT\n  n.sherpa_name AS Sherpa,\n  ROUND(n.trip_time / EXTRACT(EPOCH FROM d.total_denominator) * 100) AS Utilization\nFROM\n  Numerator n\n  JOIN Denominator d ON n.sherpa_name = d.sherpa_name\nWHERE\n  n.trip_time > 0;",
+          "rawSql": "WITH Numerator AS (\n  SELECT\n    sherpa_name,\n    SUM(\n      EXTRACT(\n        EPOCH\n        FROM\n          (end_time - start_time)\n      )\n    ) as trip_time\n  FROM\n    trips\n  WHERE\n    start_time >= CAST($__timeFrom() AS timestamp) \n    AND end_time <= CAST($__timeTo() AS timestamp) \n    AND fleet_name = '$fleetvar'\n    AND status = 'succeeded'\n    AND sherpa_name is NOT NULL\n  GROUP BY\n    sherpa_name\n),\nDenominator AS (\n  SELECT\n    SUM(\n      EXTRACT(\n        EPOCH\n        FROM\n          (MAX_end_time - MIN_start_time)\n      )\n    ) AS total_denominator\n  FROM\n    (\n      SELECT\n        MAX(end_time) AS MAX_end_time,\n        MIN(start_time) AS MIN_start_time\n      FROM\n        trips\n      WHERE\n        start_time >= CAST($__timeFrom() AS timestamp)\n        AND end_time <= CAST($__timeTo() AS timestamp)\n        AND fleet_name = '$fleetvar'\n        AND status = 'succeeded'\n        AND sherpa_name is NOT NULL\n      group by end_time::date\n    ) AS subquery\n  \n)\nSELECT\n  SUBSTRING(n.sherpa_name, 1, 6) AS Sherpa,\n  ROUND(n.trip_time / d.total_denominator * 100) AS Utilization\nFROM\n  Numerator n\n  CROSS JOIN Denominator d\nWHERE\n  n.trip_time > 0;\n",
           "refId": "A",
           "sql": {
             "columns": [
@@ -591,7 +591,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               }
             ]
           },
@@ -696,7 +697,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -770,7 +772,7 @@
       "type": "barchart"
     }
   ],
-  "refresh": "",
+  "refresh": "30s",
   "schemaVersion": 38,
   "style": "dark",
   "tags": [],
