@@ -3,6 +3,7 @@ import redis
 import json
 import os
 import logging
+import pytz
 from fastapi import Depends, APIRouter, File, UploadFile
 from sqlalchemy.orm.attributes import flag_modified
 
@@ -47,7 +48,9 @@ async def basic_info(sherpa_name: str = Depends(dpd.get_sherpa)):
             "customer": sherpa.fleet.customer,
             "site": sherpa.fleet.site,
             "location": sherpa.fleet.location,
-            "fm_time": (datetime.now()).strftime("%A, %d %b %Y %X %Z"),
+            "fm_time": (datetime.now(pytz.timezone(os.getenv("PGTZ")))).strftime(
+                "%A, %d %b %Y %X %Z"
+            ),
         }
 
     return response
