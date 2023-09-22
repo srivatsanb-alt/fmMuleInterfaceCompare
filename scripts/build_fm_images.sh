@@ -1,17 +1,18 @@
 #!/bin/bash
 set -e
 GIT_COMMIT="$(git rev-parse HEAD)"
+GIT_DES=$(git describe --all)
 GIT_TAG=$(git describe --all | awk '{split($0,a,"/"); print a[2];}')
 GIT_DES=$(git describe --all)
 IS_DIRTY="$(git diff --quiet || echo 'dirty')"
 LAST_COMMIT_DT="$(git log -1 --format=%cd)"
-FM_IMAGE_INFO="FM image built on $USER@$(hostname) branch $GIT_TAG $GIT_COMMIT (tags $GIT_TAG) IS_DIRTY $IS_DIRTY $LAST_COMMIT_DT)"
-FM_VERSION=$GIT_TAG
-GIT_TAGGED="False"
 if [[ $git_des =~ "tags/" ]] ; then
+   FM_VERSION=$GIT_TAG
    GIT_TAGGED="True"
+else
+   FM_VERSION=$(git rev-parse --abbrev-ref HEAD)
 fi
-
+FM_IMAGE_INFO="FM image built on $USER@$(hostname), FM_VERSION: $FM_VERSION (des: $GIT_DES $IS_DIRTY) $LAST_COMMIT_DT)"
 
 build_base_images_interactive()
 {
