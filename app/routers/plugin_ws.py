@@ -3,6 +3,7 @@ import asyncio
 import logging
 import logging.config
 import os
+import json
 import aioredis
 from fastapi import APIRouter, Depends, WebSocket, status, WebSocketDisconnect
 
@@ -54,9 +55,15 @@ async def plugin_comms_ws(
 
 
 async def reader(websocket, x_real_ip):
+    redis = aioredis.Redis.from_url(
+        os.getenv("FM_REDIS_URI"), max_connections=10, decode_responses=True
+    )
     while True:
         try:
-            _ = await websocket.receive_json()
+            msg = await websocket.receive_json()
+            if msg.get("type") == "plugin_init":
+                await redis.set("plugin_init", json.dumps(True))
+
         except WebSocketDisconnect as e:
             logger.info(f"websocket connection(plugin) disconnected client_ip: {x_real_ip}")
             raise e

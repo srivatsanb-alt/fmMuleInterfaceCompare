@@ -54,4 +54,7 @@ else {
 }
 fi
 
+echo "FM Version: $FM_VERSION"
+echo "Created images with the tag $FM_VERSION"
+
 
