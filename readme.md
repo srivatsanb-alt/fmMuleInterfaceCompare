@@ -50,12 +50,17 @@ mkdir static
 
 1. Go to the static directory where docker_compose_v<fm_version>.yml was copied 
 
-2. Run the following command 
+2. Run the following command to get all the ips of the server
+```
+ifconfig | grep inet | awk '{print $2}' | egrep '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+'
+```
+
+3. Run the following command 
 ```
 docker-compose -p fm -f docker_compose_v<fm_version>.yml up
 ```
 
-3. Create ssl certs (This has to be done only for the first time). ip_1, ip_2...ip_n etc are ips of the FM server. ifconfig should be run on the host machine to get the ips.
+4. Create ssl certs (This has to be done only for the first time). ip_1, ip_2...ip_n etc are ips of the FM server which were obtained in step 2
 ```
 docker exec -it fleet_manager bash 
 create_certs "127.0.0.1,<ip_1>,<ip2>,...,<ip_n>"

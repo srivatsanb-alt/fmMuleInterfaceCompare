@@ -1,5 +1,4 @@
 import os
-import subprocess
 import aioredis
 import json
 import asyncio

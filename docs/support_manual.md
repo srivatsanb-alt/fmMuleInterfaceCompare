@@ -19,6 +19,7 @@
 16. [Update FM with master FM credentials](#update-fm-with-master-fm-credentials)
 17. [Setup optimal dispatch config](#setup-optimal-dispatch-config)
 18. [Clean up disk space in FM server](#clean-up-disk-space-in-fm-server)
+19. [Create self signed certs for FM](#create-self-signed-certs-for-fm)
 
 ## Setup sherpas ##
 
@@ -345,3 +346,16 @@ FM version: ### Enter fm version like fm_dev, FM_v3.2 ###
 3. Edit keep_size_mb, FM will try to restrict the data inside static/data_backup folder to keep_size_mb only. The contents in the data backup folder will sorted and deleted based on their time of creation, older data will be deleted first. The default is set to 1000MB
 
 4. Use can also set prune_ununsed_images to true or false based on whether you want to clean up old docker images. Set prune_images_used_until_h accordingly, all the images that were unused in the last prune_images_used_until_h hours will be deleted.
+
+## Create self signed certs for FM ##
+**This step needs to be done only if the certs were not setup already**
+1. Run the following command to get all the ips of the server
+```
+ifconfig | grep inet | awk '{print $2}' | egrep '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+'
+```
+
+2. Create ssl certs (This has to be done only for the first time). ip_1, ip_2...ip_n etc are ips of the FM server obtained in the previous step. 
+```
+docker exec -it fleet_manager bash 
+create_certs "127.0.0.1,<ip_1>,<ip2>,...,<ip_n>"
+```
