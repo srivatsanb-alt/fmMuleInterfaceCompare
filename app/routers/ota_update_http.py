@@ -1,4 +1,5 @@
 import os
+import subprocess
 import aioredis
 import json
 import asyncio
@@ -24,6 +25,7 @@ async def get_available_updates(
 ):
 
     mfm_context = mu.get_mfm_context()
+
     status_code, available_updates_json = mu.send_http_req_to_mfm(
         mfm_context=mfm_context,
         endpoint="get_available_updates",
@@ -82,19 +84,19 @@ async def update_fm(
     fm_version: str,
     user_name=Depends(dpd.get_user_from_header),
 ):
-
     response = {}
     redis_conn = aioredis.Redis.from_url(
         os.getenv("FM_REDIS_URI"), max_connections=10, decode_responses=True
     )
 
-    update_wait_time_ms = int(300e3)
+    update_wait_time_ms = int(180e3)
     update_started = await redis_conn.get("update_started")
 
     if update_started is None:
         await redis_conn.setex("update_started", update_wait_time_ms, json.dumps(True))
         await redis_conn.set("updating_to", fm_version)
         await redis_conn.set("update_done", json.dumps(False))
+
     else:
         updating_to = await redis_conn.get("updating_to")
         dpd.raise_error(
@@ -120,32 +122,21 @@ async def update_fm(
     static_files_auth_password = auth_json["static_files_auth"]["password"]
     prod = "prod"
 
-    os.system("rm /app/static/fm_update_progress.log")
+    command = [
+        f"bash /app/scripts/self_updater.sh {mfm_context.server_ip} {mfm_context.server_port} {mfm_context.http_scheme} {fm_version} {prod} {registry_username} {registry_password} {static_files_auth_username} {static_files_auth_password} > /app/static/fm_update_progress.log 2>&1"
+    ]
 
-    return_code = os.system(
-        f"cd /app && bash scripts/self_updater.sh \
-        {mfm_context.server_ip} {mfm_context.server_port} \
-        {mfm_context.http_scheme} {fm_version} \
-        {prod} \
-        {registry_username} {registry_password} \
-        {static_files_auth_username} \
-        {static_files_auth_password} \
-        > /app/static/fm_update_progress.log 2>&1 &"
-    )
-
-    if return_code != 0:
-        dpd.raise_error("Unable to start update process")
-
-    update_done = False
-    while not update_done:
-        update_done = await redis_conn.get("update_done")
-        if update_done is not None:
-            update_done = json.loads(update_done)
-        await asyncio.sleep(5)
+    update_proc = await asyncio.create_subprocess_shell(*command)
+    await update_proc.wait()
 
     await redis_conn.delete("update_started")
     await redis_conn.delete("updating_to")
-    await redis_conn.delete("update_done")
+
+    update_done = await redis_conn.get("update_done")
+    update_done = json.loads(update_done)
+    if update_done is False:
+        await redis_conn.delete("update_done")
+        dpd.raise_error(f"Unable to complete the update process")
 
     os.system("rm /app/static/fm_update_progress.log")
 
