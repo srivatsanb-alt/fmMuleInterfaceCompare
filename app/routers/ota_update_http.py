@@ -137,6 +137,6 @@ async def update_fm(
         await redis_conn.delete("update_done")
         dpd.raise_error(f"Unable to complete the update process")
 
-    os.system("rm /app/static/fm_update_progress.log")
+    # os.system("rm /app/static/fm_update_progress.log")
 
     return response
