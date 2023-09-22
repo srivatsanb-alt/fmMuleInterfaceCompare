@@ -35,8 +35,20 @@ upload_to_sanjaya()
    echo "Registry password: $registry_password"
    echo "Software was last updated at: $LAST_COMMIT_DT" > static/release.dt
    echo "Images were created at: $(date)" >> static/release.dt 
-   curl -H "X-User-Token: $access_token" -F "uploaded_file=@static/docker_compose_v$FM_VERSION.yml" $HTTP_SCHEME://$MASTER_FM_IP:$MASTER_FM_PORT/api/v1/master_fm/fm_client/upload/fm/$FM_VERSION/$prod
-   curl -H "X-User-Token: $access_token" -F "uploaded_file=@static/release.dt" $HTTP_SCHEME://$MASTER_FM_IP:$MASTER_FM_PORT/api/v1/master_fm/fm_client/upload/fm/$FM_VERSION/$prod
+   upload_dc_file=$(curl -o /dev/null -w "%{http_code}" -H "X-User-Token: $access_token" -F "uploaded_file=@static/docker_compose_v$FM_VERSION.yml" $HTTP_SCHEME://$MASTER_FM_IP:$MASTER_FM_PORT/api/v1/master_fm/fm_client/upload/fm/$FM_VERSION/$prod)
+   if [ $upload_dc_file != 200 ]; then 
+   {
+      echo "Unable to upload docker compose file"
+      exit 1
+   }
+   fi
+   upload_release_dt=$(curl -o /dev/null -w "%{http_code}" -H "X-User-Token: $access_token" -F "uploaded_file=@static/release.dt" $HTTP_SCHEME://$MASTER_FM_IP:$MASTER_FM_PORT/api/v1/master_fm/fm_client/upload/fm/$FM_VERSION/$prod)
+   if [ $upload_release_dt != 200 ]; then
+   {
+      echo "Unable to upload release.dt file"
+      exit 1
+   }
+   fi   
    rm static/release.dt
    docker login --username $registry_username --password $registry_password $MASTER_FM_IP:$MASTER_FM_PORT
    docker-compose -f static/docker_compose_v$FM_VERSION.yml config | grep image | awk '{print $2}' | xargs -I % docker tag % "$MASTER_FM_IP:$MASTER_FM_PORT/"%
