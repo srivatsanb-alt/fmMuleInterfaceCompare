@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e 
-prod_release=$1
-master_fm_username=$2
+prod_release=$1 #y/n
+master_fm_username=$2 
 master_fm_password=$3
 
 source scripts/build_fm_images.sh
