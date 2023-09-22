@@ -332,6 +332,7 @@ docker rm <container_name>
 Sanjaya Username: ### Enter master fm username ###
 Sanjaya Password: ### Enter master fm password ###
 FM version: ### Enter fm version like fm_dev, FM_v3.2 ###
+Prod_release: ### Enter y if the version was git released else enter n ###
 ```
 
 3. [Restart FM](#restart-fm)
