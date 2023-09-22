@@ -51,8 +51,6 @@ else {
       tar_images
    }
    fi
-   upload_to_sanjaya_interactive
-
 }
 fi
 
