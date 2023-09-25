@@ -7,7 +7,6 @@ import subprocess
 import redis
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm.attributes import flag_modified
-from fastapi.responses import FileResponse
 
 # ati code imports
 from models.mongo_client import FMMongo
@@ -309,7 +308,8 @@ async def create_generic_alerts(
         dpd.raise_error("Unknown requester", 401)
 
     with DBSession() as dbsession:
-        dbsession.add_notification(
+        utils_util.maybe_add_notification(
+            dbsession,
             [],
             alert_description,
             mm.NotificationLevels.alert,
