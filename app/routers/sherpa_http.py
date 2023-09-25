@@ -208,7 +208,7 @@ async def sherpa_alerts(
             dpd.raise_error("Invalid alert msg")
         utils_util.maybe_add_notification(
             dbsession,
-            [sherpa_obj.name, sherpa_obj.fleet.name],
+            [sherpa_obj.name, sherpa_obj.fleet.name, sherpa_obj.fleet.customer],
             alert,
             mm.NotificationLevels.alert,
             module,
