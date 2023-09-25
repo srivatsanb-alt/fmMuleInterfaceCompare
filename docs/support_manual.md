@@ -20,6 +20,8 @@
 17. [Setup optimal dispatch config](#setup-optimal-dispatch-config)
 18. [Clean up disk space in FM server](#clean-up-disk-space-in-fm-server)
 19. [Create self signed certs for FM](#create-self-signed-certs-for-fm)
+20. [Setup mule router config in FM](#setup-mule-router-config-in-fm)
+21. [Run FM simulator]
 
 ## Setup sherpas ##
 
@@ -360,3 +362,51 @@ ifconfig | grep inet | awk '{print $2}' | egrep '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+'
 docker exec -it fleet_manager bash 
 create_certs "127.0.0.1,<ip_1>,<ip2>,...,<ip_n>"
 ```
+
+## Setup mule router config in FM ## 
+
+**This config is only for the FM router module(optimal dispatch), changing this will not change anything in the sherpas**
+
+1. Use the config editor, select the database fm_config, select the collection mule_config, click on the document to edit it.
+
+2. By default mule router on the FM uses config parameters from "/app/mule/std_configs/tug.toml", but if the tugs are not being used, then the parent in mule_config can be changed accordingly. Make sure you specfiy a valid file in the parent. 
+For eg, you make the parent point to lite.toml
+```
+parent="/app/mule/std_configs/lite.toml"
+```
+
+3. This is similar to mule config.toml, you can add config parameters like station distance_threshold if the deployment demands it. 
+
+## Run FM simulator ## 
+
+1. Use the config editor, select the database fm_config, select the collection simulator, click on the document to edit it.
+
+2. To start the simulator, set simulate to true.
+```
+simulate: true
+```
+
+3. Set visa handling to true if your simulation study needs it. The FM simulator simulates only the transit visas. So you would not be able to do a full fledged visa simulation with FM simulator.
+```
+visa_handling: true
+```
+
+3. You can also make fm simulator to book trips automatically. You can add the routes like shown below. 
+
+The route names "route1", "route2" don't matter but list of the station names that are given needs to be valid. You can also book scheduled trips, "route1" is defined as a scheduled trip 
+
+```
+book_trips: true,
+routes: {
+    "route1": [["Station A", "Station B"], ["10" # trip freq #, "2023-05-31 15:00:00" #start_time#, "2023-05-31 16:00:00" # end time #]]
+    "route2": [["Station B", "Station A"], ["-1", "", ""]]
+}
+```
+
+4. You can also make the sherpas at a particular station by setting the parameter initialize_sherpas_at.
+```
+initialize_sherpas_at: { "sample_sherpa_1" :"Station A", sample_sherpa_2:"Station B"}
+```
+
+5. [Restart FM](#restart-fm) for the changes to reflect or take effect
+
