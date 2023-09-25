@@ -214,6 +214,15 @@ activate_plugin: true
 
 4. [Flash summon buttons](#flash-summon-buttons)
 
+5. What different colurs in summon button LED mean?
+```
+ "blinking red" - Not connected to FM
+ "white" - Connected to FM but no unfinished trips
+ "rotating yellow" - Trip booked on button press, waiting for the trip to start
+ "blinking green" - Waiting at station(Trip enroute)
+ "rotating green" - Trip enroute
+```
+
 ## Flash summon buttons ##
 
 1. Connect summon button to your laptop via USB to flash firmware
