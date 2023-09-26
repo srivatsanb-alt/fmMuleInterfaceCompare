@@ -571,7 +571,22 @@ class ExclusionZoneUtils:
             zone_ids_to_add = [f"{gate_name}_lane", f"{gate_name}_station"]
             for zone_id in zone_ids_to_add:
                 exclusivity = True
-                if zone_id.endswith("_lane"):
+
+                """
+                1. By default all stations are exclusive
+
+                2. Transit gates (linked or not linked to a station)
+                and has exclusive_parking set to True in gate details will be
+                exclusive
+
+                3. For transit gates(not linked to a station) exclusive_parking
+                would mean exclusive access for transit(special exclusive zone)
+                """
+
+                if (
+                    zone_id.endswith("_lane")
+                    and gate_details.get("exclusive_parking", True) is False
+                ):
                     exclusivity = False
 
                 ezone: vm.ExclusionZone = (

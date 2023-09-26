@@ -38,10 +38,8 @@ class PatternEnum(str, Enum):
 
 class VisaType(str, Enum):
     PARKING = "parking"
-    EXCLUSIVE_PARKING = "exclusive_parking"
     UNPARKING = "unparking"
     TRANSIT = "transit"
-    SEZ = "sez"
 
 
 class AccessType(str, Enum):
