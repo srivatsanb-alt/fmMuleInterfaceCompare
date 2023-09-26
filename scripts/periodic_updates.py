@@ -93,8 +93,11 @@ def get_all_alert_notifications(dbsession):
     )
     alert_msg = {}
     alert_msg["type"] = mm.NotificationLevels.alert
+    alert_msg["notification_ids"] = []
+
     for alert in all_alerts:
         alert_msg.update({alert.id: get_table_as_dict(mm.Notifications, alert)})
+        alert_msg["notification_ids"].append(alert.id)
 
     return alert_msg
 
@@ -106,10 +109,10 @@ def send_fleet_level_notifications(dbsession, fleet_name):
     action_requests = {
         "type": mm.NotificationLevels.action_request,
         "fleet_name": fleet_name,
+        "notification_ids": [],
     }
     while True:
         module_level_info = {}
-        module_level_info["type"] = "non_alert_notifications"
         module_level_info["fleet_name"] = fleet_name
         notifications = []
         try:
@@ -122,14 +125,17 @@ def send_fleet_level_notifications(dbsession, fleet_name):
                 action_requests.update(
                     {notification.id: get_table_as_dict(mm.Notifications, notification)}
                 )
+                action_requests["notification_ids"].append(notification.id)
+
         else:
-            module_level_info["log_level"] = log_level
+            module_level_info["type"] = log_level
             module_level_info["module"] = module
+            module_level_info["notification_ids"] = []
             for notification in notifications:
                 module_level_info.update(
                     {notification.id: get_table_as_dict(mm.Notifications, notification)}
                 )
-
+                module_level_info["notification_ids"].append(notification.id)
             send_notification(module_level_info)
 
     send_notification(action_requests)
