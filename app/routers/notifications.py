@@ -164,16 +164,16 @@ async def writer(websocket, token, x_real_ip):
                 notification = {}
                 data = ast.literal_eval(message["data"])
                 for id, details in data.items():
-                    # to handles key-val pair like {"type": "notifications"} in the notification msg
-                    if not isinstance(details, dict):
-                        notification.update({id: details})
 
-                    # assuming that all the dicts in the message correspond a a notification
-                    elif token not in details.get("cleared_by", []):
+                    # if notification, have to check cleared_by, send or not send that notification
+                    if id in data.get("notification_ids", []):
+                        if token not in details.get("cleared_by", []):
+                            notification.update({id: details})
+                            num_actions = len(notification[id]["cleared_by"])
+                            notification[id]["num_actions"] = num_actions
+                            del notification[id]["cleared_by"]
+                    else:
                         notification.update({id: details})
-                        num_actions = len(notification[id]["cleared_by"])
-                        notification[id]["num_actions"] = num_actions
-                        del notification[id]["cleared_by"]
 
                 await websocket.send_json(notification)
             except Exception as e:

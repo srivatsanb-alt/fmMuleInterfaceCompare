@@ -23,7 +23,6 @@ class NotificationLevels:
     alert = "alert"
     stale_alert_or_action = "stale_alert_or_action"
     action_request = "action_request"
-    stale_alert_or_action = "stale_alert_or_action"
 
 
 NotificationTimeout = {

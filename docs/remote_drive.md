@@ -14,12 +14,12 @@ Sherpa share a video stream(camera feed), data stream(filtered lidar point cloud
 
 ## Architecture ##
 
-![Remote drive architecture](/home/srikarthikeyan/Desktop/remote_drive_architecture.png)
+![Remote drive architecture](remote_drive_architecture.png)
 
 
 ## Remote drive dashboard ## 
 
-![Remote drive Dashboard](/home/srikarthikeyan/Downloads/remote_drive_screen.png)
+![Remote drive Dashboard](remote_drive_screen.png)
 
 
 

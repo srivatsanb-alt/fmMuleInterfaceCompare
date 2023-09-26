@@ -189,7 +189,13 @@ async def process_req_with_response(queue, req, user: str):
         if status == "finished":
             response = job.result
             if response is None:
-                logging.getLogger().warning(f"Returning a null response, req: {req}")
+                job = Job.fetch(job.id, connection=redis_conn)
+                job.refresh()
+                new_response = job.result
+                logging.getLogger("fm_debug").warning(
+                    f"Got a null response from rq initially, req: {req}, new_response after refesh {new_response}"
+                )
+                response = new_response
             break
 
         if status == "failed":

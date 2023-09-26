@@ -15,19 +15,19 @@ logging.config.dictConfig(lu.get_log_config_dict())
 
 def get_reqd_zone_types(visa_type):
     reqd_zone_types = []
+
     if visa_type == rqm.VisaType.TRANSIT:
         reqd_zone_types.append(vm.ZoneType.LANE)
 
     elif visa_type == rqm.VisaType.PARKING:
         reqd_zone_types.append(vm.ZoneType.STATION)
 
-    elif visa_type in {
-        rqm.VisaType.EXCLUSIVE_PARKING,
-        rqm.VisaType.UNPARKING,
-        rqm.VisaType.SEZ,
-    }:
+    elif visa_type == rqm.VisaType.UNPARKING:
         reqd_zone_types.append(vm.ZoneType.STATION)
         reqd_zone_types.append(vm.ZoneType.LANE)
+
+    else:
+        raise ValueError(f"{visa_type} not supported")
 
     return reqd_zone_types
 
@@ -143,6 +143,7 @@ def can_grant_visa(
     for reqd_zone_type in reqd_zone_types:
         for lz in all_lzs:
             lz_zone_name, lz_zone_type = split_zone_id(lz.zone_id)
+
             # linked gates always need exlusive access
             exclusive = True
 
