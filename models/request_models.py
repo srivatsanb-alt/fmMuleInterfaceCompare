@@ -395,15 +395,6 @@ class GiveRouteWPS(ClientReq):
     sherpa_name: str = None  # only for Live monitoring: Route from current pose to next destination, None for route-preview
 
 
-class DeleteVisaAssignments(ClientReq):
-    type: str = MessageType.DELETE_VISA_ASSIGNMENTS
-
-
-class DeleteOptimalDispatchAssignments(ClientReq):
-    type: str = MessageType.DELETE_OPTIMAL_DISPATCH_ASSIGNMENTS
-    fleet_name: str
-
-
 class GetFMIncidents(ClientReq):
     sherpa_name: str
     num_of_incidents: int = 1
