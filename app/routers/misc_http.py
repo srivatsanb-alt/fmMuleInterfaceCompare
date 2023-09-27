@@ -506,3 +506,17 @@ async def fm_health_stats(
     response["current_data_folder"] = os.path.join(fm_backup_path, current_data)
 
     return response
+
+
+@router.get("/get_downloads")
+async def get_downloads(
+    user_name=Depends(dpd.get_user_from_header),
+):
+    reponse = {}
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    reponse["downloads"] = os.listdir(os.getenv("FM_DOWNLOAD_DIR"))
+    reponse["url_prefix"] = "/api/downloads"
+
+    return reponse
