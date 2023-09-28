@@ -20,6 +20,7 @@
 17. [Setup optimal dispatch config](#setup-optimal-dispatch-config)
 18. [Clean up disk space in FM server](#clean-up-disk-space-in-fm-server)
 19. [Create self signed certs for FM](#create-self-signed-certs-for-fm)
+20. [Run FM simulator](#run-fm-simulator)
 
 ## Setup sherpas ##
 
@@ -147,8 +148,8 @@ where,
 ```markdown
 method: 'hungarian',
 prioritise_waiting_stations: true,
-eta_power_factor: 1.0,
-priority_power_factor: 0.0,
+eta_power_factor: 0.9999 ## 0.00001-0.99999,
+priority_power_factor: 0.0001 ## 0.00001-0.99999,
 max_trips_to_consider: 5,
 ```
 
@@ -157,8 +158,8 @@ max_trips_to_consider: 5,
 ```markdown
 method: 'hungarian',
 prioritise_waiting_stations: true,
-eta_power_factor: 0.0,
-priority_power_factor: 1.0,
+eta_power_factor: 0.0001 ## 0.00001-0.99999,
+priority_power_factor: 0.9999 ## 0.00001-0.99999,
 max_trips_to_consider: 5,
 ```
 
@@ -166,7 +167,7 @@ max_trips_to_consider: 5,
 
 6. For good takt time, eta power factor should be higher, for fair scheduling priority power factor should be set higher.
 
-7. To reduce computation load due to optimal dispatch, max_trips_to_consider can be set to 5. Optimal dispatch logic will be consider only the first <max_trips_to_consider> number of trips. Default is set to 5. This can be increaded to <number_of_sherpas per fleet> in case there are more than 5 sherpas
+7. To reduce computation load due to optimal dispatch, max_trips_to_consider has been set to 5. Optimal dispatch logic will be consider only the first <max_trips_to_consider> number of trips. Default is set to 5. This can be increaded to <number_of_sherpas per fleet> in case there are more than 5 sherpas
 ```markdown
 [optimal_dispatch]
 max_trips_to_consider=<number_of_sherpas per fleet>
@@ -279,7 +280,7 @@ docker-compose -p fm -f docker_compose_v<fm_version> up
 
 1. Check if there were any queue build ups. The output would show queue build ups if any.
 ```
-docker exec -it fle et_manager bash 
+docker exec -it fleet_manager bash 
 inspect
 rqi
 ```
@@ -331,7 +332,7 @@ docker rm <container_name>
 
 ## Update FM with master FM credentials ## 
 
-1.  Run the script mentioned below, . You would need login credentials to sanjaya.atimotors.com to complete the update
+1.  Run the script mentioned below, you would need login credentials to sanjaya.atimotors.com to complete the update
 ```
  bash ./scripts/update_with_master_fm_cred.sh
 ```
@@ -369,3 +370,39 @@ ifconfig | grep inet | awk '{print $2}' | egrep '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+'
 docker exec -it fleet_manager bash 
 create_certs "127.0.0.1,<ip_1>,<ip2>,...,<ip_n>"
 ```
+
+# RUN FM Simulator #
+
+**FM simulator creates proxy for all the sherpa, Make sure real/physical sherpas are not connected to FM, Config changes need FM restart to take effect**
+
+1. Use the config editor, select the database fm_config, select the collection simulator, click on the document to edit it
+
+2. Set simulate to true. 
+```
+simulate: true
+```
+
+3. If you need to simulate visa/traffic gates as well, set visa_handling to true. 
+**There is a caveat FM simulator would only request/release/simulate transit type visas, so full fledged visa simulation cannot be performed with fm simulator** 
+```
+visa_handling: true
+```
+
+4. You can configure pre-defined routes, set book_trips to true. This can be used if there are so many trips to be booked. Route names don't not matter, but the stations list(route) must be valid. In the example below route1 is a schedule trip, route2 is a normal trip. In the route1 definition, 10 - trip frequency(in seconds), the following timestamps represent start_time and end_time respectively.
+```
+book_trips: true,
+routes : {
+    "route1": [["Station A", "Station B"], ["10", "2023-05-31 15:00:00", "2023-05-31 16:00:00"]],
+    "route2": [["Station B", "Station A"], ["-1", "", ""]]
+}
+
+```
+
+5. By default, sherpas will start at random stations. But if you want sherpas to start at specific stations use initialize_sherpas_at parameter. Follow the below example. Make sure the key, value match sherpa name, station name exactly
+```
+initialize_sherpas_at: {
+    "sample_sherpa" : "Station A"
+}
+```
+
+6. [Restart FM](#restart-fm)
