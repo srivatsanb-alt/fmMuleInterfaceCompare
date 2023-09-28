@@ -390,6 +390,7 @@ visa_handling: true
 
 4. You can configure pre-defined routes, set book_trips to true. This can be used if there are so many trips to be booked. Route names don't not matter, but the stations list(route) must be valid. In the example below route1 is a schedule trip, route2 is a normal trip. In the route1 definition, 10 - trip frequency(in seconds), the following timestamps represent start_time and end_time respectively.
 ```
+### OPTIONAL ###
 book_trips: true,
 routes : {
     "route1": [["Station A", "Station B"], ["10", "2023-05-31 15:00:00", "2023-05-31 16:00:00"]],
@@ -400,6 +401,7 @@ routes : {
 
 5. By default, sherpas will start at random stations. But if you want sherpas to start at specific stations use initialize_sherpas_at parameter. Follow the below example. Make sure the key, value match sherpa name, station name exactly
 ```
+### OPTIONAL ###
 initialize_sherpas_at: {
     "sample_sherpa" : "Station A"
 }
