@@ -112,6 +112,17 @@ class DBSession:
     def get_all_visa_assignments(self):
         return self.session.query(vm.VisaAssignment).all()
 
+    def get_visa_rejects(self, reqd_ezones, sherpa_name):
+        visa_rejects = []
+        for ezone in set(reqd_ezones):
+            visa_rejects.append(
+                self.session.query(vm.VisaRejects)
+                .filter(vm.VisaRejects.sherpa_name == sherpa_name)
+                .filter(vm.VisaRejects.zone_id == ezone.zone_id)
+                .one_or_none()
+            )
+        return visa_rejects
+
     def get_all_fleets(self) -> List[fm.Fleet]:
         return self.session.query(fm.Fleet).all()
 

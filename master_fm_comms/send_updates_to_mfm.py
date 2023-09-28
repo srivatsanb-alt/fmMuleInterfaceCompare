@@ -2,6 +2,8 @@ import time
 import logging
 import os
 import datetime
+import redis
+import json
 from sqlalchemy import or_, func
 from sqlalchemy.orm.attributes import flag_modified
 
@@ -481,106 +483,115 @@ def upload_important_files(
     return success, temp_last_file_update_dt
 
 
-def send_mfm_updates():
-    logging.getLogger().info("starting send_updates_to_mfm script")
-
-    mfm_context: mu.MFMContext = mu.get_mfm_context()
-    if mfm_context.send_updates is False:
-        return
-
+def send_all_one_time_msg(mfm_context):
     update_fm_version_info(mfm_context)
     update_fleet_info(mfm_context)
     upload_map_files(mfm_context)
     update_sherpa_info(mfm_context)
 
+
+def send_mfm_updates():
+    logging.getLogger().info("starting send_updates_to_mfm script")
+    redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
+
+    mfm_context: mu.MFMContext = mu.get_mfm_context()
+    if mfm_context.send_updates is False:
+        return
+
+    send_all_one_time_msg(mfm_context)
     while True:
         try:
-            while True:
-                with DBSession() as dbsession:
-                    master_fm_data_upload_info = dbsession.get_master_data_upload_info()
-                    any_updates_sent = False
 
-                    # send trip update
-                    last_trip_update_dt: str = master_fm_data_upload_info.info.get(
-                        "last_trip_update_dt", None
-                    )
-                    last_trip_update_sent = update_trip_info(
-                        mfm_context, dbsession, last_trip_update_dt
-                    )
-                    if last_trip_update_sent:
-                        last_trip_update_dt = utils_util.dt_to_str(datetime.datetime.now())
-                        any_updates_sent = True
+            send_conf_to_mfm = redis_conn.get("send_conf_to_mfm")
+            if send_conf_to_mfm is not None:
+                send_conf_to_mfm = json.loads(send_conf_to_mfm)
+                if send_conf_to_mfm is True:
+                    send_all_one_time_msg(mfm_context)
+                    redis_conn.delete("send_conf_to_mfm")
 
-                    # send trip analytics update
-                    last_trip_analytics_update_dt: str = (
-                        master_fm_data_upload_info.info.get(
-                            "last_trip_analytics_update_dt", None
-                        )
-                    )
-                    last_trip_analytics_sent = update_trip_analytics(
-                        mfm_context, dbsession, last_trip_analytics_update_dt
-                    )
-                    if last_trip_analytics_sent:
-                        last_trip_analytics_update_dt = utils_util.dt_to_str(
-                            datetime.datetime.now()
-                        )
-                        any_updates_sent = True
+            with DBSession() as dbsession:
+                master_fm_data_upload_info = dbsession.get_master_data_upload_info()
+                any_updates_sent = False
 
-                    # send sherpa oees
-                    last_sherpa_oee_update_dt: str = master_fm_data_upload_info.info.get(
-                        "last_sherpa_oee_update_dt", None
+                # send trip update
+                last_trip_update_dt: str = master_fm_data_upload_info.info.get(
+                    "last_trip_update_dt", None
+                )
+                last_trip_update_sent = update_trip_info(
+                    mfm_context, dbsession, last_trip_update_dt
+                )
+                if last_trip_update_sent:
+                    last_trip_update_dt = utils_util.dt_to_str(datetime.datetime.now())
+                    any_updates_sent = True
+
+                # send trip analytics update
+                last_trip_analytics_update_dt: str = master_fm_data_upload_info.info.get(
+                    "last_trip_analytics_update_dt", None
+                )
+                last_trip_analytics_sent = update_trip_analytics(
+                    mfm_context, dbsession, last_trip_analytics_update_dt
+                )
+                if last_trip_analytics_sent:
+                    last_trip_analytics_update_dt = utils_util.dt_to_str(
+                        datetime.datetime.now()
                     )
-                    last_sherpa_oee_sent = update_sherpa_oee(
-                        mfm_context, dbsession, last_sherpa_oee_update_dt
+                    any_updates_sent = True
+
+                # send sherpa oees
+                last_sherpa_oee_update_dt: str = master_fm_data_upload_info.info.get(
+                    "last_sherpa_oee_update_dt", None
+                )
+                last_sherpa_oee_sent = update_sherpa_oee(
+                    mfm_context, dbsession, last_sherpa_oee_update_dt
+                )
+                if last_sherpa_oee_sent:
+                    last_sherpa_oee_update_dt = utils_util.dt_to_str(
+                        datetime.datetime.now()
                     )
-                    if last_sherpa_oee_sent:
-                        last_sherpa_oee_update_dt = utils_util.dt_to_str(
-                            datetime.datetime.now()
-                        )
-                        any_updates_sent = True
+                    any_updates_sent = True
 
-                    # send fm incidents
-                    last_fm_incidents_update_dt: str = master_fm_data_upload_info.info.get(
-                        "last_fm_incidents_update_dt", None
+                # send fm incidents
+                last_fm_incidents_update_dt: str = master_fm_data_upload_info.info.get(
+                    "last_fm_incidents_update_dt", None
+                )
+                last_fm_incidents_sent = update_fm_incidents(
+                    mfm_context, dbsession, last_fm_incidents_update_dt
+                )
+                if last_fm_incidents_sent:
+                    last_fm_incidents_update_dt = utils_util.dt_to_str(
+                        datetime.datetime.now()
                     )
-                    last_fm_incidents_sent = update_fm_incidents(
-                        mfm_context, dbsession, last_fm_incidents_update_dt
+                    any_updates_sent = True
+
+                # upload important files
+                last_file_upload_dt: str = master_fm_data_upload_info.info.get(
+                    "last_file_upload_dt", None
+                )
+
+                (
+                    last_file_uplaod_success,
+                    temp_last_file_update_dt,
+                ) = upload_important_files(mfm_context, dbsession, last_file_upload_dt)
+
+                # need not set last_file_upload_dt
+                if last_file_uplaod_success:
+                    any_updates_sent = True
+                    last_file_upload_dt = utils_util.dt_to_str(temp_last_file_update_dt)
+
+                # commit last update time to db
+                if any_updates_sent:
+                    master_fm_data_upload_info.info.update(
+                        {
+                            "last_trip_analytics_update_dt": last_trip_analytics_update_dt,
+                            "last_trip_update_dt": last_trip_update_dt,
+                            "last_sherpa_oee_update_dt": last_sherpa_oee_update_dt,
+                            "last_fm_incidents_update_dt": last_fm_incidents_update_dt,
+                            "last_file_upload_dt": last_file_upload_dt,
+                        }
                     )
-                    if last_fm_incidents_sent:
-                        last_fm_incidents_update_dt = utils_util.dt_to_str(
-                            datetime.datetime.now()
-                        )
-                        any_updates_sent = True
+                    flag_modified(master_fm_data_upload_info, "info")
 
-                    # upload important files
-                    last_file_upload_dt: str = master_fm_data_upload_info.info.get(
-                        "last_file_upload_dt", None
-                    )
-
-                    (
-                        last_file_uplaod_success,
-                        temp_last_file_update_dt,
-                    ) = upload_important_files(mfm_context, dbsession, last_file_upload_dt)
-
-                    # need not set last_file_upload_dt
-                    if last_file_uplaod_success:
-                        any_updates_sent = True
-                        last_file_upload_dt = utils_util.dt_to_str(temp_last_file_update_dt)
-
-                    # commit last update time to db
-                    if any_updates_sent:
-                        master_fm_data_upload_info.info.update(
-                            {
-                                "last_trip_analytics_update_dt": last_trip_analytics_update_dt,
-                                "last_trip_update_dt": last_trip_update_dt,
-                                "last_sherpa_oee_update_dt": last_sherpa_oee_update_dt,
-                                "last_fm_incidents_update_dt": last_fm_incidents_update_dt,
-                                "last_file_upload_dt": last_file_upload_dt,
-                            }
-                        )
-                        flag_modified(master_fm_data_upload_info, "info")
-
-                time.sleep(mfm_context.update_freq)
+            time.sleep(mfm_context.update_freq)
 
         except Exception as e:
             logging.getLogger("mfm_updates").info(

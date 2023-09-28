@@ -14,6 +14,7 @@ ENV FM_STATIC_DIR="/app/static" \
     FM_LOG_DIR="/app/logs" \
     FM_MISC_DIR="/app/misc/" \
     FM_CONFIG_DIR="/app/static/fleet_config/" \
+    FM_DOWNLOAD_DIR="/app/downloads" \
     MULE_ROOT="$FM_INSTALL_DIR/mule" \
     ATI_CONFIG="/app/mule_config/config.toml" \
     ATI_CONSOLIDATED_CONFIG="/app/mule_config/consolidated.toml" \

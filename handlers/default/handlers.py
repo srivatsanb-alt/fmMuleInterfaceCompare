@@ -1169,15 +1169,13 @@ class Handlers:
             )
 
         sherpa_availability = self.dbsession.get_sherpa_availability(sherpa.name)
-        visa_assignments = self.dbsession.get_visa_held(sherpa.name)
 
         # end transaction
         self.dbsession.session.commit()
 
         # update db
         if not req.induct:
-            for visa_assignment in visa_assignments:
-                self.dbsession.session.delete(visa_assignment)
+            sherpa.exclusion_zones = []
         else:
             reset_visas_held_req = rqm.ResetVisasHeldReq()
             _ = utils_comms.send_req_to_sherpa(self.dbsession, sherpa, reset_visas_held_req)
@@ -1391,42 +1389,17 @@ class Handlers:
         elif access_type == rqm.AccessType.RELEASE:
             return self.handle_visa_release(req, sherpa)
 
-    def update_visa_status(self, sherpa_name, zone_id, reason):
-        row = (
-            self.dbsession.session.query(vm.VisaAssignment)
-            .filter(zone_id == zone_id)
-            .filter(sherpa_name == sherpa_name)
-            .first()
-        )
-        if row:
-            waiting_sherpas = dict(row.waiting_sherpas) if (row.waiting_sherpas) else {}
-            if (
-                sherpa_name not in waiting_sherpas.keys()
-            ):  # update only when it is not already present
-                waiting_sherpas[f"{sherpa_name}"] = dict(
-                    {
-                        "denied_time": (datetime.datetime.now()).strftime(
-                            "%Y-%m-%dT%H:%M:%S"
-                        ),
-                        "reason": reason,
-                    }
-                )
-                row.waiting_sherpas = waiting_sherpas
-                logging.getLogger("visa").info(
-                    "waiting sherpa " + sherpa_name + ": " + reason
-                )
-
     def handle_visa_request(self, req: rqm.VisaReq, sherpa: fm.Sherpa):
         # query db
         granted, reason, reqd_ezones = utils_visa.can_grant_visa(
             self.dbsession, sherpa, req
         )
+        visa_rejects = self.dbsession.get_visa_rejects(reqd_ezones, sherpa.name)
 
         # end transaction
         self.dbsession.session.commit()
 
         # update db
-
         if not sherpa.status.inducted:
             granted = False
             reason = "sherpa disabled for trips"
@@ -1434,8 +1407,17 @@ class Handlers:
         if granted:
             for ezone in set(reqd_ezones):
                 utils_visa.lock_exclusion_zone(ezone, sherpa)
+                if sherpa in ezone.waiting_sherpas:
+                    ezone.waiting_sherpas.remove(sherpa)
         else:
-            self.update_visa_status(sherpa.name, reqd_ezones, reason)
+            for ezone, visa_reject in zip(set(reqd_ezones), visa_rejects):
+                if visa_reject is None:
+                    vr = vm.VisaRejects(reason=reason)
+                    vr.zone_id = ezone.zone_id
+                    vr.sherpa_name = sherpa.name
+                    self.dbsession.add_to_session(vr)
+                else:
+                    visa_reject.reason = reason
 
         granted_message = "granted" if granted else "not granted"
         visa_log = f"{sherpa.name} {granted_message} {req.visa_type} type visa to zone {req.zone_name}, reason: {reason}"
@@ -1477,20 +1459,6 @@ class Handlers:
             mm.NotificationModules.visa,
         )
         return response.to_json()
-
-    def handle_delete_visa_assignments(self, req: rqm.DeleteVisaAssignments):
-
-        # query db
-        visa_assignments: List[vm.VisaAssignment] = self.get_all_visa_assignments()
-
-        # end transaction
-        self.dbsession.session.commit()
-
-        # update db
-        for visa_assignment in visa_assignments:
-            self.dbsession.session.delete(visa_assignment)
-
-        return {}
 
     def handle_sherpa_img_update(self, req: rqm.SherpaImgUpdateCtrlReq):
         response = {}

@@ -130,6 +130,8 @@ async def delete_sherpa(
     all_sherpa_names = dbsession.get_all_sherpa_names()
     redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
     redis_conn.set("all_sherpas", json.dumps(all_sherpa_names))
+    redis_conn.set("send_conf_to_mfm", json.dumps(True))
+
     queues_to_delete = [
         f"{sherpa_name}_update_handler",
         f"{sherpa_name}_trip_update_handler",
@@ -231,6 +233,7 @@ async def add_fleet(
             all_fleet_names = dbsession.get_all_fleet_names()
             redis_conn.set("all_fleet_names", json.dumps(all_fleet_names))
             redis_conn.set("add_router_for", fleet_name)
+            redis_conn.set("send_conf_to_mfm", json.dumps(True))
 
     return response
 
@@ -336,5 +339,6 @@ async def update_map(
 
         redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
         redis_conn.set("update_router_for", fleet_name)
+        redis_conn.set("send_conf_to_mfm", json.dumps(True))
 
     return response

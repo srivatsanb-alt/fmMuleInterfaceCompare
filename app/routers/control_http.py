@@ -19,21 +19,6 @@ router = APIRouter(
     responses={404: {"description": "Not found"}},
 )
 
-# clears visa assignments- traffic zones which cannot be accessed by more than one sherpa at a time.
-# Only one sherpa is assigned a visa to that zone, and after the completion of it's trip
-# the visa is revoked.
-@router.get("/fleet/clear_all_visa_assignments")
-async def clear_all_visa_assignments(user_name=Depends(dpd.get_user_from_header)):
-
-    if not user_name:
-        dpd.raise_error("Unknown requester", 401)
-
-    delete_visas_req = rqm.DeleteVisaAssignments()
-    response = await dpd.process_req_with_response(None, delete_visas_req, user_name)
-
-    return response
-
-
 # returns the sherpa status(name, assigned, initialized, idle, disabled, inducted, etc.)
 @router.get("/sherpa/{entity_name}/diagnostics")
 async def diagnostics(
