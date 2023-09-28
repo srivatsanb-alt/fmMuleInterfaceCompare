@@ -147,8 +147,8 @@ where,
 ```markdown
 method: 'hungarian',
 prioritise_waiting_stations: true,
-eta_power_factor: 1.0,
-priority_power_factor: 0.0,
+eta_power_factor: 0.9999 ## 0.00001-0.99999,
+priority_power_factor: 0.0001 ## 0.00001-0.99999,
 max_trips_to_consider: 5,
 ```
 
@@ -157,8 +157,8 @@ max_trips_to_consider: 5,
 ```markdown
 method: 'hungarian',
 prioritise_waiting_stations: true,
-eta_power_factor: 0.0,
-priority_power_factor: 1.0,
+eta_power_factor: 0.0001 ## 0.00001-0.99999,
+priority_power_factor: 0.9999 ## 0.00001-0.99999,
 max_trips_to_consider: 5,
 ```
 
@@ -166,7 +166,7 @@ max_trips_to_consider: 5,
 
 6. For good takt time, eta power factor should be higher, for fair scheduling priority power factor should be set higher.
 
-7. To reduce computation load due to optimal dispatch, max_trips_to_consider can be set to 5. Optimal dispatch logic will be consider only the first <max_trips_to_consider> number of trips. Default is set to 5. This can be increaded to <number_of_sherpas per fleet> in case there are more than 5 sherpas
+7. To reduce computation load due to optimal dispatch, max_trips_to_consider has been set to 5. Optimal dispatch logic will be consider only the first <max_trips_to_consider> number of trips. Default is set to 5. This can be increaded to <number_of_sherpas per fleet> in case there are more than 5 sherpas
 ```markdown
 [optimal_dispatch]
 max_trips_to_consider=<number_of_sherpas per fleet>

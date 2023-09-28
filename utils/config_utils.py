@@ -75,13 +75,13 @@ class ConfigValidator:
                 },
                 "eta_power_factor": {
                     "bsonType": "double",
-                    "minimum": 0.1,
+                    "minimum": 0.0,
                     "maximum": 1.0,
                     "description": "Modifier - actual eta will be modified to eta^eta_power_factor",
                 },
                 "priority_power_factor": {
                     "bsonType": "double",
-                    "minimum": 0.1,
+                    "minimum": 0.0,
                     "maximum": 1.0,
                     "description": "Modifier - actual trip priority will be modified to trip_priority^priority_power_factor",
                 },
