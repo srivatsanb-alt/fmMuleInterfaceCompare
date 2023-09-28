@@ -355,7 +355,7 @@ async def get_visa_assignments(user_name=Depends(dpd.get_user_from_header)):
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
     with DBSession() as dbsession:
-        zone_ids = dbsession.session.query(vm.VisaAssignment.zone_id).all()
+        zone_ids = dbsession.session.query(vm.ExclusionZone.zone_id).all()
         response = jsonable_encoder(zone_ids)
         for item in response:
             visa_assignments = dbsession.get_all_visa_assignments_as_dict(item["zone_id"])
