@@ -1400,8 +1400,6 @@ class Handlers:
         self.dbsession.session.commit()
 
         # update db
-        granted = False
-        reason = "sherpa disabled for trips"
         if not sherpa.status.inducted:
             granted = False
             reason = "sherpa disabled for trips"
