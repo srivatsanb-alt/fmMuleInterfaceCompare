@@ -401,7 +401,7 @@ routes : {
 5. By default, sherpas will start at random stations. But if you want sherpas to start at specific stations use initialize_sherpas_at parameter. Follow the below example. Make sure the key, value match sherpa name, station name exactly
 ```
 initialize_sherpas_at: {
-    sample_sherpa: "Station A"
+    "sample_sherpa" : "Station A"
 }
 ```
 
