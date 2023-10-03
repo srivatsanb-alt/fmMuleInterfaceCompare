@@ -250,3 +250,21 @@ def read_docker_compose_yml():
         data = yaml.safe_load(f)
 
     return data
+
+
+def good_password_check(password):
+    upper_case = False
+    special_char = False
+
+    if len(password) < 8:
+        return False
+
+    for c in password:
+        if not (c.isalpha() or c.isdigit() or c == " "):
+            special_char = True
+        if c.isupper():
+            upper_case = True
+        if special_char and upper_case:
+            return True
+
+    return False

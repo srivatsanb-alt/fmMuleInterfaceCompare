@@ -565,7 +565,10 @@ class ExclusionZoneUtils:
         if not os.path.exists(ez_path):
             return
         with open(ez_path, "r") as f:
-            ez_gates = json.load(f)
+            try:
+                ez_gates = json.load(f)
+            except Exception as e:
+                raise ValueError("Unable to parse ez.json")
 
         for gate, gate_details in ez_gates["ez_gates"].items():
             gate_name = gate_details["name"]
@@ -618,7 +621,10 @@ class ExclusionZoneUtils:
         if not os.path.exists(ez_path):
             return
         with open(ez_path, "r") as f:
-            ez_gates = json.load(f)
+            try:
+                ez_gates = json.load(f)
+            except Exception as e:
+                raise ValueError("Unable to parse ez.json")
 
         gates_dict = ez_gates["ez_gates"]
         for gate, gate_details in ez_gates["ez_gates"].items():

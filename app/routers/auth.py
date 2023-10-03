@@ -8,7 +8,8 @@ from fastapi import APIRouter, Depends
 import app.routers.dependencies as dpd
 import models.request_models as rqm
 from models.mongo_client import FMMongo
-
+import utils.util as utils_util
+import utils.config_utils as cu
 
 router = APIRouter(
     prefix="/api/v1/user",
@@ -78,6 +79,13 @@ async def add_edit_user_details(
         user_details_db = fm_mongo.get_frontend_user_details(user_query)
         db = fm_mongo.get_database("frontend_users")
         collection = fm_mongo.get_collection("user_details", db)
+
+        if frontend_user_details.password is not None:
+            if not utils_util.good_password_check(frontend_user_details.password):
+                dpd.raise_error(
+                    "Low password strenght: Password should contain atleast one upper case and one special character. Also the length should be greater than 8"
+                )
+
         if user_details_db is None:
             if frontend_user_details.password is None:
                 dpd.raise_error("Frontend user password cannot be None")
@@ -97,6 +105,7 @@ async def add_edit_user_details(
                 user_details_db["hashed_password"] = hashlib.sha256(
                     frontend_user_details.password.encode("utf-8")
                 ).hexdigest()
+
             user_details_db["role"] = frontend_user_details.role
             collection.find_one_and_replace(user_query, user_details_db)
             logging.getLogger("configure_fleet").info(
@@ -115,6 +124,9 @@ async def delete_frontend_user(
 
     if user_name is None:
         dpd.raise_error("Unknown requester", 401)
+
+    if frontend_user_name == cu.DefaultFrontendUser.admin["name"]:
+        dpd.raise_error(f"Cannot delete default user: {frontend_user_name}")
 
     with FMMongo() as fm_mongo:
         user_query = {
