@@ -21,7 +21,7 @@
 18. [Clean up disk space in FM server](#clean-up-disk-space-in-fm-server)
 19. [Create self signed certs for FM](#create-self-signed-certs-for-fm)
 20. [Run FM simulator](#run-fm-simulator)
-21. [Where to get the logs?]()
+21. [Where to get the logs?](#where-to-get-the-logs)
 
 ## Setup sherpas ##
 
@@ -434,3 +434,4 @@ cd plugin_logs
     b. fleet_manager.log - Any success/error in handlers will be recorded in fleet_manager.log
     
     c. visa.log - All the visa assignments/rejects will be present in visa.log 
+
