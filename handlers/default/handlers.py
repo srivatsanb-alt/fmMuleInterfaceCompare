@@ -170,9 +170,12 @@ class Handlers:
 
                 if num_units > 2 or num_units < 0:
                     reason = f"num units for conveyor transaction cannot be greater than 2 or less than 0, num_units_input: {num_units}"
+                    raise ValueError(f"{reason}")
 
-        if reason:
-            raise ValueError(f"{reason}")
+            if station.status.disabled is True:
+                raise ValueError(
+                    f"Cannot execute {trip_msg.route} , {station.name} is disabled"
+                )
 
     def should_recreate_scheduled_trip(self, pending_trip: tm.PendingTrip):
         trip_metadata = pending_trip.trip.trip_metadata
@@ -729,10 +732,6 @@ class Handlers:
                     logging.getLogger().error(invalid_station_error_e)
                     raise ValueError(invalid_station_error)
 
-                if station.status.disabled:
-                    raise ValueError(
-                        f"Cannot execute {trip_msg.route} , {station_name} is disabled"
-                    )
                 all_stations.append(station)
 
             fleet_name = self.dbsession.get_fleet_name_from_route(trip_msg.route)
