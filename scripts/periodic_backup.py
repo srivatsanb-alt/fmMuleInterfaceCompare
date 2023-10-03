@@ -169,13 +169,15 @@ def sort_and_remove_directories(directory, target_size, current_data):
     sort_dir_list(list_dir)
 
     directories = [os.path.join(directory, name) for name in list_dir]
-    current_size = 0
+    deleted_size = 0
     for dir_path in directories:
         dir_size = get_directory_size(dir_path)
-        if current_size + dir_size <= target_size:
-            shutil.rmtree(dir_path)
-            current_size += dir_size
-            logging.getLogger("misc").warning(f"Deleted {dir_path}")
+        shutil.rmtree(dir_path)
+        deleted_size += dir_size
+        logging.getLogger("misc").warning(f"Deleted {dir_path}")
+        if deleted_size >= target_size:
+            logging.getLogger("misc").info(f"will stop data clean up process for now")
+            break
 
 
 def cleanup_data(current_data, keep_size_mb=1000):
