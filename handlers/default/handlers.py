@@ -170,9 +170,12 @@ class Handlers:
 
                 if num_units > 2 or num_units < 0:
                     reason = f"num units for conveyor transaction cannot be greater than 2 or less than 0, num_units_input: {num_units}"
+                    raise ValueError(f"{reason}")
 
-        if reason:
-            raise ValueError(f"{reason}")
+            if station.status.disabled is True:
+                raise ValueError(
+                    f"Cannot execute {trip_msg.route} , {station.name} is disabled"
+                )
 
     def should_recreate_scheduled_trip(self, pending_trip: tm.PendingTrip):
         trip_metadata = pending_trip.trip.trip_metadata
@@ -729,10 +732,6 @@ class Handlers:
                     logging.getLogger().error(invalid_station_error_e)
                     raise ValueError(invalid_station_error)
 
-                if station.status.disabled:
-                    raise ValueError(
-                        f"Cannot execute {trip_msg.route} , {station_name} is disabled"
-                    )
                 all_stations.append(station)
 
             fleet_name = self.dbsession.get_fleet_name_from_route(trip_msg.route)
@@ -991,6 +990,17 @@ class Handlers:
         if req.stoppages.extra_info.velocity_speed_factor < 0.1:
             ongoing_trip.trip_leg.status = tm.TripLegStatus.STOPPED
             ongoing_trip.trip_leg.stoppage_reason = req.stoppages.type
+            if req.stoppages.type == "waiting for dispatch button":
+                dispatch_button_stoppage = (
+                    f"{sherpa.name} waiting for dispatch button press"
+                )
+                utils_util.maybe_add_notification(
+                    self.dbsession,
+                    [sherpa.name, sherpa.fleet.name, sherpa.fleet.customer],
+                    dispatch_button_stoppage,
+                    mm.NotificationLevels.action_request,
+                    mm.NotificationModules.dispatch_button,
+                )
 
         elif req.stoppages.extra_info.velocity_speed_factor < 0.9:
             ongoing_trip.trip_leg.status = tm.TripLegStatus.MOVING_SLOW

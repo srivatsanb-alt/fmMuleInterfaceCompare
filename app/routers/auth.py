@@ -79,6 +79,8 @@ async def add_edit_user_details(
         db = fm_mongo.get_database("frontend_users")
         collection = fm_mongo.get_collection("user_details", db)
         if user_details_db is None:
+            if frontend_user_details.password is None:
+                dpd.raise_error("Frontend user password cannot be None")
             temp = {
                 "hashed_password": hashlib.sha256(
                     frontend_user_details.password.encode("utf-8")
@@ -91,9 +93,10 @@ async def add_edit_user_details(
                 f"Inserted a new frontend user {frontend_user_details.name}"
             )
         else:
-            user_details_db["hashed_password"] = hashlib.sha256(
-                frontend_user_details.password.encode("utf-8")
-            ).hexdigest()
+            if frontend_user_details.password is not None:
+                user_details_db["hashed_password"] = hashlib.sha256(
+                    frontend_user_details.password.encode("utf-8")
+                ).hexdigest()
             user_details_db["role"] = frontend_user_details.role
             collection.find_one_and_replace(user_query, user_details_db)
             logging.getLogger("configure_fleet").info(

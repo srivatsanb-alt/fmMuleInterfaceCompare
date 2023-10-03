@@ -828,20 +828,19 @@ class DBSession:
             .all()
         )
         waiting_sherpas = (
-            self.session.query(vm.VisaAssignment.waiting_sherpas.label("waiting"))
-            .filter(vm.VisaAssignment.zone_id == zone_id)
-            .filter(vm.VisaAssignment.waiting_sherpas.isnot(None))
+
+            self.session.query(vm.VisaRejects.sherpa_name,
+                               vm.VisaRejects.created_at.label("denied_time"),
+                               vm.VisaRejects.reason)
+            .filter(vm.VisaRejects.zone_id == zone_id)
             .all()
         )
         resident_sherpas = jsonable_encoder(sherpas)
 
-        waiting_sherpas_dict = {"waiting_sherpas": []}
-        for item in waiting_sherpas:
-            temp = jsonable_encoder(item)
-            waiting_sherpas_dict["waiting_sherpas"].append(temp["waiting"])
-
+        waiting_sherpas = jsonable_encoder(waiting_sherpas)
+        
         response = {
             "resident_sherpas": resident_sherpas,
-            "waiting_sherpas": waiting_sherpas_dict["waiting_sherpas"],
+            "waiting_sherpas": waiting_sherpas
         }
         return response
