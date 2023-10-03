@@ -501,13 +501,12 @@ def send_mfm_updates():
     send_all_one_time_msg(mfm_context)
     while True:
         try:
-
             send_conf_to_mfm = redis_conn.get("send_conf_to_mfm")
             if send_conf_to_mfm is not None:
                 send_conf_to_mfm = json.loads(send_conf_to_mfm)
                 if send_conf_to_mfm is True:
-                    send_all_one_time_msg(mfm_context)
                     redis_conn.delete("send_conf_to_mfm")
+                    send_all_one_time_msg(mfm_context)
 
             with DBSession() as dbsession:
                 master_fm_data_upload_info = dbsession.get_master_data_upload_info()
