@@ -8,6 +8,8 @@ from sqlalchemy import inspect as sql_inspect
 # ati code imports
 import utils.config_utils as cu
 from core.db import get_engine
+from models.db_session import DBSession
+import models.misc_models as mm
 
 
 def create_all_tables() -> None:
@@ -57,11 +59,37 @@ def maybe_add_default_admin_user(fm_mongo):
     )
     c = fm_mongo.get_collection("user_details", fu_db)
     c.create_index("name", unique=True)
-    if c.count_documents(filter={}) == 0:
+    user_query = {
+        "name": cu.DefaultFrontendUser.admin["name"],
+    }
+    if c.find_one(filter=user_query) is None:
         c.insert_one(cu.DefaultFrontendUser.admin)
         print(f"Created default user")
 
     maybe_add_plugin_user(fm_mongo, fu_db)
+    is_admin_password_set_to_default(fm_mongo, fu_db)
+
+
+def is_admin_password_set_to_default(fm_mongo, fu_db):
+    admin_username = cu.DefaultFrontendUser.admin["name"]
+    user_query = {
+        "name": admin_username,
+    }
+    user_details_db = fm_mongo.get_frontend_user_details(user_query)
+    if (
+        user_details_db["hashed_password"]
+        == cu.DefaultFrontendUser.admin["hashed_password"]
+    ):
+        with DBSession() as dbsession:
+            default_password_log = (
+                f"Please change password for user: {admin_username}, reason: weak password"
+            )
+            dbsession.add_notification(
+                [],
+                default_password_log,
+                mm.NotificationLevels.alert,
+                mm.NotificationModules.generic,
+            )
 
 
 def create_mongo_collection(fm_mongo, fc_db, collection_name):
