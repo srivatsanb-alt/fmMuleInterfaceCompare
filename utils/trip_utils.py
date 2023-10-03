@@ -30,7 +30,7 @@ def get_trip_status(trip: Trip):
             updated_at = util.dt_to_str(trip.updated_at)
 
         if ongoing_trip:
-            trip_leg = dbsession.get_trip_leg(ongoing_trip.sherpa_name)
+            trip_leg = ongoing_trip.trip_leg
             trip_analytics: TripAnalytics = dbsession.get_trip_analytics(
                 ongoing_trip.trip_leg_id
             )

@@ -714,6 +714,23 @@ class Handlers:
 
         return done, next_task
 
+    def release_visas(self, visas_to_release, sherpa, notify=False):
+
+        # update db
+        for ezone in set(visas_to_release):
+            utils_visa.unlock_exclusion_zone(self.dbsession, ezone, sherpa)
+            visa_log = f"{sherpa.name} released {ezone.zone_id} visa"
+            logging.getLogger("visa").info(visa_log)
+
+            if notify is True:
+                utils_util.maybe_add_notification(
+                    self.dbsession,
+                    [sherpa.name, sherpa.fleet.name, sherpa.fleet.customer],
+                    visa_log,
+                    mm.NotificationLevels.info,
+                    mm.NotificationModules.visa,
+                )
+
     def handle_book(self, req: rqm.BookingReq):
         response = {}
         for trip_msg in req.trips:
@@ -1185,7 +1202,7 @@ class Handlers:
 
         # update db
         if not req.induct:
-            sherpa.exclusion_zones = []
+            self.release_visas(sherpa.exclusion_zones, sherpa, notify=True)
         else:
             reset_visas_held_req = rqm.ResetVisasHeldReq()
             _ = utils_comms.send_req_to_sherpa(self.dbsession, sherpa, reset_visas_held_req)
@@ -1453,21 +1470,21 @@ class Handlers:
         # end transaction
         self.dbsession.session.commit()
 
-        # update db
-        for ezone in set(visas_to_release):
-            utils_visa.unlock_exclusion_zone(self.dbsession, ezone, sherpa)
+        self.release_visas(visas_to_release, sherpa)
 
-        visa_log = f"{sherpa.name} released {req.visa_type} visa of zone {req.zone_name}"
-        logging.getLogger("visa").info(visa_log)
         response: rqm.ResourceResp = rqm.ResourceResp(
             granted=True, visa=req, access_type=rqm.AccessType.RELEASE
         )
-        self.dbsession.add_notification(
+
+        visa_log = f"{sherpa.name} released {req.visa_type} visa of zone {req.zone_name}"
+        utils_util.maybe_add_notification(
+            self.dbsession,
             [sherpa.name, sherpa.fleet.name, sherpa.fleet.customer],
             visa_log,
             mm.NotificationLevels.info,
             mm.NotificationModules.visa,
         )
+
         return response.to_json()
 
     def handle_sherpa_img_update(self, req: rqm.SherpaImgUpdateCtrlReq):
