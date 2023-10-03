@@ -21,6 +21,7 @@
 18. [Clean up disk space in FM server](#clean-up-disk-space-in-fm-server)
 19. [Create self signed certs for FM](#create-self-signed-certs-for-fm)
 20. [Run FM simulator](#run-fm-simulator)
+21. [Where to get the logs?]()
 
 ## Setup sherpas ##
 
@@ -408,3 +409,28 @@ initialize_sherpas_at: {
 ```
 
 6. [Restart FM](#restart-fm)
+
+
+# Where to get the logs? #
+
+We store logs corresponding to two containers (fleet_manager, fm_plugins)
+
+1. Get fleet_manager logs
+```
+docker exec -it fleet_manager bash
+cd logs
+```
+
+2. Get fm_plugins logs
+```
+docker exec -it fm_plugins bash
+cd plugin_logs
+```
+
+3. Description of some important log files
+    
+    a. uvicorn.log - Any error related to fastapi app(endpoints) will be present in uvicorn.log
+
+    b. fleet_manager.log - Any success/error in handlers will be recorded in fleet_manager.log
+    
+    c. visa.log - All the visa assignments/rejects will be present in visa.log 
