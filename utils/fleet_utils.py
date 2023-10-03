@@ -433,13 +433,12 @@ class SherpaUtils:
             sherpa.ip_address = None
             if api_key is not None:
                 sherpa.hashed_api_key = hashed_api_key
+                logger.info(f"updated sherpa {sherpa_name}, with api_key: {api_key}")
             if sherpa.fleet_id != fleet_id:
                 raise ValueError(
                     f"Cannot duplicate sherpas across fleet, {sherpa.name} is already present in {sherpa.fleet.name}"
                 )
-            logger.info(
-                f"updated sherpa {sherpa_name}, with hwid: {hwid}, api_key: {api_key}"
-            )
+            logger.info(f"updated sherpa {sherpa_name}, with hwid: {hwid}")
         else:
             if api_key is None or hwid is None:
                 raise ValueError(f"API Key/Hardware id cannot be None")
