@@ -1,19 +1,19 @@
 {
   "short_name": "Dashboard",
-  "name": "Dashboard Application",
+  "name": "Ati Motors FM UI Dashboard",
   "icons": [
     {
-      "src": "ati_logo.png",
+      "src": "favicon.ico",
       "sizes": "64x64 32x32 24x24 16x16",
       "type": "image/x-icon"
     },
     {
-      "src": "ati_logo.png",
+      "src": "logo192.png",
       "type": "image/png",
       "sizes": "192x192"
     },
     {
-      "src": "ati_logo.png",
+      "src": "logo512.png",
       "type": "image/png",
       "sizes": "512x512"
     }
