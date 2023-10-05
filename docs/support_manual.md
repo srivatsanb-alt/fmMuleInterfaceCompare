@@ -22,6 +22,7 @@
 19. [Create self signed certs for FM](#create-self-signed-certs-for-fm)
 20. [Run FM simulator](#run-fm-simulator)
 21. [Where to get the logs?](#where-to-get-the-logs)
+22. [Forgot password for frontend_user: admin ?](#forgot-password-for-frontend_user-admin)
 
 ## Setup sherpas ##
 
@@ -435,3 +436,11 @@ cd plugin_logs
     
     c. visa.log - All the visa assignments/rejects will be present in visa.log 
 
+
+## Forgot password for frontend_user: admin ? ##
+
+1. Use the config editor, select the database frontend_users, select the collection user_details, click on the document to edit it
+
+2. You would be multiple documents corresponding to different users, delete the document with name as admin
+
+3. [Restart FM](#restart-fm)

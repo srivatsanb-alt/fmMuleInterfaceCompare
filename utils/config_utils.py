@@ -1,9 +1,3 @@
-class CONFIG_VIEW_PERMISSION_LEVELS:
-    OPERATOR = 0
-    SUPERVISOR = 1
-    SUPPORT = 2
-
-
 class CreateColKwargs:
     capped_default = {"capped": True, "max": 1, "size": 10}
 

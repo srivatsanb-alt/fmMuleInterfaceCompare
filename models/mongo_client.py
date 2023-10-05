@@ -1,6 +1,5 @@
 import pymongo as pm
 import os
-from utils.config_utils import CONFIG_VIEW_PERMISSION_LEVELS
 
 
 def get_mongo_client(uri: str):
@@ -51,12 +50,6 @@ class FMMongo:
         if collection_name in db.list_collection_names():
             return db[collection_name]
         raise Exception(f"Collection {collection_name} not yet created")
-
-    def add_permission_level(self, level, **kwargs):
-        level_int = getattr(CONFIG_VIEW_PERMISSION_LEVELS, level.upper(), None)
-        if level_int is None:
-            raise Exception("Invalid permission level")
-        kwargs.update({"permission_level": level_int})
 
     def get_all_collection_names(self, db_name):
         return self.mongo_client[db_name].list_collection_names()

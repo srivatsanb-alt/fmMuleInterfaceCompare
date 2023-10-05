@@ -45,7 +45,7 @@ async def login(user_login: rqm.UserLogin):
 
 
 @router.get("/plugin/{plugin_api_key}")
-async def get_fm_secret(
+async def share_secrets_to_plugin(
     plugin_api_key: str,
 ):
     response = {}
@@ -72,7 +72,20 @@ async def add_edit_user_details(
     if user_name is None:
         dpd.raise_error("Unknown requester", 401)
 
+    default_admin_username = cu.DefaultFrontendUser.admin["name"]
+
     with FMMongo() as fm_mongo:
+        operating_user_query = {"name": user_name}
+        operating_user_details = fm_mongo.get_frontend_user_details(operating_user_query)
+        operating_user_role = operating_user_details["role"]
+
+        if getattr(rqm.FrontendUserRoles, operating_user_role) < getattr(
+            rqm.FrontendUserRoles, frontend_user_details.role
+        ):
+            dpd.raise_error(
+                f"{user_name}(role: {operating_user_role}) cannot add/edit an user with role: {frontend_user_details.role}"
+            )
+
         user_query = {
             "name": frontend_user_details.name,
         }
@@ -106,12 +119,19 @@ async def add_edit_user_details(
                     frontend_user_details.password.encode("utf-8")
                 ).hexdigest()
 
+            if (
+                frontend_user_details.name == default_admin_username
+                and frontend_user_details.role != "support"
+            ):
+                dpd.raise_error(
+                    f"Cannot change role for default frontend_user {default_admin_username}"
+                )
+
             user_details_db["role"] = frontend_user_details.role
             collection.find_one_and_replace(user_query, user_details_db)
             logging.getLogger("configure_fleet").info(
                 f"Modified frontend user details: {frontend_user_details.name}"
             )
-
     return response
 
 
