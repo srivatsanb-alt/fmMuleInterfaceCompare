@@ -404,7 +404,11 @@ class DBSession:
         skip = page * limit
         trips = {}
         count = 0
-        base_query = self.session.query(tm.Trip, tm.TripAnalytics.progress).join(tm.TripAnalytics,tm.Trip.id == tm.TripAnalytics.id).filter(tm.Trip.status.in_(valid_status))
+        base_query = (
+            self.session.query(tm.Trip, tm.TripAnalytics.progress)
+            .join(tm.TripAnalytics, tm.Trip.id == tm.TripAnalytics.id)
+            .filter(tm.Trip.status.in_(valid_status))
+        )
         if booked_from and booked_from != "":
             base_query = base_query.filter(tm.Trip.booking_time > booked_from)
         if booked_till and booked_till != "":
@@ -828,19 +832,20 @@ class DBSession:
             .all()
         )
         waiting_sherpas = (
-
-            self.session.query(vm.VisaRejects.sherpa_name,
-                               vm.VisaRejects.created_at.label("denied_time"),
-                               vm.VisaRejects.reason)
+            self.session.query(
+                vm.VisaRejects.sherpa_name,
+                vm.VisaRejects.created_at.label("denied_time"),
+                vm.VisaRejects.reason,
+            )
             .filter(vm.VisaRejects.zone_id == zone_id)
             .all()
         )
         resident_sherpas = jsonable_encoder(sherpas)
 
         waiting_sherpas = jsonable_encoder(waiting_sherpas)
-        
+
         response = {
             "resident_sherpas": resident_sherpas,
-            "waiting_sherpas": waiting_sherpas
+            "waiting_sherpas": waiting_sherpas,
         }
         return response

@@ -20,9 +20,10 @@
 17. [Setup optimal dispatch config](#setup-optimal-dispatch-config)
 18. [Clean up disk space in FM server](#clean-up-disk-space-in-fm-server)
 19. [Create self signed certs for FM](#create-self-signed-certs-for-fm)
-20. [Run FM simulator](#run-fm-simulator)
-21. [Where to get the logs?](#where-to-get-the-logs)
-22. [Forgot password for frontend_user: admin ?](#forgot-password-for-frontend_user-admin)
+19. [Use trusted CA for FM](#use-trusted-ca-for-fm)
+21. [Run FM simulator](#run-fm-simulator)
+22. [Where to get the logs?](#where-to-get-the-logs)
+23. [Forgot password for frontend_user: admin ?](#forgot-password-for-frontend_user-admin)
 
 ## Setup sherpas ##
 
@@ -283,19 +284,20 @@ docker-compose -p fm -f docker_compose_v<fm_version> up
 1. Check if there were any queue build ups. The output would show queue build ups if any.
 ```
 docker exec -it fleet_manager bash 
-inspect
-rqi
+inspect ## This would list all historical queue build ups
+rqi ## This would show if there is any queue build up at present
 ```
 
 2. Check for occurences of rq errors (rqe) in fleet_manager.log, the output might lead to the issue
 ```
-rqe
+rq
 ```
 
 3. If you are unable to login to FM, Check the docker logs - this should be run outside docker. There might be some errors in the init scripts.
 ```
 docker logs fleet_manager 
 docker logs fleet_db
+# Also check logs/fm.out inside fleet manager container
 ```
 
 ## Access Postgres DB ## 
@@ -373,6 +375,22 @@ docker exec -it fleet_manager bash
 create_certs "127.0.0.1,<ip_1>,<ip2>,...,<ip_n>"
 ```
 
+3. [Restart FM](#restart-fm) (using docker-compose command)
+
+
+## Use trusted CA for FM ## 
+
+1. Create certificate bundle. 
+
+2. Rename the certificate bundle as fm_rev_proxy_cert.pem
+
+3. Rename key file as fm_rev_proxy_key.pem 
+
+4. Copy the renamed files(key, cert) to fm static/certs directory
+
+5. [Restart FM](#restart-fm) (using docker-compose command)
+
+
 # RUN FM Simulator #
 
 **FM simulator creates proxy for all the sherpa, Make sure real/physical sherpas are not connected to FM, Config changes need FM restart to take effect**
@@ -432,9 +450,13 @@ cd plugin_logs
     
     a. uvicorn.log - Any error related to fastapi app(endpoints) will be present in uvicorn.log
 
-    b. fleet_manager.log - Any success/error in handlers will be recorded in fleet_manager.log
+    b. fleet_manager.log - Any success/error in handlers/rq will be recorded in fleet_manager.log
     
     c. visa.log - All the visa assignments/rejects will be present in visa.log 
+
+    d. plugin_logs/plugin_<plugin_conveyor>/<plugin_<plugin_name>>.log - would have logs corresponding to the plugin 
+
+    e. plugin_logs/plugin_main.log - Any error in fm_plugins can be seen in plugin_main.log 
 
 
 ## Forgot password for frontend_user: admin ? ##
