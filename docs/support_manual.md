@@ -441,6 +441,12 @@ cd plugin_logs
 
 1. Use the config editor, select the database frontend_users, select the collection user_details, click on the document to edit it
 
-2. You would be multiple documents corresponding to different users, delete the document with name as admin
+2. There would be multiple documents corresponding to different users, delete the document with name as admin
 
 3. [Restart FM](#restart-fm)
+
+4. On restart you should be able to login in the below credentials
+```
+username: admin
+password: 1234
+```
