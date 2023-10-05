@@ -75,6 +75,12 @@ class VisaReq:
     visa_type: VisaType
 
 
+class FrontendUserRoles:
+    operator = 0
+    supervisor = 1
+    support = 2
+
+
 #################################################
 # Messages from sherpa
 class SherpaReq(BaseModel):
@@ -270,8 +276,8 @@ class UserLogin(ClientReq):
 
 class FrontendUserDetails(ClientReq):
     name: str
-    password: str
     role: str
+    password: Optional[str] = None
 
 
 class AddEditSherpaReq(ClientReq):
