@@ -439,7 +439,7 @@ cd plugin_logs
 
 ## Forgot password for frontend_user: admin ? ##
 
-1. Use the config editor, select the database frontend_users, select the collection user_details, click on the document to edit it
+1. Use the config editor, select the database frontend_users, select the collection user_details
 
 2. There would be multiple documents corresponding to different users, delete the document with name as admin
 
