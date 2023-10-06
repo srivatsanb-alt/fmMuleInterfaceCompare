@@ -60,6 +60,14 @@ class DBSession:
         self.add_to_session(trip)
         return trip
 
+    def get_customer_names(self):
+        customer_names = []
+        cns = self.session.query(fm.Fleet.customer).distinct().all()
+        for cn in cns:
+            customer_names.append(cn[0])
+
+        return customer_names
+
     def create_pending_trip(self, trip_id):
         pending_trip = tm.PendingTrip(trip_id=trip_id)
         self.add_to_session(pending_trip)

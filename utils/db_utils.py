@@ -85,7 +85,7 @@ def is_admin_password_set_to_default(fm_mongo, fu_db):
                 f"Please change password for user: {admin_username}, reason: weak password"
             )
             dbsession.add_notification(
-                [],
+                dbsession.get_customer_names(),
                 default_password_log,
                 mm.NotificationLevels.alert,
                 mm.NotificationModules.generic,
