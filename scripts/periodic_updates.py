@@ -1,5 +1,6 @@
 import logging
 import time
+import datetime
 
 # ati code imports
 from utils.comms import send_status_update, send_notification
@@ -143,11 +144,25 @@ def send_fleet_level_notifications(dbsession, fleet_name):
 
 def send_periodic_updates():
     while True:
+        num_notifications = -1
+        last_update_dt = datetime.datetime.now()
         try:
             logging.getLogger().info("starting periodic updates script")
             with DBSession() as dbsession:
                 while True:
+                    new_notifs = False
                     all_fleets = dbsession.get_all_fleets()
+
+                    nc_temp = dbsession.get_notification_count()
+                    if (
+                        dbsession.any_new_addition_to_notification_table(last_update_dt)
+                        or num_notifications != nc_temp
+                    ):
+                        last_update_dt = datetime.datetime.now()
+                        new_notifs = True
+
+                    num_notifications = nc_temp
+
                     for fleet in all_fleets:
                         fleet_status_msg = get_fleet_status_msg(dbsession, fleet)
                         send_status_update(fleet_status_msg)
@@ -155,13 +170,15 @@ def send_periodic_updates():
                         ongoing_trip_msg = get_ongoing_trips_status(dbsession, fleet)
                         send_status_update(ongoing_trip_msg)
 
-                        send_fleet_level_notifications(dbsession, fleet.name)
+                        if new_notifs:
+                            send_fleet_level_notifications(dbsession, fleet.name)
 
                     visa_msg = get_visas_held_msg(dbsession)
                     send_status_update(visa_msg)
 
-                    all_alerts = get_all_alert_notifications(dbsession)
-                    send_notification(all_alerts)
+                    if new_notifs:
+                        all_alerts = get_all_alert_notifications(dbsession)
+                        send_notification(all_alerts)
 
                     # force refresh of all objects
                     dbsession.session.expire_all()

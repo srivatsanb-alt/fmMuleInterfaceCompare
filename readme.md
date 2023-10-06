@@ -5,6 +5,7 @@
 2. [Setup FM on localhost or through ssh access](#setup-fm-on-localhost-or-through-ssh-access)
 3. [Setup FM on air-gapped servers](#setup-fm-on-air-gapped-servers)
 4. [Start using fleet manager](#start-using-fleet_manager)
+5. [Run CI](#run-ci)
 
 ## System requirements ## 
 
@@ -12,10 +13,17 @@
 
 2. Install docker-compose(https://www.digitalocean.com/community/tutorials/how-to-install-and-use-docker-compose-on-ubuntu-20-04)
 
+3. docker-compose version needs to be greater than 1.29.2
+
 3. Ideal configuration : 
 ```
 RAM : 4GB 
 CORES: 4
+```
+
+4. Install jq
+```
+apt-get install jq
 ```
 
 ## Setup FM on localhost or through ssh access ## 
@@ -122,5 +130,40 @@ c. Enter static data folder path in the remote server (~/static) : You will have
 docker-compose -p fm -f docker_compose_v<fm_version> down
 docker-compose -p fm -f docker_compose_v<fm_version> up
 ```
+
+## Run CI ## 
+
+1. We have created a script ci.sh, which can be used to build and push images to sanjaya.atimotors.com
+
+2. Arguments required to run the script. 
+```
+cd <fleet_manager repo>
+bash scripts/ci.sh <y/n> <sanjaya_login_username> <sanjaya_login_password>
+
+###
+arg 1 - y/n - If 'y' is given ci script would assume it is production build else 'n' is inputted the build would be considered non-prod
+
+arg 2 - Sanjaya login user name
+
+arg 3 - Sanjaya login password
+####
+```
+
+
+3. What does the script do?
+
+    a. Builds all the required docker images. The image to be built is obtained from misc/docker-compose_untagged.yml file**
+
+    b. The docker images would be tagged with the checked out version or tag 
+
+    c. Creates a file static/docker_compose_v<branch/tag>.yml 
+
+    d. Uploads docker_compose_v<branch/tag>.yml  to sanjaya.atimotors.com - The file should get uploaded to the path: static_master_fm/downloads/<prod/non-prod>/fm/fm_v<branch/tag>
+
+    e. Uploads a file release.dt (When was the last commit, when images were created) to sanjaya.atimotors.com - The file should get uploaded to the path: static_master_fm/downloads/<prod/non-prod>/fm/fm_v<branch/tag>
+
+    f. Pushes the images created to registry in sanjaya.atimotors.com 
+
+
 
 

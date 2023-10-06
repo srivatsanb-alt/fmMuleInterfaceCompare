@@ -20,9 +20,12 @@
 17. [Setup optimal dispatch config](#setup-optimal-dispatch-config)
 18. [Clean up disk space in FM server](#clean-up-disk-space-in-fm-server)
 19. [Create self signed certs for FM](#create-self-signed-certs-for-fm)
-20. [Run FM simulator](#run-fm-simulator)
-21. [Where to get the logs?](#where-to-get-the-logs)
-22. [Forgot password for frontend_user: admin ?](#forgot-password-for-frontend_user-admin)
+19. [Use trusted CA for FM](#use-trusted-ca-for-fm)
+21. [Run FM simulator](#run-fm-simulator)
+22. [Where to get the logs?](#where-to-get-the-logs)
+23. [Forgot password for frontend_user: admin ?](#forgot-password-for-frontend_user-admin)
+24. [Add new fleet](#add-new-fleet)
+25. [Switch between multiple maps corresponding to the same fleet](#switch-between-multiple-maps-corresponding-to-the-same-fleet)
 
 ## Setup sherpas ##
 
@@ -283,19 +286,20 @@ docker-compose -p fm -f docker_compose_v<fm_version> up
 1. Check if there were any queue build ups. The output would show queue build ups if any.
 ```
 docker exec -it fleet_manager bash 
-inspect
-rqi
+inspect ## This would list all historical queue build ups
+rqi ## This would show if there is any queue build up at present
 ```
 
 2. Check for occurences of rq errors (rqe) in fleet_manager.log, the output might lead to the issue
 ```
-rqe
+rq
 ```
 
 3. If you are unable to login to FM, Check the docker logs - this should be run outside docker. There might be some errors in the init scripts.
 ```
 docker logs fleet_manager 
 docker logs fleet_db
+# Also check logs/fm.out inside fleet manager container
 ```
 
 ## Access Postgres DB ## 
@@ -373,6 +377,22 @@ docker exec -it fleet_manager bash
 create_certs "127.0.0.1,<ip_1>,<ip2>,...,<ip_n>"
 ```
 
+3. [Restart FM](#restart-fm) (using docker-compose command)
+
+
+## Use trusted CA for FM ## 
+
+1. Create certificate bundle. The attached link can help you in creating cert bundle <https://www.ssldragon.com/blog/what-is-a-ca-bundle/>
+
+2. Rename the certificate bundle as fm_rev_proxy_cert.pem
+
+3. Rename key file as fm_rev_proxy_key.pem 
+
+4. Copy the renamed files(key, cert) to fm static/certs directory
+
+5. [Restart FM](#restart-fm) (using docker-compose command)
+
+
 # RUN FM Simulator #
 
 **FM simulator creates proxy for all the sherpa, Make sure real/physical sherpas are not connected to FM, Config changes need FM restart to take effect**
@@ -432,14 +452,18 @@ cd plugin_logs
     
     a. uvicorn.log - Any error related to fastapi app(endpoints) will be present in uvicorn.log
 
-    b. fleet_manager.log - Any success/error in handlers will be recorded in fleet_manager.log
+    b. fleet_manager.log - Any success/error in handlers/rq will be recorded in fleet_manager.log
     
     c. visa.log - All the visa assignments/rejects will be present in visa.log 
+
+    d. plugin_logs/plugin_<plugin_conveyor>/<plugin_<plugin_name>>.log - would have logs corresponding to the plugin 
+
+    e. plugin_logs/plugin_main.log - Any error in fm_plugins can be seen in plugin_main.log 
 
 
 ## Forgot password for frontend_user: admin ? ##
 
-1. Use the config editor, select the database frontend_users, select the collection user_details, click on the document to edit it
+1. Use the config editor, select the database frontend_users, select the collection user_details
 
 2. There would be multiple documents corresponding to different users, delete the document with name as admin
 
@@ -450,3 +474,36 @@ cd plugin_logs
 username: admin
 password: 1234
 ```
+
+## Add new fleet ## 
+**You would need ssh access to carry out this step**
+
+1. Create a folder in fleet_manager server static directory if not already present
+```
+## this needs to be done on 
+mkdir -p <fleet_manager_static_dir>/map
+```
+
+2. Copy the map files to the folder <fleet_manager_static_dir>/map/.
+
+3. Use configure page in fleet_manager dashboard to add the fleet 
+
+
+## Switch between multiple maps corresponding to the same fleet ## 
+**These steps have to be carried out in the FM server**
+
+1. Create all_maps/<version> folder. You name version as you like. 
+```
+For example, if there are two versions of map for the same fleet
+mkdir -p <fleet_manager_static_dir>/all_maps/<version 1>
+mkdir -p <fleet_manager_static_dir>/all_maps/<version 2>
+```
+
+2. Copy different sets of map files to the folders created above
+
+3. Stop the fleet - using the option in the dashboard
+
+4. Use dashboard, switch to corresponding fleet and press update_map button on the webpage header. 
+A pop would help you to choose the required map version. 
+
+5. Start the fleet - using the option in the dashboard
