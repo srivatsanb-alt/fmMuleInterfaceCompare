@@ -380,7 +380,7 @@ create_certs "127.0.0.1,<ip_1>,<ip2>,...,<ip_n>"
 
 ## Use trusted CA for FM ## 
 
-1. Create certificate bundle. 
+1. Create certificate bundle. The attached link can help you in creating cert bundle <https://www.ssldragon.com/blog/what-is-a-ca-bundle/>
 
 2. Rename the certificate bundle as fm_rev_proxy_cert.pem
 
