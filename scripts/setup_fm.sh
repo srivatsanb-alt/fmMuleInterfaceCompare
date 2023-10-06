@@ -21,14 +21,14 @@ copy_default_certs="n"
 if [ "$remote_server" = "y" ]; then
 {
    read -p "Enter static data folder path in the remote server (~/static) :  " static_data_path
-   rsync -azvP static/docker_compose_v$FM_VERSION.yml $remote_server_addr:$static_data_path/.
+   rsync -azvP --no-o --no-g --no-perms static/docker_compose_v$FM_VERSION.yml $remote_server_addr:$static_data_path/.
    #rm static/docker_compose_v$FM_VERSION.yml
    ssh $remote_server_addr "ls -l $static_data_path/certs/fm_rev_proxy_cert.pem" || copy_default_certs="y"
    ssh $remote_server_addr "ls -l $static_data_path/certs/fm_rev_proxy_key.pem" || copy_default_certs="y"
    if [ $copy_default_certs = "y" ]; then {
         echo "copying default certs to $static_data_path/certs/"
         ssh $remote_server_addr "mkdir -p $static_data_path/certs"
-	rsync -azvP  misc/default_certs/* $remote_server_addr:$static_data_path/certs/.
+	rsync -azvP --no-o --no-g --no-perms misc/default_certs/* $remote_server_addr:$static_data_path/certs/.
    }
    fi
 }
