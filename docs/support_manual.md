@@ -24,6 +24,8 @@
 21. [Run FM simulator](#run-fm-simulator)
 22. [Where to get the logs?](#where-to-get-the-logs)
 23. [Forgot password for frontend_user: admin ?](#forgot-password-for-frontend_user-admin)
+24. [Add new fleet](#add-new-fleet)
+25. [Switch between multiple maps corresponding to the same fleet](#switch-between-multiple-maps-corresponding-to-the-same-fleet)
 
 ## Setup sherpas ##
 
@@ -472,3 +474,36 @@ cd plugin_logs
 username: admin
 password: 1234
 ```
+
+## Add new fleet ## 
+**You would need ssh access to carry out this step**
+
+1. Create a folder in fleet_manager server static directory if not already present
+```
+## this needs to be done on 
+mkdir -p <fleet_manager_static_dir>/map
+```
+
+2. Copy the map files to the folder <fleet_manager_static_dir>/map/.
+
+3. Use configure page in fleet_manager dashboard to add the fleet 
+
+
+## Switch between multiple maps corresponding to the same fleet ## 
+**These steps have to be carried out in the FM server**
+
+1. Create all_maps/<version> folder. You name version as you like. 
+```
+For example, if there are two versions of map for the same fleet
+mkdir -p <fleet_manager_static_dir>/all_maps/<version 1>
+mkdir -p <fleet_manager_static_dir>/all_maps/<version 2>
+```
+
+2. Copy different sets of map files to the folders created above
+
+3. Stop the fleet - using the option in the dashboard
+
+4. Use dashboard, switch to corresponding fleet and press update_map button on the webpage header. 
+A pop would help you to choose the required map version. 
+
+5. Start the fleet - using the option in the dashboard
