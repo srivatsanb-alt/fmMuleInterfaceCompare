@@ -406,7 +406,7 @@ class DBSession:
         count = 0
         base_query = (
             self.session.query(tm.Trip, tm.TripAnalytics.progress)
-            .join(tm.TripAnalytics, tm.Trip.id == tm.TripAnalytics.id)
+            .join(tm.TripAnalytics, tm.Trip.id == tm.TripAnalytics.trip_id)
             .filter(tm.Trip.status.in_(valid_status))
         )
         if booked_from and booked_from != "":
