@@ -310,7 +310,7 @@ async def create_generic_alerts(
     with DBSession() as dbsession:
         utils_util.maybe_add_notification(
             dbsession,
-            [],
+            dbsession.get_customer_names(),
             alert_description,
             mm.NotificationLevels.alert,
             mm.NotificationModules.generic,

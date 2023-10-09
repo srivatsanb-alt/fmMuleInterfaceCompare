@@ -1,5 +1,3 @@
-from io import BytesIO
-import json
 import logging
 from typing import Union
 from fastapi import APIRouter, Depends
@@ -218,6 +216,7 @@ async def trip_status_with_type(
 
 # returns trip status, i.e. the time slot of the trip booking and the trip status with timestamp.
 
+
 @router.post("/status_pg/{type}")
 async def trip_status_pg_with_type(
     type: str,
@@ -242,9 +241,9 @@ async def trip_status_pg_with_type(
         dpd.raise_error("Query sent for an invalid trip type")
 
     logging.getLogger("uvicorn").info(
-            f"trip_status_req: {jsonable_encoder(trip_status_req)}"
-        )
-    
+        f"trip_status_req: {jsonable_encoder(trip_status_req)}"
+    )
+
     with DBSession() as dbsession:
         if trip_status_req.booked_from and trip_status_req.booked_till:
             trip_status_req.booked_from = str_to_dt(trip_status_req.booked_from)
@@ -265,6 +264,7 @@ async def trip_status_pg_with_type(
         )
 
     return response
+
 
 @router.post("/status")
 async def trip_status(

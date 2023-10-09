@@ -60,6 +60,14 @@ class DBSession:
         self.add_to_session(trip)
         return trip
 
+    def get_customer_names(self):
+        customer_names = []
+        cns = self.session.query(fm.Fleet.customer).distinct().all()
+        for cn in cns:
+            customer_names.append(cn[0])
+
+        return customer_names
+
     def create_pending_trip(self, trip_id):
         pending_trip = tm.PendingTrip(trip_id=trip_id)
         self.add_to_session(pending_trip)
@@ -405,8 +413,7 @@ class DBSession:
         trips = {}
         count = 0
         base_query = (
-            self.session.query(tm.Trip, tm.TripAnalytics.progress)
-            .join(tm.TripAnalytics, tm.Trip.id == tm.TripAnalytics.trip_id)
+            self.session.query(tm.Trip)
             .filter(tm.Trip.status.in_(valid_status))
         )
         if booked_from and booked_from != "":
@@ -446,6 +453,9 @@ class DBSession:
         pages = int(count / limit) if (count % limit == 0) else int(count / limit + 1)
 
         trips = jsonable_encoder(trips)
+
+        for item in trips:
+            item["progress"] = self.get_trip_progress(str(item["id"]))
         trips = {
             "trips": trips,
             "count": count,
@@ -510,7 +520,14 @@ class DBSession:
             .order_by(tm.TripAnalytics.trip_leg_id.desc())
             .all()
         )
-
+    def get_trip_progress(self, trip_id):
+        progress = (
+            self.session.query(tm.TripAnalytics.progress)
+            .filter(tm.TripAnalytics.trip_id == trip_id)
+            .one_or_none()
+        )
+        return jsonable_encoder(progress)
+    
     def get_legs(self, trip_id):
         legs = (
             self.session.query(tm.TripAnalytics)
@@ -665,14 +682,11 @@ class DBSession:
     def yield_notifications_grouped_by_log_level_and_modules(
         self, fleet_name, skip_log_levels=[], skip_modules=[]
     ):
-        all_distinct_modules = [
-            i
-            for i in list(mm.NotificationModules.__dict__.keys())
-            if not i.startswith("__")
-        ]
-        all_log_levels = [
-            i for i in list(mm.NotificationLevels.__dict__.keys()) if not i.startswith("__")
-        ]
+
+        all_distinct_modules = self.session.query(
+            func.distinct(mm.Notifications.module)
+        ).all()
+        all_log_levels = self.session.query(func.distinct(mm.Notifications.log_level)).all()
         for log_level in all_log_levels:
             if log_level in skip_log_levels:
                 continue
@@ -682,8 +696,8 @@ class DBSession:
                 temp = (
                     self.session.query(mm.Notifications)
                     .filter(any_(mm.Notifications.entity_names) == fleet_name)
-                    .filter(mm.Notifications.log_level == log_level)
-                    .filter(mm.Notifications.module == mod)
+                    .filter(mm.Notifications.log_level == log_level[0])
+                    .filter(mm.Notifications.module == mod[0])
                     .all()
                 )
                 yield log_level[0], mod[0], temp

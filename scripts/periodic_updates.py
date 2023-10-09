@@ -1,6 +1,5 @@
 import logging
 import time
-import datetime
 
 # ati code imports
 from utils.comms import send_status_update, send_notification
@@ -94,74 +93,69 @@ def get_all_alert_notifications(dbsession):
     )
     alert_msg = {}
     alert_msg["type"] = mm.NotificationLevels.alert
-    alert_msg["notification_ids"] = []
-
+    alert_msg["modules"] = []
     for alert in all_alerts:
-        alert_msg.update({alert.id: get_table_as_dict(mm.Notifications, alert)})
-        alert_msg["notification_ids"].append(alert.id)
-
+        if alert.module not in alert_msg["modules"]:
+            alert_msg[alert.module] = {}
+            alert_msg["modules"].append(alert.module)
+        alert_msg[alert.module].update(
+            {alert.id: get_table_as_dict(mm.Notifications, alert)}
+        )
     return alert_msg
 
 
 def send_fleet_level_notifications(dbsession, fleet_name):
     notification_gen = dbsession.yield_notifications_grouped_by_log_level_and_modules(
-        fleet_name, skip_log_levels=[mm.NotificationLevels.alert], skip_modules=[]
+        fleet_name,
+        skip_log_levels=[
+            mm.NotificationLevels.alert,
+            mm.NotificationLevels.stale_alert_or_action,
+        ],
+        skip_modules=[],
     )
     action_requests = {
         "type": mm.NotificationLevels.action_request,
         "fleet_name": fleet_name,
-        "notification_ids": [],
+        "modules": [],
     }
+    all_infos = {
+        "type": mm.NotificationLevels.info,
+        "fleet_name": fleet_name,
+        "modules": [],
+    }
+
     while True:
-        module_level_info = {}
-        module_level_info["fleet_name"] = fleet_name
-        notifications = []
         try:
             log_level, module, notifications = next(notification_gen)
         except StopIteration:
             break
 
         if log_level == mm.NotificationLevels.action_request:
+            action_requests[module] = {}
+            action_requests["modules"].append(module)
             for notification in notifications:
-                action_requests.update(
+                action_requests[module].update(
                     {notification.id: get_table_as_dict(mm.Notifications, notification)}
                 )
-                action_requests["notification_ids"].append(notification.id)
-
-        else:
-            module_level_info["type"] = log_level
-            module_level_info["module"] = module
-            module_level_info["notification_ids"] = []
+        elif log_level == mm.NotificationLevels.info:
+            all_infos[module] = {}
+            all_infos["modules"].append(module)
             for notification in notifications:
-                module_level_info.update(
+                all_infos[module].update(
                     {notification.id: get_table_as_dict(mm.Notifications, notification)}
                 )
-                module_level_info["notification_ids"].append(notification.id)
-            send_notification(module_level_info)
 
+    send_notification(all_infos)
     send_notification(action_requests)
 
 
 def send_periodic_updates():
     while True:
-        num_notifications = -1
-        last_update_dt = datetime.datetime.now()
         try:
             logging.getLogger().info("starting periodic updates script")
             with DBSession() as dbsession:
                 while True:
-                    new_notifs = False
                     all_fleets = dbsession.get_all_fleets()
-
-                    nc_temp = dbsession.get_notification_count()
-                    if (
-                        dbsession.any_new_addition_to_notification_table(last_update_dt)
-                        or num_notifications != nc_temp
-                    ):
-                        last_update_dt = datetime.datetime.now()
-                        new_notifs = True
-
-                    num_notifications = nc_temp
 
                     for fleet in all_fleets:
                         fleet_status_msg = get_fleet_status_msg(dbsession, fleet)
@@ -170,15 +164,13 @@ def send_periodic_updates():
                         ongoing_trip_msg = get_ongoing_trips_status(dbsession, fleet)
                         send_status_update(ongoing_trip_msg)
 
-                        if new_notifs:
-                            send_fleet_level_notifications(dbsession, fleet.name)
+                        send_fleet_level_notifications(dbsession, fleet.name)
 
                     visa_msg = get_visas_held_msg(dbsession)
                     send_status_update(visa_msg)
 
-                    if new_notifs:
-                        all_alerts = get_all_alert_notifications(dbsession)
-                        send_notification(all_alerts)
+                    all_alerts = get_all_alert_notifications(dbsession)
+                    send_notification(all_alerts)
 
                     # force refresh of all objects
                     dbsession.session.expire_all()
