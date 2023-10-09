@@ -163,15 +163,20 @@ async def writer(websocket, token, x_real_ip):
             try:
                 notification = {}
                 data = ast.literal_eval(message["data"])
-                for id, details in data.items():
+                all_modules = data.get("modules", [])
 
-                    # if notification, have to check cleared_by, send or not send that notification
-                    if id in data.get("notification_ids", []):
-                        if token not in details.get("cleared_by", []):
-                            notification.update({id: details})
-                            num_actions = len(notification[id]["cleared_by"])
-                            notification[id]["num_actions"] = num_actions
-                            del notification[id]["cleared_by"]
+                for module in all_modules:
+                    notification[module] = {}
+
+                for id, details in data.items():
+                    # have to if particular notification was check cleared_by the user, decide to send or not send that notification
+                    if id in all_modules:
+                        for notif_id, notif_val in data.get(id, {}).items:
+                            if token not in notif_val.get("cleared_by", []):
+                                notification[module].update({id: notif_val})
+                                num_actions = len(notification[module][id]["cleared_by"])
+                                notification[module][id]["num_actions"] = num_actions
+                                del notification[module][id]["cleared_by"]
                     else:
                         notification.update({id: details})
 
