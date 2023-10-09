@@ -413,8 +413,7 @@ class DBSession:
         trips = {}
         count = 0
         base_query = (
-            self.session.query(tm.Trip, tm.TripAnalytics.progress)
-            .join(tm.TripAnalytics, tm.Trip.id == tm.TripAnalytics.trip_id)
+            self.session.query(tm.Trip)
             .filter(tm.Trip.status.in_(valid_status))
         )
         if booked_from and booked_from != "":
@@ -454,6 +453,9 @@ class DBSession:
         pages = int(count / limit) if (count % limit == 0) else int(count / limit + 1)
 
         trips = jsonable_encoder(trips)
+
+        for item in trips:
+            item["progress"] = self.get_trip_progress(str(item["id"]))
         trips = {
             "trips": trips,
             "count": count,
@@ -518,7 +520,14 @@ class DBSession:
             .order_by(tm.TripAnalytics.trip_leg_id.desc())
             .all()
         )
-
+    def get_trip_progress(self, trip_id):
+        progress = (
+            self.session.query(tm.TripAnalytics.progress)
+            .filter(tm.TripAnalytics.trip_id == trip_id)
+            .one_or_none()
+        )
+        return jsonable_encoder(progress)
+    
     def get_legs(self, trip_id):
         legs = (
             self.session.query(tm.TripAnalytics)
