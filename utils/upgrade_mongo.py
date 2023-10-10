@@ -46,11 +46,6 @@ def read_conditional_trips_toml_and_update_mongo_db(fm_mongo, fc_db):
         conditional_trips_doc["auto_park"]["book"] = conditional_trips_config[
             "conditional_trips"
         ]["idling_sherpa"]["book"]
-
-        conditional_trips_doc["auto_park"]["max_trips"] = conditional_trips_config[
-            "conditional_trips"
-        ]["idling_sherpa"]["max_trips"]
-
         conditional_trips_doc["auto_park"]["threshold"] = conditional_trips_config[
             "conditional_trips"
         ]["idling_sherpa"]["threshold"]

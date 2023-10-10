@@ -245,16 +245,11 @@ class ConfigValidator:
                 },
                 "auto_park": {
                     "bsonType": "object",
-                    "required": ["book", "max_trips", "threshold", "priority"],
+                    "required": ["book", "threshold", "priority"],
                     "properties": {
                         "book": {
                             "bsonType": "bool",
                             "description": "Whether to book trip to parking area for sherpas that are idling",
-                        },
-                        "max_trips": {
-                            "bsonType": "int",
-                            "description": "Max number of sherpas that can be booked with trips to parking simultaneously",
-                            "minimum": 1,
                         },
                         "threshold": {
                             "bsonType": "int",
@@ -416,7 +411,7 @@ class ConfigDefaults:
     }
     conditional_trips = {
         "trip_types": ["battery_swap", "auto_park"],
-        "auto_park": {"book": False, "max_trips": 2, "threshold": 600, "priority": 1},
+        "auto_park": {"book": False, "threshold": 600, "priority": 1},
         "battery_swap": {"book": True, "max_trips": 2, "threshold": 15, "priority": 3},
     }
     simulator = {

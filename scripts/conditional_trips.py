@@ -16,9 +16,7 @@ import app.routers.dependencies as dpd
 def get_conditional_trip_config():
 
     with FMMongo() as fm_mongo:
-        conditional_trips_config = fm_mongo.get_document_from_fm_config(
-            "conditional_trips"
-        )
+        conditional_trips_config = fm_mongo.get_document_from_fm_config("conditional_trips")
 
     return conditional_trips_config
 
@@ -156,7 +154,6 @@ class BookConditionalTrip:
     def book_auto_park_trips(self, config: dict, trip_type: str):
         idling_thresh = config["threshold"]
         trip_priority = config["priority"]
-        max_trips = config["max_trips"]
 
         idling_sherpa_status = self.get_idling_sherpa_status(idling_thresh)
 
@@ -188,20 +185,28 @@ class BookConditionalTrip:
                 )
                 continue
 
-            num_trips = self.get_num_booked_trips(trip_type)
+            last_station_name = saved_route.route[-1]
 
-            if num_trips < max_trips:
-                enqueue_trip_msg(
-                    sherpa_status.sherpa_name, saved_route.route, trip_type, trip_priority
+            try:
+                last_station = self.dbsession.get_station(last_station_name)
+            except Exception as e:
+                logging.getLogger("misc").warning(
+                    f"Unablle to get details of station: {last_station_name} in {sherpa_name} parking route. Exception: {e}"
                 )
-                logging.getLogger("misc").info(
-                    f"queued a {trip_type} trip for {sherpa_name} with route: {saved_route.route}, priority: {trip_priority}"
-                )
+                continue
 
-            else:
+            if last_station.parked_sherpa is not None:
                 logging.getLogger("misc").info(
-                    f"can only book {max_trips} trips, num {trip_type} trips: {num_trips}"
+                    f"Cannot send {sherpa_name} to {last_station_name}, {last_station.parked_sherpa.name} is already parked there"
                 )
+                continue
+
+            enqueue_trip_msg(
+                sherpa_status.sherpa_name, saved_route.route, trip_type, trip_priority
+            )
+            logging.getLogger("misc").info(
+                f"queued a {trip_type} trip for {sherpa_name} with route: {saved_route.route}, priority: {trip_priority}"
+            )
 
     def book_battery_swap_trips(self, config: dict, trip_type: str):
         battery_level_thresh = config["threshold"]

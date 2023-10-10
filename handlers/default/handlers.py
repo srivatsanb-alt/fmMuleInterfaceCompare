@@ -930,6 +930,13 @@ class Handlers:
         # update db
         status.pose = req.current_pose
 
+        if sherpa.parking_id is not None:
+            if not utils_util.are_poses_close(status.pose, sherpa.parked_at.pose):
+                logging.getLogger("status_updates").warning(
+                    f"Setting {sherpa.name} parking_id to None, sherpa pose not matching {sherpa.parking_id}"
+                )
+                sherpa.parking_id = None
+
         status.battery_status = req.battery_status
         status.error = req.error_info if req.error else None
 
@@ -1207,6 +1214,7 @@ class Handlers:
         # update db
         if not req.induct:
             self.release_visas(sherpa.exclusion_zones, sherpa, notify=True)
+            sherpa.parking_id = None
         else:
             reset_visas_held_req = rqm.ResetVisasHeldReq()
             _ = utils_comms.send_req_to_sherpa(self.dbsession, sherpa, reset_visas_held_req)
