@@ -522,7 +522,7 @@ class DBSession:
         progress = (
             self.session.query(tm.TripAnalytics.progress)
             .filter(tm.TripAnalytics.trip_id == trip_id)
-            .one_or_none()
+            .first()
         )
         return jsonable_encoder(progress)
 
