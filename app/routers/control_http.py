@@ -286,6 +286,7 @@ async def reset_pose(
 
         reset_pose_req = rqm.ResetPoseReq(
             pose=station.pose,
+            station_name=reset_pose_ctrl_req.fleet_station,
             sherpa_name=entity_name,
         )
 

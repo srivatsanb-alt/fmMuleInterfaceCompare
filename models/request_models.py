@@ -47,6 +47,14 @@ class AccessType(str, Enum):
     RELEASE = "release"
 
 
+class PasstoSherpaEndpoints:
+    RESET_POSE = "reset_pose"
+    DIAGNOSTICS = "diagnostics"
+    PAUSE_RESUME = "pause_resume"
+    SWITCH_MODE = "swith_mode"
+    IMG_UPDATE = "img_update"
+
+
 class ConveyorReq(BaseModel):
     direction: DirectionEnum
     num_units: int
@@ -468,34 +476,35 @@ class PeripheralsReq(FMReq):
 
 
 class PauseResumeReq(FMReq):
-    endpoint: str = "pause_resume"
+    endpoint: str = PasstoSherpaEndpoints.PAUSE_RESUME
     pause: bool
     sherpa_name: str
     type = MessageType.PASS_TO_SHERPA
 
 
 class SwitchModeReq(FMReq):
-    endpoint: str = "switch_mode"
+    endpoint: str = PasstoSherpaEndpoints.SWITCH_MODE
     mode: str
     sherpa_name: str
     type = MessageType.PASS_TO_SHERPA
 
 
 class ResetPoseReq(FMReq):
-    endpoint: str = "reset_pose"
+    endpoint: str = PasstoSherpaEndpoints.RESET_POSE
     pose: List[float]
     sherpa_name: str
+    station_name: Optional[str]
     type = MessageType.PASS_TO_SHERPA
 
 
 class DiagnosticsReq(FMReq):
-    endpoint: str = "diagnostics"
+    endpoint: str = PasstoSherpaEndpoints.DIAGNOSTICS
     sherpa_name: str
     type = MessageType.PASS_TO_SHERPA
 
 
 class SherpaImgUpdate(FMReq):
-    endpoint: str = "img_update"
+    endpoint: str = PasstoSherpaEndpoints.IMG_UPDATE
     image_tag: str
     fm_server_username: str
     time_zone: str

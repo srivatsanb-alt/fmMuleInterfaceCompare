@@ -5,7 +5,7 @@ from core.db import get_session, get_engine
 from models.misc_models import FMVersion
 
 
-AVAILABLE_UPGRADES = ["2.2", "3.0", "3.01", "3.1", "3.2", "3.3", "4.0"]
+AVAILABLE_UPGRADES = ["2.2", "3.0", "3.01", "3.1", "3.2", "3.3", "4.0", "4.01"]
 NO_SCHEMA_CHANGES = ["3.0", "3.01", "3.1"]
 
 
@@ -78,6 +78,22 @@ class DBUpgrade:
                 print("column route_lengths added trips table")
             else:
                 print("column route_lengths already present in trips table")
+
+    def upgrade_to_4_01(self):
+        with get_engine(os.getenv("FM_DATABASE_URI")).connect() as conn:
+            conn.execute("commit")
+            result = conn.execute(
+                "SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='sherpas'"
+            )
+            column_names = [row[0] for row in result]
+            if "parking_id" not in column_names:
+                conn.execute('ALTER TABLE "sherpas" ADD COLUMN "parking_id" VARCHAR')
+                conn.execute(
+                    'ALTER TABLE "sherpas" ADD CONSTRAINT fk_parking_id FOREIGN KEY (parking_id) REFERENCES stations (name)'
+                )
+                print("column parking_id added to sherpas table")
+            else:
+                print("column parking_id already present in sherpa table")
 
 
 def upgrade_db_schema():

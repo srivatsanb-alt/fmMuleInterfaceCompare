@@ -137,6 +137,7 @@ def send_move_msg(
         destination_pose=station.pose,
         destination_name=station.name,
     )
+    sherpa.parking_id = None
     return send_req_to_sherpa(dbsession, sherpa, move_msg)
 
 

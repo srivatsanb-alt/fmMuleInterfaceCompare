@@ -67,6 +67,12 @@ class Sherpa(Base):
     exclusion_zones = relationship(
         "ExclusionZone", secondary=VisaAssignment.__table__, back_populates="sherpas"
     )
+    parking_id = Column(String, ForeignKey("stations.name"))
+    parked_at = relationship(
+        "Station",
+        back_populates="parked_sherpa",
+        uselist=False,
+    )
 
 
 class SherpaEvent(TimestampMixin, Base):
@@ -117,16 +123,19 @@ class Station(Base):
     fleet_id = Column(Integer, ForeignKey("fleets.id"), nullable=False)
     fleet = relationship("Fleet", back_populates="stations")
     status = relationship("StationStatus", back_populates="station", uselist=False)
+    parked_sherpa = relationship(
+        "Sherpa",
+        back_populates="parked_at",
+        uselist=False,
+    )
 
 
 class StationStatus(TimestampMixin, Base):
     __tablename__ = "stationstatus"
-
     station_name = Column(String, ForeignKey("stations.name"), primary_key=True, index=True)
     station = relationship("Station", back_populates="status")
     disabled = Column(Boolean)
     arriving_sherpas = Column(ARRAY(String))
-    sherpa_at_station = Column(String)
 
 
 class AvailableSherpas(TimestampMixin, Base):
