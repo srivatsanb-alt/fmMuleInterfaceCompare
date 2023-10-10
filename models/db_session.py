@@ -412,10 +412,7 @@ class DBSession:
         skip = page * limit
         trips = {}
         count = 0
-        base_query = (
-            self.session.query(tm.Trip)
-            .filter(tm.Trip.status.in_(valid_status))
-        )
+        base_query = self.session.query(tm.Trip).filter(tm.Trip.status.in_(valid_status))
         if booked_from and booked_from != "":
             base_query = base_query.filter(tm.Trip.booking_time > booked_from)
         if booked_till and booked_till != "":
@@ -520,6 +517,7 @@ class DBSession:
             .order_by(tm.TripAnalytics.trip_leg_id.desc())
             .all()
         )
+
     def get_trip_progress(self, trip_id):
         progress = (
             self.session.query(tm.TripAnalytics.progress)
@@ -527,7 +525,7 @@ class DBSession:
             .one_or_none()
         )
         return jsonable_encoder(progress)
-    
+
     def get_legs(self, trip_id):
         legs = (
             self.session.query(tm.TripAnalytics)
@@ -700,6 +698,10 @@ class DBSession:
                     .filter(mm.Notifications.module == mod[0])
                     .all()
                 )
+
+                if len(temp) == 0:
+                    continue
+
                 yield log_level[0], mod[0], temp
 
     def delete_all_notifications(self):
