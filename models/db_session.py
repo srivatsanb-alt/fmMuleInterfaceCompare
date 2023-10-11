@@ -249,6 +249,9 @@ class DBSession:
         for stale_sherpa_event in stale_sherpa_events:
             self.session.delete(stale_sherpa_event)
 
+    def get_station_if_present(self, name: str) -> fm.Station:
+        return self.session.query(fm.Station).filter(fm.Station.name == name).one_or_none()
+
     def get_station(self, name: str) -> fm.Station:
         return self.session.query(fm.Station).filter(fm.Station.name == name).one()
 
@@ -412,10 +415,7 @@ class DBSession:
         skip = page * limit
         trips = {}
         count = 0
-        base_query = (
-            self.session.query(tm.Trip)
-            .filter(tm.Trip.status.in_(valid_status))
-        )
+        base_query = self.session.query(tm.Trip).filter(tm.Trip.status.in_(valid_status))
         if booked_from and booked_from != "":
             base_query = base_query.filter(tm.Trip.booking_time > booked_from)
         if booked_till and booked_till != "":
@@ -520,14 +520,15 @@ class DBSession:
             .order_by(tm.TripAnalytics.trip_leg_id.desc())
             .all()
         )
+
     def get_trip_progress(self, trip_id):
         progress = (
             self.session.query(tm.TripAnalytics.progress)
             .filter(tm.TripAnalytics.trip_id == trip_id)
-            .one_or_none()
+            .first()
         )
         return jsonable_encoder(progress)
-    
+
     def get_legs(self, trip_id):
         legs = (
             self.session.query(tm.TripAnalytics)
@@ -700,6 +701,10 @@ class DBSession:
                     .filter(mm.Notifications.module == mod[0])
                     .all()
                 )
+
+                if len(temp) == 0:
+                    continue
+
                 yield log_level[0], mod[0], temp
 
     def delete_all_notifications(self):

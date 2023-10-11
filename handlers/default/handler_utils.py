@@ -117,7 +117,7 @@ def start_leg(
     ongoing_trip: tm.OngoingTrip,
     from_station: fm.Station,
     to_station: fm.Station,
-) -> tm.TripLeg:
+):
 
     trip: tm.Trip = ongoing_trip.trip
 
@@ -134,8 +134,6 @@ def start_leg(
         update_leg_curr_station(from_station, sherpa_name)
 
     update_leg_next_station(to_station, sherpa_name)
-
-    return trip_leg
 
 
 def end_leg(ongoing_trip: tm.OngoingTrip):

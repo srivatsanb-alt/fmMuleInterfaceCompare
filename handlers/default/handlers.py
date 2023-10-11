@@ -290,6 +290,7 @@ class Handlers:
         self.do_pre_actions(ongoing_trip)
 
         hutils.start_leg(self.dbsession, ongoing_trip, from_station, to_station)
+        sherpa.status.trip_leg_id = ongoing_trip.trip_leg_id
 
         from_station_name = from_station.name if from_station else None
         started_leg_log = f"{sherpa.name} started a trip leg of trip (trip_id: {trip.id}) from {from_station_name} to {to_station.name}"
@@ -321,6 +322,7 @@ class Handlers:
         logging.getLogger(sherpa_name).info(end_leg_log)
 
         hutils.end_leg(ongoing_trip)
+        sherpa.status.trip_leg_id = None
 
         if trip_analytics:
             trip_analytics.end_time = datetime.datetime.now()
@@ -927,6 +929,14 @@ class Handlers:
 
         # update db
         status.pose = req.current_pose
+
+        if sherpa.parking_id is not None:
+            if not utils_util.are_poses_close(status.pose, sherpa.parked_at.pose):
+                logging.getLogger("status_updates").warning(
+                    f"Setting {sherpa.name} parking_id to None, sherpa pose not matching {sherpa.parking_id}"
+                )
+                sherpa.parking_id = None
+
         status.battery_status = req.battery_status
         status.error = req.error_info if req.error else None
 
@@ -1183,6 +1193,7 @@ class Handlers:
 
         # update db
         sherpa.pose = req.destination_pose
+        sherpa.parking_id = curr_station.name
         self.end_leg(ongoing_trip, sherpa, curr_station, trip_analytics)
 
     def handle_induct_sherpa(self, req: rqm.SherpaInductReq):
@@ -1203,6 +1214,7 @@ class Handlers:
         # update db
         if not req.induct:
             self.release_visas(sherpa.exclusion_zones, sherpa, notify=True)
+            sherpa.parking_id = None
         else:
             reset_visas_held_req = rqm.ResetVisasHeldReq()
             _ = utils_comms.send_req_to_sherpa(self.dbsession, sherpa, reset_visas_held_req)
@@ -1522,6 +1534,11 @@ class Handlers:
         logging.getLogger(sherpa.name).info(
             f"passing control request to sherpa {sherpa.name}, {req.dict()} "
         )
+
+        if req.endpoint == rqm.PasstoSherpaEndpoints.RESET_POSE:
+            if req.station_name is not None:
+                sherpa.parking_id = req.station_name
+
         utils_comms.send_req_to_sherpa(self.dbsession, sherpa, req)
 
     def handle_save_route(self, req: rqm.SaveRouteReq):

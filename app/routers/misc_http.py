@@ -148,18 +148,6 @@ async def sherpa_summary(
             {"sherpa_status": utils_util.get_table_as_dict(fm.SherpaStatus, sherpa_status)}
         )
 
-        # check if sherpa is at station
-        at_station = None
-        response.update({"at_station": at_station})
-
-        if sherpa_status.pose is not None:
-            at_station = utils_util.get_closest_station(
-                dbsession, sherpa_status.pose, sherpa.fleet.name
-            )
-
-        if at_station:
-            response.update({"at_station": at_station.name})
-
     return response
 
 

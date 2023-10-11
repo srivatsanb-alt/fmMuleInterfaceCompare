@@ -144,7 +144,6 @@ async def reader(websocket, token, x_real_ip):
     while True:
         try:
             _ = await websocket.receive_json()
-            pass
         except WebSocketDisconnect as e:
             logger.info(f"websocket(notifications) with {x_real_ip} disconnected")
             raise e
@@ -171,16 +170,16 @@ async def writer(websocket, token, x_real_ip):
                 for id, details in data.items():
                     # have to if particular notification was check cleared_by the user, decide to send or not send that notification
                     if id in all_modules:
-                        for notif_id, notif_val in data.get(id, {}).items:
+                        for notif_id, notif_val in details.items():
                             if token not in notif_val.get("cleared_by", []):
-                                notification[module].update({id: notif_val})
-                                num_actions = len(notification[module][id]["cleared_by"])
-                                notification[module][id]["num_actions"] = num_actions
-                                del notification[module][id]["cleared_by"]
+                                notif_val["num_actions"] = len(notif_val["cleared_by"])
+                                del notif_val["cleared_by"]
+                                notification[module].update({notif_id: notif_val})
                     else:
                         notification.update({id: details})
 
                 await websocket.send_json(notification)
+
             except Exception as e:
                 logger.error(
                     f"Exception in notification webSocket writer for {x_real_ip}, Exception: {e}"
