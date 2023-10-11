@@ -54,7 +54,7 @@ async def get_available_updates(
             mfm_context=mfm_context,
             endpoint="download_file",
             req_type="get",
-            query=f"prod/fm/{available_update_version}/release.notes",
+            query=f"fm/{available_update_version}/release.notes",
             auth=auth,
         )
         if status_code == 200:
@@ -67,7 +67,7 @@ async def get_available_updates(
             mfm_context=mfm_context,
             endpoint="download_file",
             req_type="get",
-            query=f"prod/fm/{available_update_version}/release.dt",
+            query=f"fm/{available_update_version}/release.dt",
             auth=auth,
         )
         if status_code == 200:
@@ -119,10 +119,9 @@ async def update_fm(
     registry_password = auth_json["registry_auth"]["password"]
     static_files_auth_username = auth_json["static_files_auth"]["username"]
     static_files_auth_password = auth_json["static_files_auth"]["password"]
-    prod = "prod"
 
     command = [
-        f"bash /app/scripts/self_updater.sh {mfm_context.server_ip} {mfm_context.server_port} {mfm_context.http_scheme} {fm_version} {prod} {registry_username} {registry_password} {static_files_auth_username} {static_files_auth_password} > /app/static/fm_update_progress.log 2>&1"
+        f"bash /app/scripts/self_updater.sh {mfm_context.server_ip} {mfm_context.server_port} {mfm_context.http_scheme} {fm_version} {registry_username} {registry_password} {static_files_auth_username} {static_files_auth_password} > /app/static/fm_update_progress.log 2>&1"
     ]
 
     update_proc = await asyncio.create_subprocess_shell(*command)
