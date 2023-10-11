@@ -8,7 +8,6 @@ HTTP_SCHEME="https"
 read -p "Sanjaya Username: " master_fm_username
 read -p "Sanjaya Password: " master_fm_password
 read -p "FM version: " FM_VERSION
-read -p "Is this build in production? (y/n) " prod_release
 
 resp=$(curl -X "POST" -H "Content-Type: application/json" -d '{"name": "'$master_fm_username'", "password": "'$master_fm_password'"}' https://sanjaya.atimotors.com/api/v1/master_fm/user/login)
 
