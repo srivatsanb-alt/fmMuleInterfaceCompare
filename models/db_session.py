@@ -249,6 +249,9 @@ class DBSession:
         for stale_sherpa_event in stale_sherpa_events:
             self.session.delete(stale_sherpa_event)
 
+    def get_station_if_present(self, name: str) -> fm.Station:
+        return self.session.query(fm.Station).filter(fm.Station.name == name).one_or_none()
+
     def get_station(self, name: str) -> fm.Station:
         return self.session.query(fm.Station).filter(fm.Station.name == name).one()
 
