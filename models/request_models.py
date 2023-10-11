@@ -51,7 +51,7 @@ class PasstoSherpaEndpoints:
     RESET_POSE = "reset_pose"
     DIAGNOSTICS = "diagnostics"
     PAUSE_RESUME = "pause_resume"
-    SWITCH_MODE = "swith_mode"
+    SWITCH_MODE = "switch_mode"
     IMG_UPDATE = "img_update"
 
 
