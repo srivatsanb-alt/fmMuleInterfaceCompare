@@ -23,10 +23,9 @@ upload_to_sanjaya()
      MASTER_FM_IP="sanjaya.atimotors.com"
    }
    fi
-   MASTER_FM_IP="sanjaya.atimotors.com"
    MASTER_FM_PORT="443"
    HTTP_SCHEME="https"
-   resp=$(curl -X "POST" -H "Content-Type: application/json" -d '{"name": "'$master_fm_username'", "password": "'$master_fm_password'"}' https://sanjaya.atimotors.com/api/v1/master_fm/user/login)
+   resp=$(curl -X "POST" -H "Content-Type: application/json" -d '{"name": "'$master_fm_username'", "password": "'$master_fm_password'"}' $HTTP_SCHEME://$MASTER_FM_IP:$MASTER_FM_PORT/api/v1/master_fm/user/login)
    echo $resp
    access_token=$(echo $resp | jq .access_token | sed -e 's/^"//' -e 's/"$//')
    registry_username=$(echo $resp | jq .registry_auth.username | sed -e 's/^"//' -e 's/"$//')
