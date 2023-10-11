@@ -16,6 +16,13 @@ upload_to_sanjaya()
    prod_release=$1
    master_fm_username=$2
    master_fm_password=$3
+   MASTER_FM_IP="staging-sanjaya.atimotors.com"
+   if [ "$prod_release" = "y" ]; then
+   {
+     prod=true
+     MASTER_FM_IP="sanjaya.atimotors.com"
+   }
+   fi
    MASTER_FM_IP="sanjaya.atimotors.com"
    MASTER_FM_PORT="443"
    HTTP_SCHEME="https"
@@ -35,14 +42,14 @@ upload_to_sanjaya()
    echo "Registry password: $registry_password"
    echo "Software was last updated at: $LAST_COMMIT_DT" > static/release.dt
    echo "Images were created at: $(date)" >> static/release.dt 
-   upload_dc_file=$(curl -o /dev/null -w "%{http_code}" -H "X-User-Token: $access_token" -F "uploaded_file=@static/docker_compose_v$FM_VERSION.yml" $HTTP_SCHEME://$MASTER_FM_IP:$MASTER_FM_PORT/api/v1/master_fm/fm_client/upload/fm/$FM_VERSION/$prod)
+   upload_dc_file=$(curl -o /dev/null -w "%{http_code}" -H "X-User-Token: $access_token" -F "uploaded_file=@static/docker_compose_v$FM_VERSION.yml" $HTTP_SCHEME://$MASTER_FM_IP:$MASTER_FM_PORT/api/v1/master_fm/fm_client/upload/fm/$FM_VERSION)
    if [ $upload_dc_file != 200 ]; then 
    {
       echo "Unable to upload docker compose file"
       exit 1
    }
    fi
-   upload_release_dt=$(curl -o /dev/null -w "%{http_code}" -H "X-User-Token: $access_token" -F "uploaded_file=@static/release.dt" $HTTP_SCHEME://$MASTER_FM_IP:$MASTER_FM_PORT/api/v1/master_fm/fm_client/upload/fm/$FM_VERSION/$prod)
+   upload_release_dt=$(curl -o /dev/null -w "%{http_code}" -H "X-User-Token: $access_token" -F "uploaded_file=@static/release.dt" $HTTP_SCHEME://$MASTER_FM_IP:$MASTER_FM_PORT/api/v1/master_fm/fm_client/upload/fm/$FM_VERSION)
    if [ $upload_release_dt != 200 ]; then
    {
       echo "Unable to upload release.dt file"
