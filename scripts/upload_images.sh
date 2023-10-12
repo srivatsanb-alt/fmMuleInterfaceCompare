@@ -57,8 +57,8 @@ upload_to_sanjaya()
    fi   
    rm static/release.dt
    docker login --username $registry_username --password $registry_password $MASTER_FM_IP:$MASTER_FM_PORT
-   docker-compose -f static/docker_compose_v$FM_VERSION.yml config | grep image | awk '{print $2}' | xargs -I % docker tag % "$MASTER_FM_IP:$MASTER_FM_PORT/"%
-   docker-compose -f static/docker_compose_v$FM_VERSION.yml config | grep image | awk -v registry="$MASTER_FM_IP:$MASTER_FM_PORT/" '{print registry$2}' | xargs -I % docker push %
+   docker-compose -f static/docker_compose_v$FM_VERSION.yml config | grep image | awk '{print $2}' | xargs -I % docker tag % "$MASTER_FM_IP:$MASTER_FM_PORT/"% || exit 1
+   docker-compose -f static/docker_compose_v$FM_VERSION.yml config | grep image | awk -v registry="$MASTER_FM_IP:$MASTER_FM_PORT/" '{print registry$2}' | xargs -I % docker push % || exit 1
    docker logout $MASTER_FM_IP:$MASTER_FM_PORT
 }
 
