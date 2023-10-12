@@ -1,6 +1,6 @@
 From ubuntu:20.04
 RUN echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections
-RUN apt-get update
+RUN apt update -y && apt upgrade -y
 RUN apt install -y --show-progress \
     build-essential \
     curl make net-tools unzip git openssh-client \
@@ -40,6 +40,4 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 RUN curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
 RUN chmod +x /usr/local/bin/docker-compose
-
-
 
