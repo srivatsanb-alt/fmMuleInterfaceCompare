@@ -19,7 +19,6 @@ upload_to_sanjaya()
    MASTER_FM_IP="staging-sanjaya.atimotors.com"
    if [ "$prod_release" = "y" ]; then
    {
-     prod=true
      MASTER_FM_IP="sanjaya.atimotors.com"
    }
    fi
@@ -30,12 +29,6 @@ upload_to_sanjaya()
    access_token=$(echo $resp | jq .access_token | sed -e 's/^"//' -e 's/"$//')
    registry_username=$(echo $resp | jq .registry_auth.username | sed -e 's/^"//' -e 's/"$//')
    registry_password=$(echo $resp | jq .registry_auth.password | sed -e 's/^"//' -e 's/"$//')
-   prod=false
-   if [ "$prod_release" = "y" ]; then
-   {
-     prod=true
-   }
-   fi	      
    echo "Access token: $access_token"
    echo "Registry username: $registry_username"
    echo "Registry password: $registry_password"
