@@ -174,7 +174,7 @@ class Handlers:
 
             if station.status.disabled is True:
                 raise ValueError(
-                    f"Cannot execute {trip_msg.route} , {station.name} is disabled"
+                    f"Cannot accept the trip booking since {station.name} is disabled"
                 )
 
     def should_recreate_scheduled_trip(self, pending_trip: tm.PendingTrip):
