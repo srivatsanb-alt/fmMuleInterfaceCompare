@@ -483,30 +483,45 @@ def upload_important_files(
     return success, temp_last_file_update_dt
 
 
-def send_all_one_time_msg(mfm_context):
+def send_conf_to_mfm(mfm_context):
     update_fm_version_info(mfm_context)
     update_fleet_info(mfm_context)
     upload_map_files(mfm_context)
     update_sherpa_info(mfm_context)
 
 
+def maybe_send_conf_to_mfm(last_conf_sent_unix_dt, redis_conn, mfm_context):
+    temp = redis_conn.get("send_conf_to_mfm_unix_dt")
+    if temp is None:
+        return
+
+    temp = float(temp.decode())
+    if temp > last_conf_sent_unix_dt:
+        logging.getLogger("mfm_updates").info(
+            "Will send all fleet configuration to master fm again"
+        )
+        send_conf_to_mfm(mfm_context)
+        return True
+
+    return False
+
+
 def send_mfm_updates():
     logging.getLogger().info("starting send_updates_to_mfm script")
     redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
-
     mfm_context: mu.MFMContext = mu.get_mfm_context()
     if mfm_context.send_updates is False:
         return
-
-    send_all_one_time_msg(mfm_context)
+    send_conf_to_mfm(mfm_context)
+    last_conf_sent_unix_dt = time.time()
     while True:
         try:
-            send_conf_to_mfm = redis_conn.get("send_conf_to_mfm")
-            if send_conf_to_mfm is not None:
-                send_conf_to_mfm = json.loads(send_conf_to_mfm)
-                if send_conf_to_mfm is True:
-                    redis_conn.delete("send_conf_to_mfm")
-                    send_all_one_time_msg(mfm_context)
+            if maybe_send_conf_to_mfm(last_conf_sent_unix_dt, redis_conn, mfm_context):
+                last_conf_sent_unix_dt = time.time()
+            else:
+                logging.getLogger("mfm_updates").info(
+                    "need not send all fleet configuration to master fm again"
+                )
 
             with DBSession() as dbsession:
                 master_fm_data_upload_info = dbsession.get_master_data_upload_info()

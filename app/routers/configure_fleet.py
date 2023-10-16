@@ -1,10 +1,11 @@
 import os
+import time
 import logging
 import glob
 from fastapi import APIRouter, Depends
 import shutil
-import redis
 import json
+import aioredis
 from rq.command import send_shutdown_command
 
 # ati code imports
@@ -88,8 +89,10 @@ async def add_edit_sherpa(
 
             all_sherpa_names.append(sherpa_name)
             lu.set_log_config_dict(all_sherpa_names)
-            redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
-            redis_conn.set("all_sherpas", json.dumps(all_sherpa_names))
+
+            redis_conn = aioredis.Redis.from_url(os.getenv("FM_REDIS_URI"))
+            await redis_conn.set("all_sherpas", json.dumps(all_sherpa_names))
+            await redis_conn.set("send_conf_to_mfm_unix_dt", time.time())
 
             new_qs = [f"{sherpa_name}_update_handler", f"{sherpa_name}_trip_update_handler"]
             for new_q in new_qs:
@@ -128,9 +131,10 @@ async def delete_sherpa(
         fu.SherpaUtils.delete_sherpa(dbsession, sherpa_name)
 
     all_sherpa_names = dbsession.get_all_sherpa_names()
-    redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
-    redis_conn.set("all_sherpas", json.dumps(all_sherpa_names))
-    redis_conn.set("send_conf_to_mfm", json.dumps(True))
+
+    redis_conn = aioredis.Redis.from_url(os.getenv("FM_REDIS_URI"))
+    await redis_conn.set("all_sherpas", json.dumps(all_sherpa_names))
+    await redis_conn.set("send_conf_to_mfm_unix_dt", time.time())
 
     queues_to_delete = [
         f"{sherpa_name}_update_handler",
@@ -229,11 +233,11 @@ async def add_fleet(
                 raise e
 
         if new_fleet:
-            redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
+            redis_conn = aioredis.Redis.from_url(os.getenv("FM_REDIS_URI"))
             all_fleet_names = dbsession.get_all_fleet_names()
-            redis_conn.set("all_fleet_names", json.dumps(all_fleet_names))
-            redis_conn.set("add_router_for", fleet_name)
-            redis_conn.set("send_conf_to_mfm", json.dumps(True))
+            await redis_conn.set("all_fleet_names", json.dumps(all_fleet_names))
+            await redis_conn.set("add_router_for", fleet_name)
+            await redis_conn.set("send_conf_to_mfm_unix_dt", time.time())
 
     return response
 
@@ -243,6 +247,7 @@ async def delete_fleet(
     fleet_name: str,
     user_name=Depends(dpd.get_user_from_header),
 ):
+    response = {}
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
@@ -275,7 +280,12 @@ async def delete_fleet(
 
         fu.FleetUtils.delete_fleet(dbsession, fleet_name)
 
-    return {}
+        redis_conn = aioredis.Redis.from_url(os.getenv("FM_REDIS_URI"))
+        all_fleet_names = dbsession.get_all_fleet_names()
+        await redis_conn.set("all_fleet_names", json.dumps(all_fleet_names))
+        await redis_conn.set("send_conf_to_mfm_unix_dt", time.time())
+
+    return response
 
 
 # deletes fleet from FM.
@@ -337,8 +347,8 @@ async def update_map(
             else:
                 raise e
 
-        redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
-        redis_conn.set("update_router_for", fleet_name)
-        redis_conn.set("send_conf_to_mfm", json.dumps(True))
+        redis_conn = aioredis.Redis.from_url(os.getenv("FM_REDIS_URI"))
+        await redis_conn.set("update_router_for", fleet_name)
+        await redis_conn.set("send_conf_to_mfm_unix_dt", time.time())
 
     return response

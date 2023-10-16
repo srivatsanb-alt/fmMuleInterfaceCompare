@@ -3,6 +3,7 @@ import uvicorn
 import os
 import logging
 import logging.config
+import aioredis
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -52,7 +53,7 @@ app.add_middleware(
 
 
 @app.middleware("http")
-async def add_process_time_header(request: Request, call_next):
+async def custom_fm_mw(request: Request, call_next):
     start_time = time.time()
     response = await call_next(request)
     process_time = time.time() - start_time
