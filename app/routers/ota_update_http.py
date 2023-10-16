@@ -134,9 +134,6 @@ async def update_fm(
 
     update_done = await redis_conn.get("update_done")
     update_done = json.loads(update_done)
-    if update_done is False:
-        await redis_conn.delete("update_done")
-        dpd.raise_error(f"Unable to complete the update process")
 
     dt_str = utils_util.dt_to_str(datetime.datetime.now())
     dt_str_no_space = dt_str.replace(" ", "-")
@@ -146,5 +143,9 @@ async def update_fm(
     )
 
     os.system("rm /app/static/fm_update_progress.log")
+
+    if update_done is False:
+        await redis_conn.delete("update_done")
+        dpd.raise_error(f"Unable to complete the update process")
 
     return response
