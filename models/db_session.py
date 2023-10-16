@@ -1,6 +1,7 @@
 import datetime
 import os
 from typing import List
+from sqlalchemy.sql import not_
 from sqlalchemy import func, any_, or_, and_, extract, text
 from sqlalchemy.orm import Session
 from fastapi.encoders import jsonable_encoder
@@ -400,8 +401,8 @@ class DBSession:
 
     def get_trips_with_timestamp_and_status_pagination(
         self,
-        booked_from,
-        booked_till,
+        from_dt,
+        to_dt,
         filter_fleets,
         valid_status,
         sherpa_names,
@@ -416,10 +417,14 @@ class DBSession:
         trips = {}
         count = 0
         base_query = self.session.query(tm.Trip).filter(tm.Trip.status.in_(valid_status))
-        if booked_from and booked_from != "":
-            base_query = base_query.filter(tm.Trip.booking_time > booked_from)
-        if booked_till and booked_till != "":
-            base_query = base_query.filter(tm.Trip.booking_time < booked_till)
+        if from_dt and from_dt != "":
+            base_query = base_query.filter(
+                or_(tm.Trip.booking_time >= from_dt, tm.Trip.start_time >= from_dt)
+            )
+        if to_dt and to_dt != "":
+            base_query = base_query.filter(
+                or_(tm.Trip.booking_time <= to_dt, tm.Trip.end_time <= to_dt)
+            )
         if filter_fleets and filter_fleets != "[]":
             base_query = base_query.filter(tm.Trip.fleet_name.in_(filter_fleets))
         if sherpa_names and sherpa_names != "[]":
@@ -466,11 +471,11 @@ class DBSession:
         }
         return trips
 
-    def get_trips_with_timestamp_and_status(self, booked_from, booked_till, valid_status):
+    def get_trips_with_timestamp_and_status(self, from_dt, to_dt, valid_status):
         return (
             self.session.query(tm.Trip)
-            .filter(tm.Trip.booking_time > booked_from)
-            .filter(tm.Trip.booking_time < booked_till)
+            .filter(or_(tm.Trip.booking_time >= from_dt, tm.Trip.start_time >= from_dt))
+            .filter(or_(tm.Trip.booking_time <= to_dt, tm.Trip.end_time <= to_dt))
             .filter(tm.Trip.status.in_(valid_status))
             .order_by(tm.Trip.id.desc())
             .all()
@@ -485,11 +490,11 @@ class DBSession:
             .all()
         )
 
-    def get_trips_with_timestamp(self, booked_from, booked_till):
+    def get_trips_with_timestamp(self, from_dt, to_dt):
         return (
             self.session.query(tm.Trip)
-            .filter(tm.Trip.booking_time > booked_from)
-            .filter(tm.Trip.booking_time < booked_till)
+            .filter(or_(tm.Trip.booking_time >= from_dt, tm.Trip.start_time >= from_dt))
+            .filter(or_(tm.Trip.booking_time <= to_dt, tm.Trip.end_time <= to_dt))
             .order_by(tm.Trip.id.desc())
             .all()
         )
@@ -502,12 +507,12 @@ class DBSession:
             .all()
         )
 
-    def get_trip_analytics_with_timestamp(self, booked_from, booked_till):
+    def get_trip_analytics_with_timestamp(self, from_dt, to_dt):
         return (
             self.session.query(tm.TripAnalytics)
             .join(tm.Trip, (tm.TripAnalytics.trip_id == tm.Trip.id))
-            .filter(tm.Trip.booking_time > booked_from)
-            .filter(tm.Trip.booking_time < booked_till)
+            .filter(or_(tm.Trip.booking_time >= from_dt, tm.Trip.start_time >= from_dt))
+            .filter(or_(tm.Trip.booking_time <= to_dt, tm.Trip.end_time <= to_dt))
             .order_by(tm.TripAnalytics.trip_leg_id.desc())
             .all()
         )
@@ -539,8 +544,8 @@ class DBSession:
 
     def get_trip_analytics_with_pagination(
         self,
-        booked_from,
-        booked_till,
+        from_dt,
+        to_dt,
         filter_fleets,
         sherpa_names,
         sort_field="id",
@@ -562,8 +567,8 @@ class DBSession:
 
         base_query = (
             self.session.query(tm.Trip)
-            .filter(tm.Trip.booking_time > booked_from)
-            .filter(tm.Trip.booking_time < booked_till)
+            .filter(tm.Trip.start_time >= from_dt)
+            .filter(tm.Trip.end_time <= to_dt)
         )
 
         if filter_fleets and filter_fleets != "[]":

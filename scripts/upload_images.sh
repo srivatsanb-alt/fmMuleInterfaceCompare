@@ -19,7 +19,6 @@ upload_to_sanjaya()
    MASTER_FM_IP="staging-sanjaya.atimotors.com"
    if [ "$prod_release" = "y" ]; then
    {
-     prod=true
      MASTER_FM_IP="sanjaya.atimotors.com"
    }
    fi
@@ -30,12 +29,6 @@ upload_to_sanjaya()
    access_token=$(echo $resp | jq .access_token | sed -e 's/^"//' -e 's/"$//')
    registry_username=$(echo $resp | jq .registry_auth.username | sed -e 's/^"//' -e 's/"$//')
    registry_password=$(echo $resp | jq .registry_auth.password | sed -e 's/^"//' -e 's/"$//')
-   prod=false
-   if [ "$prod_release" = "y" ]; then
-   {
-     prod=true
-   }
-   fi	      
    echo "Access token: $access_token"
    echo "Registry username: $registry_username"
    echo "Registry password: $registry_password"
@@ -57,8 +50,8 @@ upload_to_sanjaya()
    fi   
    rm static/release.dt
    docker login --username $registry_username --password $registry_password $MASTER_FM_IP:$MASTER_FM_PORT
-   docker-compose -f static/docker_compose_v$FM_VERSION.yml config | grep image | awk '{print $2}' | xargs -I % docker tag % "$MASTER_FM_IP:$MASTER_FM_PORT/"%
-   docker-compose -f static/docker_compose_v$FM_VERSION.yml config | grep image | awk -v registry="$MASTER_FM_IP:$MASTER_FM_PORT/" '{print registry$2}' | xargs -I % docker push %
+   docker-compose -f static/docker_compose_v$FM_VERSION.yml config | grep image | awk '{print $2}' | xargs -I % docker tag % "$MASTER_FM_IP:$MASTER_FM_PORT/"% || exit 1
+   docker-compose -f static/docker_compose_v$FM_VERSION.yml config | grep image | awk -v registry="$MASTER_FM_IP:$MASTER_FM_PORT/" '{print registry$2}' | xargs -I % docker push % || exit 1
    docker logout $MASTER_FM_IP:$MASTER_FM_PORT
 }
 

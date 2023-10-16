@@ -139,6 +139,19 @@ def start_leg(
 def end_leg(ongoing_trip: tm.OngoingTrip):
     ongoing_trip.trip_leg.end()
     ongoing_trip.end_leg()
+    if ongoing_trip.finished_booked():
+        trip_progress = 100
+    else:
+        trip_progress = np.round(
+            (
+                np.sum(ongoing_trip.trip.etas_at_start[: ongoing_trip.next_idx_aug])
+                / np.sum(ongoing_trip.trip.etas_at_start)
+            )
+            * 100,
+            2,
+        )
+    ongoing_trip.trip.trip_metadata.update({"total_trip_progress": str(trip_progress)})
+    flag_modified(ongoing_trip.trip, "trip_metadata")
 
 
 def update_leg_curr_station(curr_station: fm.Station, sherpa_name: str):

@@ -273,6 +273,11 @@ class ClientReq(BaseModel):
     ttl: Optional[int] = None
 
 
+class GenericFromToTimeReq(ClientReq):
+    from_dt: Optional[str]
+    to_dt: Optional[str]
+
+
 class MasterDataInfo(ClientReq):
     fleet_name: str
 
@@ -384,23 +389,19 @@ class SherpaImgUpdateCtrlReq(ClientReq):
     type: str = "sherpa_img_update"
 
 
-class TripStatusReq_pg(ClientReq):
+class TripStatusReq(GenericFromToTimeReq):
+    trip_ids: Optional[List[int]]
+
+
+class TripStatusReq_pg(GenericFromToTimeReq):
     page_no: int
     rec_limit: int
     filter_fleets: Optional[List[str]]
     filter_sherpa_names: Optional[List[str]]
     filter_status: Optional[List[str]]
-    booked_from: Optional[str]
-    booked_till: Optional[str]
     sort_field: Optional[str]
     sort_order: Optional[str]
     search_txt: Optional[str]
-
-
-class TripStatusReq(ClientReq):
-    booked_from: Optional[str]
-    booked_till: Optional[str]
-    trip_ids: Optional[List[int]]
 
 
 class GiveRouteWPS(ClientReq):
@@ -429,11 +430,6 @@ class UpdateSavedRouteReq(ClientReq):
 class UpdateSherpaMetaDataReq(ClientReq):
     sherpa_name: str
     info: Dict[str, str]
-
-
-class GenericFromToTimeReq(ClientReq):
-    from_dt: str
-    to_dt: str
 
 
 #################################################
