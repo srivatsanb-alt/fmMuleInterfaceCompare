@@ -2,13 +2,15 @@ import os
 import aioredis
 import json
 import asyncio
+import shutil
+import datetime
 from fastapi import APIRouter, Depends
 from requests.auth import HTTPBasicAuth
 
 # ati code imports
 import master_fm_comms.mfm_utils as mu
-
 import app.routers.dependencies as dpd
+import utils.util as utils_util
 
 
 router = APIRouter(
@@ -136,6 +138,13 @@ async def update_fm(
         await redis_conn.delete("update_done")
         dpd.raise_error(f"Unable to complete the update process")
 
-    # os.system("rm /app/static/fm_update_progress.log")
+    dt_str = utils_util.dt_to_str(datetime.datetime.now())
+    dt_str_no_space = dt_str.replace(" ", "-")
+    shutil.copy(
+        "/app/static/fm_update_progress.log",
+        f"/app/static/fm_update_progress_{dt_str_no_space}.log",
+    )
+
+    os.system("rm /app/static/fm_update_progress.log")
 
     return response
