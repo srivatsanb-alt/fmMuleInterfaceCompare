@@ -93,6 +93,9 @@ api_key: '<api_key generated for the customer>'
 send_updates: true
 ```
 
+7. [Restart FM](#restart-fm)
+
+
 ## Setup auto parking feature ##
 
 1. Use the config editor, select the database fm_config, select the collection conditional_trips, click on the document to edit it
@@ -359,7 +362,7 @@ FM version: ### Enter fm version like fm_dev, FM_v3.2 ###
 
 2. Use the config editor, select the database fm_config, select the collection data_backup, click on the document to edit it
 
-3. Edit keep_size_mb, FM will try to restrict the data inside static/data_backup folder to keep_size_mb only. The contents in the data backup folder will sorted and deleted based on their time of creation, older data will be deleted first. The default is set to 1000MB
+3. Edit keep_size_mb, FM will try to restrict the data inside static/data_backup folder to keep_size_mb only. The contents in the data backup folder will sorted and deleted based on their time of creation, older data will be deletedparking_id first. The default is set to 1000MB
 
 4. Use can also set prune_ununsed_images to true or false based on whether you want to clean up old docker images. Set prune_images_used_until_h accordingly, all the images that were unused in the last prune_images_used_until_h hours will be deleted.
 
