@@ -26,6 +26,7 @@
 23. [Forgot password for frontend_user: admin ?](#forgot-password-for-frontend_user-admin)
 24. [Add new fleet](#add-new-fleet)
 25. [Switch between multiple maps corresponding to the same fleet](#switch-between-multiple-maps-corresponding-to-the-same-fleet)
+26. [Simulate summon_button/conveyor with postman](#simulate-summon_buttonconveyor-with-postman)
 
 ## Setup sherpas ##
 
@@ -92,6 +93,9 @@ ws_scheme: 'ws'
 api_key: '<api_key generated for the customer>'
 send_updates: true
 ```
+
+7. [Restart FM](#restart-fm)
+
 
 ## Setup auto parking feature ##
 
@@ -359,7 +363,7 @@ FM version: ### Enter fm version like fm_dev, FM_v3.2 ###
 
 2. Use the config editor, select the database fm_config, select the collection data_backup, click on the document to edit it
 
-3. Edit keep_size_mb, FM will try to restrict the data inside static/data_backup folder to keep_size_mb only. The contents in the data backup folder will sorted and deleted based on their time of creation, older data will be deleted first. The default is set to 1000MB
+3. Edit keep_size_mb, FM will try to restrict the data inside static/data_backup folder to keep_size_mb only. The contents in the data backup folder will sorted and deleted based on their time of creation, older data will be deletedparking_id first. The default is set to 1000MB
 
 4. Use can also set prune_ununsed_images to true or false based on whether you want to clean up old docker images. Set prune_images_used_until_h accordingly, all the images that were unused in the last prune_images_used_until_h hours will be deleted.
 
@@ -506,3 +510,29 @@ mkdir -p <fleet_manager_static_dir>/all_maps/<version 2>
 A pop would help you to choose the required map version. 
 
 5. Start the fleet - using the option in the dashboard
+
+
+## Simulate summon_button/conveyor with postman ##
+
+1. Create a new window for websocket connection in postman 
+
+2. Use the url given below based on plugin you are using
+```
+summon_button: ws://<fm_ip>:<plugin_port>/plugin/ws/api/v1/summon_button
+conveyor: ws://<fm_ip>:<plugin_port>/plugin/ws/api/v1/conveyor
+```
+
+3. Set api-key in headers
+```
+X-API-Key: <api_key> 
+```
+
+4. Send a tote_status message on behalf of conveyor. Only the attributes num_totes matters. All other are info given for debugging 
+```
+{"sensor_1": 0,"sensor_2": 0,"sensor_3": 0,"sensor_4": 0,"sensor_5": 0,"sensor_6": 0,"num_totes": 1,"num_totes_to_transfer": 0,"compact_time": 0,"last_compact_time": 420774,"last_egress_time": 420798,"last_egress_reading": 0,"gate_state": 0,"gate_ready_time": 3421937,"last_tick_time": 28964247,"type": "tote_status"}
+```
+
+5. Simulate summon_button press, send button_pressed message
+```
+{"type": "button_pressed"}
+```

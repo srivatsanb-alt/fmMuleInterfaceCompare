@@ -206,7 +206,7 @@ class BookConditionalTrip:
 
             if already_parked:
                 logging.getLogger("misc").info(
-                    f"sherpa already parked at {sherpa_status.sherpa.parking_id}"
+                    f"{sherpa_name} already parked at {sherpa_status.sherpa.parking_id}"
                 )
                 continue
 

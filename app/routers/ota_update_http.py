@@ -142,7 +142,7 @@ async def update_fm(
         f"/app/static/fm_update_progress_{dt_str_no_space}.log",
     )
 
-    os.system("rm /app/static/fm_update_progress.log")
+    os.system("sleep 5 && rm /app/static/fm_update_progress.log &")
 
     if update_done is False:
         await redis_conn.delete("update_done")

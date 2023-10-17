@@ -578,13 +578,8 @@ class ExclusionZoneUtils:
 
                 """
                 1. By default all stations are exclusive
-
-                2. Transit gates (linked or not linked to a station)
-                and has exclusive_parking set to True in gate details will be
-                exclusive
-
-                3. For transit gates(not linked to a station) exclusive_parking
-                would mean exclusive access for transit(special exclusive zone)
+                2. By default all lane are non-exclusive
+                3. If exclusive parking is set to True, the _lane will be made exclusive as well
                 """
 
                 if (
