@@ -26,6 +26,7 @@
 23. [Forgot password for frontend_user: admin ?](#forgot-password-for-frontend_user-admin)
 24. [Add new fleet](#add-new-fleet)
 25. [Switch between multiple maps corresponding to the same fleet](#switch-between-multiple-maps-corresponding-to-the-same-fleet)
+26. [Simulate summon_button/conveyor with postman](#simulate-summon_buttonconveyor-with-postman)
 
 ## Setup sherpas ##
 
@@ -509,3 +510,29 @@ mkdir -p <fleet_manager_static_dir>/all_maps/<version 2>
 A pop would help you to choose the required map version. 
 
 5. Start the fleet - using the option in the dashboard
+
+
+## Simulate summon_button/conveyor with postman ##
+
+1. Create a new window for websocket connection in postman 
+
+2. Use the url given below based on plugin you are using
+```
+summon_button: ws://<fm_ip>:<plugin_port>/plugin/ws/api/v1/summon_button
+conveyor: ws://<fm_ip>:<plugin_port>/plugin/ws/api/v1/conveyor
+```
+
+3. Set api-key in headers
+```
+X-API-Key: <api_key> 
+```
+
+4. Send a tote_status message on behalf of conveyor. Only the attributes num_totes matters. All other are info given for debugging 
+```
+{"sensor_1": 0,"sensor_2": 0,"sensor_3": 0,"sensor_4": 0,"sensor_5": 0,"sensor_6": 0,"num_totes": 1,"num_totes_to_transfer": 0,"compact_time": 0,"last_compact_time": 420774,"last_egress_time": 420798,"last_egress_reading": 0,"gate_state": 0,"gate_ready_time": 3421937,"last_tick_time": 28964247,"type": "tote_status"}
+```
+
+5. Simulate summon_button press, send button_pressed message
+```
+{"type": "button_pressed"}
+```
