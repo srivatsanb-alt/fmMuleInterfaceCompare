@@ -5,7 +5,7 @@ set_timezone()
     CONTINENT=$(echo $TZ | awk -F '/' '{ print $1 }')
     CITY=$(echo $TZ | awk -F '/' '{ print $2 }')
     sed -i "s/Asia/$CONTINENT/g" static/docker_compose_v$FM_VERSION.yml
-    sed -i "s/Asia/$CITY/g" static/docker_compose_v$FM_VERSION.yml
+    sed -i "s/Kolkata/$CITY/g" static/docker_compose_v$FM_VERSION.yml
 }
 
 download_pull_fm_update()
