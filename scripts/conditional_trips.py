@@ -164,6 +164,20 @@ class BookConditionalTrip:
         )
         return len(trips)
 
+    def can_park_at_station(self, station_name):
+        parking_station = self.dbsession.get_station_if_present(station_name)
+        if parking_station is None:
+            logging.getLogger("misc").error(f"Invalid station: {station_name}")
+            return False
+
+        if parking_station.parked_sherpa is not None:
+            logging.getLogger("misc").info(
+                f"Cannot use {parking_station.name} for parking, {parking_station.parked_sherpa.name} is already parked there"
+            )
+            return False
+
+        return True
+
     def book_auto_park_trips(self, config: dict, trip_type: str):
         idling_thresh = config["threshold"]
         trip_priority = config["priority"]
@@ -174,9 +188,17 @@ class BookConditionalTrip:
             logging.getLogger("misc").warning(f"No idling sherpas")
 
         for sherpa_status in idling_sherpa_status:
+            self.dbsession.session.refresh(sherpa_status)
+            sherpa_name = sherpa_status.sherpa_name
+
+            if sherpa_status.trip_id is not None:
+                logging.getLogger("misc").info(
+                    f"{sherpa_name} not idle anymore, got assigned with trip: {sherpa_status.trip_id}"
+                )
+                continue
+
             park_at_any_station = False
 
-            sherpa_name = sherpa_status.sherpa_name
             # fleet_name = sherpa_status.sherpa.fleet.name
             route_tag = f"parking_{sherpa_name}"
             saved_route = self.dbsession.get_saved_route(route_tag)
@@ -199,7 +221,7 @@ class BookConditionalTrip:
 
             already_parked = False
             if park_at_any_station and sherpa_status.sherpa.parking_id:
-                if sherpa_status.sherpa.parking_id in any(saved_route.route):
+                if sherpa_status.sherpa.parking_id in saved_route.route:
                     already_parked = True
             elif sherpa_status.sherpa.parking_id == saved_route.route[-1]:
                 already_parked = True
@@ -216,33 +238,22 @@ class BookConditionalTrip:
                     if not self.is_station_already_booked_with_conditional_trip(
                         trip_type, p_station_name
                     ):
-                        parking_station_name = p_station_name
-                        parking_route = [parking_station_name]
-                        break
+                        if self.can_park_at_station(p_station_name):
+                            parking_station_name = p_station_name
+                            parking_route = [parking_station_name]
+                            break
                     else:
                         logging.getLogger("misc").error(
                             f"{p_station_name} is already booked with {trip_type} trip"
                         )
             else:
-                parking_station_name = saved_route.route[-1]
-                parking_route = saved_route.route
+                if self.can_park_at_station(saved_route.route[-1]):
+                    parking_station_name = saved_route.route[-1]
+                    parking_route = saved_route.route
 
             if parking_route is None:
                 logging.getLogger("misc").info(
                     f"Couldn't find any parking spot for {sherpa_name}"
-                )
-                continue
-
-            parking_station = self.dbsession.get_station_if_present(parking_station_name)
-            if parking_station is None:
-                logging.getLogger("misc").error(
-                    f"Invalid station: {parking_station} in given route: {route_tag}"
-                )
-                continue
-
-            if parking_station.parked_sherpa is not None:
-                logging.getLogger("misc").info(
-                    f"Cannot use {parking_station.name} for parking, {parking_station.parked_sherpa.name} is already parked there"
                 )
                 continue
 
@@ -251,6 +262,17 @@ class BookConditionalTrip:
             )
             logging.getLogger("misc").info(
                 f"queued a {trip_type} trip for {sherpa_name} with route: {parking_route}, priority: {trip_priority}"
+            )
+
+            while not self.is_trip_already_booked(sherpa_name, trip_type):
+                time.sleep(0.5)
+                logging.getLogger("misc").info(
+                    f"{trip_type} trip for {sherpa_name} not yet booked"
+                )
+                self.dbsession.session.expire_all()
+
+            logging.getLogger("misc").info(
+                f"{trip_type} trip for {sherpa_name} booked successfully"
             )
 
     def book_battery_swap_trips(self, config: dict, trip_type: str):
