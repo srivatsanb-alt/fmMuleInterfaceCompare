@@ -3,7 +3,6 @@ import uvicorn
 import os
 import logging
 import logging.config
-import aioredis
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
