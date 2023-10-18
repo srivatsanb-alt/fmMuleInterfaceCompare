@@ -3,7 +3,7 @@ set -e
 get_all_reqd_images()
 {
     FM_VERSION=$1
-    all_reqd_images=$(docker-compose -f static/docker_compose_v$FM_VERSION.yml config | grep image | awk '{print $2}')
+    all_reqd_images=$(docker-compose -f /app/static/docker_compose_v$FM_VERSION.yml config | grep image | awk '{print $2}')
     echo $all_reqd_images
 }
 
