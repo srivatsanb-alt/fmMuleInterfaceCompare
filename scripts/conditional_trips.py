@@ -247,9 +247,12 @@ class BookConditionalTrip:
                             f"{p_station_name} is already booked with {trip_type} trip"
                         )
             else:
-                if self.can_park_at_station(saved_route.route[-1]):
-                    parking_station_name = saved_route.route[-1]
-                    parking_route = saved_route.route
+                if not self.is_station_already_booked_with_conditional_trip(
+                    trip_type, saved_route.route[-1]
+                ):
+                    if self.can_park_at_station(saved_route.route[-1]):
+                        parking_station_name = saved_route.route[-1]
+                        parking_route = saved_route.route
 
             if parking_route is None:
                 logging.getLogger("misc").info(
@@ -274,6 +277,7 @@ class BookConditionalTrip:
             logging.getLogger("misc").info(
                 f"{trip_type} trip for {sherpa_name} booked successfully"
             )
+            self.dbsession.session.expire_all()
 
     def book_battery_swap_trips(self, config: dict, trip_type: str):
         battery_level_thresh = config["threshold"]

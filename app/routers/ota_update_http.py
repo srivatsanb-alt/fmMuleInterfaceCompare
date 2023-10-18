@@ -5,9 +5,10 @@ import asyncio
 import shutil
 import datetime
 from fastapi import APIRouter, Depends
-from requests.auth import HTTPBasicAuth
 
 # ati code imports
+from models.db_session import DBSession
+import models.misc_models as mm
 import master_fm_comms.mfm_utils as mu
 import app.routers.dependencies as dpd
 import utils.util as utils_util
@@ -26,56 +27,24 @@ async def get_available_updates(
 ):
 
     mfm_context = mu.get_mfm_context()
-
-    status_code, available_updates_json = mu.send_http_req_to_mfm(
-        mfm_context=mfm_context,
-        endpoint="get_available_updates",
-        req_type="get",
-        query="fm",
-    )
+    status_code, available_updates_json = mu.get_available_updates_fm(mfm_context)
     if status_code != 200:
         dpd.raise_error("Unable to fetch info on available_updates")
 
-    status_code, auth_json = mu.send_http_req_to_mfm(
-        mfm_context=mfm_context,
-        endpoint="get_basic_auth",
-        req_type="get",
-    )
-    if status_code != 200:
+    auth, _ = mu.get_mfm_static_file_auth(mfm_context)
+    if auth is None:
         dpd.raise_error(
-            f"Unable access master_fm: {mfm_context.mfm_ip}:{mfm_context.mfm_port}"
+            f"Unable get auth for master_fm: {mfm_context.mfm_ip}:{mfm_context.mfm_port}"
         )
-    static_files_auth_username = auth_json["static_files_auth"]["username"]
-    static_files_auth_password = auth_json["static_files_auth"]["password"]
-    auth = HTTPBasicAuth(static_files_auth_username, static_files_auth_password)
-
     available_updates = {}
     for available_update_version in available_updates_json["available_updates"]:
+        release_notes, release_dt = mu.get_release_details(
+            mfm_context, available_update_version, auth
+        )
         available_updates.update({available_update_version: {}})
-        status_code, release_notes = mu.send_http_req_to_mfm(
-            mfm_context=mfm_context,
-            endpoint="download_file",
-            req_type="get",
-            query=f"fm/{available_update_version}/release.notes",
-            auth=auth,
-        )
-        if status_code == 200:
-            temp = None
-            if release_notes is not None:
-                temp = release_notes.decode()
-            available_updates[available_update_version].update({"release_notes": temp})
 
-        status_code, release_dt = mu.send_http_req_to_mfm(
-            mfm_context=mfm_context,
-            endpoint="download_file",
-            req_type="get",
-            query=f"fm/{available_update_version}/release.dt",
-            auth=auth,
-        )
-        if status_code == 200:
-            available_updates[available_update_version].update(
-                {"release_dt": release_dt.decode()}
-            )
+        available_updates[available_update_version].update({"release_notes": release_notes})
+        available_updates[available_update_version].update({"release_dt": release_dt})
 
     return available_updates
 
@@ -105,16 +74,10 @@ async def update_fm(
         )
 
     mfm_context = mu.get_mfm_context()
-
-    status_code, auth_json = mu.send_http_req_to_mfm(
-        mfm_context=mfm_context,
-        endpoint="get_basic_auth",
-        req_type="get",
-    )
-
-    if status_code != 200:
+    _, auth_json = mu.get_mfm_static_file_auth(mfm_context)
+    if auth_json is None:
         dpd.raise_error(
-            f"Unable access master_fm: {mfm_context.mfm_ip}:{mfm_context.mfm_port}"
+            f"Unable get auth for master_fm: {mfm_context.mfm_ip}:{mfm_context.mfm_port}"
         )
 
     registry_username = auth_json["registry_auth"]["username"]
@@ -131,7 +94,6 @@ async def update_fm(
 
     await redis_conn.delete("update_started")
     await redis_conn.delete("updating_to")
-
     update_done = await redis_conn.get("update_done")
     update_done = json.loads(update_done)
 
@@ -147,5 +109,15 @@ async def update_fm(
     if update_done is False:
         await redis_conn.delete("update_done")
         dpd.raise_error(f"Unable to complete the update process")
+
+    update_log = f"Update to {fm_version} successful! Please restart FM with restart all services button in maintenance page"
+    with DBSession() as dbsession:
+        utils_util.maybe_add_notification(
+            dbsession,
+            dbsession.get_customer_names(),
+            update_log,
+            mm.NotificationLevels.alert,
+            mm.NotificationModules.generic,
+        )
 
     return response

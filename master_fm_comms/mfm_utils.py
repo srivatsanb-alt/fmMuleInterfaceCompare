@@ -2,6 +2,7 @@ import logging
 import os
 import requests
 from dataclasses import dataclass
+from requests.auth import HTTPBasicAuth
 
 # ati code imports
 from models.mongo_client import FMMongo
@@ -187,3 +188,59 @@ def prune_fleet_status(fleet_status_msg: dict):
     pruned_msg.update({"sherpa_status": new_sherpa_status})
 
     return pruned_msg
+
+
+def get_mfm_static_file_auth(mfm_context):
+    status_code, auth_json = send_http_req_to_mfm(
+        mfm_context=mfm_context,
+        endpoint="get_basic_auth",
+        req_type="get",
+    )
+
+    if status_code != 200:
+        return None, None
+
+    static_files_auth_username = auth_json["static_files_auth"]["username"]
+    static_files_auth_password = auth_json["static_files_auth"]["password"]
+    auth = HTTPBasicAuth(static_files_auth_username, static_files_auth_password)
+
+    return auth, auth_json
+
+
+def get_available_updates_fm(mfm_context):
+    status_code, available_updates_json = send_http_req_to_mfm(
+        mfm_context=mfm_context,
+        endpoint="get_available_updates",
+        req_type="get",
+        query="fm",
+    )
+    return status_code, available_updates_json
+
+
+def get_release_details(mfm_context, fm_version, auth):
+    release_notes = None
+    release_dt = None
+    status_code, release_dt = send_http_req_to_mfm(
+        mfm_context=mfm_context,
+        endpoint="download_file",
+        req_type="get",
+        query=f"fm/{fm_version}/release.dt",
+        auth=auth,
+    )
+    if status_code == 200:
+        if release_dt is not None:
+            release_dt = release_dt.decode()
+
+    status_code, release_notes = send_http_req_to_mfm(
+        mfm_context=mfm_context,
+        endpoint="download_file",
+        req_type="get",
+        query=f"fm/{fm_version}/release.notes",
+        auth=auth,
+    )
+
+    if status_code == 200:
+        if release_notes is not None:
+            release_notes = release_notes.decode()
+
+    return release_notes, release_dt

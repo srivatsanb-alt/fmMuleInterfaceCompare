@@ -54,8 +54,9 @@ async def forward_alerts(alert_config):
                         entity_names = details.get("entity_names")
                         alert_msg += f"\n entity_names: {entity_names}"
                         response = webhook.send(text=alert_msg)
-                    if response.status_code == 200:
-                        alert_sent = True
+
+                        if response.status_code == 200:
+                            alert_sent = True
 
                     if alert_sent:
                         logger.info(f"Sent alert msg: {alert_msg}")
