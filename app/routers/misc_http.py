@@ -5,6 +5,7 @@ from fastapi.encoders import jsonable_encoder
 import aioredis
 import subprocess
 import redis
+import glob
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm.attributes import flag_modified
 
@@ -506,5 +507,58 @@ async def get_downloads(
 
     reponse["downloads"] = os.listdir(os.getenv("FM_DOWNLOAD_DIR"))
     reponse["url_prefix"] = "/api/downloads"
+
+    return reponse
+
+
+@router.get("/get_all_valid_fm_versions")
+async def get_valid_fm_version(
+    user_name=Depends(dpd.get_user_from_header),
+):
+
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    all_dc_files = glob.glob("/app/static/docker_compose_*.yml")
+
+    valid_versions = []
+    for dc_file in all_dc_files:
+        #### NEED TO CHANGE THIS LATER ###
+        fm_version = os.path.basename(dc_file).split("_", 2)[-1].rsplit(".", 1)[0][1:]
+        temp = subprocess.check_output(
+            [
+                "bash",
+                "-c",
+                f". /app/scripts/docker_utils.sh; are_all_dc_images_available {fm_version}",
+            ]
+        )
+        import logging
+
+        logging.info(f"{temp}, {fm_version}")
+        if temp.decode() == "yes\n":
+            valid_versions.append(fm_version)
+
+    return valid_versions
+
+
+@router.get("/scheduled_restart/{fm_version}/{dt}")
+async def scheduled_restart(
+    fm_version: str,
+    dt: str,
+    user_name=Depends(dpd.get_user_from_header),
+):
+    reponse = {}
+
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    os.system(f"echo {fm_version} > /app/static/restart.with")
+    # os.system(f"echo {dt} > /app/static/restart.at")
+
+    fifo_msg = "restart_all_services\n"
+
+    with open("/app/static/run_on_host_fifo", "w") as f:
+        f.write(fifo_msg)
+        f.flush()
 
     return reponse
