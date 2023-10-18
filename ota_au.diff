@@ -1,0 +1,40 @@
+diff --git a/utils/config_utils.py b/utils/config_utils.py
+index ecf73c9..e072763 100644
+--- a/utils/config_utils.py
++++ b/utils/config_utils.py
+@@ -379,6 +379,27 @@ class ConfigValidator:
+             },
+         }
+     }
++    ota_update_fm = {
++        "$jsonSchema": {
++            "bsonType": "object",
++            "required": ["tag_to_fetch", "check_freq", "auto_update"],
++            "properties": {
++                "auto_update": {
++                    "bsonType": "bool",
++                    "description": "Whether to auto update",
++                },
++                "check_freq": {
++                    "bsonType": "int",
++                    "description": "Freqency at which the available_updates check should happen",
++                    "minimum": 1,
++                },
++                "tag_to_fetch": {
++                    "bsonType": "string",
++                    "description": "Name of the tag that needs to be fetched",
++                },
++            },
++        }
++    }
+ 
+ 
+ class ConfigDefaults:
+@@ -443,6 +464,7 @@ class ConfigDefaults:
+     }
+     trip_metadata = {"metadata": {"description": []}}
+     fm_version = {"version": 3.3}
++    ota_update_fm = {"auto_update": True, "check_freq": 300, "tag_to_fetch": "fm_dev"}
+ 
+ 
+ class DefaultFrontendUser:
