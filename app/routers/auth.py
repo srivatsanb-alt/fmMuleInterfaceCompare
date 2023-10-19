@@ -8,6 +8,8 @@ from fastapi import APIRouter, Depends
 import app.routers.dependencies as dpd
 import models.request_models as rqm
 from models.mongo_client import FMMongo
+from models.db_session import DBSession
+import models.misc_models as mm
 import utils.util as utils_util
 import utils.config_utils as cu
 
@@ -31,6 +33,17 @@ async def login(user_login: rqm.UserLogin):
         user_details = fm_mongo.get_frontend_user_details(user_query)
         if user_details is None:
             dpd.raise_error("Unknown requester", 401)
+
+        if hashed_password == cu.DefaultFrontendUser.admin["hashed_password"]:
+            with DBSession() as dbsession:
+                default_password_log = f"Please change password for user: {user_login.name}, reason: weak password"
+                utils_util.maybe_add_notification(
+                    dbsession,
+                    dbsession.get_customer_names(),
+                    default_password_log,
+                    mm.NotificationLevels.alert,
+                    mm.NotificationModules.generic,
+                )
 
         response = {
             "access_token": dpd.generate_jwt_token(user_login.name),
