@@ -27,6 +27,9 @@ run_simulator() {
 }
 
 
+cp misc/run_on_host/run_on_host.sh /app/static/.
+echo "update" > /app/static/run_on_host_updater_fifo || true
+
 redis-server --port $REDIS_PORT > $LOGS/redis.log 2>&1 &
 sleep 2
 fm_init
