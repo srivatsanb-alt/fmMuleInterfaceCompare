@@ -550,7 +550,7 @@ install_run_on_host_service.sh
 
 2. Give all perimissions to install_run_on_host_service script
 ```
-chmod ugo+rwx install_run_on_host_service.sh
+sudo chmod ugo+rwx install_run_on_host_service.sh
 ```
 
 3. Run install_run_on_host_service.sh
