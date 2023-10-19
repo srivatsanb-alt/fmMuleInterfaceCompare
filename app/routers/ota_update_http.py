@@ -112,8 +112,7 @@ async def update_fm(
 
     update_log = f"Update to {fm_version} successful! Please restart FM with restart all services button in maintenance page"
     with DBSession() as dbsession:
-        utils_util.maybe_add_notification(
-            dbsession,
+        dbsession.add_notification(
             dbsession.get_customer_names(),
             update_log,
             mm.NotificationLevels.alert,
