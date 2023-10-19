@@ -8,8 +8,6 @@ from sqlalchemy import inspect as sql_inspect
 # ati code imports
 import utils.config_utils as cu
 from core.db import get_engine
-from models.db_session import DBSession
-import models.misc_models as mm
 
 
 def create_all_tables() -> None:
