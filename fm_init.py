@@ -67,7 +67,7 @@ def populate_redis_with_basic_info(dbsession: DBSession):
 
 
 def check_if_run_host_service_is_setup(dbsession):
-    if not os.path.exists("/app/static/run_on_host_fifo") or os.path.exists(
+    if not os.path.exists("/app/static/run_on_host_fifo") or not os.path.exists(
         "/app/static/run_on_host_updater_fifo"
     ):
         run_on_host_fifo_log = "Please setup run on host service by following the support manual available in downloads section"
