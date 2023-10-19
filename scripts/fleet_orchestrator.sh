@@ -48,9 +48,10 @@ update_run_on_host_service() {
 
   cp misc/run_on_host/run_on_host.sh /app/static/.
   
-  FILE="/app/static/run_on_host_updater_fifo"
-  if [ -f $FILE ]; then 
+  FILE_PIPE="/app/static/run_on_host_updater_fifo"
+  if [ -p $FILE_PIPE ]; then 
     echo "update" > /app/static/run_on_host_updater_fifo
+    echo "Sent update message to run_on_host_update_fifo"
   fi
 
 }
