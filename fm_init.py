@@ -11,6 +11,7 @@ import json
 import utils.log_utils as lu
 import utils.db_utils as dbu
 import utils.fleet_utils as fu
+import models.misc_models as mm
 from models.mongo_client import FMMongo
 from utils.upgrade_db import upgrade_db_schema, maybe_drop_tables
 from utils.upgrade_mongo import upgrade_mongo_schema
@@ -65,6 +66,19 @@ def populate_redis_with_basic_info(dbsession: DBSession):
     redis_conn.set("generic_handler_job_timeout_ms", generic_handler_job_timeout * 1000)
 
 
+def check_if_run_host_service_is_setup(dbsession):
+    if not os.path.exists("/app/static/run_on_host_fifo") or os.path.exists(
+        "/app/static/run_on_host_updater_fifo"
+    ):
+        run_on_host_fifo_log = "Please setup run on host service by following the support manual available in downloads section"
+        dbsession.add_notification(
+            dbsession.get_customer_names(),
+            run_on_host_fifo_log,
+            mm.NotificationLevels.alert,
+            mm.NotificationModules.generic,
+        )
+
+
 def main():
     time.sleep(5)
 
@@ -96,6 +110,8 @@ def main():
 
         # populate redis with basic info
         populate_redis_with_basic_info(dbsession)
+
+        check_if_run_host_service_is_setup(dbsession)
 
     FM_TAG = os.getenv("FM_TAG")
     print(f"fm software tag: {FM_TAG}")
