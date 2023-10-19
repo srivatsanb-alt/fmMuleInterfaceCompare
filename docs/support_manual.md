@@ -27,7 +27,7 @@
 24. [Add new fleet](#add-new-fleet)
 25. [Switch between multiple maps corresponding to the same fleet](#switch-between-multiple-maps-corresponding-to-the-same-fleet)
 26. [Simulate summon_button/conveyor with postman](#simulate-summon_buttonconveyor-with-postman)
-27. [Setup run on host service]()
+27. [Setup run on host service](#setup-run-on-host-servicec)
 
 ## Setup sherpas ##
 
@@ -541,47 +541,21 @@ X-API-Key: <api_key>
 ## Setup run on host service ##
 **This will be used to run commands outside docker's context, setting up this will require sudo access**
 
-1. Download run_on_host_service.tar from downloads section on the dashboard
-
-2. Extract the files
+1. Check the FM static dir, following files should exists
 ```
-tar -xvf run_on_host_service
-```
-
-3. Copy the run_on_host.sh and run_on_host.service to the FM static directory on the FM server
-
-4. Set the working directory in run_on_host.service to point to FM static directory
-```
-WorkingDirectory=<FM static dir complete path>
+run_on_host.sh
+run_on_host_updater.sh
+install_run_on_host_service.sh
 ```
 
-5. Make a fifo file
+2. Give all perimissions to install_run_on_host_service script
 ```
-mkfifo run_on_host_fifo
-```
-
-4. Give all permissions to run_on_host.sh
-```
-cd <FM static dir>
-chmod ugo+rwx run_on_host.sh
+chmod ugo+rwx install_run_on_host_service.sh
 ```
 
-5. Copy run_on_host.service to /etc/systemd/system/
+3. Run install_run_on_host_service.sh
 ```
-sudo cp run_on_host.service /etc/systemd/system/.
-```
-
-6. Enable and start run_on_host.service
-```
-sudo systemctl start run_on_host.service 
-sudo systemctl enable run_on_host.service
+./install_run_on_host_service.sh
 ```
 
-7. Check the status of run_on_host.service, to ensure it is working fine
-```
-sudo systemctl status run_on_host.service 
-```
-
-
- 
-
+4. Ensure that the output show the run_on_host is successfully installed
