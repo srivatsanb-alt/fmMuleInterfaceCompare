@@ -6,6 +6,8 @@ do
         if [ $service_type = "restart_all_services" ]; then
 	    FM_VERSION=$(cat restart.with)
 	    docker-compose -p fm down || echo "Unable to stop FM"
+	    echo "Stopped FM"
+	    sleep 3
             docker-compose -p fm -f docker_compose_v$FM_VERSION.yml up -d || echo "Unable to bring up FM with $FM_VERSION"
         else
             echo "unknown service_type <$service_type>"
