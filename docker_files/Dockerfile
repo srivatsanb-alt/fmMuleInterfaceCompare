@@ -45,7 +45,6 @@ COPY ./misc/messages_pb2.py /app/mule/ati/schema/
 # expose downloads
 COPY ./docs/support_manual.pdf /app/downloads/.
 COPY ./misc/FlashTool_SB.tar /app/downloads/.
-COPY ./misc/run_on_host.tar /app/downloads/.
 COPY ./master_fm_comms/mfm_rev_tunnel.tar /app/downloads/.
 
 RUN mkdir /app/logs
