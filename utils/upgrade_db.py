@@ -5,7 +5,7 @@ from core.db import get_session, get_engine
 from models.misc_models import FMVersion
 
 
-AVAILABLE_UPGRADES = ["2.2", "3.0", "3.01", "3.1", "3.2", "3.3", "4.0", "4.01"]
+AVAILABLE_UPGRADES = ["2.2", "3.0", "3.01", "3.1", "3.2", "3.3", "4.0", "4.01", "4.02"]
 NO_SCHEMA_CHANGES = ["3.0", "3.01", "3.1"]
 
 
@@ -95,9 +95,15 @@ class DBUpgrade:
             else:
                 print("column parking_id already present in sherpa table")
 
+    def upgrade_to_4_02(self):
+        ## have no limits on num connections ##
+        with get_engine(os.getenv("FM_DATABASE_URI")).connect() as conn:
+            conn.execute("commit")
+            conn.execute("alter role postgres with connection limit -1")
+            print("Set no-limit to num connections")
+
 
 def upgrade_db_schema():
-
     # fm version records available only after v2.1
     with get_session(os.getenv("FM_DATABASE_URI")) as session:
         fm_version = session.query(FMVersion).one_or_none()
