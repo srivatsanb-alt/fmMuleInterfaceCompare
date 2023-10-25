@@ -110,7 +110,7 @@ async def update_fm(
         await redis_conn.delete("update_done")
         dpd.raise_error(f"Unable to complete the update process")
 
-    update_log = f"Update to {fm_version} successful! Please restart FM with restart all services button in maintenance page"
+    update_log = f"Update to {fm_version} successful! Please switch to fm_{fm_version} with change FM version button in maintenance page"
     with DBSession() as dbsession:
         dbsession.add_notification(
             dbsession.get_customer_names(),
