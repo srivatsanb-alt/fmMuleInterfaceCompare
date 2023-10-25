@@ -72,7 +72,7 @@ def get_ongoing_trips_status(dbsession, fleet):
 
 
 def get_visas_held_msg(dbsession):
-    all_visas_held = dbsession.get_all_visas_held()
+    all_visas_held = dbsession.get_all_visa_assignments()
     visa_msg = {}
     for visa_held in all_visas_held:
         sherpa_visas = visa_msg.get(visa_held.sherpa_name, {})

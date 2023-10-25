@@ -32,6 +32,15 @@ def get_reqd_zone_types(visa_type):
     return reqd_zone_types
 
 
+def get_reqd_zone_ids(zone_name, reqd_zone_types):
+    reqd_zone_ids = []
+
+    for zone_type in reqd_zone_types:
+        reqd_zone_ids.append(f"{zone_name}_{zone_type}")
+
+    return reqd_zone_ids
+
+
 def get_linked_gates(ezone: vm.ExclusionZone):
     return ezone.prev_linked_gates + ezone.next_linked_gates
 
@@ -51,16 +60,10 @@ def can_lock_exclusion_zone(
     dbsession: DBSession,
     ezone: vm.ExclusionZone,
     sherpa: fm.Sherpa,
-    zone_id: str,
-    zone_name: str,
-    zone_type: str,
     exclusive: bool = True,
 ):
+    zone_id = ezone.zone_id
     reason = None
-    if ezone is None:
-        reason = f"Unable to get a ezone with zone_id: {zone_id}"
-        logging.getLogger("visa").error(reason)
-        return False, reason
 
     logging.getLogger("visa").info(
         f"{ezone.zone_id} access held by {[s.name for s in ezone.sherpas]}"
@@ -117,62 +120,67 @@ def can_grant_visa(
     visa_type = req.visa_type
     zone_name = req.zone_name
     reqd_zone_types = get_reqd_zone_types(visa_type)
+    reqd_zone_ids = get_reqd_zone_ids(zone_name, reqd_zone_types)
+    unavailable_ezs = dbsession.get_unavailable_reqd_ezones(reqd_zone_ids)
 
-    reqd_ezones = []
-    all_lzs = []
+    """
+        ### Checking unavailable visas for two reasons ###
 
-    # check for specific visa
-    for reqd_zone_type in reqd_zone_types:
-        zone_type = reqd_zone_type
-        ezone = dbsession.get_exclusion_zone(zone_name, zone_type)
-        for ez in get_linked_gates(ezone):
-            all_lzs.append(ez)
+        1. Sherpa asking for the ez might be already holding it
+        2. Non exclusive access can be granted
 
+    """
+
+    for ezone in unavailable_ezs:
         exclusive = ezone.exclusivity
-
-        granted, reason = can_lock_exclusion_zone(
-            dbsession, ezone, sherpa, ezone.zone_id, zone_name, zone_type, exclusive
-        )
-
+        zone_name = ezone.zone_id
+        granted, reason = can_lock_exclusion_zone(dbsession, ezone, sherpa, exclusive)
         if not granted:
             return granted, reason, []
 
-        reqd_ezones.append(ezone)
+    reqd_ezones = dbsession.get_reqd_ezones(reqd_zone_ids)
+    if len(reqd_zone_ids) != len(reqd_ezones):
+        available_zone_ids = [ezone.zone_id for ezone in reqd_ezones]
+        raise ValueError(
+            f"Couldn't get details of all the required ezones. reqd: {reqd_zone_ids}, available: {available_zone_ids}"
+        )
 
-    # check for linked gates
-    for reqd_zone_type in reqd_zone_types:
-        for lz in all_lzs:
-            lz_zone_name, lz_zone_type = split_zone_id(lz.zone_id)
+    ## get all the linked ezones ###
+    linked_ezs = []
+    unavailable_linked_ezs = []
+    for ez in reqd_ezones:
+        linked_ezs.extend(get_linked_gates(ez))
 
-            # linked gates always need exlusive access
-            exclusive = True
+    linked_ezs = set(linked_ezs)
 
-            granted, reason = can_lock_exclusion_zone(
-                dbsession,
-                lz,
-                sherpa,
-                lz.zone_id,
-                lz_zone_name,
-                lz_zone_type,
-                exclusive,
-            )
-            if not granted:
-                return granted, reason, []
+    ## get all the linked gate and unavailable ezones ###
+    if len(linked_ezs) > 0:
+        all_locked_ezones = dbsession.get_all_locked_ezones()
+        unavailable_linked_ezs = [
+            linked_ez for linked_ez in linked_ezs if linked_ez in all_locked_ezones
+        ]
+
+    for ezone in unavailable_linked_ezs:
+        exclusive = True
+        granted, reason = can_lock_exclusion_zone(
+            dbsession,
+            ezone,
+            sherpa,
+            exclusive,
+        )
+        if not granted:
+            return granted, reason, []
 
     reason = "all visas reqd are available"
     return True, reason, reqd_ezones
 
 
 def get_visas_to_release(dbsession: DBSession, sherpa: fm.Sherpa, req: rqm):
-
     visa_type = req.visa_type
     zone_name = req.zone_name
-    visas_to_release = []
 
     reqd_zone_types = get_reqd_zone_types(visa_type)
-    for reqd_zone_type in reqd_zone_types:
-        zone_type = reqd_zone_type
-        ezone = dbsession.get_exclusion_zone(zone_name, zone_type)
-        visas_to_release.append(ezone)
+    reqd_zone_ids = get_reqd_zone_ids(zone_name, reqd_zone_types)
+    visas_to_release = dbsession.get_reqd_ezones(reqd_zone_ids)
 
     return visas_to_release

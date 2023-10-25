@@ -359,7 +359,6 @@ class FleetSimulator:
                 enqueue(sherpa_update_q, handle, *args, **kwargs)
 
     def send_trip_status(self, sherpa_name):
-        from utils.router_utils import get_dense_path
 
         redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
 
@@ -437,7 +436,7 @@ class FleetSimulator:
 
                 if self.visa_handling[sherpa.fleet.name]:
                     ez = self.exclusion_zones[sherpa.fleet.name]
-                    sherpa_visa = session.get_visa_held(sherpa_name)
+                    sherpa_visa = session.get_visa_assignment(sherpa_name)
                     print(f"visa held: {sherpa_visa}")
                     if len(sherpa_visa) > 0:
                         print(f"visa held: {sherpa_visa}")
