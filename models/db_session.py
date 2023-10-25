@@ -1,7 +1,6 @@
 import datetime
 import os
 from typing import List
-from sqlalchemy.sql import not_
 from sqlalchemy import func, any_, or_, and_, extract, text
 from sqlalchemy.orm import Session
 from fastapi.encoders import jsonable_encoder
@@ -108,10 +107,29 @@ class DBSession:
         ezone.prev_linked_gates.append(linked_ezone)
         linked_ezone.next_linked_gates.append(ezone)
 
-    def get_all_visas_held(self):
-        return self.session.query(vm.VisaAssignment).all()
+    def get_all_locked_ezones(self):
+        return (
+            self.session.query(vm.ExclusionZone)
+            .join(vm.VisaAssignment, vm.ExclusionZone.zone_id == vm.VisaAssignment.zone_id)
+            .all()
+        )
 
-    def get_visa_held(self, sherpa_name: str):
+    def get_reqd_ezones(self, reqd_zone_ids):
+        return (
+            self.session.query(vm.ExclusionZone)
+            .filter(vm.ExclusionZone.zone_id == any_(reqd_zone_ids))
+            .all()
+        )
+
+    def get_unavailable_reqd_ezones(self, reqd_zone_ids):
+        return (
+            self.session.query(vm.ExclusionZone)
+            .join(vm.VisaAssignment, vm.ExclusionZone.zone_id == vm.VisaAssignment.zone_id)
+            .filter(vm.ExclusionZone.zone_id == any_(reqd_zone_ids))
+            .all()
+        )
+
+    def get_visa_assignment(self, sherpa_name: str):
         return (
             self.session.query(vm.VisaAssignment)
             .filter(vm.VisaAssignment.sherpa_name == sherpa_name)

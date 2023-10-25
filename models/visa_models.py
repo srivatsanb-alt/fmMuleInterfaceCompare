@@ -1,5 +1,4 @@
-from sqlalchemy.ext.mutable import MutableDict
-from sqlalchemy import Boolean, Column, ForeignKey, String, ARRAY, JSON
+from sqlalchemy import Boolean, Column, ForeignKey, String, ARRAY
 from sqlalchemy.orm import relationship
 
 from models.base_models import Base, TimestampMixin
