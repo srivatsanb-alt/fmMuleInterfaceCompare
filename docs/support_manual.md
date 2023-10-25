@@ -65,7 +65,7 @@ ping sanjaya.atimotors.com
 2. Use config editor, select the database fm_config, select the collection master_fm, click on the document to edit it
 
 3. If sanajaya.atimotors.com is accessible, you don't have to follow the remaining steps(steps 4-6)
-    a. Change the below mentioned parameters in the document, save the same
+    a. Change the below mentioned parameters in the document, save the same. And [Restart FM](#restart-fm). The remaining steps need not be followed
     ```
     api_key: '<api_key generated for the customer>'
     send_updates: true
@@ -80,7 +80,7 @@ cd mfm_rev_tunnel
 bash mfm_rev_tunnel.sh <user@fm_server_ip> <client_name>
 ```
 
-6. ssh into the FM server, set GatewayPorts to yes in /etc/ssh/sshd_config (This will require sudo access) and restart the ssh service
+6. ssh into the FM server, set GatewayPorts to yes in /etc/ssh/sshd_config (This will require sudo access) and restart the ssh service, reboot the machine for the this to take effect.
 ```
 sudo systemctl restart ssh
 ```
@@ -106,8 +106,7 @@ send_updates: true
 ```
 auto_park: {
     book: true,
-    max_trips: 2, ### max number sherpas that can do auto parked trips simultaneously
-    threshold: 600, ### Threshold in seconds after which sherpa should be sent to parking station if found idle 
+    threshold: 600, ### Threshold in seconds after which sherpa should be sent to parking station if ## found idle 
     priority: 1 ## trip priority to be given to auto park trips
 }
 ```
