@@ -396,6 +396,11 @@ create_certs "127.0.0.1,<ip_1>,<ip2>,...,<ip_n>"
 
 5. [Restart FM](#restart-fm) (using docker-compose command)
 
+6. Set fm_cert_file in sherpa config.toml as below
+```
+fm_cert_file="/etc/ssl/certs/ca-certificates.crt"
+```
+
 
 # RUN FM Simulator #
 
