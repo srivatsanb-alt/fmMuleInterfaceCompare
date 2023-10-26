@@ -363,7 +363,7 @@ FM version: ### Enter fm version like fm_dev, FM_v3.2 ###
 
 2. Use the config editor, select the database fm_config, select the collection data_backup, click on the document to edit it
 
-3. Edit keep_size_mb, FM will try to restrict the data inside static/data_backup folder to keep_size_mb only. The contents in the data backup folder will sorted and deleted based on their time of creation, older data will be deletedparking_id first. The default is set to 1000MB
+3. Edit keep_size_mb, FM will try to restrict the data inside static/data_backup folder to keep_size_mb only. The contents in the data backup folder will sorted and deleted based on their time of creation, older data will be deleted first. The default is set to 1000MB
 
 4. Use can also set prune_ununsed_images to true or false based on whether you want to clean up old docker images. Set prune_images_used_until_h accordingly, all the images that were unused in the last prune_images_used_until_h hours will be deleted.
 
@@ -413,7 +413,7 @@ simulate: true
 ```
 
 3. If you need to simulate visa/traffic gates as well, set visa_handling to true. 
-**There is a caveat FM simulator would only request/release/simulate transit type visas, so full fledged visa simulation cannot be performed with fm simulator** 
+**There is a caveat, FM simulator would only request/release/simulate transit type visas, so full fledged visa simulation cannot be performed with fm simulator** 
 ```
 visa_handling: true
 ```
@@ -477,7 +477,7 @@ cd plugin_logs
 
 3. [Restart FM](#restart-fm)
 
-4. On restart you should be able to login in the below credentials
+4. On restart you should be able to login with the below credentials
 ```
 username: admin
 password: 1234

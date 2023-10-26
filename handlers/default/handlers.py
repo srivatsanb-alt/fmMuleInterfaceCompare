@@ -368,7 +368,22 @@ class Handlers:
             ongoing_trip and ongoing_trip.trip_leg and not ongoing_trip.trip_leg.finished()
         )
 
-    # run optimal_dispatch
+    # maybe run optimal_dispatch
+    def maybe_run_optimal_dispatch(self, msg):
+        try:
+            run_opt_d = False
+            if msg.type in cc.OptimalDispatchInfluencers:
+                run_opt_d = True
+                if msg.type == cc.MessageType.PASS_TO_SHERPA:
+                    if not isinstance(msg, rqm.ResetPoseReq):
+                        run_opt_d = False
+            if run_opt_d:
+                with DBSession() as dbsession:
+                    self.dbsession = dbsession
+                    self.run_optimal_dispatch(req_ctxt.fleet_names)
+        except Exception as e:
+            logging.getLogger().error(f"couldn't run optimal dispatch, {e}")
+
     def run_optimal_dispatch(self, fleet_names):
         with FMMongo() as fm_mongo:
             optimal_dispatch_config = fm_mongo.get_document_from_fm_config(
@@ -1635,18 +1650,6 @@ class Handlers:
             response = msg_handler(msg)
 
         # run optimal dispatch if needs be - need not be coupled with handler
-        try:
-            run_opt_d = False
-            if msg.type in cc.OptimalDispatchInfluencers:
-                run_opt_d = True
-                if msg.type == cc.MessageType.PASS_TO_SHERPA:
-                    if not isinstance(msg, rqm.ResetPoseReq):
-                        run_opt_d = False
-            if run_opt_d:
-                with DBSession() as dbsession:
-                    self.dbsession = dbsession
-                    self.run_optimal_dispatch(req_ctxt.fleet_names)
-        except Exception as e:
-            logging.getLogger().error(f"couldn't run optimal dispatch, {e}")
+        self.maybe_run_optimal_dispatch(msg)
 
         return response
