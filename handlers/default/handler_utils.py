@@ -85,8 +85,8 @@ def start_trip(
         if eta is None:
             eta = route_length
 
-        route_lengths.append(np.round(route_length, 2))
-        etas_at_start.append(np.round(eta, 2))
+        route_lengths.append(route_length)
+        etas_at_start.append(eta)
         start_pose = station.pose
         start_station_name = station.name
 
