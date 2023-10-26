@@ -471,14 +471,16 @@ async def fm_health_stats(
 
     # GET DISK USAGE
     total_disk_usage = []
-    static_disk_usage = subprocess.check_output("du /app/static/ -d 1 -h ", shell=True)
+    static_dir = os.getenv("FM_STATIC_DIR")
+    static_disk_usage = subprocess.check_output(f"du {static_dir} -d 1 -h ", shell=True)
     if static_disk_usage is not None:
         static_disk_usage = static_disk_usage.decode()
         static_disk_usage = static_disk_usage.split("\n")
         for item in static_disk_usage:
             total_disk_usage.append(item.split("\t"))
 
-    logs_disk_usage = subprocess.check_output("du /app/logs/ -d 1 -h ", shell=True)
+    log_dir = os.getenv("FM_LOG_DIR")
+    logs_disk_usage = subprocess.check_output(f"du {log_dir} -d 1 -h ", shell=True)
     if logs_disk_usage is not None:
         logs_disk_usage = logs_disk_usage.decode()
         logs_disk_usage = logs_disk_usage.split("\n")
@@ -519,7 +521,8 @@ async def get_valid_fm_version(
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    all_dc_files = glob.glob("/app/static/docker_compose_*.yml")
+    dc_patter_path = os.path.join(os.getenv("FM_STATIC_DIR"), "docker_compose_*.yml")
+    all_dc_files = glob.glob(dc_patter_path)
 
     valid_versions = []
     for dc_file in all_dc_files:
@@ -552,12 +555,14 @@ async def scheduled_restart(
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    os.system(f"echo {fm_version} > /app/static/restart.with")
-    # os.system(f"echo {dt} > /app/static/restart.at")
+    restart_with = os.path.join(os.getenv("FM_STATIC_DIR"), "restart.with")
+    os.system(f"echo {fm_version} > {restart_with}")
+    # os.system(f"echo {dt} > {restart_at}")
 
     fifo_msg = "restart_all_services\n"
 
-    with open("/app/static/run_on_host_fifo", "w") as f:
+    run_on_host_fifo = os.path.join(os.getenv("FM_STATIC_DIR"), "run_on_host_fifo")
+    with open(run_on_host_fifo, "w") as f:
         f.write(fifo_msg)
         f.flush()
 
