@@ -27,7 +27,7 @@
 24. [Add new fleet](#add-new-fleet)
 25. [Switch between multiple maps corresponding to the same fleet](#switch-between-multiple-maps-corresponding-to-the-same-fleet)
 26. [Simulate summon_button/conveyor with postman](#simulate-summon_buttonconveyor-with-postman)
-27. [Setup run on host service](#setup-run-on-host-servicec)
+27. [Setup run on host service](#setup-run-on-host-service)
 
 ## Setup sherpas ##
 
@@ -562,4 +562,4 @@ sudo chmod ugo+rwx install_run_on_host_service.sh
 ./install_run_on_host_service.sh
 ```
 
-4. Ensure that the output show the run_on_host is successfully installed
+4. Ensure that the output shows that the run_on_host is successfully installed

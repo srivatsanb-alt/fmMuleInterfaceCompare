@@ -1,6 +1,7 @@
 import os
 import aioredis
 import json
+import redis
 import asyncio
 import shutil
 import datetime
@@ -99,18 +100,23 @@ async def update_fm(
 
     dt_str = utils_util.dt_to_str(datetime.datetime.now())
     dt_str_no_space = dt_str.replace(" ", "-")
-    shutil.copy(
-        "/app/static/fm_update_progress.log",
-        f"/app/static/fm_update_progress_{dt_str_no_space}.log",
-    )
 
+    current_data_folder = await redis_conn.get("current_data_folder")
+    dest_path = f"/app/static/fm_update_progress_{dt_str_no_space}.log"
+    if current_data_folder:
+        fm_backup_path = os.path.join(os.getenv("FM_STATIC_DIR"), "data_backup")
+        dest_path = os.path.join(
+            fm_backup_path, current_data_folder, f"fm_update_progress_{dt_str_no_space}.log"
+        )
+
+    shutil.copy("/app/static/fm_update_progress.log", dest_path)
     os.system("sleep 5 && rm /app/static/fm_update_progress.log &")
 
     if update_done is False:
         await redis_conn.delete("update_done")
         dpd.raise_error(f"Unable to complete the update process")
 
-    update_log = f"Update to {fm_version} successful! Please switch to fm_{fm_version} with change FM version button in maintenance page"
+    update_log = f"Update to {fm_version} successful! Please switch to {fm_version} with the change FM version button in maintenance page"
     with DBSession() as dbsession:
         dbsession.add_notification(
             dbsession.get_customer_names(),
