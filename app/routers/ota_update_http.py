@@ -1,7 +1,6 @@
 import os
 import aioredis
 import json
-import redis
 import asyncio
 import shutil
 import datetime
@@ -86,8 +85,10 @@ async def update_fm(
     static_files_auth_username = auth_json["static_files_auth"]["username"]
     static_files_auth_password = auth_json["static_files_auth"]["password"]
 
+    update_progress_log = os.path.join(os.getenv("FM_STATIC_DIR"), "fm_update_progress.log")
+
     command = [
-        f"bash /app/scripts/self_updater.sh {mfm_context.server_ip} {mfm_context.server_port} {mfm_context.http_scheme} {fm_version} {registry_username} {registry_password} {static_files_auth_username} {static_files_auth_password} > /app/static/fm_update_progress.log 2>&1"
+        f"bash /app/scripts/self_updater.sh {mfm_context.server_ip} {mfm_context.server_port} {mfm_context.http_scheme} {fm_version} {registry_username} {registry_password} {static_files_auth_username} {static_files_auth_password} > {update_progress_log} 2>&1"
     ]
 
     update_proc = await asyncio.create_subprocess_shell(*command)
@@ -102,15 +103,17 @@ async def update_fm(
     dt_str_no_space = dt_str.replace(" ", "-")
 
     current_data_folder = await redis_conn.get("current_data_folder")
-    dest_path = f"/app/static/fm_update_progress_{dt_str_no_space}.log"
+    dest_path = os.path.join(
+        os.getenv("FM_STATIC_DIR"), f"fm_update_progress_{dt_str_no_space}.log"
+    )
     if current_data_folder:
         fm_backup_path = os.path.join(os.getenv("FM_STATIC_DIR"), "data_backup")
         dest_path = os.path.join(
             fm_backup_path, current_data_folder, f"fm_update_progress_{dt_str_no_space}.log"
         )
 
-    shutil.copy("/app/static/fm_update_progress.log", dest_path)
-    os.system("sleep 5 && rm /app/static/fm_update_progress.log &")
+    shutil.copy(update_progress_log, dest_path)
+    os.system(f"sleep 5 && rm {update_progress_log} &")
 
     if update_done is False:
         await redis_conn.delete("update_done")
