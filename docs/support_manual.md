@@ -57,30 +57,25 @@ ME_CONFIG_BASICAUTH_PASSWORD: ****
 
 ## Send updates to master fm ## 
 
-1. Check whether FM server has access to sanjaya.atimotors.com by doing a ping
-```
-ping sanjaya.atimotors.com
-```
+1. Use config editor, select the database fm_config, select the collection master_fm, click on the document to edit it
 
-2. Use config editor, select the database fm_config, select the collection master_fm, click on the document to edit it
-
-3. If sanajaya.atimotors.com is accessible, you don't have to follow the remaining steps(steps 4-6)
+2. If sanajaya.atimotors.com is accessible, you don't have to follow the remaining steps(steps 4-6)
     a. Change the below mentioned parameters in the document, save the same. And [Restart FM](#restart-fm). The remaining steps need not be followed
     ```
     api_key: '<api_key generated for the customer>'
     send_updates: true
     ```
     
-4. If sanajaya.atimotors.com is not accessible but you are be able to ssh to FM server via another machine which has access to sanjaya.atimotors.com, then a reverse tunnel can be setup to access sanjaya.atimotors.com
+3. If sanajaya.atimotors.com is not accessible but you are be able to ssh to FM server via another machine which has access to sanjaya.atimotors.com, then a reverse tunnel can be setup to access sanjaya.atimotors.com
 
-5. To setup reverse tunnel, get mfm_rev_tunnel.tar from the downloads section on the dashboard and copy the same to the machine which has access sanjaya.atimotors.com(pingable) and has ssh access to the FM server, do the following
+4. To setup reverse tunnel, get mfm_rev_tunnel.tar from the downloads section on the dashboard and copy the same to the machine which has access sanjaya.atimotors.com(pingable) and has ssh access to the FM server, do the following
 ```
 tar -xvf mfm_rev_tunnel.tar ## This is for Linux, something similar has to be done for other os
 cd mfm_rev_tunnel
 bash mfm_rev_tunnel.sh <user@fm_server_ip> <client_name>
 ```
 
-6. ssh into the FM server, set GatewayPorts to yes in /etc/ssh/sshd_config (This will require sudo access) and restart the ssh service, reboot the machine for the this to take effect.
+5. ssh into the FM server, set GatewayPorts to yes in /etc/ssh/sshd_config (This will require sudo access) and restart the ssh service, reboot the machine for the this to take effect.
 ```
 sudo systemctl restart ssh
 ```

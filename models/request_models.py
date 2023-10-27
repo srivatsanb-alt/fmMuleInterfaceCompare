@@ -7,11 +7,6 @@ import pydantic
 from core.constants import MessageType
 from pydantic import BaseModel
 from models.base_models import JsonMixin
-from models.config_models import (
-    BasicConfig,
-    OptimalDispatch,
-    Alerts,
-)
 
 
 class HitchReq(BaseModel):
@@ -309,12 +304,6 @@ class AddFleetReq(ClientReq):
 class UpdateMapReq(ClientReq):
     fleet_name: str
     map_path: str
-
-
-class FleetConfigUpdate(BaseModel):
-    fleet: BasicConfig
-    optimal_dispatch: OptimalDispatch
-    alerts: Optional[Alerts]
 
 
 class TripMetaData(BaseModel):
