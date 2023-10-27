@@ -335,8 +335,15 @@ def update_fm_incidents(
     for fm_incident in fm_incidents:
         fm_incident_dict = utils_util.get_table_as_dict(mm.FMIncidents, fm_incident)
         del fm_incident_dict["id"]
-        other_info_jdump = json.dumps(fm_incident_dict["other_info"])
-        fm_incident_dict["other_info"] = {"json_dumped_other_info": other_info_jdump}
+        if fm_incident_dict.get("other_info"):
+
+            """
+            doing a json dumps since the other info has all data types,
+            its becoming difficult to pydantic validation on server side
+            """
+            other_info_jdump = json.dumps(fm_incident_dict["other_info"])
+            fm_incident_dict["other_info"] = {"json_dumped_other_info": other_info_jdump}
+
         all_fm_incidents.append(fm_incident_dict)
 
     if len(all_fm_incidents) == 0:
