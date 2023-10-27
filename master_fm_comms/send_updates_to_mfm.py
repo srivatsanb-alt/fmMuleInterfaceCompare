@@ -386,6 +386,7 @@ def update_sherpa_oee(
     all_sherpa_oees = []
     for sherpa_oee in sherpa_oees:
         sherpa_oee_dict = utils_util.get_table_as_dict(mm.SherpaOEE, sherpa_oee)
+        del sherpa_oee_dict["id"]
         all_sherpa_oees.append(sherpa_oee_dict)
 
     if len(all_sherpa_oees) == 0:
