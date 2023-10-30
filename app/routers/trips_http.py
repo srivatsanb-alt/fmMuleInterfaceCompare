@@ -47,7 +47,10 @@ async def force_delete_ongoing_trip(
     with DBSession() as dbsession:
         sherpa = dbsession.get_sherpa(sherpa_name)
 
-        if sherpa.status.disabled_reason != cc.DisabledReason.STALE_HEARTBEAT:
+        if sherpa.status.disabled_reason not in [
+            cc.DisabledReason.STALE_HEARTBEAT,
+            cc.DisabledReason.SOFTWARE_NOT_COMPATIBLE,
+        ]:
             dpd.raise_error("This option can be used only if the sherpa is disconnected")
 
         if sherpa.status.trip_id is None:
