@@ -1,12 +1,13 @@
 {
   "files": {
     "main.css": "/static/css/main.76b9918f.css",
-    "main.js": "/static/js/main.92378f7f.js",
+    "main.js": "/static/js/main.d3aeea6e.js",
     "static/js/787.029b2ff0.chunk.js": "/static/js/787.029b2ff0.chunk.js",
     "static/media/Login Image.png": "/static/media/Login Image.885a80af3ca6e7d909a4.png",
     "static/media/OpenSans-Regular-400.ttf": "/static/media/OpenSans-Regular-400.57cd57a648021fa1c396.ttf",
     "static/media/Montserrat-Medium.ttf": "/static/media/Montserrat-Medium.a281f04d4c8926e7dea1.ttf",
     "static/media/ati-logo.svg": "/static/media/ati-logo.7580eeb2c44fb6c2bf6bcfb7938e2acc.svg",
+    "service-worker.js": "/service-worker.js",
     "static/media/sherpa-with-direction.svg": "/static/media/sherpa-with-direction.e0d4bcc49a56f1a1ab19597c8b3e47e4.svg",
     "static/media/sherpa.svg": "/static/media/sherpa.d69d000168d6b36cf5e600f607d6df82.svg",
     "static/media/configuration.svg": "/static/media/configuration.c148b080eb1da6ffec9a5b9091712f20.svg",
@@ -47,11 +48,11 @@
     "static/media/stop-ops.svg": "/static/media/stop-ops.6c7b29fbe8941d0af4a88cc140a38fbf.svg",
     "static/media/resume-ops.svg": "/static/media/resume-ops.7eaed0ce19cc32d0d9d68e2c29c4ed05.svg",
     "main.76b9918f.css.map": "/static/css/main.76b9918f.css.map",
-    "main.92378f7f.js.map": "/static/js/main.92378f7f.js.map",
+    "main.d3aeea6e.js.map": "/static/js/main.d3aeea6e.js.map",
     "787.029b2ff0.chunk.js.map": "/static/js/787.029b2ff0.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.76b9918f.css",
-    "static/js/main.92378f7f.js"
+    "static/js/main.d3aeea6e.js"
   ]
 }
