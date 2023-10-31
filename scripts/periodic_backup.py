@@ -116,7 +116,13 @@ def backup_data():
             prune_unused_images(backup_config)
             last_prune_time = time.time()
 
-        shutil.copytree(os.getenv("FM_LOG_DIR"), logs_save_path)
+        try:
+            shutil.copytree(os.getenv("FM_LOG_DIR"), logs_save_path)
+        except Exception as e:
+            logging.getLogger("misc").info(
+                f"Exception in periodic backup script, exception: {e}"
+            )
+
         logging.getLogger("misc").info(f"Backed up data")
 
         try:
@@ -145,19 +151,7 @@ def get_directory_size(directory):
 
 
 def sort_dir_list(list_dir):
-    TIME_FORMAT = "%Y-%m-%d-%H-%M-%S"
-    for dir in list_dir:
-        try:
-            datetime.datetime.strptime(dir.rsplit("_", 1)[0], TIME_FORMAT)
-        except Exception as e:
-            logging.getLogger("misc").info(
-                f"Directory name not in valid format, ignoring {dir}, cannot be sorted according to timestamp, exception: {e}"
-            )
-            list_dir.remove(dir)
-
-    list_dir.sort(
-        key=lambda date: datetime.datetime.strptime(date.rsplit("_", 1)[0], TIME_FORMAT)
-    )
+    list_dir.sort(key=lambda cdate: os.path.getctime(cdate))
 
 
 def sort_and_remove_directories(directory, target_size, current_data):
