@@ -71,6 +71,13 @@ def upload_map_files(mfm_context: mu.MFMContext):
                         upload_done.append(file_name)
                         if len(upload_done) == len(all_map_files):
                             map_files_uploaded[i] = True
+                    elif response_status_code == 413:
+                        logging.getLogger("mfm_updates").warning(
+                            f"Ignoring to upload map file {file_name} of {fleet.name}, file size too large"
+                        )
+                        upload_done.append(file_name)
+                        if len(upload_done) == len(all_map_files):
+                            map_files_uploaded[i] = True
                     else:
                         logging.getLogger("mfm_updates").info(
                             f"unable to upload map_file {file_name} of {fleet.name} to master fm, status_code {response_status_code}"
@@ -479,6 +486,14 @@ def upload_important_files(
         if response_status_code == 200:
             logging.getLogger("mfm_updates").info(
                 f"Successfully uploaded files with params: {params}"
+            )
+            success = True
+            temp_last_file_update_dt = file_upload.created_at
+            if file_upload.updated_at:
+                temp_last_file_update_dt = file_upload.updated_at
+        elif response_status_code == 413:
+            logging.getLogger("mfm_updates").info(
+                f"Ignoring upload files with params: {params}, file size too large"
             )
             success = True
             temp_last_file_update_dt = file_upload.created_at
