@@ -578,14 +578,15 @@ class ExclusionZoneUtils:
 
                 """
                 1. By default all stations are exclusive
-                2. By default all lane are non-exclusive
-                3. If exclusive parking is set to True, the _lane will be made exclusive as well
+                2. By default all lanes are non-exclusive
+                3. If sez is present in gate_tags, the _lane will be made exclusive as well
                 """
 
-                if (
-                    zone_id.endswith("_lane")
-                    and gate_details.get("exclusive_parking", True) is False
-                ):
+                gate_tags = gate_details.get("gate_tags")
+                if gate_tags is None:
+                    gate_tags = []
+
+                if zone_id.endswith("_lane") and "sez" not in gate_tags:
                     exclusivity = False
 
                 ezone: vm.ExclusionZone = (
@@ -593,6 +594,7 @@ class ExclusionZoneUtils:
                     .filter_by(zone_id=zone_id)
                     .one_or_none()
                 )
+
                 if ezone:
                     logger.info(f"ExclusionZone {zone_id} already present")
                     logger.info(f"ExclusionZone serving fleets {ezone.fleets}")
