@@ -959,14 +959,14 @@ class Handlers:
             status.disabled = False
             status.disabled_reason = None
 
-        if req.mode != "fleet":
+        if req.mode in ["fleet", "simulation"]:
+            if not status.initialized:
+                self.initialize_sherpa(sherpa)
+
+        elif status.initialized:
             logging.getLogger("status_updates").info(f"{sherpa.name} uninitialized")
             status.initialized = False
             status.continue_curr_task = False
-
-        elif not status.initialized:
-            # sherpa switched to fleet mode
-            self.initialize_sherpa(sherpa)
 
         if req.mode == "error":
             sherpa_error_alert = f"{req.sherpa_name} in error mode"
