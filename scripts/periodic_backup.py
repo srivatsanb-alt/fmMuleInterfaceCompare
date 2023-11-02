@@ -150,8 +150,8 @@ def get_directory_size(directory):
     return total_size_mb
 
 
-def sort_dir_list(list_dir):
-    list_dir.sort(key=lambda cdate: os.path.getctime(cdate))
+def sort_dir_list(directory, list_dir):
+    list_dir.sort(key=lambda cdate: os.path.getctime(os.path.join(directory, cdate)))
 
 
 def sort_and_remove_directories(directory, target_size, current_data):
@@ -160,7 +160,7 @@ def sort_and_remove_directories(directory, target_size, current_data):
 
     # cannot delete current data folder
     list_dir.remove(current_data)
-    sort_dir_list(list_dir)
+    sort_dir_list(directory, list_dir)
 
     directories = [os.path.join(directory, name) for name in list_dir]
     deleted_size = 0
