@@ -291,7 +291,7 @@ rqi ## This would show if there is any queue build up at present
 
 2. Check for occurences of rq errors (rqe) in fleet_manager.log, the output might lead to the issue
 ```
-rq
+rqe
 ```
 
 3. If you are unable to login to FM, Check the docker logs - this should be run outside docker. There might be some errors in the init scripts.
