@@ -6,7 +6,7 @@ import aioredis
 import subprocess
 import redis
 import glob
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, UploadFile, File
 from sqlalchemy.orm.attributes import flag_modified
 
 # ati code imports
@@ -567,3 +567,26 @@ async def scheduled_restart(
         f.flush()
 
     return reponse
+
+
+@router.post("/upload_map_file/{fleet_name}")
+async def upload_map_file(
+    fleet_name: str,
+    uploaded_file: UploadFile = File(...),
+    user_name=Depends(dpd.get_user_from_header),
+):
+
+    response = {}
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    dir_to_save = os.path.join(os.getenv("FM_STATIC_DIR"), fleet_name, "map")
+
+    if not os.path.exists(dir_to_save):
+        os.makedirs(dir_to_save)
+
+    file_path = os.path.join(dir_to_save, uploaded_file.filename)
+    with open(file_path, "wb") as f:
+        f.write(await uploaded_file.read())
+
+    return response
