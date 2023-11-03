@@ -289,9 +289,9 @@ class FrontendUserDetails(ClientReq):
 
 
 class AddEditSherpaReq(ClientReq):
-    api_key: str
     hwid: str
     fleet_name: str
+    api_key: Optional[str]
 
 
 class AddFleetReq(ClientReq):
