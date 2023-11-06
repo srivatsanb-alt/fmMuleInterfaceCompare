@@ -260,7 +260,7 @@ class ConfigValidator:
                             "bsonType": "int",
                             "description": "Set trip priority for the booking",
                             "minimum": 1,
-                            "maximum": 3,
+                            "maximum": 10,
                         },
                     },
                 },
