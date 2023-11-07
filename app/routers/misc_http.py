@@ -1,13 +1,16 @@
 import json
 import os
 import asyncio
+from fastapi.encoders import jsonable_encoder
 import aioredis
 import subprocess
 import redis
-from fastapi import APIRouter, Depends
+import glob
+from fastapi import APIRouter, Depends, UploadFile, File
 from sqlalchemy.orm.attributes import flag_modified
 
 # ati code imports
+from models.mongo_client import FMMongo
 import models.visa_models as vm
 import models.request_models as rqm
 import models.fleet_models as fm
@@ -35,14 +38,30 @@ async def site_info(user_name=Depends(dpd.get_user_from_header)):
     timezone = os.environ["PGTZ"]
     fm_tag = os.environ["FM_TAG"]
 
+    with FMMongo() as fm_mongo:
+        simulator_config = fm_mongo.get_document_from_fm_config("simulator")
+
     response = {
         "fleet_names": fleet_names,
         "timezone": timezone,
         "software_version": fm_tag,
         "compatible_sherpa_versions": compatible_sherpa_versions,
+        "simulator": simulator_config["simulate"],
     }
 
     return response
+
+
+@router.get("/get_trip_metadata")
+async def get_trip_metadata(user_name=Depends(dpd.get_user_from_header)):
+
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    with FMMongo() as fm_mongo:
+        trip_metadata = fm_mongo.get_document_from_fm_config("trip_metadata")
+
+    return trip_metadata
 
 
 # returns info about all the sherpas, stations and their corresponding status(initialized, inducted, disabled, idle, etc.).
@@ -129,18 +148,6 @@ async def sherpa_summary(
         response.update(
             {"sherpa_status": utils_util.get_table_as_dict(fm.SherpaStatus, sherpa_status)}
         )
-
-        # check if sherpa is at station
-        at_station = None
-        response.update({"at_station": at_station})
-
-        if sherpa_status.pose is not None:
-            at_station = utils_util.get_closest_station(
-                dbsession, sherpa_status.pose, sherpa.fleet.name
-            )
-
-        if at_station:
-            response.update({"at_station": at_station.name})
 
     return response
 
@@ -290,8 +297,9 @@ async def create_generic_alerts(
         dpd.raise_error("Unknown requester", 401)
 
     with DBSession() as dbsession:
-        dbsession.add_notification(
-            [],
+        utils_util.maybe_add_notification(
+            dbsession,
+            dbsession.get_customer_names(),
             alert_description,
             mm.NotificationLevels.alert,
             mm.NotificationModules.generic,
@@ -338,16 +346,23 @@ async def get_fm_incidents(
 @router.get("/get_visa_assignments")
 async def get_visa_assignments(user_name=Depends(dpd.get_user_from_header)):
     response = []
-
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
-
     with DBSession() as dbsession:
-        all_visa_assignments = dbsession.session.query(vm.VisaAssignment).all()
-        for visa_assignment in all_visa_assignments:
-            temp = utils_util.get_table_as_dict(vm.VisaAssignment, visa_assignment)
-            response.append(temp)
-
+        zone_ids = dbsession.session.query(vm.ExclusionZone.zone_id).all()
+        response = jsonable_encoder(zone_ids)
+        for item in response:
+            visa_assignments = dbsession.get_all_visa_assignments_as_dict(item["zone_id"])
+            item["resident_sherpas"] = (
+                visa_assignments["resident_sherpas"]
+                if (visa_assignments["resident_sherpas"])
+                else []
+            )
+            item["waiting_sherpas"] = (
+                visa_assignments["waiting_sherpas"]
+                if (visa_assignments["waiting_sherpas"])
+                else []
+            )
     return response
 
 
@@ -461,14 +476,16 @@ async def fm_health_stats(
 
     # GET DISK USAGE
     total_disk_usage = []
-    static_disk_usage = subprocess.check_output("du /app/static/ -d 1 -h ", shell=True)
+    static_dir = os.getenv("FM_STATIC_DIR")
+    static_disk_usage = subprocess.check_output(f"du {static_dir} -d 1 -h ", shell=True)
     if static_disk_usage is not None:
         static_disk_usage = static_disk_usage.decode()
         static_disk_usage = static_disk_usage.split("\n")
         for item in static_disk_usage:
             total_disk_usage.append(item.split("\t"))
 
-    logs_disk_usage = subprocess.check_output("du /app/logs/ -d 1 -h ", shell=True)
+    log_dir = os.getenv("FM_LOG_DIR")
+    logs_disk_usage = subprocess.check_output(f"du {log_dir} -d 1 -h ", shell=True)
     if logs_disk_usage is not None:
         logs_disk_usage = logs_disk_usage.decode()
         logs_disk_usage = logs_disk_usage.split("\n")
@@ -483,5 +500,98 @@ async def fm_health_stats(
     fm_backup_path = os.path.join(os.getenv("FM_STATIC_DIR"), "data_backup")
     current_data = redis_conn.get("current_data_folder").decode()
     response["current_data_folder"] = os.path.join(fm_backup_path, current_data)
+
+    return response
+
+
+@router.get("/get_downloads")
+async def get_downloads(
+    user_name=Depends(dpd.get_user_from_header),
+):
+    reponse = {}
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    reponse["downloads"] = os.listdir(os.getenv("FM_DOWNLOAD_DIR"))
+    reponse["url_prefix"] = "/api/downloads"
+
+    return reponse
+
+
+@router.get("/get_all_valid_fm_versions")
+async def get_valid_fm_version(
+    user_name=Depends(dpd.get_user_from_header),
+):
+
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    dc_patter_path = os.path.join(os.getenv("FM_STATIC_DIR"), "docker_compose_*.yml")
+    all_dc_files = glob.glob(dc_patter_path)
+
+    valid_versions = []
+    for dc_file in all_dc_files:
+        #### NEED TO CHANGE THIS LATER ###
+        fm_version = os.path.basename(dc_file).split("_", 2)[-1].rsplit(".", 1)[0][1:]
+        temp = subprocess.check_output(
+            [
+                "bash",
+                "-c",
+                f". /app/scripts/docker_utils.sh; are_all_dc_images_available {fm_version}",
+            ]
+        )
+        import logging
+
+        logging.info(f"{temp}, {fm_version}")
+        if temp.decode() == "yes\n":
+            valid_versions.append(fm_version)
+
+    return valid_versions
+
+
+@router.get("/scheduled_restart/{fm_version}/{dt}")
+async def scheduled_restart(
+    fm_version: str,
+    dt: str,
+    user_name=Depends(dpd.get_user_from_header),
+):
+    reponse = {}
+
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    restart_with = os.path.join(os.getenv("FM_STATIC_DIR"), "restart.with")
+    os.system(f"echo {fm_version} > {restart_with}")
+    # os.system(f"echo {dt} > {restart_at}")
+
+    fifo_msg = "restart_all_services\n"
+
+    run_on_host_fifo = os.path.join(os.getenv("FM_STATIC_DIR"), "run_on_host_fifo")
+    with open(run_on_host_fifo, "w") as f:
+        f.write(fifo_msg)
+        f.flush()
+
+    return reponse
+
+
+@router.post("/upload_map_file/{fleet_name}")
+async def upload_map_file(
+    fleet_name: str,
+    uploaded_file: UploadFile = File(...),
+    user_name=Depends(dpd.get_user_from_header),
+):
+
+    response = {}
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    dir_to_save = os.path.join(os.getenv("FM_STATIC_DIR"), fleet_name, "map")
+
+    if not os.path.exists(dir_to_save):
+        os.makedirs(dir_to_save)
+
+    file_path = os.path.join(dir_to_save, uploaded_file.filename)
+    with open(file_path, "wb") as f:
+        f.write(await uploaded_file.read())
 
     return response

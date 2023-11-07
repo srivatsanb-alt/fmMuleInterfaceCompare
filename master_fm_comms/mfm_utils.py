@@ -2,7 +2,10 @@ import logging
 import os
 import requests
 from dataclasses import dataclass
-import toml
+from requests.auth import HTTPBasicAuth
+
+# ati code imports
+from models.mongo_client import FMMongo
 
 
 @dataclass
@@ -16,6 +19,7 @@ class MFMContext:
     cert_file: str
     update_freq: int
     ws_update_freq: int
+    send_updates: bool
 
 
 def get_mfm_ws_url(mfm_context: MFMContext):
@@ -66,6 +70,11 @@ def get_mfm_url(mfm_context: MFMContext, endpoint, query=""):
             mfm_url, "api/v1/master_fm/fm_client/update_sherpa_oee"
         ),
         "upload_file": os.path.join(mfm_url, "api/v1/master_fm/fm_client/upload_file"),
+        "get_available_updates": os.path.join(
+            mfm_url, "api/v1/master_fm/fm_client/get_available_updates", str(query)
+        ),
+        "download_file": os.path.join(mfm_url, "api/static/downloads", str(query)),
+        "get_basic_auth": os.path.join(mfm_url, "api/v1/master_fm/user/get_basic_auth"),
     }
     return fm_endpoints.get(endpoint, None)
 
@@ -73,12 +82,23 @@ def get_mfm_url(mfm_context: MFMContext, endpoint, query=""):
 def check_response(response):
     response_json = None
     if response.status_code == 200:
-        response_json = response.json()
+        try:
+            response_json = response.json()
+        except:
+            # could be downloadable file
+            response_json = response.content
     return response.status_code, response_json
 
 
 def send_http_req_to_mfm(
-    mfm_context, endpoint, req_type, req_json=None, files=None, params=None, query=""
+    mfm_context,
+    endpoint,
+    req_type,
+    req_json=None,
+    files=None,
+    params=None,
+    query="",
+    auth=None,
 ):
     response_json = None
     url = get_mfm_url(mfm_context, endpoint, query)
@@ -95,6 +115,9 @@ def send_http_req_to_mfm(
 
     if params:
         kwargs.update({"params": params})
+
+    if auth:
+        kwargs.update({"auth": auth})
 
     if mfm_context.http_scheme == "https":
         kwargs.update({"verify": mfm_context.cert_file})
@@ -116,29 +139,24 @@ def send_http_req_to_mfm(
 
 
 def get_mfm_context():
-    mfm_config_path = os.path.join(os.getenv("FM_CONFIG_DIR"), "master_fm_config.toml")
-
-    if not os.path.exists(mfm_config_path):
-        logging.getLogger("mfm_updates").error(f"mfm_config : {mfm_config_path} not found")
-        return
-
-    mfm_config = toml.load(mfm_config_path)
-
-    if not mfm_config["master_fm"]["comms"].get("send_updates", False):
-        logging.getLogger("mfm_updates").info("Send updates set/default to False")
-        return
+    with FMMongo() as fm_mongo:
+        mfm_config = fm_mongo.get_document_from_fm_config("master_fm")
 
     mfm_context = MFMContext(
-        http_scheme=mfm_config["master_fm"]["http_scheme"],
-        server_ip=mfm_config["master_fm"]["mfm_ip"],
-        server_port=mfm_config["master_fm"]["mfm_port"],
-        ws_scheme=mfm_config["master_fm"]["ws_scheme"],
-        ws_suffix=mfm_config["master_fm"]["ws_suffix"],
-        cert_file=mfm_config["master_fm"]["mfm_cert_file"],
-        x_api_key=mfm_config["master_fm"]["comms"]["api_key"],
-        update_freq=mfm_config["master_fm"]["comms"]["update_freq"],
-        ws_update_freq=mfm_config["master_fm"]["comms"]["ws_update_freq"],
+        http_scheme=mfm_config["http_scheme"],
+        server_ip=mfm_config["mfm_ip"],
+        server_port=mfm_config["mfm_port"],
+        ws_scheme=mfm_config["ws_scheme"],
+        ws_suffix=mfm_config["ws_suffix"],
+        cert_file=mfm_config["mfm_cert_file"],
+        x_api_key=mfm_config["api_key"],
+        update_freq=mfm_config["update_freq"],
+        ws_update_freq=mfm_config["ws_update_freq"],
+        send_updates=mfm_config["send_updates"],
     )
+
+    if mfm_context.send_updates is False:
+        logging.getLogger("mfm_updates").info("Send updates set/default to False")
 
     return mfm_context
 
@@ -170,3 +188,59 @@ def prune_fleet_status(fleet_status_msg: dict):
     pruned_msg.update({"sherpa_status": new_sherpa_status})
 
     return pruned_msg
+
+
+def get_mfm_static_file_auth(mfm_context):
+    status_code, auth_json = send_http_req_to_mfm(
+        mfm_context=mfm_context,
+        endpoint="get_basic_auth",
+        req_type="get",
+    )
+
+    if status_code != 200:
+        return None, None
+
+    static_files_auth_username = auth_json["static_files_auth"]["username"]
+    static_files_auth_password = auth_json["static_files_auth"]["password"]
+    auth = HTTPBasicAuth(static_files_auth_username, static_files_auth_password)
+
+    return auth, auth_json
+
+
+def get_available_updates_fm(mfm_context):
+    status_code, available_updates_json = send_http_req_to_mfm(
+        mfm_context=mfm_context,
+        endpoint="get_available_updates",
+        req_type="get",
+        query="fm",
+    )
+    return status_code, available_updates_json
+
+
+def get_release_details(mfm_context, fm_version, auth):
+    release_notes = None
+    release_dt = None
+    status_code, release_dt = send_http_req_to_mfm(
+        mfm_context=mfm_context,
+        endpoint="download_file",
+        req_type="get",
+        query=f"fm/{fm_version}/release.dt",
+        auth=auth,
+    )
+    if status_code == 200:
+        if release_dt is not None:
+            release_dt = release_dt.decode()
+
+    status_code, release_notes = send_http_req_to_mfm(
+        mfm_context=mfm_context,
+        endpoint="download_file",
+        req_type="get",
+        query=f"fm/{fm_version}/release.notes",
+        auth=auth,
+    )
+
+    if status_code == 200:
+        if release_notes is not None:
+            release_notes = release_notes.decode()
+
+    return release_notes, release_dt

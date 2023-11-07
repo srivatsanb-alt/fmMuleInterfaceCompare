@@ -1,11 +1,13 @@
+import logging
+import time
+
+# ati code imports
 from utils.comms import send_status_update, send_notification
 from utils.util import get_table_as_dict
 import utils.trip_utils as tu
-import logging
 from models.db_session import DBSession
 from models.fleet_models import SherpaStatus, Sherpa, Fleet, Station, StationStatus
-from models.misc_models import Notifications
-import time
+import models.misc_models as mm
 
 
 def get_fleet_status_msg(dbsession, fleet):
@@ -70,7 +72,7 @@ def get_ongoing_trips_status(dbsession, fleet):
 
 
 def get_visas_held_msg(dbsession):
-    all_visas_held = dbsession.get_all_visas_held()
+    all_visas_held = dbsession.get_all_visa_assignments()
     visa_msg = {}
     for visa_held in all_visas_held:
         sherpa_visas = visa_msg.get(visa_held.sherpa_name, {})
@@ -85,16 +87,66 @@ def get_visas_held_msg(dbsession):
     return visa_msg
 
 
-def get_notifications(dbsession):
-    all_notifications = dbsession.get_notifications()
-    notification_msg = {}
-    notification_msg["type"] = "notifications"
-    for notification in all_notifications:
-        notification_msg.update(
-            {notification.id: get_table_as_dict(Notifications, notification)}
+def get_all_alert_notifications(dbsession):
+    all_alerts = dbsession.get_notifications_filter_with_log_level(
+        mm.NotificationLevels.alert
+    )
+    alert_msg = {}
+    alert_msg["type"] = mm.NotificationLevels.alert
+    alert_msg["modules"] = []
+    for alert in all_alerts:
+        if alert.module not in alert_msg["modules"]:
+            alert_msg[alert.module] = {}
+            alert_msg["modules"].append(alert.module)
+        alert_msg[alert.module].update(
+            {alert.id: get_table_as_dict(mm.Notifications, alert)}
         )
+    return alert_msg
 
-    return notification_msg
+
+def send_fleet_level_notifications(dbsession, fleet_name):
+    notification_gen = dbsession.yield_notifications_grouped_by_log_level_and_modules(
+        fleet_name,
+        skip_log_levels=[
+            mm.NotificationLevels.alert,
+            mm.NotificationLevels.stale_alert_or_action,
+        ],
+        skip_modules=[],
+    )
+    action_requests = {
+        "type": mm.NotificationLevels.action_request,
+        "fleet_name": fleet_name,
+        "modules": [],
+    }
+    all_infos = {
+        "type": mm.NotificationLevels.info,
+        "fleet_name": fleet_name,
+        "modules": [],
+    }
+
+    while True:
+        try:
+            log_level, module, notifications = next(notification_gen)
+        except StopIteration:
+            break
+
+        if log_level == mm.NotificationLevels.action_request:
+            action_requests[module] = {}
+            action_requests["modules"].append(module)
+            for notification in notifications:
+                action_requests[module].update(
+                    {notification.id: get_table_as_dict(mm.Notifications, notification)}
+                )
+        elif log_level == mm.NotificationLevels.info:
+            all_infos[module] = {}
+            all_infos["modules"].append(module)
+            for notification in notifications:
+                all_infos[module].update(
+                    {notification.id: get_table_as_dict(mm.Notifications, notification)}
+                )
+
+    send_notification(all_infos)
+    send_notification(action_requests)
 
 
 def send_periodic_updates():
@@ -104,6 +156,7 @@ def send_periodic_updates():
             with DBSession() as dbsession:
                 while True:
                     all_fleets = dbsession.get_all_fleets()
+
                     for fleet in all_fleets:
                         fleet_status_msg = get_fleet_status_msg(dbsession, fleet)
                         send_status_update(fleet_status_msg)
@@ -111,11 +164,13 @@ def send_periodic_updates():
                         ongoing_trip_msg = get_ongoing_trips_status(dbsession, fleet)
                         send_status_update(ongoing_trip_msg)
 
+                        send_fleet_level_notifications(dbsession, fleet.name)
+
                     visa_msg = get_visas_held_msg(dbsession)
                     send_status_update(visa_msg)
-                    notification_msg = get_notifications(dbsession)
 
-                    send_notification(notification_msg)
+                    all_alerts = get_all_alert_notifications(dbsession)
+                    send_notification(all_alerts)
 
                     # force refresh of all objects
                     dbsession.session.expire_all()

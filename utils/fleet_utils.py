@@ -5,24 +5,20 @@ import secrets
 import logging
 import logging.config
 import json
-import glob
-import importlib
 import datetime
 from typing import List, Dict
-from core.db import get_engine
 from core.constants import FleetStatus
-
-from sqlalchemy import inspect as sql_inspect
 from sqlalchemy import or_
 from sqlalchemy.sql import not_
 from sqlalchemy.orm.attributes import flag_modified
+
+# ati code imports
 from models.db_session import DBSession
 import models.fleet_models as fm
 import models.visa_models as vm
 import models.misc_models as mm
 import models.trip_models as tm
 import utils.util as utils_util
-from models.frontend_models import FrontendUser
 from models.base_models import StationProperties
 import utils.log_utils as lu
 
@@ -37,32 +33,6 @@ sys.path.append(os.environ["MULE_ROOT"])
 
 def gen_api_key(hwid: str) -> str:
     return secrets.token_urlsafe(32) + "_" + hwid
-
-
-def create_all_tables() -> None:
-    all_files = glob.glob("models/*.py")
-    for file in all_files:
-        module = file.split(".")[0]
-        module = module.replace("/", ".")
-        print(f"looking for models in module: {module}")
-        try:
-            models = importlib.import_module(module)
-            models.Base.metadata.create_all(bind=get_engine(os.getenv("FM_DATABASE_URI")))
-            print(f"created tables from {module}")
-        except Exception as e:
-            print(f"failed to create tables from {module}, {e}")
-    return
-
-
-def create_table(model) -> None:
-    model.__table__.metadata(bind=get_engine(os.getenv("FM_DATABASE_URI")))
-    return
-
-
-def get_all_table_names():
-    inspector = sql_inspect(get_engine(os.getenv("FM_DATABASE_URI")))
-    all_table_names = inspector.get_table_names("public")
-    return all_table_names
 
 
 def compute_sha1_hash(fpath: str) -> str:
@@ -200,48 +170,6 @@ def add_sherpa_metadata(dbsession: DBSession):
         if sherpa_metadata is None:
             sm = fm.SherpaMetaData(sherpa_name=sherpa.name, info={"can_edit": "True"})
             dbsession.add_to_session(sm)
-
-
-class FrontendUserUtils:
-    @classmethod
-    def add_update_frontend_user(
-        cls, dbsession: DBSession, user_name: str, hashed_password: str, role: str
-    ) -> None:
-        user: FrontendUser = (
-            dbsession.session.query(FrontendUser)
-            .filter(FrontendUser.name == user_name)
-            .one_or_none()
-        )
-        if user:
-            user.hashed_password = hashed_password
-            user.role = role
-            logger.info(
-                f"updated FrontendUser {user_name}, with role: {role}, hashed_password: {hashed_password}"
-            )
-
-        else:
-            user = FrontendUser(name=user_name, hashed_password=hashed_password, role=role)
-            logger.info(
-                f"added FrontendUser {user_name}, with role: {role}, hashed_password: {hashed_password}"
-            )
-            dbsession.add_to_session(user)
-
-    @classmethod
-    def delete_frontend_user(cls, dbsession: DBSession, user_name: str):
-        user: FrontendUser = (
-            dbsession.session.query(FrontendUser)
-            .filter(FrontendUser.name == user_name)
-            .one_or_none()
-        )
-        if user:
-            dbsession.session.delete(user)
-            logger.info(f"deleted FrontendUser {user_name}")
-        else:
-            raise ValueError(f"FrontendUser {user_name} not found")
-
-    @classmethod
-    def delete_all_frontend_users(cls, dbsession: DBSession):
-        _ = dbsession.session.query(FrontendUser).delete()
 
 
 class FleetUtils:
@@ -443,7 +371,7 @@ class FleetUtils:
         for p_trip in p_trips:
             if station_name in p_trip.trip.route:
                 logger.info(
-                    f"deleted trip {p_trip.trip.id}, reason: Invalid route, station: {station_name} has been removed from the map"
+                    f"deleted trip {p_trip.trip.id}, reason: Invalid route, {station_name} will be removed with the map change"
                 )
                 dbsession.delete_pending_trip(p_trip)
                 p_trip.trip.status = tm.TripStatus.CANCELLED
@@ -497,23 +425,36 @@ class SherpaUtils:
         if hwid is None:
             raise ValueError("Cannot add a sherpa without hwid")
 
-        if api_key is None:
-            api_key = gen_api_key(hwid)
-            logger.info(f"generated api_key {api_key} for {sherpa_name} with {hwid}")
+        if api_key is not None:
+            hashed_api_key = hashlib.sha256(api_key.encode("utf-8")).hexdigest()
 
-        hashed_api_key = hashlib.sha256(api_key.encode("utf-8")).hexdigest()
         if sherpa:
             sherpa.hwid = hwid
             sherpa.ip_address = None
-            sherpa.hashed_api_key = hashed_api_key
+            if api_key is not None:
+                sherpa.hashed_api_key = hashed_api_key
+                logger.info(f"updated sherpa {sherpa_name}, with api_key: {api_key}")
             if sherpa.fleet_id != fleet_id:
                 raise ValueError(
-                    "Cannot edit fleet_id for sherpa object. Delete sherpa,  add it to a different fleet"
+                    f"Cannot duplicate sherpas across fleet, {sherpa.name} is already present in {sherpa.fleet.name}"
                 )
-            logger.info(
-                f"updated sherpa {sherpa_name}, with hwid: {hwid}, api_key: {api_key}"
-            )
+            logger.info(f"updated sherpa {sherpa_name}, with hwid: {hwid}")
         else:
+            if api_key is None or hwid is None:
+                raise ValueError(f"API Key/Hardware id cannot be None")
+
+            temp = dbsession.get_sherpa_with_hwid(hwid)
+            if temp:
+                raise ValueError(
+                    f"Cannot duplicate hwid {temp.name} already has the inputted hwid"
+                )
+
+            temp = dbsession.get_sherpa_with_hashed_api_key(hashed_api_key)
+            if temp:
+                raise ValueError(
+                    f"Cannot duplicate api_key {temp.name} already has the inputted api key"
+                )
+
             sherpa: fm.Sherpa = fm.Sherpa(
                 name=sherpa_name,
                 hwid=hwid,
@@ -624,18 +565,36 @@ class ExclusionZoneUtils:
         if not os.path.exists(ez_path):
             return
         with open(ez_path, "r") as f:
-            ez_gates = json.load(f)
+            try:
+                ez_gates = json.load(f)
+            except Exception as e:
+                raise ValueError("Unable to parse ez.json")
 
-        for gate in ez_gates["ez_gates"].values():
-            gate_name = gate["name"]
+        for gate, gate_details in ez_gates["ez_gates"].items():
+            gate_name = gate_details["name"]
             zone_ids_to_add = [f"{gate_name}_lane", f"{gate_name}_station"]
-            # exclusivity = gate["exclusive_parking"]
             for zone_id in zone_ids_to_add:
+                exclusivity = True
+
+                """
+                1. By default all stations are exclusive
+                2. By default all lanes are non-exclusive
+                3. If sez is present in gate_tags, the _lane will be made exclusive as well
+                """
+
+                gate_tags = gate_details.get("gate_tags")
+                if gate_tags is None:
+                    gate_tags = []
+
+                if zone_id.endswith("_lane") and "sez" not in gate_tags:
+                    exclusivity = False
+
                 ezone: vm.ExclusionZone = (
                     dbsession.session.query(vm.ExclusionZone)
                     .filter_by(zone_id=zone_id)
                     .one_or_none()
                 )
+
                 if ezone:
                     logger.info(f"ExclusionZone {zone_id} already present")
                     logger.info(f"ExclusionZone serving fleets {ezone.fleets}")
@@ -644,9 +603,10 @@ class ExclusionZoneUtils:
                         ezone.fleets.append(fleet_name)
                         logger.info(f"ExclusionZone serving fleets {ezone.fleets}")
                         flag_modified(ezone, "fleets")
+                    ezone.exclusivity = exclusivity
                 else:
                     ezone: vm.ExclusionZone = vm.ExclusionZone(
-                        zone_id=zone_id, fleets=[fleet_name]
+                        zone_id=zone_id, exclusivity=exclusivity, fleets=[fleet_name]
                     )
                     dbsession.add_to_session(ezone)
                     logger.info(f"Added exclusionZone {zone_id}")
@@ -658,21 +618,51 @@ class ExclusionZoneUtils:
         if not os.path.exists(ez_path):
             return
         with open(ez_path, "r") as f:
-            ez_gates = json.load(f)
+            try:
+                ez_gates = json.load(f)
+            except Exception as e:
+                raise ValueError("Unable to parse ez.json")
 
         gates_dict = ez_gates["ez_gates"]
-        for gate in gates_dict.values():
-            gate_name = gate["name"]
-            if not gate["linked_gate"]:
+        for gate, gate_details in ez_gates["ez_gates"].items():
+            gate_name = gate_details["name"]
+
+            if gate_details.get("exclusive_parking", True) is True:
+                cls.create_internal_link_between_station_and_lane(dbsession, gate_name)
+
+            if not gate_details["linked_gate"]:
                 logger.info(f"Gate {gate_name} has no linked gates")
                 continue
 
-            linked_gates = gate["linked_gates_ids"]
+            linked_gates = gate_details["linked_gates_ids"]
             logger.info(f"Gate {gate_name} has linked gates: {linked_gates}")
             prev_zone = gate_name
             for linked_gate in linked_gates:
                 next_zone = gates_dict[str(linked_gate)]["name"]
                 cls.create_links_between_zones(dbsession, prev_zone, next_zone)
+
+    @classmethod
+    def create_internal_link_between_station_and_lane(
+        cls, dbsession: DBSession, ezone_name
+    ):
+        ezone_st = ezone_name + "_station"
+        ezone_lane = ezone_name + "_lane"
+
+        internal_link = (
+            dbsession.session.query(vm.LinkedGates)
+            .filter(vm.LinkedGates.prev_zone_id == ezone_st)
+            .filter(vm.LinkedGates.next_zone_id == ezone_lane)
+            .one_or_none()
+        )
+        if internal_link:
+            logger.info(
+                f"Internal Link between {ezone_name} station and lane already exsists"
+            )
+
+        else:
+            internal_link = vm.LinkedGates(prev_zone_id=ezone_st, next_zone_id=ezone_lane)
+            dbsession.add_to_session(internal_link)
+            logger.info(f"Created a internal link between {ezone_st} and {ezone_lane}")
 
     @classmethod
     def create_links_between_zones(cls, dbsession: DBSession, prev_zone, next_zone):

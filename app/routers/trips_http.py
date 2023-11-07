@@ -1,5 +1,3 @@
-from io import BytesIO
-import json
 import logging
 from typing import Union
 from fastapi import APIRouter, Depends
@@ -49,7 +47,10 @@ async def force_delete_ongoing_trip(
     with DBSession() as dbsession:
         sherpa = dbsession.get_sherpa(sherpa_name)
 
-        if sherpa.status.disabled_reason != cc.DisabledReason.STALE_HEARTBEAT:
+        if sherpa.status.disabled_reason not in [
+            cc.DisabledReason.STALE_HEARTBEAT,
+            cc.DisabledReason.SOFTWARE_NOT_COMPATIBLE,
+        ]:
             dpd.raise_error("This option can be used only if the sherpa is disconnected")
 
         if sherpa.status.trip_id is None:
@@ -187,12 +188,12 @@ async def trip_status_with_type(
         dpd.raise_error("Query sent for an invalid trip type")
 
     with DBSession() as dbsession:
-        if trip_status_req.booked_from and trip_status_req.booked_till:
-            trip_status_req.booked_from = str_to_dt(trip_status_req.booked_from)
-            trip_status_req.booked_till = str_to_dt(trip_status_req.booked_till)
+        if trip_status_req.from_dt and trip_status_req.to_dt:
+            trip_status_req.from_dt = str_to_dt(trip_status_req.from_dt)
+            trip_status_req.to_dt = str_to_dt(trip_status_req.to_dt)
 
             all_trips = dbsession.get_trips_with_timestamp_and_status(
-                trip_status_req.booked_from, trip_status_req.booked_till, valid_status
+                trip_status_req.from_dt, trip_status_req.to_dt, valid_status
             )
 
         else:
@@ -217,8 +218,6 @@ async def trip_status_with_type(
 
 
 # returns trip status, i.e. the time slot of the trip booking and the trip status with timestamp.
-
-
 @router.post("/status_pg/{type}")
 async def trip_status_pg_with_type(
     type: str,
@@ -237,25 +236,33 @@ async def trip_status_pg_with_type(
         valid_status = tm.COMPLETED_TRIP_STATUS
     elif type == "ongoing":
         valid_status = tm.ONGOING_TRIP_STATUS
+    elif type == "active":
+        valid_status = tm.ACTIVE_TRIP_STATUS
     else:
         dpd.raise_error("Query sent for an invalid trip type")
 
-    with DBSession() as dbsession:
-        if trip_status_req.booked_from and trip_status_req.booked_till:
-            trip_status_req.booked_from = str_to_dt(trip_status_req.booked_from)
-            trip_status_req.booked_till = str_to_dt(trip_status_req.booked_till)
+    logging.getLogger("uvicorn").info(
+        f"trip_status_req: {jsonable_encoder(trip_status_req)}"
+    )
 
-            response = dbsession.get_trips_with_timestamp_and_status_pagination(
-                trip_status_req.booked_from,
-                trip_status_req.booked_till,
-                valid_status,
-                trip_status_req.filter_sherpa_names,
-                trip_status_req.filter_status,
-                trip_status_req.order_by,
-                trip_status_req.order_mode,
-                trip_status_req.skip,
-                trip_status_req.limit,
-            )
+    with DBSession() as dbsession:
+        if trip_status_req.from_dt and trip_status_req.to_dt:
+            trip_status_req.from_dt = str_to_dt(trip_status_req.from_dt)
+            trip_status_req.to_dt = str_to_dt(trip_status_req.to_dt)
+
+        response = dbsession.get_trips_with_timestamp_and_status_pagination(
+            trip_status_req.from_dt,
+            trip_status_req.to_dt,
+            trip_status_req.filter_fleets,
+            valid_status,
+            trip_status_req.filter_sherpa_names,
+            trip_status_req.filter_status,
+            trip_status_req.search_txt,
+            trip_status_req.sort_field,
+            trip_status_req.sort_order,
+            trip_status_req.page_no,
+            trip_status_req.rec_limit,
+        )
 
     return response
 
@@ -271,11 +278,11 @@ async def trip_status(
 
     with DBSession() as dbsession:
         all_trips = None
-        if trip_status_req.booked_from and trip_status_req.booked_till:
-            trip_status_req.booked_from = str_to_dt(trip_status_req.booked_from)
-            trip_status_req.booked_till = str_to_dt(trip_status_req.booked_till)
+        if trip_status_req.from_dt and trip_status_req.to_dt:
+            trip_status_req.from_dt = str_to_dt(trip_status_req.from_dt)
+            trip_status_req.to_dt = str_to_dt(trip_status_req.to_dt)
             all_trips = dbsession.get_trips_with_timestamp(
-                trip_status_req.booked_from, trip_status_req.booked_till
+                trip_status_req.from_dt, trip_status_req.to_dt
             )
 
         else:
@@ -325,18 +332,19 @@ async def trip_analytics_pg(
         dpd.raise_error("Unknown requester", 401)
 
     with DBSession() as dbsession:
-        if trip_analytics_req.booked_from and trip_analytics_req.booked_till:
-            trip_analytics_req.booked_from = str_to_dt(trip_analytics_req.booked_from)
-            trip_analytics_req.booked_till = str_to_dt(trip_analytics_req.booked_till)
+        if trip_analytics_req.from_dt and trip_analytics_req.to_dt:
+            trip_analytics_req.from_dt = str_to_dt(trip_analytics_req.from_dt)
+            trip_analytics_req.to_dt = str_to_dt(trip_analytics_req.to_dt)
 
         trip_analytics = dbsession.get_trip_analytics_with_pagination(
-            trip_analytics_req.booked_from,
-            trip_analytics_req.booked_till,
+            trip_analytics_req.from_dt,
+            trip_analytics_req.to_dt,
+            trip_analytics_req.filter_fleets,
             trip_analytics_req.filter_sherpa_names,
-            trip_analytics_req.order_by,
-            trip_analytics_req.order_mode,
-            trip_analytics_req.skip,
-            trip_analytics_req.limit,
+            trip_analytics_req.sort_field,
+            trip_analytics_req.sort_order,
+            trip_analytics_req.page_no,
+            trip_analytics_req.rec_limit,
         )
         response = trip_analytics
 
@@ -352,12 +360,12 @@ async def trip_analytics(
         dpd.raise_error("Unknown requester", 401)
 
     with DBSession() as dbsession:
-        if trip_analytics_req.booked_from and trip_analytics_req.booked_till:
-            trip_analytics_req.booked_from = str_to_dt(trip_analytics_req.booked_from)
-            trip_analytics_req.booked_till = str_to_dt(trip_analytics_req.booked_till)
+        if trip_analytics_req.from_dt and trip_analytics_req.to_dt:
+            trip_analytics_req.from_dt = str_to_dt(trip_analytics_req.from_dt)
+            trip_analytics_req.to_dt = str_to_dt(trip_analytics_req.to_dt)
 
             all_trip_analytics = dbsession.get_trip_analytics_with_timestamp(
-                trip_analytics_req.booked_from, trip_analytics_req.booked_till
+                trip_analytics_req.from_dt, trip_analytics_req.to_dt
             )
 
         else:
@@ -462,7 +470,6 @@ async def get_saved_routes(
         dpd.raise_error("Unknown requester", 401)
 
     with DBSession() as dbsession:
-
         saved_routes = dbsession.get_saved_routes_fleet(fleet_name)
 
         for saved_route in saved_routes:
@@ -565,12 +572,12 @@ async def export_analytics_data(
         dpd.raise_error("Unknown requester", 401)
 
     with DBSession() as dbsession:
-        if trip_analytics_req.booked_from and trip_analytics_req.booked_till:
-            trip_analytics_req.booked_from = str_to_dt(trip_analytics_req.booked_from)
-            trip_analytics_req.booked_till = str_to_dt(trip_analytics_req.booked_till)
+        if trip_analytics_req.from_dt and trip_analytics_req.to_dt:
+            trip_analytics_req.from_dt = str_to_dt(trip_analytics_req.from_dt)
+            trip_analytics_req.to_dt = str_to_dt(trip_analytics_req.to_dt)
 
             all_trip_analytics = dbsession.get_trip_analytics_with_timestamp(
-                trip_analytics_req.booked_from, trip_analytics_req.booked_till
+                trip_analytics_req.from_dt, trip_analytics_req.to_dt
             )
 
         else:

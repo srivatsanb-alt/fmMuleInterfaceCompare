@@ -1,4 +1,5 @@
 import hashlib
+import logging
 import time
 import jwt
 import asyncio
@@ -7,11 +8,13 @@ from fastapi import Header
 from fastapi.param_functions import Query
 from rq.job import Job
 from rq import Retry
-from utils.rq_utils import enqueue, enqueue_at, Queues
-from core.config import Config
 import redis
 import os
 import json
+
+# ati code imports
+import core.handler_configuration as hc
+from utils.rq_utils import enqueue, enqueue_at, Queues
 from models.request_models import SherpaReq
 from models.db_session import DBSession
 
@@ -70,7 +73,7 @@ def get_sherpa(x_api_key: str = Header(None)):
     hashed_api_key = hashlib.sha256(x_api_key.encode("utf-8")).hexdigest()
 
     with DBSession() as dbsession:
-        sherpa = dbsession.get_sherpa_by_api_key(hashed_api_key)
+        sherpa = dbsession.get_sherpa_with_hashed_api_key(hashed_api_key)
         sherpa_name = sherpa.name if sherpa else None
 
     return sherpa_name
@@ -90,6 +93,10 @@ def get_user_from_query(token: str = Query(None)):
 
 def get_real_ip_from_header(x_real_ip: str = Header(None)):
     return x_real_ip
+
+
+def get_forwarded_for_from_header(x_forwarded_for: str = Header(None)):
+    return x_forwarded_for
 
 
 def decode_token(token: str):
@@ -128,7 +135,7 @@ def process_req(queue, req, user, redis_conn=None, dt=None):
     job = None
     req.source = user
 
-    handler_obj = Config.get_handler()
+    handler_obj = hc.HandlerConfiguration.get_handler()
     args = [handler_obj, req]
     kwargs = {}
 
@@ -181,6 +188,14 @@ async def process_req_with_response(queue, req, user: str):
 
         if status == "finished":
             response = job.result
+            if response is None:
+                job = Job.fetch(job.id, connection=redis_conn)
+                job.refresh()
+                new_response = job.result
+                logging.getLogger("fm_debug").warning(
+                    f"Got a null response from rq initially, req: {req}, new_response after refesh {new_response}"
+                )
+                response = new_response
             break
 
         if status == "failed":

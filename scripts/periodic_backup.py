@@ -13,42 +13,46 @@ import json
 
 # ati code imports
 from core.db import get_engine
-from core.config import Config
+from models.mongo_client import FMMongo
+
+
+def prune_unused_images(backup_config):
+    if backup_config["prune_unused_images"] is True:
+        temp = backup_config["prune_images_used_until_h"]
+        if os.system(f"docker image prune -f --filter 'until={temp}h'") == 0:
+            logging.getLogger("misc").info(f"Pruned old({temp}h) docker images")
+        else:
+            logging.getLogger("misc").warning(f"Unable to prune old({temp}h) docker images")
 
 
 def backup_data():
-    backup_config = Config.get_backup_config()
+    with FMMongo() as fm_mongo:
+        backup_config = fm_mongo.get_document_from_fm_config("data_backup")
+
     logging.getLogger().info("Starting periodic data_backup")
     fm_backup_path = os.path.join(os.getenv("FM_STATIC_DIR"), "data_backup")
     start_time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
     current_data = f"{start_time}_data"
-
     redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
     redis_conn.set("current_data_folder", current_data)
-
+    run_backup_path = os.path.join(fm_backup_path, current_data)
     if not os.path.exists(fm_backup_path):
         os.mkdir(fm_backup_path)
-    os.mkdir(os.path.join(fm_backup_path, current_data))
-
-    logs_save_path = os.path.join(fm_backup_path, current_data, "logs")
-
-    with open(os.path.join(fm_backup_path, current_data, "info.txt"), "w") as info_file:
+    os.mkdir(run_backup_path)
+    logs_save_path = os.path.join(run_backup_path, "logs")
+    with open(os.path.join(run_backup_path, "info.txt"), "w") as info_file:
         info_file.write(os.getenv("FM_IMAGE_INFO"))
 
-    redis_conn = redis.from_url(
-        os.getenv("FM_REDIS_URI"), encoding="utf-8", decode_responses=True
-    )
-
-    plugin_db_init = False
-    while not plugin_db_init:
-        plugin_db_init = (
-            False
-            if redis_conn.get("plugins_workers_db_init") is None
-            else json.loads(redis_conn.get("plugins_workers_db_init"))
-        )
-        if not plugin_db_init:
-            logging.info("Will wait for plugin db init")
-            time.sleep(20)
+    # wait for plugin init
+    logging.getLogger().info(f"Will check for plugin init")
+    plugin_init = False
+    while not plugin_init:
+        plugin_init = redis_conn.get("plugin_init")
+        if plugin_init is not None:
+            plugin_init = json.loads(plugin_init)
+        logging.getLogger().info(f"Waiting for plugin init")
+        time.sleep(10)
+    logging.getLogger().info(f"plugin init done!")
 
     # get all databases
     all_databases = [
@@ -61,11 +65,15 @@ def backup_data():
     valid_dbs = []
     for database_name in all_databases:
         if not any(excludable in database_name for excludable in ["postgres", "template"]):
-            db_backup_path = os.path.join(fm_backup_path, current_data, database_name)
+            db_backup_path = os.path.join(
+                fm_backup_path, current_data, f"{database_name}_db"
+            )
             os.mkdir(os.path.join(db_backup_path))
             logging.info(f"Will periodically backup {database_name} db")
             valid_dbs.append(database_name)
 
+    freq = 60
+    last_prune_time = time.time()
     while True:
         for db_name in valid_dbs:
             path_to_db = os.path.join(os.getenv("FM_DATABASE_URI"), db_name)
@@ -84,7 +92,7 @@ def backup_data():
                     data = session.query(model).all()
                     df = pd.DataFrame(data, columns=column_names)
                     csv_save_path = os.path.join(
-                        fm_backup_path, current_data, db_name, f"{model}.csv"
+                        fm_backup_path, current_data, f"{db_name}_db", f"{model}.csv"
                     )
                     df.to_csv(csv_save_path, index=False)
                 except:
@@ -97,19 +105,36 @@ def backup_data():
         except:
             pass
 
-        shutil.copytree(os.getenv("FM_LOG_DIR"), logs_save_path)
+        docker_cp_returncod = os.system(
+            f"docker cp fm_plugins:/app/plugin_logs {run_backup_path}"
+        )
+        if docker_cp_returncod != 0:
+            logging.getLogger("misc").warning(f"Unable to copy fm_plugin logs")
+
+        # prune images every 30 minutes
+        if time.time() - last_prune_time > 1800:
+            prune_unused_images(backup_config)
+            last_prune_time = time.time()
+
+        try:
+            shutil.copytree(os.getenv("FM_LOG_DIR"), logs_save_path)
+        except Exception as e:
+            logging.getLogger("misc").info(
+                f"Exception in periodic backup script, exception: {e}"
+            )
+
         logging.getLogger("misc").info(f"Backed up data")
 
         try:
             # default keep size is 1000MB
-            keep_size_mb = backup_config.get("keep_size_mb", 1000)
+            keep_size_mb = backup_config["keep_size_mb"]
             cleanup_data(current_data, keep_size_mb)
 
         except Exception as e:
             logging.getLogger("misc").error(
                 f"couldn't cleanup old backed up data, exception: {e}"
             )
-        time.sleep(10)
+        time.sleep(freq)
 
 
 def get_directory_size(directory):
@@ -125,20 +150,8 @@ def get_directory_size(directory):
     return total_size_mb
 
 
-def sort_dir_list(list_dir):
-    TIME_FORMAT = "%Y-%m-%d-%H-%M-%S"
-    for dir in list_dir:
-        try:
-            datetime.datetime.strptime(dir.rsplit("_", 1)[0], TIME_FORMAT)
-        except Exception as e:
-            logging.getLogger("misc").info(
-                f"Directory name not in valid format, ignoring {dir}, cannot be sorted according to timestamp, exception: {e}"
-            )
-            list_dir.remove(dir)
-
-    list_dir.sort(
-        key=lambda date: datetime.datetime.strptime(date.rsplit("_", 1)[0], TIME_FORMAT)
-    )
+def sort_dir_list(directory, list_dir):
+    list_dir.sort(key=lambda cdate: os.path.getctime(os.path.join(directory, cdate)))
 
 
 def sort_and_remove_directories(directory, target_size, current_data):
@@ -147,16 +160,18 @@ def sort_and_remove_directories(directory, target_size, current_data):
 
     # cannot delete current data folder
     list_dir.remove(current_data)
-    sort_dir_list(list_dir)
+    sort_dir_list(directory, list_dir)
 
     directories = [os.path.join(directory, name) for name in list_dir]
-    current_size = 0
+    deleted_size = 0
     for dir_path in directories:
         dir_size = get_directory_size(dir_path)
-        if current_size + dir_size <= target_size:
-            shutil.rmtree(dir_path)
-            current_size += dir_size
-            logging.getLogger("misc").warning(f"Deleted {dir_path}")
+        shutil.rmtree(dir_path)
+        deleted_size += dir_size
+        logging.getLogger("misc").warning(f"Deleted {dir_path}")
+        if deleted_size >= target_size:
+            logging.getLogger("misc").info(f"will stop data clean up process for now")
+            break
 
 
 def cleanup_data(current_data, keep_size_mb=1000):

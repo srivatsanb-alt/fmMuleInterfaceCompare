@@ -12,7 +12,7 @@ from redis import Redis
 
 
 # ati code imports
-from core.config import Config
+import core.handler_configuration as hc
 from core.constants import MessageType
 from models.db_session import DBSession
 import models.misc_models as mm
@@ -110,7 +110,6 @@ async def sherpa_status(
     sherpa_name=Depends(dpd.get_sherpa),
     x_real_ip=Depends(dpd.get_real_ip_from_header),
 ):
-
     client_ip = websocket.client.host
     if x_real_ip is None:
         x_real_ip = client_ip
@@ -158,7 +157,8 @@ async def sherpa_status(
 
 
 async def reader(websocket, sherpa):
-    handler_obj = Config.get_handler()
+    handler_obj = hc.HandlerConfiguration.get_handler()
+
     while True:
         try:
             msg = await websocket.receive_json()

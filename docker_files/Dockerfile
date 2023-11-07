@@ -2,33 +2,29 @@ FROM fleet_manager_base:dev
 
 ARG FM_IMAGE_INFO
 ARG FM_TAG
-ARG MULE_IMAGE_ID
-ARG FM_SERVER_USERNAME
-ARG FM_SERVER_IP
-ARG FM_PORT
-ARG REDIS_PORT
-ARG PLUGIN_PORT
+ARG GIT_TAGGED
+ARG LAST_COMMIT_DT
 
-RUN echo "server ip $FM_SERVER_IP"
+RUN mkdir /app/mule_config
+RUN mkdir /app/downloads
 
-ENV FM_INSTALL_DIR="/app" REDIS_PORT=$REDIS_PORT FM_PORT=$FM_PORT PLUGIN_PORT=$PLUGIN_PORT FM_SERVER_IP=$FM_SERVER_IP
+ENV FM_INSTALL_DIR="/app"
 
-
-ENV FM_REDIS_URI="redis://localhost:$REDIS_PORT" \
-    FM_STATIC_DIR="/app/static" \
+ENV FM_STATIC_DIR="/app/static" \
     FM_LOG_DIR="/app/logs" \
     FM_MISC_DIR="/app/misc/" \
     FM_CONFIG_DIR="/app/static/fleet_config/" \
+    FM_DOWNLOAD_DIR="/app/downloads" \
     MULE_ROOT="$FM_INSTALL_DIR/mule" \
-    ATI_CONFIG="/app/static/mule_config/config.toml" \
-    ATI_CONSOLIDATED_CONFIG="/app/static/mule_config/consolidated.toml" \
+    ATI_CONFIG="/app/mule_config/config.toml" \
+    ATI_CONSOLIDATED_CONFIG="/app/mule_config/consolidated.toml" \
     ATI_STATIC_AUTH_USERNAME="ati_static_files" \
     ATI_STATIC_AUTH_PASSWORD="atiStatic112" \
     FM_IMAGE_INFO=$FM_IMAGE_INFO \
     FM_TAG=$FM_TAG \
-    FM_SERVER_USERNAME=$FM_SERVER_USERNAME \
-    PYTHONPATH="/app" \
-    MULE_IMAGE_ID=$MULE_IMAGE_ID
+    GIT_TAGGED=$GIT_TAGGED \
+    LAST_COMMIT_DT=$LAST_COMMIT_DT \
+    PYTHONPATH="/app"
 
 RUN ln -fs /usr/share/zoneinfo/Asia/Kolkata /etc/localtime && \
        dpkg-reconfigure -f noninteractive tzdata
@@ -39,10 +35,18 @@ RUN echo "alias rqe='grep -e rq -C 5 /app/logs/fleet_manager.log'" >> ~/.bashrc
 RUN echo "alias apihw='poetry run python /app/utils/api_key_gen.py --hw_id'" >> ~/.bashrc
 RUN echo "alias apind='poetry run python utils/gen_api_keys_n_devices.py --num_devices'" >> ~/.bashrc
 RUN echo "alias sip='psql -c \"select sherpas.name, sherpas.ip_address, fleets.name from sherpas join fleets on fleet_id=fleets.id;\"'" >> ~/.bashrc
+RUN echo "alias hashpass='poetry run python utils/gen_hashed_password.py --password'" >> ~/.bashrc
+RUN echo "alias create_certs='poetry run python utils/create_certs.py --ips'" >> ~/.bashrc
 
 COPY . /app/
 RUN echo "Copying messages_pb2.py to mule/ati/schema on the docker"
 COPY ./misc/messages_pb2.py /app/mule/ati/schema/
+
+# expose downloads
+COPY ./docs/support_manual.pdf /app/downloads/.
+COPY ./misc/FlashTool_SB.tar /app/downloads/.
+COPY ./master_fm_comms/mfm_rev_tunnel.tar /app/downloads/.
+
 RUN mkdir /app/logs
 RUN cd /app
 RUN chmod +x scripts/fleet_orchestrator.sh

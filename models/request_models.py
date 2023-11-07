@@ -7,11 +7,6 @@ import pydantic
 from core.constants import MessageType
 from pydantic import BaseModel
 from models.base_models import JsonMixin
-from models.config_models import (
-    BasicConfig,
-    OptimalDispatch,
-    Alerts,
-)
 
 
 class HitchReq(BaseModel):
@@ -38,15 +33,21 @@ class PatternEnum(str, Enum):
 
 class VisaType(str, Enum):
     PARKING = "parking"
-    EXCLUSIVE_PARKING = "exclusive_parking"
     UNPARKING = "unparking"
     TRANSIT = "transit"
-    SEZ = "sez"
 
 
 class AccessType(str, Enum):
     REQUEST = "request"
     RELEASE = "release"
+
+
+class PasstoSherpaEndpoints:
+    RESET_POSE = "reset_pose"
+    DIAGNOSTICS = "diagnostics"
+    PAUSE_RESUME = "pause_resume"
+    SWITCH_MODE = "switch_mode"
+    IMG_UPDATE = "img_update"
 
 
 class ConveyorReq(BaseModel):
@@ -75,6 +76,12 @@ class VisaReq:
     zone_id: str
     zone_name: str
     visa_type: VisaType
+
+
+class FrontendUserRoles:
+    operator = 0
+    supervisor = 1
+    support = 2
 
 
 #################################################
@@ -261,6 +268,11 @@ class ClientReq(BaseModel):
     ttl: Optional[int] = None
 
 
+class GenericFromToTimeReq(ClientReq):
+    from_dt: Optional[str]
+    to_dt: Optional[str]
+
+
 class MasterDataInfo(ClientReq):
     fleet_name: str
 
@@ -270,10 +282,16 @@ class UserLogin(ClientReq):
     password: str
 
 
+class FrontendUserDetails(ClientReq):
+    name: str
+    role: str
+    password: Optional[str] = None
+
+
 class AddEditSherpaReq(ClientReq):
-    api_key: str
     hwid: str
     fleet_name: str
+    api_key: Optional[str]
 
 
 class AddFleetReq(ClientReq):
@@ -286,12 +304,6 @@ class AddFleetReq(ClientReq):
 class UpdateMapReq(ClientReq):
     fleet_name: str
     map_path: str
-
-
-class FleetConfigUpdate(BaseModel):
-    fleet: BasicConfig
-    optimal_dispatch: OptimalDispatch
-    alerts: Optional[Alerts]
 
 
 class TripMetaData(BaseModel):
@@ -366,36 +378,25 @@ class SherpaImgUpdateCtrlReq(ClientReq):
     type: str = "sherpa_img_update"
 
 
-class TripStatusReq_pg(ClientReq):
-    skip: int
-    limit: int
+class TripStatusReq(GenericFromToTimeReq):
+    trip_ids: Optional[List[int]]
+
+
+class TripStatusReq_pg(GenericFromToTimeReq):
+    page_no: int
+    rec_limit: int
+    filter_fleets: Optional[List[str]]
     filter_sherpa_names: Optional[List[str]]
     filter_status: Optional[List[str]]
-    booked_from: Optional[str]
-    booked_till: Optional[str]
-    
-    order_by: Optional[str]
-    order_mode: Optional[str]
-
-class TripStatusReq(ClientReq):
-    booked_from: Optional[str]
-    booked_till: Optional[str]
-    trip_ids: Optional[List[int]]
+    sort_field: Optional[str]
+    sort_order: Optional[str]
+    search_txt: Optional[str]
 
 
 class GiveRouteWPS(ClientReq):
     start_pose: List = None  # Start station pose
     to_poses: List = None  # end station pose(s). can be more than 1 station
     sherpa_name: str = None  # only for Live monitoring: Route from current pose to next destination, None for route-preview
-
-
-class DeleteVisaAssignments(ClientReq):
-    type: str = MessageType.DELETE_VISA_ASSIGNMENTS
-
-
-class DeleteOptimalDispatchAssignments(ClientReq):
-    type: str = MessageType.DELETE_OPTIMAL_DISPATCH_ASSIGNMENTS
-    fleet_name: str
 
 
 class GetFMIncidents(ClientReq):
@@ -418,11 +419,6 @@ class UpdateSavedRouteReq(ClientReq):
 class UpdateSherpaMetaDataReq(ClientReq):
     sherpa_name: str
     info: Dict[str, str]
-
-
-class GenericFromToTimeReq(ClientReq):
-    from_dt: str
-    to_dt: str
 
 
 #################################################
@@ -465,34 +461,35 @@ class PeripheralsReq(FMReq):
 
 
 class PauseResumeReq(FMReq):
-    endpoint: str = "pause_resume"
+    endpoint: str = PasstoSherpaEndpoints.PAUSE_RESUME
     pause: bool
     sherpa_name: str
     type = MessageType.PASS_TO_SHERPA
 
 
 class SwitchModeReq(FMReq):
-    endpoint: str = "switch_mode"
+    endpoint: str = PasstoSherpaEndpoints.SWITCH_MODE
     mode: str
     sherpa_name: str
     type = MessageType.PASS_TO_SHERPA
 
 
 class ResetPoseReq(FMReq):
-    endpoint: str = "reset_pose"
+    endpoint: str = PasstoSherpaEndpoints.RESET_POSE
     pose: List[float]
     sherpa_name: str
+    station_name: Optional[str]
     type = MessageType.PASS_TO_SHERPA
 
 
 class DiagnosticsReq(FMReq):
-    endpoint: str = "diagnostics"
+    endpoint: str = PasstoSherpaEndpoints.DIAGNOSTICS
     sherpa_name: str
     type = MessageType.PASS_TO_SHERPA
 
 
 class SherpaImgUpdate(FMReq):
-    endpoint: str = "img_update"
+    endpoint: str = PasstoSherpaEndpoints.IMG_UPDATE
     image_tag: str
     fm_server_username: str
     time_zone: str

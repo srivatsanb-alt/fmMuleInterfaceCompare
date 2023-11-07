@@ -1,8 +1,0 @@
-{
-	"<line_name>_line": {
-		"end_station": "<station_name>",
-		"sherpas": [
-			"<sherpa1>, <sherpa2>"
-		]
-	}
-}

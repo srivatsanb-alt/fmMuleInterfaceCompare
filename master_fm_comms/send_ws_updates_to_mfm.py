@@ -38,10 +38,11 @@ async def send_ongoing_trip_status(ws, mfm_context: mu.MFMContext):
                 continue
 
             fleet_name = data.get("fleet_name")
-
             temp = last_update_dt.get(fleet_name)
+
             if temp is None:
-                continue
+                raise Exception("New fleet has been added, reconnect again")
+
             time_delta = datetime.datetime.now() - temp
 
             if time_delta.seconds > mfm_context.ws_update_freq:
@@ -81,7 +82,8 @@ async def send_fleet_status(ws, mfm_context: mu.MFMContext):
 
             temp = last_update_dt.get(fleet_name)
             if temp is None:
-                continue
+                raise Exception("New fleet has been added, reconnect again")
+
             time_delta = datetime.datetime.now() - temp
 
             if time_delta.seconds > mfm_context.ws_update_freq:
@@ -99,7 +101,7 @@ async def async_send_ws_msgs_to_mfm():
     logging.getLogger("mfm_updates").info("started async_send_ws_msgs_to_mfm script")
     mfm_context: mu.MFMContext = mu.get_mfm_context()
 
-    if mfm_context is None:
+    if mfm_context.send_updates is False:
         return
 
     while True:

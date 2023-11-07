@@ -1,5 +1,5 @@
-import requests 
-import os 
+import requests
+import os
 
 FM_PORT = os.getenv("FM_PORT")
 FM_VERSION = os.getenv("FM_TAG")
@@ -16,7 +16,7 @@ if not show_all:
     print(f"**This doc would only show apis that start with any of {show_only}**\n\n")
 
 
-all_path_details= resp_json["paths"]
+all_path_details = resp_json["paths"]
 all_components = resp_json["components"]
 
 count = 1
@@ -29,12 +29,12 @@ for url, details in all_path_details.items():
         other_details = details[req_method]
         req_body = other_details.get("requestBody")
         params = other_details.get("parameters")
-        
+
         print(f"Parameters required")
-        param_count=0
+        param_count = 0
         for param in params:
-            param_count+=1
-            p_title= param["schema"].get("title")
+            param_count += 1
+            p_title = param["schema"].get("title")
             p_type = param["schema"].get("type")
             to_be_sent_in = param["in"]
             print(f"\t\t{param_count}) {p_title}: {p_type}, \t  in: {to_be_sent_in}")
@@ -54,8 +54,10 @@ for url, details in all_path_details.items():
                             title = req_prop["title"]
                             temp_type = req_prop["type"]
                             print(f"\t\t{title}: {temp_type}")
-                        except:
+                        except Exception as e:
+                            # print(
+                            #     f"Unable to get title and type from request body, Exception: {e}"
+                            # )
                             pass
         print("\n\n\n")
-        count+=1
-
+        count += 1

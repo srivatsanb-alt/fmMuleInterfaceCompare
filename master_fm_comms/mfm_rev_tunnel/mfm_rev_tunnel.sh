@@ -42,6 +42,7 @@ else {
   sudo cp mfm_rev_tunnel_nginx.conf /etc/nginx/nginx.conf
   echo "Updated nginx conf"
   sudo nginx -t
+  sudo systemctl daemon-reload
   sudo systemctl restart nginx.service 
 }
 fi

@@ -9,8 +9,13 @@ import json
 
 # ati code imports
 import utils.log_utils as lu
+import utils.db_utils as dbu
 import utils.fleet_utils as fu
+import models.misc_models as mm
+from models.mongo_client import FMMongo
 from utils.upgrade_db import upgrade_db_schema, maybe_drop_tables
+from utils.upgrade_mongo import upgrade_mongo_schema
+
 from models.db_session import DBSession
 
 # get log config
@@ -20,27 +25,19 @@ sys.path.append("/app/mule")
 from mule.ati.common.config import load_mule_config
 
 
-def regenerate_config():
-    with open(os.getenv("ATI_CONSOLIDATED_CONFIG"), "w") as f:
-        toml.dump(load_mule_config(os.getenv("ATI_CONFIG")), f)
+def regenerate_mule_config():
+    with open(os.getenv("ATI_CONFIG"), "w") as ac:
+        with FMMongo() as fm_mongo:
+            mule_config = fm_mongo.get_document_from_fm_config("mule_config")
+        toml.dump(mule_config["mule_site_config"], ac)
+
+    with open(os.getenv("ATI_CONSOLIDATED_CONFIG"), "w") as acc:
+        toml.dump(load_mule_config(os.getenv("ATI_CONFIG")), acc)
+
     os.environ["ATI_CONFIG"] = os.environ["ATI_CONSOLIDATED_CONFIG"]
 
-
-def update_frontend_user_details(dbsession: DBSession):
-
-    fu.FrontendUserUtils.delete_all_frontend_users(dbsession)
-    dbsession.session.flush()
-
-    frontend_user_config = toml.load(
-        os.path.join(os.getenv("FM_CONFIG_DIR"), "frontend_users.toml")
-    )
-    logging.getLogger().info(f"frontend user details in config {frontend_user_config}")
-
-    for user_name, user_details in frontend_user_config["frontenduser"].items():
-        role = user_details.get("role", "operator")
-        fu.FrontendUserUtils.add_update_frontend_user(
-            dbsession, user_name, user_details["hashed_password"], role
-        )
+    config_path = os.environ["ATI_CONSOLIDATED_CONFIG"]
+    logging.getLogger().info(f"Regenerated mule config, saved to: {config_path}")
 
 
 def populate_redis_with_basic_info(dbsession: DBSession):
@@ -58,30 +55,38 @@ def populate_redis_with_basic_info(dbsession: DBSession):
     lu.set_log_config_dict(sherpa_names)
 
     # redis_expire_timeout
-    fleet_config = toml.load(os.path.join(os.getenv("FM_CONFIG_DIR"), "fleet_config.toml"))
+    with FMMongo() as fm_mongo:
+        rq_params = fm_mongo.get_document_from_fm_config("rq")
 
     # store default job timeout
-    default_job_timeout = fleet_config["fleet"]["rq"].get("default_job_timeout", 15)
-    generic_handler_job_timeout = fleet_config["fleet"]["rq"].get(
-        "generic_handler_job_timeout", 10
-    )
+    default_job_timeout = rq_params["default_job_timeout"]
+    generic_handler_job_timeout = rq_params["generic_handler_job_timeout"]
 
     redis_conn.set("default_job_timeout_ms", default_job_timeout * 1000)
     redis_conn.set("generic_handler_job_timeout_ms", generic_handler_job_timeout * 1000)
 
 
+def check_if_run_host_service_is_setup(dbsession):
+    if not os.path.exists("/app/static/run_on_host_fifo") or not os.path.exists(
+        "/app/static/run_on_host_updater_fifo"
+    ):
+        run_on_host_fifo_log = "Please setup run on host service by following the support manual available in downloads section"
+        dbsession.add_notification(
+            dbsession.get_customer_names(),
+            run_on_host_fifo_log,
+            mm.NotificationLevels.alert,
+            mm.NotificationModules.generic,
+        )
+
+
 def main():
-    # regenerate_mule_config for routing
-    regenerate_config()
-    config_path = os.environ["ATI_CONFIG"]
-    logging.getLogger().info(f"will use {config_path} as ATI_CONFIG")
     time.sleep(5)
 
     DB_UP = False
     while not DB_UP:
         try:
             maybe_drop_tables()
-            fu.create_all_tables()
+            dbu.create_all_tables()
             upgrade_db_schema()
             DB_UP = True
         except Exception as e:
@@ -90,16 +95,23 @@ def main():
             )
             time.sleep(5)
 
+    with FMMongo() as fm_mongo:
+        dbu.setfm_mongo_config(fm_mongo)
+
+    upgrade_mongo_schema()
+
+    # regenerate_mule_config for routing
+    regenerate_mule_config()
+
     with DBSession() as dbsession:
         fu.add_software_compatability(dbsession)
         fu.add_master_fm_data_upload(dbsession)
         fu.add_sherpa_metadata(dbsession)
 
-        # update frontenduser details
-        update_frontend_user_details(dbsession)
-
         # populate redis with basic info
         populate_redis_with_basic_info(dbsession)
+
+        check_if_run_host_service_is_setup(dbsession)
 
     FM_TAG = os.getenv("FM_TAG")
     print(f"fm software tag: {FM_TAG}")

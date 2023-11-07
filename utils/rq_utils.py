@@ -1,8 +1,24 @@
 import logging
+from logging import WARNING
 import os
 import redis
 from rq import Queue
 import json
+from rq import Connection, Worker
+
+
+def start_worker(queue):
+    with Connection():
+        Worker.log_result_lifespan = False
+        worker = Worker(
+            queue,
+            disable_default_exception_handler=True,
+            log_job_description=False,
+            connection=redis.from_url(os.getenv("FM_REDIS_URI")),
+        )
+        logging.info(f"Started worker for queue {queue}")
+        worker.work(logging_level=WARNING, with_scheduler=True)
+
 
 # utils for redis rq
 class Queues:
