@@ -222,14 +222,19 @@ class Handlers:
     ):
         fleet: fm.Fleet = sherpa.fleet
 
-        if fleet.status == cc.FleetStatus.STOPPED:
-            logging.getLogger(sherpa.name).info(
-                f"fleet {fleet.name} is stopped, not assigning new trip to {sherpa.name}"
-            )
-            return False
-
         if not pending_trip:
             return False
+
+        if fleet.status == cc.FleetStatus.STOPPED:
+            if pending_trip.trip.booked_by == f"auto_park_{sherpa.name}":
+                logging.getLogger(sherpa.name).info(
+                    f"fleet {fleet.name} is stopped, but will allow auto_park trip"
+                )
+            else:
+                logging.getLogger(sherpa.name).info(
+                    f"fleet {fleet.name} is stopped, not assigning new trip to {sherpa.name}"
+                )
+                return False
 
         logging.getLogger(sherpa.name).info(
             f"found pending trip id {pending_trip.trip_id}, route: {pending_trip.trip.route}"
