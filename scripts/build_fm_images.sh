@@ -6,7 +6,7 @@ GIT_TAG=$(git describe --all | awk '{split($0,a,"/"); print a[2];}')
 GIT_DES=$(git describe --all)
 IS_DIRTY="$(git diff --quiet || echo 'dirty')"
 LAST_COMMIT_DT="$(git log -1 --format=%cd)"
-if [[ $git_des =~ "tags/" ]] ; then
+if [[ $GIT_DES =~ "tags/" ]] ; then
    FM_VERSION=$GIT_TAG
    GIT_TAGGED="True"
 else
