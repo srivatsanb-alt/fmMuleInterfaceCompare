@@ -1,82 +1,81 @@
-import time
+import ast
+import logging
+import logging.config
+import logging
+import logging.config
 import os
-import logging
-import logging.config
-import logging
-import logging.config
+import aioredis
 from slack_sdk.webhook import WebhookClient
+import asyncio
 
 # ati code imports
 import utils.log_utils as lu
-from core.config import Config
-from models.db_session import DBSession
-from models.fleet_models import SherpaStatus
-
+import models.misc_models as mm
+from models.mongo_client import FMMongo
 
 # setup logging
 logging.config.dictConfig(lu.get_log_config_dict())
 logger = logging.getLogger("misc")
 
 
+async def forward_alerts(alert_config):
+
+    slack_webhook_url = alert_config["slack_webhook_url"]
+    try:
+        webhook = WebhookClient(slack_webhook_url)
+    except Exception as e:
+        logger.info(f"unable to create WebhookClient, exception: {e}")
+        return
+
+    redis = aioredis.Redis.from_url(
+        os.getenv("FM_REDIS_URI"), max_connections=10, decode_responses=True
+    )
+    psub = redis.pubsub()
+    await psub.subscribe("channel:notifications")
+    sent_notification_ids = []
+
+    while True:
+        try:
+            message = await psub.get_message(ignore_subscribe_messages=True, timeout=5)
+            if message:
+                data = ast.literal_eval(message["data"])
+                if data["type"] != mm.NotificationLevels.alert:
+                    continue
+
+                for id, details in data.items():
+                    alert_sent = False
+                    if not isinstance(details, dict):
+                        continue
+                    elif id in sent_notification_ids:
+                        continue
+                    sent_notification_ids.append(id)
+                    alert_msg = details.get("log")
+                    if alert_msg:
+                        entity_names = details.get("entity_names")
+                        alert_msg += f"\n entity_names: {entity_names}"
+                        response = webhook.send(text=alert_msg)
+
+                        if response.status_code == 200:
+                            alert_sent = True
+
+                    if alert_sent:
+                        logger.info(f"Sent alert msg: {alert_msg}")
+                    else:
+                        logger.warning(f"Unable to send alert msg: {alert_msg}")
+        except Exception as e:
+            logger.error(f"Exception in alerts script, exception: {e}")
+
+
 def send_slack_alerts():
-    fleet_config = Config.read_config()
-    alert_config = fleet_config.get("alerts", {})
 
-    notifications = alert_config.get("notifications", False)
-    time_interval = alert_config.get("time_interval", 30)
-    # slack_webhook_url = "https://hooks.slack.com/services/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"
-    slack_webhook_url = alert_config.get("slack_webhook_url")
+    with FMMongo() as fm_mongo:
+        alert_config = fm_mongo.get_document_from_fm_config("alerts")
 
-    logger.info(f"Started send_slack_alerts script, slack_webhook_url: {slack_webhook_url}")
+    notifications = alert_config["notifications"]
+    logger.info(f"Started send_slack_alerts script")
 
-    webhook = WebhookClient(slack_webhook_url)
-
-    if not notifications:
+    if notifications is not True:
         logger.info("slack alerts notification is set to false")
         return
 
-    if slack_webhook_url is None:
-        logger.info("slack webhook url not present")
-        return
-
-    all_previous_error = {}
-    sherpa_names = []
-    while True:
-        with DBSession() as dbsession:
-            sherpas_with_error = (
-                dbsession.session.query(SherpaStatus)
-                .filter(SherpaStatus.mode == "error")
-                .all()
-            )
-
-            for sherpa_with_previous_errors in list(all_previous_error):
-                if sherpa_with_previous_errors not in sherpa_names:
-                    logger.info(
-                        f"sherpa {sherpa_with_previous_errors} is no longer in error mode, the error was {all_previous_error[sherpa_with_previous_errors]}"
-                    )
-                    del all_previous_error[sherpa_with_previous_errors]
-            sherpa_names = []
-            for sherpa in sherpas_with_error:
-                sherpa_names.append(sherpa.sherpa_name)
-                previous_error = all_previous_error.get(sherpa.sherpa_name)
-                if previous_error == sherpa.error:
-                    pass
-                else:
-                    body = f":warning: sherpa {sherpa.sherpa_name} in {sherpa.mode} mode: {sherpa.error}"
-                    try:
-                        response = webhook.send(text=body)
-                        if response.status_code == 200:
-                            logger.info(
-                                f"slack alert sent, sherpa {sherpa.sherpa_name} in {sherpa.mode} mode: {sherpa.error}"
-                            )
-                        else:
-                            logger.info(
-                                f"slack alert not sent, sherpa {sherpa.sherpa_name} in {sherpa.mode} mode: {sherpa.error}"
-                            )
-
-                        all_previous_error[sherpa.sherpa_name] = sherpa.error
-
-                    except Exception as e:
-                        logger.info(f"unable to send slack alert, exception: {e}")
-
-        time.sleep(time_interval)
+    asyncio.get_event_loop().run_until_complete(forward_alerts(alert_config))

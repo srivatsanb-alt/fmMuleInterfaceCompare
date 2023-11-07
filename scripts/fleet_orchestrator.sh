@@ -5,7 +5,6 @@ LOGS=$FM_LOG_DIR
 TS=$(date +'%H%M%S')
 
 start() {
-
     echo "starting control_module router"
     poetry run python /app/optimal_dispatch/router.py &
 
@@ -14,12 +13,6 @@ start() {
 
     echo "starting fleet manager uvicorn, listening on port $FM_PORT"
     poetry run python /app/app/main.py 2>&1 &
-
-    echo "starting plugins uvicorn, listening on port $PLUGIN_PORT"
-    poetry run python /app/plugins/plugin_app.py 2>&1 &
-
-    echo "starting plugins worker"
-    poetry run python plugins/plugin_rq.py 2>&1 &
 }
 
 fm_init() {
@@ -34,6 +27,36 @@ run_simulator() {
 }
 
 
+
+update_run_on_host_service() {
+
+  FILE="/app/static/run_on_host_updater.sh"
+  if [ -f $FILE ]; then
+    echo "File $FILE exists."
+  else
+    echo "Copying $FILE to static dir"
+    cp /app/misc/run_on_host/run_on_host_updater.sh /app/static/.
+  fi
+
+  FILE="/app/static/install_run_on_host_service.sh"
+  if [ -f $FILE ]; then
+    echo "File $FILE exists."
+  else
+    echo "Copying $FILE to static dir"
+    cp /app/scripts/install_run_on_host_service.sh /app/static/.
+  fi
+
+  cp misc/run_on_host/run_on_host.sh /app/static/.
+
+  FILE_PIPE="/app/static/run_on_host_updater_fifo"
+  if [ -p $FILE_PIPE ]; then
+    echo "update" > $FM_STATIC_DIR/run_on_host_updater_fifo
+    echo "Sent update message to run_on_host_update_fifo"
+  fi
+
+}
+
+
 redis-server --port $REDIS_PORT > $LOGS/redis.log 2>&1 &
 sleep 2
 fm_init
@@ -44,4 +67,7 @@ run_simulator
 
 #to keep the docker alive - run a never ending process
 cd /app
+
+update_run_on_host_service
+
 poetry run python scripts/restart.py 2>&1

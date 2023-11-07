@@ -10,8 +10,6 @@ class MessageType:
     DELETE_ONGOING_TRIP = "delete_ongoing_trip"
     DELETE_BOOKED_TRIP = "delete_booked_trip"
     INDUCT_SHERPA = "induct_sherpa"
-    DELETE_VISA_ASSIGNMENTS = "delete_visa_assignments"
-    DELETE_OPTIMAL_DISPATCH_ASSIGNMENTS = "delete_optimal_dispatch_assignments"
     ASSIGN_NEXT_TASK = "assign_next_task"
     FM_HEALTH_CHECK = "fm_health_check"
     SHERPA_ALERTS = "sherpa_alerts"

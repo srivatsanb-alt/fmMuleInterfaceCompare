@@ -1,6 +1,5 @@
 import sys
 import os
-from core.config import Config
 
 sys.path.append(os.environ["MULE_ROOT"])
 from mule.ati.control.bridge.router_planner_interface import RoutePlannerInterface
@@ -37,3 +36,7 @@ class AllRouterModules:
 
     def get_router_module(self, fleet_name: str):
         return self.router_modules[fleet_name]
+
+    def add_router_module(self, fleet_name):
+        map_path = os.path.join(os.environ["FM_STATIC_DIR"], f"{fleet_name}/map/")
+        self.router_modules.update({fleet_name: RouterModule(map_path)})

@@ -1,10 +1,18 @@
 import time
-from utils.rq_utils import Queues, enqueue
-from utils.util import generate_random_job_id
-from core.config import Config
 import requests
 import ast
 import redis
+import json
+import os
+from multiprocessing import Process
+import numpy as np
+from typing import List
+import threading
+
+# ati code
+import core.handler_configuration as hc
+from utils.rq_utils import Queues, enqueue
+from utils.util import generate_random_job_id
 from models.request_models import (
     SherpaStatusMsg,
     TripStatusMsg,
@@ -19,12 +27,6 @@ from models.request_models import (
 )
 from models.trip_models import OngoingTrip
 from models.trip_models import TripState as ts
-from typing import List
-import json
-import random
-import os
-from multiprocessing import Process
-import numpy as np
 from models.db_session import DBSession
 from models.fleet_models import Sherpa, Station
 from models.request_models import (
@@ -35,13 +37,15 @@ from models.request_models import (
     ConveyorReq,
     DirectionEnum,
 )
-from plugins.conveyor.conveyor_models import ToteStatus
-import threading
+from models.mongo_client import FMMongo
 
 LOOKAHEAD = 5.0
 PATH_DENSITY = 1000
 THETA_MAX = np.rad2deg(10)
-rq_params = Config.get_fleet_rq_params()
+
+with FMMongo() as fm_mongo:
+    rq_params = fm_mongo.get_document_from_fm_config("rq")
+
 TIMEOUT = rq_params.get("generic_handler_job_timeout", 10)
 
 
@@ -202,12 +206,15 @@ class MuleWS:
 
 class FleetSimulator:
     def __init__(self):
-        self.handler_obj = Config.get_handler()
+        self.handler_obj = hc.HandlerConfiguration.get_handler()
         with DBSession() as dbsession:
             self.fleet_names = dbsession.get_all_fleet_names()
-        self.simulator_config = Config.get_simulator_config()
+
+        with FMMongo() as fm_mongo:
+            simulator_config = fm_mongo.get_document_from_fm_config("simulator")
+
+        self.simulator_config = simulator_config
         self.should_book_trips = self.simulator_config.get("book_trips", False)
-        self.conveyor_capacity = self.simulator_config.get("conveyor_capacity", 6)
         self.exclusion_zones = {}
         self.visas_held = {}
         self.visa_needed = {}
@@ -294,49 +301,6 @@ class FleetSimulator:
                 # t.daemon = True
                 # t.start()
 
-    def populate_conveyor_with_totes(self, conveyor):
-        while True:
-            with DBSession() as session:
-                session.session.refresh(conveyor)
-                if time.time() - self.last_conveyor_update > random.randrange(30, 60):
-                    num_totes_to_add = random.randrange(0, 2)
-                    updated_tote_count = np.min(
-                        conveyor.num_totes + num_totes_to_add, self.conveyor_capacity
-                    )
-                    print(f"Adding {num_totes_to_add} tote/s to conveyor {conveyor.name}")
-                    self.last_conveyor_update = time.time()
-                    msg = ToteStatus(
-                        num_totes=updated_tote_count,
-                        compact_time=0,
-                        type="tote_status",
-                        name=conveyor.name,
-                    )
-                    queue = Queues.queues_dict["generic_handler"]
-                    args = [self.handler_obj, msg]
-                    kwargs = {"ttl": 1}
-                    kwargs.update({"job_timeout": TIMEOUT})
-                    enqueue(queue, handle, *args, **kwargs)
-
-    def book_conveyor_trips(self):
-        print(
-            f"populating conveyors and booking pickups. Max capacity on conveyor = {self.conveyor_capacity} totes."
-        )
-        with DBSession() as session:
-            conveyors = session.get_all_conveyors()
-            for conveyor in conveyors:
-                t = threading.Thread(
-                    target=self.populate_conveyor_with_totes(), args=[conveyor]
-                )
-                t.daemon = True
-                t.start()
-
-    def simulate_conveyors(self):
-        self.last_conveyor_update = 0
-        print(f"booking trips to conveyors")
-        t = threading.Thread(target=self.book_conveyor_trips)
-        t.daemon = True
-        t.start()
-
     def send_verify_fleet_files_req(self, sherpa_name):
         generic_q = Queues.queues_dict["generic_handler"]
         msg = SherpaReq(
@@ -395,7 +359,6 @@ class FleetSimulator:
                 enqueue(sherpa_update_q, handle, *args, **kwargs)
 
     def send_trip_status(self, sherpa_name):
-        from utils.router_utils import get_dense_path
 
         redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
 
@@ -473,7 +436,7 @@ class FleetSimulator:
 
                 if self.visa_handling[sherpa.fleet.name]:
                     ez = self.exclusion_zones[sherpa.fleet.name]
-                    sherpa_visa = session.get_visa_held(sherpa_name)
+                    sherpa_visa = session.get_visa_assignment(sherpa_name)
                     print(f"visa held: {sherpa_visa}")
                     if len(sherpa_visa) > 0:
                         print(f"visa held: {sherpa_visa}")

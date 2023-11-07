@@ -22,6 +22,8 @@ from app.routers import (
     notifications,
     configure_fleet,
     version_control,
+    plugin_ws,
+    ota_update_http,
 )
 import utils.log_utils as lu
 
@@ -50,7 +52,7 @@ app.add_middleware(
 
 
 @app.middleware("http")
-async def add_process_time_header(request: Request, call_next):
+async def custom_fm_mw(request: Request, call_next):
     start_time = time.time()
     response = await call_next(request)
     process_time = time.time() - start_time
@@ -72,6 +74,8 @@ app.include_router(station_http.router)
 app.include_router(notifications.router)
 app.include_router(configure_fleet.router)
 app.include_router(version_control.router)
+app.include_router(plugin_ws.router)
+app.include_router(ota_update_http.router)
 
 
 def get_uvicorn_config():
@@ -88,6 +92,7 @@ def get_uvicorn_config():
 
 def main():
     app.mount("/api/static", StaticFiles(directory="/app/static"), name="static")
+    app.mount("/api/downloads", StaticFiles(directory="/app/downloads"), name="manuals")
     config = get_uvicorn_config()
     server = uvicorn.Server(config)
     server.run()

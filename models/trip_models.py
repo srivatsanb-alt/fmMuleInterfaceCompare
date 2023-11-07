@@ -32,7 +32,7 @@ class TripLegStatus:
 COMPLETED_TRIP_STATUS = [TripStatus.SUCCEEDED, TripStatus.FAILED, TripStatus.CANCELLED]
 ONGOING_TRIP_STATUS = [TripStatus.WAITING_STATION, TripStatus.EN_ROUTE]
 YET_TO_START_TRIP_STATUS = [TripStatus.BOOKED, TripStatus.ASSIGNED]
-
+ACTIVE_TRIP_STATUS = [TripStatus.WAITING_STATION, TripStatus.EN_ROUTE, TripStatus.BOOKED, TripStatus.ASSIGNED]
 
 class TripState:
     WAITING_STATION_AUTO_HITCH_START = "waiting_station_auto_hitch_start"
@@ -58,12 +58,15 @@ class TripAnalytics(Base, TimestampMixin):
     to_station = Column(String, index=True)
     cte = Column(Float)
     te = Column(Float)
+    route_length = Column(Float)
+    progress = Column(Float)
     expected_trip_time = Column(Float)
     actual_trip_time = Column(Float)
     time_elapsed_obstacle_stoppages = Column(Float)
     time_elapsed_visa_stoppages = Column(Float)
     time_elapsed_other_stoppages = Column(Float)
     num_trip_msg = Column(Integer)
+
 
 
 class SavedRoutes(Base):
@@ -103,6 +106,7 @@ class Trip(Base, TimestampMixin):
 
     # BOOKED, ASSIGNED, WAITING_STATION, EN_ROUTE, SUCCEEDED, FAILED
     status = Column(String, index=True)
+    route_lengths = Column(ARRAY(Float))
     etas_at_start = Column(ARRAY(Float))
     etas = Column(ARRAY(Float))
 

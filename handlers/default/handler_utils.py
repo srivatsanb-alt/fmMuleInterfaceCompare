@@ -11,7 +11,7 @@ from sqlalchemy.orm.attributes import flag_modified
 
 
 # ati code imports
-from core.config import Config
+from models.mongo_client import FMMongo
 import core.constants as cc
 from models.db_session import DBSession
 import models.fleet_models as fm
@@ -53,30 +53,46 @@ def start_trip(
 
     redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
     etas_at_start = []
+    route_lengths = []
+    start_station_name = None
     for station in all_stations:
         end_pose = station.pose
+        end_station_name = station.name
         route_length = utils_util.get_route_length(
             start_pose, end_pose, fleet_name, redis_conn
         )
         if route_length == np.inf:
-            reason = f"no route from {start_pose} to {end_pose}"
-            trip_failed_log = f"trip {ongoing_trip.trip_id} failed, sherpa_name: {ongoing_trip.sherpa_name} , reason: {reason}"
+            start_station_info = (
+                start_station_name if start_station_name is not None else start_pose
+            )
+            reason = f"no route from {start_station_info} to {end_station_name}"
+            trip_failed_log = f"{ongoing_trip.sherpa_name} failed to do trip with trip_id: {ongoing_trip.trip.id}) , reason: {reason}"
             logging.getLogger(ongoing_trip.sherpa_name).warning(trip_failed_log)
-
             dbsession.add_notification(
-                [sherpa.name, sherpa.fleet.name],
+                [sherpa.name, sherpa.fleet.name, sherpa.fleet.customer],
                 trip_failed_log,
                 mm.NotificationLevels.alert,
-                mm.NotificationModules.trip,
+                mm.NotificationModules.errors,
             )
             end_trip(dbsession, ongoing_trip, sherpa, False)
             return
 
-        etas_at_start.append(route_length)
-        start_pose = station.pose
+        eta = (
+            0
+            if route_length == 0
+            else dbsession.get_expected_trip_time(start_station_name, end_station_name)
+        )
+        if eta is None:
+            eta = route_length
 
+        route_lengths.append(route_length)
+        etas_at_start.append(eta)
+        start_pose = station.pose
+        start_station_name = station.name
+
+    ongoing_trip.trip.route_lengths = route_lengths
     ongoing_trip.trip.etas_at_start = etas_at_start
-    ongoing_trip.trip.etas = ongoing_trip.trip.etas_at_start
+    ongoing_trip.trip.etas = etas_at_start
 
     ongoing_trip.trip.start()
     logging.getLogger(ongoing_trip.sherpa_name).info(f"trip {ongoing_trip.trip_id} started")
@@ -101,7 +117,7 @@ def start_leg(
     ongoing_trip: tm.OngoingTrip,
     from_station: fm.Station,
     to_station: fm.Station,
-) -> tm.TripLeg:
+):
 
     trip: tm.Trip = ongoing_trip.trip
 
@@ -119,12 +135,23 @@ def start_leg(
 
     update_leg_next_station(to_station, sherpa_name)
 
-    return trip_leg
-
 
 def end_leg(ongoing_trip: tm.OngoingTrip):
     ongoing_trip.trip_leg.end()
     ongoing_trip.end_leg()
+    if ongoing_trip.finished_booked():
+        trip_progress = 100
+    else:
+        trip_progress = np.round(
+            (
+                np.sum(ongoing_trip.trip.etas_at_start[: ongoing_trip.next_idx_aug])
+                / np.sum(ongoing_trip.trip.etas_at_start)
+            )
+            * 100,
+            2,
+        )
+    ongoing_trip.trip.trip_metadata.update({"total_trip_progress": str(trip_progress)})
+    flag_modified(ongoing_trip.trip, "trip_metadata")
 
 
 def update_leg_curr_station(curr_station: fm.Station, sherpa_name: str):
@@ -158,11 +185,9 @@ def is_sherpa_available_for_new_trip(sherpa_status):
 
 
 # FM HEALTH CHECK #
-def record_rq_perf():
-    redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
+def record_rq_perf(current_data_folder):
     fm_backup_path = os.path.join(os.getenv("FM_STATIC_DIR"), "data_backup")
-    current_data = redis_conn.get("current_data_folder").decode()
-    csv_save_path = os.path.join(fm_backup_path, current_data, "rq_perf.csv")
+    csv_save_path = os.path.join(fm_backup_path, current_data_folder, "rq_perf.csv")
     column_names, data = utils_util.rq_perf()
     data = data
     df = pd.DataFrame(data, columns=column_names)
@@ -170,18 +195,12 @@ def record_rq_perf():
     df.to_csv(csv_save_path, mode="a", index=False, header=header)
 
 
-def record_cpu_perf():
-
-    redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
+def record_cpu_perf(current_data_folder):
     fm_backup_path = os.path.join(os.getenv("FM_STATIC_DIR"), "data_backup")
-    current_data = redis_conn.get("current_data_folder").decode()
-    csv_save_path = os.path.join(fm_backup_path, current_data, "sys_perf.csv")
-
+    csv_save_path = os.path.join(fm_backup_path, current_data_folder, "sys_perf.csv")
     column_names, data = utils_util.sys_perf()
     data = [data]
-
     df = pd.DataFrame(data, columns=column_names)
-
     header = True if not os.path.exists(csv_save_path) else False
     df.to_csv(csv_save_path, mode="a", index=False, header=header)
 
@@ -231,9 +250,12 @@ def delete_notifications(dbsession: DBSession):
 
 
 def check_sherpa_status(dbsession: DBSession):
-    MULE_HEARTBEAT_INTERVAL = Config.get_fleet_comms_params()["mule_heartbeat_interval"]
+    with FMMongo() as fm_mongo:
+        comms_config = fm_mongo.get_document_from_fm_config("comms")
+
+    sherpa_heartbeat_interval = comms_config["sherpa_heartbeat_interval"]
     stale_sherpas_status: fm.SherpaStatus = dbsession.get_all_stale_sherpa_status(
-        MULE_HEARTBEAT_INTERVAL
+        sherpa_heartbeat_interval
     )
 
     for stale_sherpa_status in stale_sherpas_status:
@@ -245,16 +267,20 @@ def check_sherpa_status(dbsession: DBSession):
             stale_sherpa_status.disabled_reason = cc.DisabledReason.STALE_HEARTBEAT
 
         logging.getLogger("status_updates").warning(
-            f"stale heartbeat from sherpa {stale_sherpa_status.sherpa_name} last_update_at: {stale_sherpa_status.updated_at} mule_heartbeat_interval: {MULE_HEARTBEAT_INTERVAL}"
+            f"stale heartbeat from sherpa {stale_sherpa_status.sherpa_name} last_update_at: {stale_sherpa_status.updated_at} mule_heartbeat_interval: {sherpa_heartbeat_interval}"
         )
 
         if stale_sherpa_status.trip_id:
             utils_util.maybe_add_notification(
                 dbsession,
-                [stale_sherpa_status.sherpa_name],
+                [
+                    stale_sherpa_status.sherpa_name,
+                    stale_sherpa_status.sherpa.fleet.name,
+                    stale_sherpa_status.sherpa.fleet.customer,
+                ],
                 f"Lost connection to {stale_sherpa_status.sherpa_name}, sherpa doing trip: {stale_sherpa_status.trip_id}",
                 mm.NotificationLevels.alert,
-                mm.NotificationModules.generic,
+                mm.NotificationModules.errors,
             )
 
         # set mode change - reflects in sherpa_oee

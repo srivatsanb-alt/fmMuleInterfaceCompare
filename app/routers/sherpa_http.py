@@ -1,7 +1,9 @@
+from datetime import datetime
 import redis
 import json
 import os
 import logging
+import pytz
 from fastapi import Depends, APIRouter, File, UploadFile
 from sqlalchemy.orm.attributes import flag_modified
 
@@ -46,6 +48,9 @@ async def basic_info(sherpa_name: str = Depends(dpd.get_sherpa)):
             "customer": sherpa.fleet.customer,
             "site": sherpa.fleet.site,
             "location": sherpa.fleet.location,
+            "fm_time": (datetime.now(pytz.timezone(os.getenv("PGTZ")))).strftime(
+                "%A, %d %b %Y %X %Z"
+            ),
         }
 
     return response
@@ -186,12 +191,15 @@ async def sherpa_alerts(
         sherpa_obj = dbsession.get_sherpa(sherpa)
         alert = f"Got an alert from {sherpa}, "
 
+        module = mm.NotificationModules.generic
         if alert_msg.trolley_load_cell:
             alert = alert + alert_msg.trolley_load_cell
+            module = mm.NotificationModules.trolley
         elif alert_msg.low_battery_alarm:
             alert = alert + alert_msg.low_battery_alarm
         elif alert_msg.obstructed:
             alert = alert + alert_msg.obstructed
+            module = mm.NotificationModules.stoppages
         elif alert_msg.emergency_button:
             alert = alert + alert_msg.emergency_button
         elif alert_msg.user_pause:
@@ -200,10 +208,10 @@ async def sherpa_alerts(
             dpd.raise_error("Invalid alert msg")
         utils_util.maybe_add_notification(
             dbsession,
-            [sherpa_obj.name, sherpa_obj.fleet.name],
+            [sherpa_obj.name, sherpa_obj.fleet.name, sherpa_obj.fleet.customer],
             alert,
             mm.NotificationLevels.alert,
-            mm.NotificationModules.generic,
+            module,
         )
 
 
@@ -213,7 +221,6 @@ async def upload_file(
     uploaded_file: UploadFile = File(...),
     sherpa_name: str = Depends(dpd.get_sherpa),
 ):
-
     logging.getLogger("uvicorn").info(f"{file_upload_req}")
 
     response = []
@@ -276,10 +283,9 @@ async def add_fm_incident(
         dpd.raise_error("Unknown requester", 401)
 
     with DBSession() as dbsession:
-
         if add_fm_incident_req.type not in mm.FMIncidentTypes:
             dpd.raise_error(
-                f"Will only accept incidents of type {mm.FMIncidentTypes}requester"
+                f"Will only accept incidents of type {mm.FMIncidentTypes} requester"
             )
 
         fm_incident = mm.FMIncidents(
@@ -306,7 +312,6 @@ async def update_fm_incident_data_details(
     update_incident_data_details_req: rqm.UpdateIncidentDataDetailsReq,
     sherpa: str = Depends(dpd.get_sherpa),
 ):
-
     response = {}
 
     if not sherpa:
@@ -324,7 +329,6 @@ async def update_fm_incident_data_details(
 
         # update other info
         if update_incident_data_details_req.other_info:
-
             if fm_incident.other_info is None:
                 fm_incident.other_info = {}
 

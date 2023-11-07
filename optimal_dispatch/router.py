@@ -25,16 +25,35 @@ from utils.util import are_poses_close
 from utils.router_utils import AllRouterModules
 
 
-def start_router_module():
-    redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
+def init_routers():
     with DBSession() as dbsession:
         fleet_names = dbsession.get_all_fleet_names()
-
     all_router_modules = AllRouterModules(fleet_names)
+    return all_router_modules
 
+
+def start_router_module():
+    redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
     logger = logging.getLogger("control_module_router")
+    all_router_modules = init_routers()
+    logger.info(f"Intialized the router modules")
 
     while True:
+        add_router_for = redis_conn.get("add_router_for")
+        update_router_for = redis_conn.get("update_router_for")
+
+        if add_router_for is not None:
+            fleet_name = add_router_for.decode()
+            all_router_modules.add_router_module(fleet_name)
+            redis_conn.delete("add_router_for")
+            logger.info(f"Added router module for {fleet_name}")
+
+        if update_router_for is not None:
+            fleet_name = update_router_for.decode()
+            all_router_modules.add_router_module(fleet_name)
+            redis_conn.delete("update_router_for")
+            logger.info(f"Updated router module for {fleet_name}")
+
         for key in redis_conn.keys("control_router_rl_job_*"):
             str_job = redis_conn.get(key)
             logger.info(f"Got a route length estimation job {str_job}")
@@ -108,6 +127,7 @@ def start_router_module():
             rm = all_router_modules.get_router_module(fleet_name)
 
             route_length = 0
+            dp_rl_result = [[], [], [], 0]
             if not are_poses_close(pose_1, pose_2):
                 try:
                     final_route, visa_obj, rl = rm.get_route(pose_1, pose_2)
@@ -117,7 +137,6 @@ def start_router_module():
                     logger.info(
                         f"unable to find route between {pose_1} and {pose_2} of {fleet_name} \n Exception {e}"
                     )
-                    dp_rl_result = [[], [], [], 0]
 
             redis_conn.setex(
                 f"result_dp_rl_job_{job_id}",

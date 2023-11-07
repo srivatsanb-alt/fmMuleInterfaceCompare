@@ -2,18 +2,16 @@ import sys
 import time
 import json
 import redis
-
-# import toml
 import os
+
+# ati code imports....
+from models.mongo_client import FMMongo
 from fleet_simulator import FleetSimulator, MuleWS
-from core.config import Config
 
 if __name__ == "__main__":
-    simulator_config = Config.get_simulator_config()
-    # plugins = toml.load(os.path.join(os.getenv("FM_CONFIG_DIR"), "plugin_config.toml"))[
-    #    "all_plugins"
-    # ]
-    # simulate_conveyor_plugin = "conveyor" in plugins
+
+    with FMMongo() as fm_mongo:
+        simulator_config = fm_mongo.get_document_from_fm_config("simulator")
 
     if sys.argv[1] == "establish_all_sherpa_ws" and simulator_config["simulate"]:
         mule_ws = MuleWS()

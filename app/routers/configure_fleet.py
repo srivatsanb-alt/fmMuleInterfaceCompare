@@ -1,15 +1,17 @@
 import os
+import time
 import logging
 import glob
 from fastapi import APIRouter, Depends
 import shutil
+import json
+import aioredis
+from rq.command import send_shutdown_command
 
 # ati code imports
 from utils import fleet_utils as fu
 from models.db_session import DBSession
-from models.frontend_models import FrontendUser
 import models.fleet_models as fm
-import models.misc_models as mm
 import models.request_models as rqm
 import app.routers.dependencies as dpd
 from utils.comms import close_websocket_for_sherpa
@@ -75,21 +77,28 @@ async def add_edit_sherpa(
                 api_key=add_edit_sherpa.api_key,
                 fleet_id=fleet.id,
             )
-
-            if sherpa_name not in all_sherpa_names:
-                action_request = f"New sherpa {sherpa_name} has been added to {fleet.name}, please restart FM software using restart fleet manager button in the maintenance page"
-                dbsession.add_notification(
-                    [fleet.name],
-                    action_request,
-                    mm.NotificationLevels.alert,
-                    mm.NotificationModules.generic,
-                )
-
         except Exception as e:
             if isinstance(e, ValueError):
                 dpd.raise_error(str(e))
             else:
                 raise e
+
+        if sherpa_name not in all_sherpa_names:
+            import utils.rq_utils as rqu
+            from multiprocessing import Process
+
+            all_sherpa_names.append(sherpa_name)
+            lu.set_log_config_dict(all_sherpa_names)
+
+            redis_conn = aioredis.Redis.from_url(os.getenv("FM_REDIS_URI"))
+            await redis_conn.set("all_sherpas", json.dumps(all_sherpa_names))
+            await redis_conn.set("send_conf_to_mfm_unix_dt", time.time())
+
+            new_qs = [f"{sherpa_name}_update_handler", f"{sherpa_name}_trip_update_handler"]
+            for new_q in new_qs:
+                rqu.Queues.add_queue(new_q)
+                process = Process(target=rqu.start_worker, args=(new_q,))
+                process.start()
 
     return {}
 
@@ -120,6 +129,19 @@ async def delete_sherpa(
 
         close_websocket_for_sherpa(sherpa_name)
         fu.SherpaUtils.delete_sherpa(dbsession, sherpa_name)
+
+    all_sherpa_names = dbsession.get_all_sherpa_names()
+
+    redis_conn = aioredis.Redis.from_url(os.getenv("FM_REDIS_URI"))
+    await redis_conn.set("all_sherpas", json.dumps(all_sherpa_names))
+    await redis_conn.set("send_conf_to_mfm_unix_dt", time.time())
+
+    queues_to_delete = [
+        f"{sherpa_name}_update_handler",
+        f"{sherpa_name}_trip_update_handler",
+    ]
+    for q_name in queues_to_delete:
+        send_shutdown_command(redis_conn, q_name)
 
     return {}
 
@@ -204,19 +226,18 @@ async def add_fleet(
             fu.ExclusionZoneUtils.add_exclusion_zones(dbsession, fleet.name)
             fu.ExclusionZoneUtils.add_linked_gates(dbsession, fleet.name)
 
-            if new_fleet:
-                action_request = f"New fleet {fleet.name} has been added, please restart FM software using restart fleet manager button in the maintenance page"
-                dbsession.add_notification(
-                    [fleet.name],
-                    action_request,
-                    mm.NotificationLevels.action_request,
-                    mm.NotificationModules.generic,
-                )
         except Exception as e:
             if isinstance(e, ValueError):
                 dpd.raise_error(str(e))
             else:
                 raise e
+
+        if new_fleet:
+            redis_conn = aioredis.Redis.from_url(os.getenv("FM_REDIS_URI"))
+            all_fleet_names = dbsession.get_all_fleet_names()
+            await redis_conn.set("all_fleet_names", json.dumps(all_fleet_names))
+            await redis_conn.set("add_router_for", fleet_name)
+            await redis_conn.set("send_conf_to_mfm_unix_dt", time.time())
 
     return response
 
@@ -226,6 +247,7 @@ async def delete_fleet(
     fleet_name: str,
     user_name=Depends(dpd.get_user_from_header),
 ):
+    response = {}
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
@@ -258,7 +280,12 @@ async def delete_fleet(
 
         fu.FleetUtils.delete_fleet(dbsession, fleet_name)
 
-    return {}
+        redis_conn = aioredis.Redis.from_url(os.getenv("FM_REDIS_URI"))
+        all_fleet_names = dbsession.get_all_fleet_names()
+        await redis_conn.set("all_fleet_names", json.dumps(all_fleet_names))
+        await redis_conn.set("send_conf_to_mfm_unix_dt", time.time())
+
+    return response
 
 
 # deletes fleet from FM.
@@ -314,58 +341,14 @@ async def update_map(
             for sherpa in all_fleet_sherpas:
                 close_websocket_for_sherpa(sherpa.name)
 
-            restart_fm_notification = (
-                f"Map files of fleet: {fleet_name} updated! Please restart fleet manager"
-            )
-
-            dbsession.add_notification(
-                [fleet_name],
-                restart_fm_notification,
-                mm.NotificationLevels.alert,
-                mm.NotificationModules.map_file_check,
-            )
-
         except Exception as e:
             if isinstance(e, ValueError):
                 dpd.raise_error(str(e))
             else:
                 raise e
 
-    return response
-
-
-@router.get("/all_user_info")
-async def all_user_info(user_name=Depends(dpd.get_user_from_header)):
-
-    if not user_name:
-        dpd.raise_error("Unknown requester", 401)
-
-    response = {}
-    with DBSession() as dbsession:
-        all_frontend_user = dbsession.session.query(FrontendUser).all()
-        for frontenduser in all_frontend_user:
-            response.update({frontenduser.name: {"role": frontenduser.role}})
+        redis_conn = aioredis.Redis.from_url(os.getenv("FM_REDIS_URI"))
+        await redis_conn.set("update_router_for", fleet_name)
+        await redis_conn.set("send_conf_to_mfm_unix_dt", time.time())
 
     return response
-
-
-# @router.get("/delete_user/{name}")
-# def delete_user(name: str, user_name=Depends(get_user_from_header)):
-#
-#     if not user_name:
-#         raise_error("Unknown requester", 401)
-#
-#     response = {}
-#     with DBSession() as dbsession:
-#         frontenduser = (
-#             dbsession.session.query(FrontendUser)
-#             .filter(FrontendUser.name == name)
-#             .one_or_none()
-#         )
-#
-#         if not frontenduser:
-#             raise ValueError("User not found")
-#
-#         dbsession.session.delete(frontenduser)
-#
-#     return response

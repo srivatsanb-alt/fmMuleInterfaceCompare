@@ -24,3 +24,4 @@ bazel-*
 logs/
 static/
 !static/certs
+fm_plugins
