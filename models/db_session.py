@@ -139,6 +139,9 @@ class DBSession:
     def get_all_visa_assignments(self):
         return self.session.query(vm.VisaAssignment).all()
 
+    def get_all_visa_rejects(self):
+        return self.session.query(vm.VisaRejects).all()
+
     def get_visa_rejects(self, reqd_ezones, sherpa_name):
         visa_rejects = []
         for ezone in set(reqd_ezones):
