@@ -736,6 +736,11 @@ class Handlers:
 
         return done, next_task
 
+    def delete_visa_rejects(self, sherpa_name, all_visa_rejects):
+        for visa_reject in all_visa_rejects:
+            if visa_reject.sherpa_name == sherpa_name:
+                self.dbsession.delete(visa_reject)
+
     def release_visas(self, visas_to_release, sherpa, notify=False):
 
         # update db
@@ -1220,6 +1225,7 @@ class Handlers:
         response = {}
         # query db
         sherpa: fm.Sherpa = self.dbsession.get_sherpa(req.sherpa_name)
+        all_visa_rejects = self.dbsession.get_all_visa_rejects()
 
         if sherpa.status.pose is None:
             raise ValueError(
@@ -1235,6 +1241,8 @@ class Handlers:
         if not req.induct:
             self.release_visas(sherpa.exclusion_zones, sherpa, notify=True)
             sherpa.parking_id = None
+            self.delete_visa_rejects(sherpa.name, all_visa_rejects)
+
         else:
             reset_visas_held_req = rqm.ResetVisasHeldReq()
             _ = utils_comms.send_req_to_sherpa(self.dbsession, sherpa, reset_visas_held_req)
