@@ -239,8 +239,8 @@ def update_trip_analytics(
     new_trip_analytics = (
         dbsession.session.query(tm.TripAnalytics)
         .join(tm.Trip, tm.Trip.id == tm.TripAnalytics.trip_id)
-        .filter(tm.TripAnalytics.created_at > last_trip_analytics_update_dt)
-        .filter(tm.TripAnalytics.created_at > recent_dt)
+        .filter(tm.Trip.end_time > last_trip_analytics_update_dt)
+        .filter(tm.Trip.end_time > recent_dt)
         .filter(tm.Trip.status.in_(tm.COMPLETED_TRIP_STATUS))
         .all()
     )
