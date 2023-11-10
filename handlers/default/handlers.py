@@ -739,7 +739,7 @@ class Handlers:
     def delete_visa_rejects(self, sherpa_name, all_visa_rejects):
         for visa_reject in all_visa_rejects:
             if visa_reject.sherpa_name == sherpa_name:
-                self.dbsession.delete(visa_reject)
+                self.dbsession.session.delete(visa_reject)
 
     def release_visas(self, visas_to_release, sherpa, notify=False):
 
