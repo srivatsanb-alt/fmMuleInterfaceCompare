@@ -1552,8 +1552,10 @@ class Handlers:
         return response
 
     def handle_pass_to_sherpa(self, req):
+
         sherpa: fm.Sherpa = self.dbsession.get_sherpa(req.sherpa_name)
-        station: fm.Station = self.dbsession.get_station(req.station_name)
+        if req.endpoint == rqm.PasstoSherpaEndpoints.RESET_POSE:
+            station: fm.Station = self.dbsession.get_station(req.station_name)
 
         # add fleet_names to req_ctxt - this is for optimal_dispatch
         fleet_name = sherpa.fleet.name
@@ -1567,10 +1569,9 @@ class Handlers:
         if req.endpoint == rqm.PasstoSherpaEndpoints.RESET_POSE:
             if req.station_name is not None:
                 sherpa.parking_id = req.station_name
+                sherpa.status.pose = station.pose
 
         utils_comms.send_req_to_sherpa(self.dbsession, sherpa, req)
-
-        sherpa.status.pose = station.pose
 
     def handle_save_route(self, req: rqm.SaveRouteReq):
         reponse = {}
