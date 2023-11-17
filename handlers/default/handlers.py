@@ -1553,6 +1553,7 @@ class Handlers:
 
     def handle_pass_to_sherpa(self, req):
         sherpa: fm.Sherpa = self.dbsession.get_sherpa(req.sherpa_name)
+        station: fm.Station = self.dbsession.get_station(req.station_name)
 
         # add fleet_names to req_ctxt - this is for optimal_dispatch
         fleet_name = sherpa.fleet.name
@@ -1568,6 +1569,8 @@ class Handlers:
                 sherpa.parking_id = req.station_name
 
         utils_comms.send_req_to_sherpa(self.dbsession, sherpa, req)
+
+        sherpa.status.pose = station.pose
 
     def handle_save_route(self, req: rqm.SaveRouteReq):
         reponse = {}
