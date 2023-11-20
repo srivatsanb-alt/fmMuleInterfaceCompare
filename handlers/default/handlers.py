@@ -758,6 +758,22 @@ class Handlers:
                     mm.NotificationModules.visa,
                 )
 
+    def handle_fleet_start_stop(self, req: rqm.StartStopCtrlReq):
+        # query DB
+        fleet: fm.Fleet = self.dbsession.get_fleet(req.fleet_name)
+        if not fleet:
+            raise ValueError(f"Fleet name {req.fleet_name} not found")
+
+        if fleet.status == cc.FleetStatus.PAUSED:
+            raise ValueError(
+                f"{req.fleet_name} is paused already, cannot perform start/stop"
+            )
+
+        fleet.status = cc.FleetStatus.STARTED if req.start else cc.FleetStatus.STOPPED
+
+        if req.fleet_name not in req_ctxt.fleet_names:
+            req_ctxt.fleet_names.append(req.fleet_name)
+
     def handle_book(self, req: rqm.BookingReq):
         response = {}
         for trip_msg in req.trips:
