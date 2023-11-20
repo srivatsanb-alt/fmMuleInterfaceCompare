@@ -3,6 +3,7 @@ class MessageType:
     REACHED = "reached"
     PERIPHERALS = "peripherals"
     SHERPA_STATUS = "sherpa_status"
+    FLEET_START_STOP = "fleet_start_stop"
     TRIP_STATUS = "trip_status"
     BOOKING = "book"
     PASS_TO_SHERPA = "pass_to_sherpa"
@@ -25,6 +26,7 @@ OptimalDispatchInfluencers = [
     MessageType.DELETE_ONGOING_TRIP,
     MessageType.INDUCT_SHERPA,
     MessageType.PASS_TO_SHERPA,
+    MessageType.FLEET_START_STOP,
 ]
 
 UpdateMsgs = [MessageType.SHERPA_STATUS, MessageType.TRIP_STATUS]

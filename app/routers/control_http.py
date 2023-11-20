@@ -107,17 +107,9 @@ async def start_stop(
     if not entity_name:
         dpd.raise_error(detail="No entity name")
 
-    with DBSession() as dbsession:
-        fleet: fm.Fleet = dbsession.get_fleet(entity_name)
-        if not fleet:
-            dpd.raise_error("Fleet not found")
+    start_stop_ctrl_req.fleet_name = entity_name
 
-        if fleet.status == FleetStatus.PAUSED:
-            dpd.raise_error("Fleet is paused, cannot start/stop ops")
-
-        fleet.status = (
-            FleetStatus.STARTED if start_stop_ctrl_req.start else FleetStatus.STOPPED
-        )
+    response = await dpd.process_req_with_response(None, start_stop_ctrl_req, user_name)
 
     return response
 
