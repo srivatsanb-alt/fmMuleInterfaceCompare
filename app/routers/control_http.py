@@ -11,6 +11,8 @@ import models.request_models as rqm
 import models.fleet_models as fm
 import app.routers.dependencies as dpd
 from utils.comms import send_async_req_to_sherpa
+import utils.util as utils_util
+import models.misc_models as mm
 
 
 router = APIRouter(
@@ -136,8 +138,17 @@ async def emergency_stop(
             dpd.raise_error("Fleet not found")
 
         fleet.status = (
-            FleetStatus.PAUSED if pause_resume_ctrl_req.pause else FleetStatus.STARTED
+            FleetStatus.PAUSED if pause_resume_ctrl_req.pause else FleetStatus.STOPPED
         )
+
+        if not pause_resume_ctrl_req.pause:
+            alert_description = f"To start operations of fleet: {entity_name}, press start ops button in the web page header"
+            dbsession.add_notification(
+                [entity_name],
+                alert_description,
+                mm.NotificationLevels.alert,
+                mm.NotificationModules.generic,
+            )
 
         all_sherpa_status = dbsession.get_all_sherpa_status()
         sherpa_status_fleet = []
