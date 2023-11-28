@@ -3,6 +3,7 @@ set -e
 
 if [ "$(uname)" = "Darwin" ]; then
 {
+   echo "Applying macos patch"
    git apply misc/mac_os.diff
 }
 fi
@@ -64,4 +65,10 @@ fi
 echo "FM Version: $FM_VERSION"
 echo "Created images with the tag $FM_VERSION"
 
+if [ "$(uname)" = "Darwin" ]; then
+{
+   echo "Reverting macos patch"
+   git apply -R misc/mac_os.diff
+}
+fi
 
