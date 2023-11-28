@@ -1,5 +1,12 @@
 #!/bin/bash
 set -e 
+
+if [ "$(uname)" = "Darwin" ]; then
+{
+   git apply misc/mac_os.diff
+}
+fi
+
 source scripts/build_fm_images.sh
 source scripts/upload_images.sh 
 
