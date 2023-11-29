@@ -2,6 +2,7 @@ import time
 import logging
 import os
 import datetime
+import shutil
 import redis
 import json
 from sqlalchemy import or_, func
@@ -490,6 +491,11 @@ def upload_important_files(
             temp_last_file_update_dt = file_upload.created_at
             if file_upload.updated_at:
                 temp_last_file_update_dt = file_upload.updated_at
+
+            if file_upload.type == "error_data":
+                logging.getLogger("mfm_updates").info(f"Deleting file {file_upload.path}")
+                shutil.rmtree(file_upload.path)
+
         elif response_status_code == 413:
             logging.getLogger("mfm_updates").info(
                 f"Ignoring upload files with params: {params}, file size too large"
@@ -498,6 +504,7 @@ def upload_important_files(
             temp_last_file_update_dt = file_upload.created_at
             if file_upload.updated_at:
                 temp_last_file_update_dt = file_upload.updated_at
+
         else:
             logging.getLogger("mfm_updates").info(
                 f"unable to upload files with params {params}, status_code: {response_status_code}"
