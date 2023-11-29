@@ -491,11 +491,6 @@ def upload_important_files(
             temp_last_file_update_dt = file_upload.created_at
             if file_upload.updated_at:
                 temp_last_file_update_dt = file_upload.updated_at
-
-            if file_upload.type == "error_data":
-                logging.getLogger("mfm_updates").info(f"Deleting file {file_upload.path}")
-                shutil.rmtree(file_upload.path)
-
         elif response_status_code == 413:
             logging.getLogger("mfm_updates").info(
                 f"Ignoring upload files with params: {params}, file size too large"
