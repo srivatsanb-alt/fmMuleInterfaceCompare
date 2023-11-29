@@ -281,7 +281,7 @@ class OptimalDispatch:
         priority_matrix = np.zeros((len(self.pickup_q), len(self.sherpa_q)))
         num_router_calls = 0
         i = 0
-        for pickup_keys, pickup_q_val in self.pickup_q.items():
+        for pickup_q, pickup_q_val in self.pickup_q.items():
             j = 0
             for sherpa_q, sherpa_q_val in self.sherpa_q.items():
 
@@ -290,14 +290,13 @@ class OptimalDispatch:
                 pickup_priority = pickup_q_val["priority"]
                 route = pickup_q_val["route"]
                 sherpa_name = pickup_q_val["sherpa_name"]
-
-                exclude_stations = sherpa_q_val["exclude_stations"]
-                if any(
+                temp_stations = [
                     station in sherpa_q_val["exclude_stations"]
                     for station in pickup_q_val["route"]
-                ):
+                ]
+                if len(temp_stations) > 0:
                     self.logger.info(
-                        f"cannot send {sherpa_q} to {route}, {sherpa_q} restricted from going to {exclude_stations}"
+                        f"cannot use {sherpa_q} for trip_id: {pickup_q}, reason: sherpa restricted from going to {temp_stations}"
                     )
                     total_eta = np.inf
                 elif (
@@ -313,7 +312,7 @@ class OptimalDispatch:
                     total_eta = np.inf
                 elif sherpa_name and sherpa_name != sherpa_q:
                     self.logger.info(
-                        f"cannot assign {sherpa_q} for trip_id: {pickup_keys}, can be assigned only to {sherpa_name} "
+                        f"cannot assign {sherpa_q} for trip_id: {pickup_q}, can be assigned only to {sherpa_name} "
                     )
                     total_eta = np.inf
                 else:
