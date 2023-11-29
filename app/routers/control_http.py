@@ -11,7 +11,6 @@ import models.request_models as rqm
 import models.fleet_models as fm
 import app.routers.dependencies as dpd
 from utils.comms import send_async_req_to_sherpa
-import utils.util as utils_util
 import models.misc_models as mm
 
 
