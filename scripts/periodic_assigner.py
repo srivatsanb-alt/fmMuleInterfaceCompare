@@ -34,7 +34,11 @@ def enqueue_scheduled_trips(db_session: DBSession, schdeuled_job_id):
                 )
 
                 process_req(
-                    None, trigger_optimal_dispatch_req, "self", dt=scheduled_start_time
+                    None,
+                    trigger_optimal_dispatch_req,
+                    "self",
+                    redis_conn=None,
+                    dt=scheduled_start_time,
                 )
                 schdeuled_job_id.append(pending_trip.trip_id)
 
