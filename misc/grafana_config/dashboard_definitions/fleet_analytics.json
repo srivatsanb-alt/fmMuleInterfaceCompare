@@ -451,8 +451,8 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "fixedColor": "light-blue",
-            "mode": "fixed"
+            "fixedColor": "blue",
+            "mode": "continuous-YlBl"
           },
           "custom": {
             "axisCenteredZero": false,
@@ -460,7 +460,7 @@
             "axisLabel": "",
             "axisPlacement": "left",
             "fillOpacity": 80,
-            "gradientMode": "opacity",
+            "gradientMode": "hue",
             "hideFrom": {
               "legend": false,
               "tooltip": false,
@@ -571,7 +571,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "fillOpacity": 44,
-            "gradientMode": "opacity",
+            "gradientMode": "scheme",
             "hideFrom": {
               "legend": false,
               "tooltip": false,
@@ -644,7 +644,7 @@
           "showLegend": true
         },
         "orientation": "auto",
-        "showValue": "never",
+        "showValue": "auto",
         "stacking": "none",
         "tooltip": {
           "mode": "multi",
@@ -695,6 +695,7 @@
       "fieldConfig": {
         "defaults": {
           "color": {
+            "fixedColor": "yellow",
             "mode": "continuous-YlBl"
           },
           "custom": {
@@ -703,7 +704,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "fillOpacity": 41,
-            "gradientMode": "opacity",
+            "gradientMode": "scheme",
             "hideFrom": {
               "legend": false,
               "tooltip": false,
@@ -754,7 +755,7 @@
           "showLegend": true
         },
         "orientation": "horizontal",
-        "showValue": "never",
+        "showValue": "auto",
         "stacking": "none",
         "tooltip": {
           "mode": "multi",
