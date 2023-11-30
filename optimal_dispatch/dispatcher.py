@@ -291,8 +291,9 @@ class OptimalDispatch:
                 route = pickup_q_val["route"]
                 sherpa_name = pickup_q_val["sherpa_name"]
                 temp_stations = [
-                    station in sherpa_q_val["exclude_stations"]
+                    station
                     for station in pickup_q_val["route"]
+                    if station in sherpa_q_val["exclude_stations"]
                 ]
                 if len(temp_stations) > 0:
                     self.logger.info(
