@@ -460,7 +460,7 @@
             "axisLabel": "",
             "axisPlacement": "left",
             "fillOpacity": 80,
-            "gradientMode": "hue",
+            "gradientMode": "opacity",
             "hideFrom": {
               "legend": false,
               "tooltip": false,
@@ -530,7 +530,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH joined_table AS (\n  SELECT\n    CASE\n      WHEN SPLIT_PART(t.sherpa_name, '-', 3) IS NOT NULL THEN SPLIT_PART(t.sherpa_name, '-', 1) || '-' || SPLIT_PART(t.sherpa_name, '-', 2)\n      ELSE t.sherpa_name\n    END AS Sherpa,\n    t.route as Route,\n    t.start_time as start_time,\n    t.end_time as end_time,\n    a.actual_trip_time as Trip_Time,\n    a.time_elapsed_obstacle_stoppages as Obstacle_Time,\n    a.time_elapsed_visa_stoppages as Visa_Time,\n    a.time_elapsed_other_stoppages as Other_Time,\n    t.fleet_name,\n    t.status as status\n  FROM\n    trips AS t\n    INNER JOIN trip_analytics AS a ON t.id = a.trip_id\n  WHERE\n    t.fleet_name = '$fleetvar'\n    AND t.status = 'succeeded'\n    AND t.start_time >= CAST($__timeFrom() AS timestamp) AT TIME ZONE 'UTC' AT TIME ZONE '$tz'\n    AND t.end_time <= CAST($__timeTo() AS timestamp) AT TIME ZONE 'UTC' AT TIME ZONE '$tz'\n)\nSELECT\n  Sherpa,\n  Route,\n  AVG(\n    EXTRACT(\n      EPOCH\n      FROM\n        (end_time - start_time)\n    )\n  ) AS Trip_time\nFROM\n  (\n    SELECT\n      Sherpa,\n      Route,\n      start_time,\n      end_time,\n      ROW_NUMBER() OVER (\n        PARTITION BY Sherpa\n        ORDER BY\n          COUNT(*) DESC\n      ) AS route_rank,\n      fleet_name,\n      status\n    FROM\n      joined_table\n    WHERE\n      start_time >= CAST($__timeFrom() AS timestamp) AT TIME ZONE 'UTC' AT TIME ZONE '$tz'\n      AND end_time <= CAST($__timeTo() AS timestamp) AT TIME ZONE 'UTC' AT TIME ZONE '$tz'\n    GROUP BY\n      Sherpa,\n      Route,\n      start_time,\n      end_time,\n      fleet_name,\n      status\n  ) ranked_data\nWHERE\n  route_rank = 1\n  AND fleet_name = '$fleetvar'\n  AND status = 'succeeded'\n  AND start_time >= CAST($__timeFrom() AS timestamp) AT TIME ZONE 'UTC' AT TIME ZONE '$tz'\n  AND end_time <= CAST($__timeTo() AS timestamp) AT TIME ZONE 'UTC' AT TIME ZONE '$tz'\nGROUP BY\n  Sherpa,\n  Route;",
+          "rawSql": "select\n  Sherpa,\n  route,\n  Trip_time as \"Average Takt time\"\nfrom\n  (\n    SELECT\n    CASE\n      WHEN SPLIT_PART(t.sherpa_name, '-', 3) IS NOT NULL THEN SPLIT_PART(t.sherpa_name, '-', 1) || '-' || SPLIT_PART(t.sherpa_name, '-', 2)\n      ELSE t.sherpa_name\n    END AS Sherpa,\n      t.route,\n      AVG(\n    EXTRACT(\n      EPOCH\n      FROM\n        (t.end_time - t.start_time)\n    )\n  ) AS Trip_time,\n      ROW_NUMBER() over(\n        partition by t.sherpa_name\n        order by\n          count(*) DESC\n      ) as route_rank\n    from\n      trips t\n      join trip_analytics a on a.trip_id = t.id\n    where\n      t.start_time >= CAST($__timeFrom() AS timestamp) AT TIME ZONE 'UTC' AT TIME ZONE '$tz'\n      and t.end_time <= CAST($__timeTo() AS timestamp) AT TIME ZONE 'UTC' AT TIME ZONE '$tz'\n      and fleet_name = '$fleetvar'\n      and status = 'succeeded'\n    group by\n      t.sherpa_name,\n      t.route\n  ) as d\nwhere\n  route_rank = 1;",
           "refId": "A",
           "sql": {
             "columns": [
@@ -571,7 +571,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "fillOpacity": 44,
-            "gradientMode": "hue",
+            "gradientMode": "opacity",
             "hideFrom": {
               "legend": false,
               "tooltip": false,
@@ -598,7 +598,32 @@
           },
           "unit": "s"
         },
-        "overrides": []
+        "overrides": [
+          {
+            "__systemRef": "hideSeriesFrom",
+            "matcher": {
+              "id": "byNames",
+              "options": {
+                "mode": "exclude",
+                "names": [
+                  "Average Obstacle time"
+                ],
+                "prefix": "All except:",
+                "readOnly": true
+              }
+            },
+            "properties": [
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": true
+                }
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
         "h": 11,
@@ -637,7 +662,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH joined_table AS (\n  SELECT\n    CASE\n      WHEN SPLIT_PART(t.sherpa_name, '-', 3) IS NOT NULL THEN SPLIT_PART(t.sherpa_name, '-', 1) || '-' || SPLIT_PART(t.sherpa_name, '-', 2)\n      ELSE t.sherpa_name\n    END AS Sherpa,\n    t.route as Route,\n    t.start_time as start_time,\n    t.end_time as end_time,\n    a.actual_trip_time as Trip_Time,\n    a.time_elapsed_obstacle_stoppages as Obstacle_Time,\n    a.time_elapsed_visa_stoppages as Visa_Time,\n    a.time_elapsed_other_stoppages as Other_Time,\n    t.fleet_name,\n    t.status as status\n  FROM\n    trips AS t\n    INNER JOIN trip_analytics AS a ON t.id = a.trip_id\n  WHERE\n    t.fleet_name = '$fleetvar'\n    AND t.status = 'succeeded'\n    AND t.start_time >= CAST($__timeFrom() AS timestamp) AT TIME ZONE 'UTC' AT TIME ZONE '$tz'\n    AND t.end_time <= CAST($__timeTo() AS timestamp) AT TIME ZONE 'UTC' AT TIME ZONE '$tz'\n)\nSELECT\n  Sherpa,\n  Route,\n  AVG(Obstacle_Time) AS \"Average Obstacle time\"\nFROM\n  (\n    SELECT\n      Sherpa,\n      Route,\n      start_time,\n      end_time,\n      Obstacle_Time,\n      ROW_NUMBER() OVER (\n        PARTITION BY Sherpa\n        ORDER BY\n          COUNT(*) DESC\n      ) AS route_rank,\n      fleet_name,\n      status\n    FROM\n      joined_table\n    WHERE\n      start_time >= CAST($__timeFrom() AS timestamp) AT TIME ZONE 'UTC' AT TIME ZONE '$tz'\n      AND end_time <= CAST($__timeTo() AS timestamp) AT TIME ZONE 'UTC' AT TIME ZONE '$tz'\n    GROUP BY\n      Sherpa,\n      Route,\n      start_time,\n      end_time,\n      Obstacle_Time,\n      fleet_name,\n      status\n  ) ranked_data\nWHERE\n  route_rank = 1\n  AND fleet_name = '$fleetvar'\n  AND status = 'succeeded'\n  AND start_time >= CAST($__timeFrom() AS timestamp) AT TIME ZONE 'UTC' AT TIME ZONE '$tz'\n  AND end_time <= CAST($__timeTo() AS timestamp) AT TIME ZONE 'UTC' AT TIME ZONE '$tz'\nGROUP BY\n  Sherpa,\n  Route;",
+          "rawSql": "select\n  sherpa_name,\n  route,\n  avg_obstacle_time as \"Average Obstacle time\"\nfrom\n  (\n    select\n      t.sherpa_name,\n      t.route,\n      AVG(a.time_elapsed_obstacle_stoppages) as avg_obstacle_time,\n      ROW_NUMBER() over(\n        partition by t.sherpa_name\n        order by\n          count(*) DESC\n      ) as route_rank\n    from\n      trips t\n      join trip_analytics a on a.trip_id = t.id\n    where\n      t.start_time >= CAST($__timeFrom() AS timestamp) AT TIME ZONE 'UTC' AT TIME ZONE '$tz'\n      and t.end_time <= CAST($__timeTo() AS timestamp) AT TIME ZONE 'UTC' AT TIME ZONE '$tz'\n      and fleet_name = '$fleetvar'\n      and status = 'succeeded'\n    group by\n      t.sherpa_name,\n      t.route\n  ) as d\nwhere\n  route_rank = 1;",
           "refId": "A",
           "sql": {
             "columns": [
@@ -678,7 +703,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "fillOpacity": 41,
-            "gradientMode": "hue",
+            "gradientMode": "opacity",
             "hideFrom": {
               "legend": false,
               "tooltip": false,
@@ -747,7 +772,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH joined_table AS (\n  SELECT\n    CASE\n      WHEN SPLIT_PART(t.sherpa_name, '-', 3) IS NOT NULL THEN SPLIT_PART(t.sherpa_name, '-', 1) || '-' || SPLIT_PART(t.sherpa_name, '-', 2)\n      ELSE t.sherpa_name\n    END AS Sherpa,\n    t.route as Route,\n    t.start_time as start_time,\n    t.end_time as end_time,\n    t.trip_metadata as trip_metadata,\n    t.fleet_name,\n    t.status\n  FROM\n    trips AS t\n    INNER JOIN trip_analytics AS a ON t.id = a.trip_id\n  WHERE\n    t.fleet_name = '$fleetvar'\n    AND t.status = 'succeeded'\n    AND t.start_time >= CAST($__timeFrom() AS timestamp) AT TIME ZONE 'UTC' AT TIME ZONE '$tz'\n    AND t.end_time <= CAST($__timeTo() AS timestamp) AT TIME ZONE 'UTC' AT TIME ZONE '$tz'\n)\nSELECT\n  Sherpa,\n  Route,\n  Avg(COALESCE(\n    CAST(\n      trip_metadata ->> 'total_dispatch_wait_time' as numeric\n    ),\n    0\n  )) AS total_dispatch_time\nFROM\n  (\n    SELECT\n      Sherpa,\n      Route,\n      start_time,\n      end_time,\n      ROW_NUMBER() OVER (\n        PARTITION BY Sherpa\n        ORDER BY\n          COUNT(*) DESC\n      ) AS route_rank,\n      fleet_name,\n      status,\n      trip_metadata\n    FROM\n      joined_table\n    WHERE\n      start_time >= CAST($__timeFrom() AS timestamp) AT TIME ZONE 'UTC' AT TIME ZONE '$tz'\n      AND end_time <= CAST($__timeTo() AS timestamp) AT TIME ZONE 'UTC' AT TIME ZONE '$tz'\n    GROUP BY\n      Sherpa,\n      Route,\n      start_time,\n      end_time,\n      fleet_name,\n      status,\n      trip_metadata\n  ) ranked_data\nWHERE\n  route_rank = 1\n  and fleet_name = '$fleetvar'\n  AND status = 'succeeded'\n  AND start_time >= CAST($__timeFrom() AS timestamp) AT TIME ZONE 'UTC' AT TIME ZONE '$tz'\n  AND end_time <= CAST($__timeTo() AS timestamp) AT TIME ZONE 'UTC' AT TIME ZONE '$tz'\nGROUP BY\n  Sherpa,\n  Route;",
+          "rawSql": "select\n  Sherpa,\n  route,\n  dispatch_time as \"Average Dispatch Wait time\"\nfrom\n  (\n    SELECT\n    CASE\n      WHEN SPLIT_PART(t.sherpa_name, '-', 3) IS NOT NULL THEN SPLIT_PART(t.sherpa_name, '-', 1) || '-' || SPLIT_PART(t.sherpa_name, '-', 2)\n      ELSE t.sherpa_name\n    END AS Sherpa,\n      t.route,\n      Avg(COALESCE(\n    CAST(\n      trip_metadata ->> 'total_dispatch_wait_time' as numeric\n    ),\n    0\n  )) AS dispatch_time,\n      ROW_NUMBER() over(\n        partition by t.sherpa_name\n        order by\n          count(*) DESC\n      ) as route_rank\n    from\n      trips t\n      join trip_analytics a on a.trip_id = t.id\n    where\n      t.start_time >= CAST($__timeFrom() AS timestamp) AT TIME ZONE 'UTC' AT TIME ZONE '$tz'\n      and t.end_time <= CAST($__timeTo() AS timestamp) AT TIME ZONE 'UTC' AT TIME ZONE '$tz'\n      and fleet_name = '$fleetvar'\n      and status = 'succeeded'\n    group by\n      t.sherpa_name,\n      t.route\n  ) as d\nwhere\n  route_rank = 1;",
           "refId": "A",
           "sql": {
             "columns": [
