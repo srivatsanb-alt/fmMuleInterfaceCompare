@@ -11,6 +11,7 @@ import pandas as pd
 # ati code imports
 import utils.log_utils as lu
 import utils.util as utils_util
+from core.constants import FleetStatus
 from models.fleet_models import Fleet, AvailableSherpas, OptimalDispatchState
 from models.trip_models import Trip, PendingTrip, TripStatus
 from optimal_dispatch.hungarian import hungarian_assignment
@@ -188,6 +189,7 @@ class OptimalDispatch:
                         "exclude_stations": self.get_exclude_stations_for_sherpa(
                             dbsession, available_sherpa.name
                         ),
+                        "fleet_status": available_sherpa.fleet.status,
                     }
                 }
             )
@@ -259,6 +261,7 @@ class OptimalDispatch:
                         "priority": updated_priority,
                         "route": pending_trip.trip.augmented_route,
                         "sherpa_name": sherpa_name,
+                        "booked_by": pending_trip.trip.booked_by,
                     },
                 }
             )
@@ -276,33 +279,41 @@ class OptimalDispatch:
             np.ones((len(self.pickup_q), len(self.sherpa_q))) * np.inf
         )
         priority_matrix = np.zeros((len(self.pickup_q), len(self.sherpa_q)))
+        num_router_calls = 0
         i = 0
-        for pickup_keys, pickup_q_val in self.pickup_q.items():
+        for pickup_q, pickup_q_val in self.pickup_q.items():
             j = 0
             for sherpa_q, sherpa_q_val in self.sherpa_q.items():
+
                 pose_1 = sherpa_q_val["pose"]
                 pose_2 = pickup_q_val["pose"]
                 pickup_priority = pickup_q_val["priority"]
                 route = pickup_q_val["route"]
                 sherpa_name = pickup_q_val["sherpa_name"]
-
-                exclude_stations = sherpa_q_val["exclude_stations"]
-                if any(
-                    station in sherpa_q_val["exclude_stations"]
+                temp_stations = [
+                    station
                     for station in pickup_q_val["route"]
-                ):
+                    if station in sherpa_q_val["exclude_stations"]
+                ]
+                if len(temp_stations) > 0:
                     self.logger.info(
-                        f"cannot send {sherpa_q} to {route}, {sherpa_q} restricted from going to {exclude_stations}"
+                        f"cannot use {sherpa_q} for trip_id: {pickup_q}, reason: sherpa restricted from going to {temp_stations}"
                     )
                     total_eta = np.inf
-                elif i + 1 > max_trips_to_consider:
+                elif (
+                    sherpa_q_val["fleet_status"] == FleetStatus.STOPPED
+                    and f"auto_park_{sherpa_q}" != pickup_q_val["booked_by"]
+                ):
+                    self.logger.info(f"cannot send {sherpa_q} to {route}, fleet stopped")
+                    total_eta = np.inf
+                elif num_router_calls > max_trips_to_consider:
                     self.logger.info(
-                        f"cannot send {sherpa_q} to {route}, num trips to consider for optimal_dispatch exceeded : {max_trips_to_consider}, trip num: {i}"
+                        f"cannot send {sherpa_q} to {route}, num trips to consider for optimal_dispatch exceeded : {max_trips_to_consider}, trip num: {num_router_calls}"
                     )
                     total_eta = np.inf
                 elif sherpa_name and sherpa_name != sherpa_q:
                     self.logger.info(
-                        f"cannot assign {sherpa_q} for trip_id: {pickup_keys}, can be assigned only to {sherpa_name} "
+                        f"cannot assign {sherpa_q} for trip_id: {pickup_q}, can be assigned only to {sherpa_name} "
                     )
                     total_eta = np.inf
                 else:
@@ -310,6 +321,7 @@ class OptimalDispatch:
                         pose_1, pose_2, fleet_name, redis_conn
                     )
                     total_eta = route_length + sherpa_q_val["remaining_eta"]
+                    num_router_calls += 1
 
                 # to handle w1 == 0  and eta == np.inf case
                 weighted_total_eta = (

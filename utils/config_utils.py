@@ -379,6 +379,18 @@ class ConfigValidator:
             },
         }
     }
+    app_security = {
+        "$jsonSchema": {
+            "bsonType": "object",
+            "required": ["token_expiry_time"],
+            "properties": {
+                "token_expiry_time": {
+                    "bsonType": "int",
+                    "description": "Token expiry time in seconds",
+                },
+            },
+        }
+    }
 
 
 class ConfigDefaults:
@@ -443,6 +455,7 @@ class ConfigDefaults:
     }
     trip_metadata = {"metadata": {"description": []}}
     fm_version = {"version": 3.3}
+    app_security = {"token_expiry_time": 3600}
 
 
 class DefaultFrontendUser:

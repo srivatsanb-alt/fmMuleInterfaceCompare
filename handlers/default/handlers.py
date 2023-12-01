@@ -222,14 +222,19 @@ class Handlers:
     ):
         fleet: fm.Fleet = sherpa.fleet
 
-        if fleet.status == cc.FleetStatus.STOPPED:
-            logging.getLogger(sherpa.name).info(
-                f"fleet {fleet.name} is stopped, not assigning new trip to {sherpa.name}"
-            )
-            return False
-
         if not pending_trip:
             return False
+
+        if fleet.status == cc.FleetStatus.STOPPED:
+            if pending_trip.trip.booked_by == f"auto_park_{sherpa.name}":
+                logging.getLogger(sherpa.name).info(
+                    f"fleet {fleet.name} is stopped, but will allow auto_park trip"
+                )
+            else:
+                logging.getLogger(sherpa.name).info(
+                    f"fleet {fleet.name} is stopped, not assigning new trip to {sherpa.name}"
+                )
+                return False
 
         logging.getLogger(sherpa.name).info(
             f"found pending trip id {pending_trip.trip_id}, route: {pending_trip.trip.route}"
@@ -731,6 +736,11 @@ class Handlers:
 
         return done, next_task
 
+    def delete_visa_rejects(self, sherpa_name, all_visa_rejects):
+        for visa_reject in all_visa_rejects:
+            if visa_reject.sherpa_name == sherpa_name:
+                self.dbsession.session.delete(visa_reject)
+
     def release_visas(self, visas_to_release, sherpa, notify=False):
 
         # update db
@@ -747,6 +757,22 @@ class Handlers:
                     mm.NotificationLevels.info,
                     mm.NotificationModules.visa,
                 )
+
+    def handle_fleet_start_stop(self, req: rqm.StartStopCtrlReq):
+        # query DB
+        fleet: fm.Fleet = self.dbsession.get_fleet(req.fleet_name)
+        if not fleet:
+            raise ValueError(f"Fleet name {req.fleet_name} not found")
+
+        if fleet.status == cc.FleetStatus.PAUSED:
+            raise ValueError(
+                f"{req.fleet_name} is paused already, cannot perform start/stop"
+            )
+
+        fleet.status = cc.FleetStatus.STARTED if req.start else cc.FleetStatus.STOPPED
+
+        if req.fleet_name not in req_ctxt.fleet_names:
+            req_ctxt.fleet_names.append(req.fleet_name)
 
     def handle_book(self, req: rqm.BookingReq):
         response = {}
@@ -1215,6 +1241,7 @@ class Handlers:
         response = {}
         # query db
         sherpa: fm.Sherpa = self.dbsession.get_sherpa(req.sherpa_name)
+        all_visa_rejects = self.dbsession.get_all_visa_rejects()
 
         if sherpa.status.pose is None:
             raise ValueError(
@@ -1230,6 +1257,8 @@ class Handlers:
         if not req.induct:
             self.release_visas(sherpa.exclusion_zones, sherpa, notify=True)
             sherpa.parking_id = None
+            self.delete_visa_rejects(sherpa.name, all_visa_rejects)
+
         else:
             reset_visas_held_req = rqm.ResetVisasHeldReq()
             _ = utils_comms.send_req_to_sherpa(self.dbsession, sherpa, reset_visas_held_req)
@@ -1539,7 +1568,10 @@ class Handlers:
         return response
 
     def handle_pass_to_sherpa(self, req):
+
         sherpa: fm.Sherpa = self.dbsession.get_sherpa(req.sherpa_name)
+        if req.endpoint == rqm.PasstoSherpaEndpoints.RESET_POSE:
+            station: fm.Station = self.dbsession.get_station(req.station_name)
 
         # add fleet_names to req_ctxt - this is for optimal_dispatch
         fleet_name = sherpa.fleet.name
@@ -1553,6 +1585,7 @@ class Handlers:
         if req.endpoint == rqm.PasstoSherpaEndpoints.RESET_POSE:
             if req.station_name is not None:
                 sherpa.parking_id = req.station_name
+                sherpa.status.pose = station.pose
 
         utils_comms.send_req_to_sherpa(self.dbsession, sherpa, req)
 

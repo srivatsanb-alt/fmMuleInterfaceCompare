@@ -2,6 +2,7 @@ import time
 import logging
 import os
 import datetime
+import shutil
 import redis
 import json
 from sqlalchemy import or_, func
@@ -238,20 +239,19 @@ def update_trip_analytics(
 
     new_trip_analytics = (
         dbsession.session.query(tm.TripAnalytics)
-        .filter(tm.TripAnalytics.updated_at > last_trip_analytics_update_dt)
-        .filter(tm.TripAnalytics.updated_at > recent_dt)
-        .filter(tm.TripAnalytics.end_time is not None)
+        .join(tm.Trip, tm.Trip.id == tm.TripAnalytics.trip_id)
+        .filter(tm.Trip.end_time > last_trip_analytics_update_dt)
+        .filter(tm.Trip.end_time > recent_dt)
+        .filter(tm.Trip.status.in_(tm.COMPLETED_TRIP_STATUS))
         .all()
     )
 
     trips_analytics = []
     for trip_analytics in new_trip_analytics:
-        trip: tm.Trip = dbsession.get_trip(trip_analytics.trip_id)
-        if trip.status in tm.COMPLETED_TRIP_STATUS:
-            ta = tu.get_trip_analytics(trip_analytics)
-            del ta["updated_at"]
-            del ta["created_at"]
-            trips_analytics.append(ta)
+        ta = tu.get_trip_analytics(trip_analytics)
+        del ta["updated_at"]
+        del ta["created_at"]
+        trips_analytics.append(ta)
 
     if len(trips_analytics) == 0:
         logging.getLogger("mfm_updates").info("no new trip analytics to be updated")
@@ -499,6 +499,7 @@ def upload_important_files(
             temp_last_file_update_dt = file_upload.created_at
             if file_upload.updated_at:
                 temp_last_file_update_dt = file_upload.updated_at
+
         else:
             logging.getLogger("mfm_updates").info(
                 f"unable to upload files with params {params}, status_code: {response_status_code}"

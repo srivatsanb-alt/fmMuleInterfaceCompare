@@ -57,6 +57,7 @@ def populate_redis_with_basic_info(dbsession: DBSession):
     # redis_expire_timeout
     with FMMongo() as fm_mongo:
         rq_params = fm_mongo.get_document_from_fm_config("rq")
+        app_security_params = fm_mongo.get_document_from_fm_config("app_security")
 
     # store default job timeout
     default_job_timeout = rq_params["default_job_timeout"]
@@ -64,6 +65,7 @@ def populate_redis_with_basic_info(dbsession: DBSession):
 
     redis_conn.set("default_job_timeout_ms", default_job_timeout * 1000)
     redis_conn.set("generic_handler_job_timeout_ms", generic_handler_job_timeout * 1000)
+    redis_conn.set("token_expiry_time_sec", app_security_params["token_expiry_time"])
 
 
 def check_if_run_host_service_is_setup(dbsession):
