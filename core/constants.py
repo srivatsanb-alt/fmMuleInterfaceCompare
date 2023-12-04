@@ -39,6 +39,7 @@ class FleetStatus:
     STARTED = "started"
     STOPPED = "stopped"
     PAUSED = "paused"
+    MAINTENANCE = "maintenance"
 
 
 class DisabledReason:
