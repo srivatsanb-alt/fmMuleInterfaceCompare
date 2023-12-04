@@ -359,6 +359,7 @@ class SherpaInductReq(ClientReq):
 
 class StartStopCtrlReq(ClientReq):
     start: bool
+    maintenance: Optional[bool]
     fleet_name: Optional[str]
     type: str = MessageType.FLEET_START_STOP
 

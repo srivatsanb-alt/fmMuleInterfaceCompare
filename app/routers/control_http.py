@@ -93,7 +93,7 @@ async def update_sherpa_img(
 
 
 # starts or stops the fleet
-@router.post("/fleet/{entity_name}/start_stop")
+@router.post("/fleet/start_stop")
 async def start_stop(
     start_stop_ctrl_req: rqm.StartStopCtrlReq,
     entity_name=Union[str, None],
@@ -107,8 +107,6 @@ async def start_stop(
 
     if not entity_name:
         dpd.raise_error(detail="No entity name")
-
-    start_stop_ctrl_req.fleet_name = entity_name
 
     response = await dpd.process_req_with_response(None, start_stop_ctrl_req, user_name)
 
