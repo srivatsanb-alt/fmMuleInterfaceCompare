@@ -32,7 +32,13 @@ class TripLegStatus:
 COMPLETED_TRIP_STATUS = [TripStatus.SUCCEEDED, TripStatus.FAILED, TripStatus.CANCELLED]
 ONGOING_TRIP_STATUS = [TripStatus.WAITING_STATION, TripStatus.EN_ROUTE]
 YET_TO_START_TRIP_STATUS = [TripStatus.BOOKED, TripStatus.ASSIGNED]
-ACTIVE_TRIP_STATUS = [TripStatus.WAITING_STATION, TripStatus.EN_ROUTE, TripStatus.BOOKED, TripStatus.ASSIGNED]
+ACTIVE_TRIP_STATUS = [
+    TripStatus.WAITING_STATION,
+    TripStatus.EN_ROUTE,
+    TripStatus.BOOKED,
+    TripStatus.ASSIGNED,
+]
+
 
 class TripState:
     WAITING_STATION_AUTO_HITCH_START = "waiting_station_auto_hitch_start"
@@ -66,7 +72,6 @@ class TripAnalytics(Base, TimestampMixin):
     time_elapsed_visa_stoppages = Column(Float)
     time_elapsed_other_stoppages = Column(Float)
     num_trip_msg = Column(Integer)
-
 
 
 class SavedRoutes(Base):
@@ -298,6 +303,20 @@ class OngoingTrip(Base, TimestampMixin):
     def clear_states(self):
         self.states.clear()
         flag_modified(self, "states")
+
+    def get_basic_trip_description(self):
+        desc = None
+
+        trip_metadata = self.trip.trip_metadata
+
+        if trip_metadata is not None:
+            desc = trip_metadata.get("description")
+
+        return {
+            "booked_by": self.trip.booked_by,
+            "description": desc,
+            "route": self.trip.augmented_route,
+        }
 
 
 def is_start_state(state):

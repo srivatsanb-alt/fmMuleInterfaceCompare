@@ -217,7 +217,6 @@ class Stoppages(JsonMixin):
 class TripInfo(JsonMixin):
     current_pose: List[float]
     destination_pose: List[float]
-    destination_name: str
     total_route_length: float
     remaining_route_length: float
     cte: float
@@ -446,6 +445,7 @@ class MoveReq(FMReq):
     trip_leg_id: int
     destination_pose: List[float]
     destination_name: str
+    basic_trip_description: Optional[dict]
 
 
 class TerminateTripReq(FMReq):
@@ -461,6 +461,7 @@ class PeripheralsReq(FMReq):
     speaker: Optional[SpeakerReq]
     indicator: Optional[IndicatorReq]
     dispatch_button: Optional[DispatchButtonReq]
+    next_destination: Optional[str]
 
 
 class PauseResumeReq(FMReq):
