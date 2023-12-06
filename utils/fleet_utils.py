@@ -404,9 +404,7 @@ class FleetUtils:
             cls.delete_station_status(dbsession, station.name)
             cls.delete_station(dbsession, station.name)
 
-        ExclusionZoneUtils.delete_exclusion_zones(
-            dbsession, fleet_name, deleting_fleet=True
-        )
+        ExclusionZoneUtils.delete_exclusion_zones(dbsession, fleet_name)
 
         map_ip = fleet.map_id
 
@@ -718,9 +716,7 @@ class ExclusionZoneUtils:
                 logger.info(f"Created a link between {prev_zone_id} and {next_zone_st}")
 
     @classmethod
-    def delete_exclusion_zones(
-        cls, dbsession: DBSession, fleet_name: str, deleting_fleet=False
-    ):
+    def delete_exclusion_zones(cls, dbsession: DBSession, fleet_name: str):
         all_ezones: List[vm.ExclusionZone] = dbsession.session.query(vm.ExclusionZone).all()
 
         updatable_gate_names = []
