@@ -725,7 +725,7 @@ class ExclusionZoneUtils:
         if ez_gates is not None:
             for gate, gate_details in ez_gates["ez_gates"].items():
                 updatable_gate_names.append(gate_details["name"])
-                logging.info(f"Updatable gates: {updatable_gate_names}")
+        logging.info(f"Updatable gates: {updatable_gate_names}")
 
         for ezone in all_ezones:
             if fleet_name in ezone.fleets:
@@ -736,7 +736,7 @@ class ExclusionZoneUtils:
                     dbsession.session.delete(ezone)
                     logger.info(f"deleted ezone {ezone.zone_id}")
 
-                elif ezone.zone_id.rsplit("_", -1)[0] in updatable_gate_names:
+                elif ezone.zone_id.rsplit("_", 1)[0] in updatable_gate_names:
                     cls.delete_links(dbsession, ezone)
                     logger.info(f"deleted links of ezone: {ezone.zone_id}")
 
