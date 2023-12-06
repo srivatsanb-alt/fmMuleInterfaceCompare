@@ -55,18 +55,6 @@ async def login(user_login: rqm.UserLogin):
             },
         }
 
-        if user_login.name == cu.DefaultFrontendUser.admin["name"]:
-            if hashed_password == cu.DefaultFrontendUser.admin["hashed_password"]:
-                with DBSession() as dbsession:
-                    default_password_log = f"Please change password for user: {user_login.name}, reason: weak password"
-                    utils_util.maybe_add_notification(
-                        dbsession,
-                        dbsession.get_customer_names(),
-                        default_password_log,
-                        mm.NotificationLevels.alert,
-                        mm.NotificationModules.generic,
-                    )
-
     return response
 
 
