@@ -716,7 +716,9 @@ class ExclusionZoneUtils:
                 logger.info(f"Created a link between {prev_zone_id} and {next_zone_st}")
 
     @classmethod
-    def delete_exclusion_zones(cls, dbsession: DBSession, fleet_name: str):
+    def delete_exclusion_zones(
+        cls, dbsession: DBSession, fleet_name: str, update_map=False
+    ):
         all_ezones: List[vm.ExclusionZone] = dbsession.session.query(vm.ExclusionZone).all()
 
         updatable_gate_names = []
@@ -730,13 +732,14 @@ class ExclusionZoneUtils:
         for ezone in all_ezones:
             if fleet_name in ezone.fleets:
                 ezone.fleets.remove(fleet_name)
+                logger.info(f"removed {fleet_name} from fleets of ezone: {ezone.zone_id}")
 
                 if len(ezone.fleets) == 0:
                     cls.delete_links(dbsession, ezone)
                     dbsession.session.delete(ezone)
                     logger.info(f"deleted ezone {ezone.zone_id}")
 
-                elif ezone.zone_id.rsplit("_", 1)[0] in updatable_gate_names:
+                elif ezone.zone_id.rsplit("_", 1)[0] in updatable_gate_names and update_map:
                     cls.delete_links(dbsession, ezone)
                     logger.info(f"deleted links of ezone: {ezone.zone_id}")
 
