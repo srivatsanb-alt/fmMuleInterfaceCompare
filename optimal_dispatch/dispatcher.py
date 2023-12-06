@@ -300,6 +300,11 @@ class OptimalDispatch:
                         f"cannot use {sherpa_q} for trip_id: {pickup_q}, reason: sherpa restricted from going to {temp_stations}"
                     )
                     total_eta = np.inf
+                elif sherpa_q_val["fleet_status"] == FleetStatus.MAINTENANCE:
+                    self.logger.info(
+                        f"cannot send {sherpa_q} to {route}, fleet in maintenance mode"
+                    )
+                    total_eta = np.inf
                 elif (
                     sherpa_q_val["fleet_status"] == FleetStatus.STOPPED
                     and f"auto_park_{sherpa_q}" != pickup_q_val["booked_by"]

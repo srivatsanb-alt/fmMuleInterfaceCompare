@@ -74,6 +74,20 @@ def get_filenames(directory: str) -> List:
     return file_names
 
 
+def load_ez_json(fleet_name):
+    ez_path = get_map_file_path(fleet_name, "ez.json")
+    if not os.path.exists(ez_path):
+        return None
+
+    with open(ez_path, "r") as f:
+        try:
+            ez_gates = json.load(f)
+        except Exception as e:
+            raise ValueError(f"Unable to parse ez.json, Exception: {e}")
+
+    return ez_gates
+
+
 def is_reset_fleet_required(fleet_name, map_files):
     fleet_path = os.path.join(os.environ["FM_STATIC_DIR"], f"{fleet_name}/map")
     for mf in map_files:
@@ -390,7 +404,10 @@ class FleetUtils:
             cls.delete_station_status(dbsession, station.name)
             cls.delete_station(dbsession, station.name)
 
-        ExclusionZoneUtils.delete_exclusion_zones(dbsession, fleet_name)
+        ExclusionZoneUtils.delete_exclusion_zones(
+            dbsession, fleet_name, deleting_fleet=True
+        )
+
         map_ip = fleet.map_id
 
         # delete optimal dispatch state
@@ -561,14 +578,11 @@ class SherpaUtils:
 class ExclusionZoneUtils:
     @classmethod
     def add_exclusion_zones(cls, dbsession: DBSession, fleet_name: str):
-        ez_path = get_map_file_path(fleet_name, "ez.json")
-        if not os.path.exists(ez_path):
+
+        ez_gates = load_ez_json(fleet_name)
+
+        if ez_gates is None:
             return
-        with open(ez_path, "r") as f:
-            try:
-                ez_gates = json.load(f)
-            except Exception as e:
-                raise ValueError("Unable to parse ez.json")
 
         for gate, gate_details in ez_gates["ez_gates"].items():
             gate_name = gate_details["name"]
@@ -614,14 +628,10 @@ class ExclusionZoneUtils:
 
     @classmethod
     def add_linked_gates(cls, dbsession: DBSession, fleet_name: str):
-        ez_path = get_map_file_path(fleet_name, "ez.json")
-        if not os.path.exists(ez_path):
+
+        ez_gates = load_ez_json(fleet_name)
+        if ez_gates is None:
             return
-        with open(ez_path, "r") as f:
-            try:
-                ez_gates = json.load(f)
-            except Exception as e:
-                raise ValueError("Unable to parse ez.json")
 
         gates_dict = ez_gates["ez_gates"]
         for gate, gate_details in ez_gates["ez_gates"].items():
@@ -637,6 +647,7 @@ class ExclusionZoneUtils:
             linked_gates = gate_details["linked_gates_ids"]
             logger.info(f"Gate {gate_name} has linked gates: {linked_gates}")
             prev_zone = gate_name
+
             for linked_gate in linked_gates:
                 next_zone = gates_dict[str(linked_gate)]["name"]
                 cls.create_links_between_zones(dbsession, prev_zone, next_zone)
@@ -707,15 +718,30 @@ class ExclusionZoneUtils:
                 logger.info(f"Created a link between {prev_zone_id} and {next_zone_st}")
 
     @classmethod
-    def delete_exclusion_zones(cls, dbsession: DBSession, fleet_name: str):
+    def delete_exclusion_zones(
+        cls, dbsession: DBSession, fleet_name: str, deleting_fleet=False
+    ):
         all_ezones: List[vm.ExclusionZone] = dbsession.session.query(vm.ExclusionZone).all()
+
+        updatable_gate_names = []
+
+        ez_gates = load_ez_json(fleet_name)
+        if ez_gates is not None:
+            for gate, gate_details in ez_gates["ez_gates"].items():
+                updatable_gate_names.append(gate_details["name"])
+
         for ezone in all_ezones:
             if fleet_name in ezone.fleets:
                 ezone.fleets.remove(fleet_name)
+
                 if len(ezone.fleets) == 0:
                     cls.delete_links(dbsession, ezone)
                     dbsession.session.delete(ezone)
                     logger.info(f"deleted ezone {ezone.zone_id}")
+
+                elif ezone.zone_id.rsplit("_", -1)[0] in updatable_gate_names:
+                    cls.delete_links(dbsession, ezone)
+
                 flag_modified(ezone, "fleets")
 
     @classmethod

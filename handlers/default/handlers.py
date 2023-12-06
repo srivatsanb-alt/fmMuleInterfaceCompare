@@ -236,6 +236,12 @@ class Handlers:
                 )
                 return False
 
+        elif fleet.status == cc.FleetStatus.MAINTENANCE:
+            logging.getLogger(sherpa.name).info(
+                f"fleet {fleet.name} is maintenance mode, not assigning new trip to {sherpa.name}"
+            )
+            return False
+
         logging.getLogger(sherpa.name).info(
             f"found pending trip id {pending_trip.trip_id}, route: {pending_trip.trip.route}"
         )
@@ -761,6 +767,7 @@ class Handlers:
     def handle_fleet_start_stop(self, req: rqm.StartStopCtrlReq):
         # query DB
         fleet: fm.Fleet = self.dbsession.get_fleet(req.fleet_name)
+
         if not fleet:
             raise ValueError(f"Fleet name {req.fleet_name} not found")
 
@@ -770,6 +777,9 @@ class Handlers:
             )
 
         fleet.status = cc.FleetStatus.STARTED if req.start else cc.FleetStatus.STOPPED
+
+        if fleet.status == cc.FleetStatus.STOPPED and req.maintenance is True:
+            fleet.status = cc.FleetStatus.MAINTENANCE
 
         if req.fleet_name not in req_ctxt.fleet_names:
             req_ctxt.fleet_names.append(req.fleet_name)
