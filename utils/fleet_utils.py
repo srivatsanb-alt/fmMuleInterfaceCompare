@@ -725,7 +725,7 @@ class ExclusionZoneUtils:
         if ez_gates is not None:
             for gate, gate_details in ez_gates["ez_gates"].items():
                 updatable_gate_names.append(gate_details["name"])
-        logging.info(f"Updatable gates: {updatable_gate_names}")
+        logger.info(f"Updatable gates: {updatable_gate_names}")
 
         for ezone in all_ezones:
             if fleet_name in ezone.fleets:
