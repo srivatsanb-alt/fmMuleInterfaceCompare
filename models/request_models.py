@@ -461,7 +461,7 @@ class PeripheralsReq(FMReq):
     speaker: Optional[SpeakerReq]
     indicator: Optional[IndicatorReq]
     dispatch_button: Optional[DispatchButtonReq]
-    next_destination: Optional[str]
+    basic_trip_description: Optional[dict]
 
 
 class PauseResumeReq(FMReq):
