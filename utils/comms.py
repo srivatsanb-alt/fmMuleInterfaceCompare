@@ -131,11 +131,13 @@ async def send_async_req_to_sherpa(dbsession, sherpa: Sherpa, msg: FMReq) -> Dic
 def send_move_msg(
     dbsession, sherpa: Sherpa, ongoing_trip: OngoingTrip, station: Station
 ) -> Dict:
+
     move_msg = MoveReq(
         trip_id=ongoing_trip.trip_id,
         trip_leg_id=ongoing_trip.trip_leg_id,
         destination_pose=station.pose,
         destination_name=station.name,
+        basic_trip_description=ongoing_trip.get_basic_trip_description(),
     )
     sherpa.parking_id = None
     return send_req_to_sherpa(dbsession, sherpa, move_msg)

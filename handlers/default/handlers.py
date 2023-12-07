@@ -460,6 +460,7 @@ class Handlers:
             indicator=rqm.IndicatorReq(
                 pattern=rqm.PatternEnum.wait_for_dispatch, activate=True
             ),
+            basic_trip_description=ongoing_trip.get_basic_trip_description(),
         )
         _ = utils_comms.send_req_to_sherpa(self.dbsession, sherpa, sherpa_action_msg)
         self.record_dispatch_wait_start(ongoing_trip)
@@ -468,14 +469,21 @@ class Handlers:
         self, ongoing_trip: tm.OngoingTrip, sherpa: fm.Sherpa
     ):
         ongoing_trip.add_state(tm.TripState.WAITING_STATION_AUTO_HITCH_START)
-        hitch_msg = rqm.PeripheralsReq(auto_hitch=rqm.HitchReq(hitch=True))
+        hitch_msg = rqm.PeripheralsReq(
+            auto_hitch=rqm.HitchReq(
+                hitch=True, basic_trip_description=ongoing_trip.get_basic_trip_description()
+            )
+        )
         _ = utils_comms.send_req_to_sherpa(self.dbsession, sherpa, hitch_msg)
 
     def add_auto_unhitch_start_to_ongoing_trip(
         self, ongoing_trip: tm.OngoingTrip, sherpa: fm.Sherpa
     ):
         ongoing_trip.add_state(tm.TripState.WAITING_STATION_AUTO_UNHITCH_START)
-        unhitch_msg = rqm.PeripheralsReq(auto_hitch=rqm.HitchReq(hitch=False))
+        unhitch_msg = rqm.PeripheralsReq(
+            auto_hitch=rqm.HitchReq(hitch=False),
+            basic_trip_description=ongoing_trip.get_basic_trip_description(),
+        )
         _ = utils_comms.send_req_to_sherpa(self.dbsession, sherpa, unhitch_msg)
 
     def add_conveyor_start_to_ongoing_trip(
@@ -516,7 +524,11 @@ class Handlers:
 
         ongoing_trip.add_state(conveyor_start_state)
         conveyor_send_msg = rqm.PeripheralsReq(
-            conveyor=rqm.ConveyorReq(direction=direction, num_units=num_units)
+            conveyor=rqm.ConveyorReq(
+                direction=direction,
+                num_units=num_units,
+                basic_trip_description=ongoing_trip.get_basic_trip_description(),
+            )
         )
         _ = utils_comms.send_req_to_sherpa(self.dbsession, sherpa, conveyor_send_msg)
 
@@ -1374,6 +1386,7 @@ class Handlers:
         sound_msg = rqm.PeripheralsReq(
             speaker=rqm.SpeakerReq(sound=rqm.SoundEnum.wait_for_dispatch, play=False),
             indicator=rqm.IndicatorReq(pattern=rqm.PatternEnum.free, activate=True),
+            basic_trip_description=ongoing_trip.get_basic_trip_description(),
         )
 
         _ = utils_comms.send_req_to_sherpa(self.dbsession, sherpa, sound_msg)

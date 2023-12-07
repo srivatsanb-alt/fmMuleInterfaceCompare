@@ -404,9 +404,7 @@ class FleetUtils:
             cls.delete_station_status(dbsession, station.name)
             cls.delete_station(dbsession, station.name)
 
-        ExclusionZoneUtils.delete_exclusion_zones(
-            dbsession, fleet_name, deleting_fleet=True
-        )
+        ExclusionZoneUtils.delete_exclusion_zones(dbsession, fleet_name)
 
         map_ip = fleet.map_id
 
@@ -719,7 +717,7 @@ class ExclusionZoneUtils:
 
     @classmethod
     def delete_exclusion_zones(
-        cls, dbsession: DBSession, fleet_name: str, deleting_fleet=False
+        cls, dbsession: DBSession, fleet_name: str, update_map=False
     ):
         all_ezones: List[vm.ExclusionZone] = dbsession.session.query(vm.ExclusionZone).all()
 
@@ -729,18 +727,21 @@ class ExclusionZoneUtils:
         if ez_gates is not None:
             for gate, gate_details in ez_gates["ez_gates"].items():
                 updatable_gate_names.append(gate_details["name"])
+        logger.info(f"Updatable gates: {updatable_gate_names}")
 
         for ezone in all_ezones:
             if fleet_name in ezone.fleets:
                 ezone.fleets.remove(fleet_name)
+                logger.info(f"removed {fleet_name} from fleets of ezone: {ezone.zone_id}")
 
                 if len(ezone.fleets) == 0:
                     cls.delete_links(dbsession, ezone)
                     dbsession.session.delete(ezone)
                     logger.info(f"deleted ezone {ezone.zone_id}")
 
-                elif ezone.zone_id.rsplit("_", -1)[0] in updatable_gate_names:
+                elif ezone.zone_id.rsplit("_", 1)[0] in updatable_gate_names and update_map:
                     cls.delete_links(dbsession, ezone)
+                    logger.info(f"deleted links of ezone: {ezone.zone_id}")
 
                 flag_modified(ezone, "fleets")
 
