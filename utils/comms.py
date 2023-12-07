@@ -77,6 +77,10 @@ def send_req_to_sherpa(dbsession, sherpa: Sherpa, msg: FMReq) -> Dict:
     send_ws_msg_to_sherpa(body, sherpa)
     time.sleep(0.005)
 
+    if body["ack_reqd"] is False:
+        logging.getLogger().info(f"Ack not reqd for req_id: {req_id}")
+        return
+
     while redis_conn.get(f"success_{req_id}") is None:
         time.sleep(0.005)
 

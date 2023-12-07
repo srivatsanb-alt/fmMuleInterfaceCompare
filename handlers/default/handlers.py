@@ -279,6 +279,8 @@ class Handlers:
             return
         sherpa_name = ongoing_trip.sherpa_name
         hutils.end_trip(self.dbsession, ongoing_trip, sherpa, success)
+        if success:
+            self.send_terminate_trip_req(sherpa, ongoing_trip, ack_reqd=False)
         logging.getLogger(sherpa_name).info(f"trip {ongoing_trip.trip_id} finished")
 
     def start_leg(
@@ -440,6 +442,14 @@ class Handlers:
             trip_metadata.update({"total_dispatch_wait_time": str(disaptch_wait.seconds)})
             del trip_metadata["dispatch_wait_start"]
             flag_modified(ongoing_trip.trip, "trip_metadata")
+
+    def send_terminate_trip_req(self, sherpa, ongoing_trip, ack_reqd=True):
+        terminate_trip_msg = rqm.TerminateTripReq(
+            trip_id=ongoing_trip.trip_id,
+            trip_leg_id=ongoing_trip.trip_leg_id,
+            ack_reqd=ack_reqd,
+        )
+        _ = utils_comms.send_req_to_sherpa(self.dbsession, sherpa, terminate_trip_msg)
 
     def add_dispatch_start_to_ongoing_trip(
         self, ongoing_trip: tm.OngoingTrip, sherpa: fm.Sherpa, timeout=False
@@ -673,13 +683,7 @@ class Handlers:
             ongoing_trip.trip.cancel()
 
             if not force_delete:
-                terminate_trip_msg = rqm.TerminateTripReq(
-                    trip_id=ongoing_trip.trip_id, trip_leg_id=ongoing_trip.trip_leg_id
-                )
-
-                _ = utils_comms.send_req_to_sherpa(
-                    self.dbsession, sherpa, terminate_trip_msg
-                )
+                self.send_terminate_trip_req(sherpa, ongoing_trip)
             else:
                 logging.getLogger().info(
                     f"Not sending terminate_trip request to {sherpa.name}"
