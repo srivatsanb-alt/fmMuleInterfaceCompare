@@ -1,8 +1,10 @@
 import hashlib
 import os
+import time
+from fastapi.responses import PlainTextResponse
 import redis
 import logging
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, Request
 
 # ati code imports
 import app.routers.dependencies as dpd
@@ -12,6 +14,15 @@ from models.db_session import DBSession
 import models.misc_models as mm
 import utils.util as utils_util
 import utils.config_utils as cu
+from fastapi_limiter import FastAPILimiter
+# Create a rate limiter instance
+limiter = FastAPILimiter()
+
+# Rate limit 5 requests per minute
+max_requests = 5
+interval_seconds = 60  # 1 minute
+# Rate limiting data storage
+rate_limit_storage = {}
 
 router = APIRouter(
     prefix="/api/v1/user",
@@ -19,13 +30,32 @@ router = APIRouter(
     responses={404: {"description": "Not found"}},
 )
 
+
 # performs user authentication
-
-
+# This route is rate-limited
 @router.post("/login")
-async def login(user_login: rqm.UserLogin):
+async def login(user_login: rqm.UserLogin, request: Request):
     response = {}
 
+    client_ip = request.client.host
+
+    # Check if the client IP is in the rate limit storage
+    if client_ip not in rate_limit_storage:
+        rate_limit_storage[client_ip] = []
+
+    request_times = rate_limit_storage[client_ip]
+
+    # Remove request times older than the interval
+    current_time = time.time()
+    request_times = [t for t in request_times if current_time - t <= interval_seconds]
+
+    if len(request_times) >= max_requests:
+        raise HTTPException(status_code=429, detail="Rate limit exceeded")
+
+    # Update the request times
+    request_times.append(current_time)
+    rate_limit_storage[client_ip] = request_times
+    
     hashed_password = hashlib.sha256(user_login.password.encode("utf-8")).hexdigest()
 
     with FMMongo() as fm_mongo:

@@ -43,7 +43,7 @@ serial = "^0.0.97"
 pymongo = "^4.4.1"
 certifi = "2023.7.22"
 slowapi = "^0.1.8"
-
+fastapi-limiter = "^0.1.5"
 [tool.poetry.dev-dependencies]
 
 [tool.poetry.scripts]
