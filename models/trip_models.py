@@ -305,18 +305,27 @@ class OngoingTrip(Base, TimestampMixin):
         flag_modified(self, "states")
 
     def get_basic_trip_description(self):
-        desc = None
-
         trip_metadata = self.trip.trip_metadata
 
         if trip_metadata is not None:
             desc = trip_metadata.get("description")
 
-        return {
+        waiting_reason = " "
+        if len(self.states) != 0:
+            waiting_reason = get_waiting_reason(self.states)
+
+        temp = {
             "booked_by": self.trip.booked_by,
             "description": desc,
             "route": self.trip.augmented_route,
+            "curr_station": self.curr_station(),
+            "next_station": self.next_station(),
+            "waiting_for": waiting_reason,
+            "status": self.trip.status,
+            "trip_id": self.trip.id,
+            "trip_leg_id": self.trip_leg_id,
         }
+        return temp
 
 
 def is_start_state(state):
@@ -327,3 +336,16 @@ def get_end_state(state):
     if not is_start_state(state):
         return state
     return state[: -len(START)] + END
+
+
+def get_waiting_reason(states):
+    temp = " "
+    for state in states:
+        if state.rsplit("_", 1)[-1] == START:
+            if get_end_state(state) not in states:
+                if temp == " ":
+                    temp = "Waiting for"
+                for x in state.split("_")[2:-1]:
+                    temp += f" {x},"
+
+    return temp[:-1]
