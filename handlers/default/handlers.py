@@ -236,6 +236,12 @@ class Handlers:
                 )
                 return False
 
+        elif fleet.status == cc.FleetStatus.MAINTENANCE:
+            logging.getLogger(sherpa.name).info(
+                f"fleet {fleet.name} is maintenance mode, not assigning new trip to {sherpa.name}"
+            )
+            return False
+
         logging.getLogger(sherpa.name).info(
             f"found pending trip id {pending_trip.trip_id}, route: {pending_trip.trip.route}"
         )
@@ -273,6 +279,8 @@ class Handlers:
             return
         sherpa_name = ongoing_trip.sherpa_name
         hutils.end_trip(self.dbsession, ongoing_trip, sherpa, success)
+        if success:
+            self.send_terminate_trip_req(sherpa, ongoing_trip, ack_reqd=False)
         logging.getLogger(sherpa_name).info(f"trip {ongoing_trip.trip_id} finished")
 
     def start_leg(
@@ -435,6 +443,14 @@ class Handlers:
             del trip_metadata["dispatch_wait_start"]
             flag_modified(ongoing_trip.trip, "trip_metadata")
 
+    def send_terminate_trip_req(self, sherpa, ongoing_trip, ack_reqd=True):
+        terminate_trip_msg = rqm.TerminateTripReq(
+            trip_id=ongoing_trip.trip_id,
+            trip_leg_id=ongoing_trip.trip_leg_id,
+            ack_reqd=ack_reqd,
+        )
+        _ = utils_comms.send_req_to_sherpa(self.dbsession, sherpa, terminate_trip_msg)
+
     def add_dispatch_start_to_ongoing_trip(
         self, ongoing_trip: tm.OngoingTrip, sherpa: fm.Sherpa, timeout=False
     ):
@@ -454,6 +470,7 @@ class Handlers:
             indicator=rqm.IndicatorReq(
                 pattern=rqm.PatternEnum.wait_for_dispatch, activate=True
             ),
+            basic_trip_description=ongoing_trip.get_basic_trip_description(),
         )
         _ = utils_comms.send_req_to_sherpa(self.dbsession, sherpa, sherpa_action_msg)
         self.record_dispatch_wait_start(ongoing_trip)
@@ -462,14 +479,21 @@ class Handlers:
         self, ongoing_trip: tm.OngoingTrip, sherpa: fm.Sherpa
     ):
         ongoing_trip.add_state(tm.TripState.WAITING_STATION_AUTO_HITCH_START)
-        hitch_msg = rqm.PeripheralsReq(auto_hitch=rqm.HitchReq(hitch=True))
+        hitch_msg = rqm.PeripheralsReq(
+            auto_hitch=rqm.HitchReq(
+                hitch=True, basic_trip_description=ongoing_trip.get_basic_trip_description()
+            )
+        )
         _ = utils_comms.send_req_to_sherpa(self.dbsession, sherpa, hitch_msg)
 
     def add_auto_unhitch_start_to_ongoing_trip(
         self, ongoing_trip: tm.OngoingTrip, sherpa: fm.Sherpa
     ):
         ongoing_trip.add_state(tm.TripState.WAITING_STATION_AUTO_UNHITCH_START)
-        unhitch_msg = rqm.PeripheralsReq(auto_hitch=rqm.HitchReq(hitch=False))
+        unhitch_msg = rqm.PeripheralsReq(
+            auto_hitch=rqm.HitchReq(hitch=False),
+            basic_trip_description=ongoing_trip.get_basic_trip_description(),
+        )
         _ = utils_comms.send_req_to_sherpa(self.dbsession, sherpa, unhitch_msg)
 
     def add_conveyor_start_to_ongoing_trip(
@@ -510,7 +534,11 @@ class Handlers:
 
         ongoing_trip.add_state(conveyor_start_state)
         conveyor_send_msg = rqm.PeripheralsReq(
-            conveyor=rqm.ConveyorReq(direction=direction, num_units=num_units)
+            conveyor=rqm.ConveyorReq(
+                direction=direction,
+                num_units=num_units,
+                basic_trip_description=ongoing_trip.get_basic_trip_description(),
+            )
         )
         _ = utils_comms.send_req_to_sherpa(self.dbsession, sherpa, conveyor_send_msg)
 
@@ -655,13 +683,7 @@ class Handlers:
             ongoing_trip.trip.cancel()
 
             if not force_delete:
-                terminate_trip_msg = rqm.TerminateTripReq(
-                    trip_id=ongoing_trip.trip_id, trip_leg_id=ongoing_trip.trip_leg_id
-                )
-
-                _ = utils_comms.send_req_to_sherpa(
-                    self.dbsession, sherpa, terminate_trip_msg
-                )
+                self.send_terminate_trip_req(sherpa, ongoing_trip)
             else:
                 logging.getLogger().info(
                     f"Not sending terminate_trip request to {sherpa.name}"
@@ -761,6 +783,7 @@ class Handlers:
     def handle_fleet_start_stop(self, req: rqm.StartStopCtrlReq):
         # query DB
         fleet: fm.Fleet = self.dbsession.get_fleet(req.fleet_name)
+
         if not fleet:
             raise ValueError(f"Fleet name {req.fleet_name} not found")
 
@@ -770,6 +793,9 @@ class Handlers:
             )
 
         fleet.status = cc.FleetStatus.STARTED if req.start else cc.FleetStatus.STOPPED
+
+        if fleet.status == cc.FleetStatus.STOPPED and req.maintenance is True:
+            fleet.status = cc.FleetStatus.MAINTENANCE
 
         if req.fleet_name not in req_ctxt.fleet_names:
             req_ctxt.fleet_names.append(req.fleet_name)
@@ -1364,6 +1390,7 @@ class Handlers:
         sound_msg = rqm.PeripheralsReq(
             speaker=rqm.SpeakerReq(sound=rqm.SoundEnum.wait_for_dispatch, play=False),
             indicator=rqm.IndicatorReq(pattern=rqm.PatternEnum.free, activate=True),
+            basic_trip_description=ongoing_trip.get_basic_trip_description(),
         )
 
         _ = utils_comms.send_req_to_sherpa(self.dbsession, sherpa, sound_msg)

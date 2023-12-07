@@ -442,7 +442,7 @@ class ConfigDefaults:
     }
     mule_config = {
         "mule_site_config": {
-            "parent": "/app/mule/std_configs/site_configs/default_tug.toml",
+            "parent": "/app/mule/std_configs/tug.toml",
             "control.policy": {"enforce_visa": False},
             "fleet": {
                 "ws_url": "xyz",

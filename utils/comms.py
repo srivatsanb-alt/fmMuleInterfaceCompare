@@ -77,6 +77,10 @@ def send_req_to_sherpa(dbsession, sherpa: Sherpa, msg: FMReq) -> Dict:
     send_ws_msg_to_sherpa(body, sherpa)
     time.sleep(0.005)
 
+    if body["ack_reqd"] is False:
+        logging.getLogger().info(f"Ack not reqd for req_id: {req_id}")
+        return
+
     while redis_conn.get(f"success_{req_id}") is None:
         time.sleep(0.005)
 
@@ -131,11 +135,13 @@ async def send_async_req_to_sherpa(dbsession, sherpa: Sherpa, msg: FMReq) -> Dic
 def send_move_msg(
     dbsession, sherpa: Sherpa, ongoing_trip: OngoingTrip, station: Station
 ) -> Dict:
+
     move_msg = MoveReq(
         trip_id=ongoing_trip.trip_id,
         trip_leg_id=ongoing_trip.trip_leg_id,
         destination_pose=station.pose,
         destination_name=station.name,
+        basic_trip_description=ongoing_trip.get_basic_trip_description(),
     )
     sherpa.parking_id = None
     return send_req_to_sherpa(dbsession, sherpa, move_msg)

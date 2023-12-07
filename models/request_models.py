@@ -217,7 +217,6 @@ class Stoppages(JsonMixin):
 class TripInfo(JsonMixin):
     current_pose: List[float]
     destination_pose: List[float]
-    destination_name: str
     total_route_length: float
     remaining_route_length: float
     cte: float
@@ -359,6 +358,7 @@ class SherpaInductReq(ClientReq):
 
 class StartStopCtrlReq(ClientReq):
     start: bool
+    maintenance: Optional[bool]
     fleet_name: Optional[str]
     type: str = MessageType.FLEET_START_STOP
 
@@ -429,6 +429,7 @@ class FMReq(BaseModel):
     source: Union[str, None] = None
     endpoint: str
     ttl: Optional[int] = None
+    ack_reqd: Optional[bool] = True
 
 
 class InitReq(FMReq):
@@ -445,6 +446,7 @@ class MoveReq(FMReq):
     trip_leg_id: int
     destination_pose: List[float]
     destination_name: str
+    basic_trip_description: Optional[dict]
 
 
 class TerminateTripReq(FMReq):
@@ -460,6 +462,7 @@ class PeripheralsReq(FMReq):
     speaker: Optional[SpeakerReq]
     indicator: Optional[IndicatorReq]
     dispatch_button: Optional[DispatchButtonReq]
+    basic_trip_description: Optional[dict]
 
 
 class PauseResumeReq(FMReq):

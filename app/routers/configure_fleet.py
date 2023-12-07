@@ -332,7 +332,9 @@ async def update_map(
         try:
             fu.FleetUtils.add_map(dbsession, fleet_name)
             fu.FleetUtils.update_stations_in_map(dbsession, fleet_name, fleet.id)
-            fu.ExclusionZoneUtils.delete_exclusion_zones(dbsession, fleet_name)
+            fu.ExclusionZoneUtils.delete_exclusion_zones(
+                dbsession, fleet_name, update_map=True
+            )
             fu.ExclusionZoneUtils.add_exclusion_zones(dbsession, fleet_name)
             fu.ExclusionZoneUtils.add_linked_gates(dbsession, fleet_name)
 
