@@ -429,6 +429,7 @@ class FMReq(BaseModel):
     source: Union[str, None] = None
     endpoint: str
     ttl: Optional[int] = None
+    ack_reqd: Optional[bool] = True
 
 
 class InitReq(FMReq):
