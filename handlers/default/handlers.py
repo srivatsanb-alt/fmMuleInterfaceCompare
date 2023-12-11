@@ -249,7 +249,7 @@ class Handlers:
         sherpa_status: fm.SherpaStatus = sherpa.status
         sherpa_status.continue_curr_task = False
 
-        if not hutils.is_sherpa_available_for_new_trip(sherpa_status):
+        if hutils.is_sherpa_available_for_new_trip(sherpa_status) is False:
             logging.getLogger(sherpa.name).info(
                 f"{sherpa.name} not available for {pending_trip.trip_id}"
             )

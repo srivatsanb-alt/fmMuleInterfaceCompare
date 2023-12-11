@@ -181,7 +181,7 @@ def is_sherpa_available_for_new_trip(sherpa_status):
         reason = "not initialized"
     if not reason:
         reason = AVAILABLE
-    return reason == AVAILABLE, reason
+    return reason == AVAILABLE
 
 
 # FM HEALTH CHECK #
