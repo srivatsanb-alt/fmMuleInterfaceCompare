@@ -1,9 +1,11 @@
 import time
 import uvicorn
 import os
+import aioredis
 import logging
 import logging.config
 
+from fastapi_limiter import FastAPILimiter
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -51,9 +53,18 @@ app.add_middleware(
 )
 
 
+@app.on_event("startup")
+async def startup():
+    redis_db = aioredis.from_url(
+        os.getenv("FM_REDIS_URI"), encoding="utf-8", decode_responses=True
+    )
+    await FastAPILimiter.init(redis_db)
+
+
 @app.middleware("http")
 async def custom_fm_mw(request: Request, call_next):
     start_time = time.time()
+
     response = await call_next(request)
     process_time = time.time() - start_time
     response.headers["X-Process-Time"] = str(process_time)

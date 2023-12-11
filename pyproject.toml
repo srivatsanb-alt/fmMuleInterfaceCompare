@@ -15,7 +15,6 @@ SQLAlchemy = "^1.4.26"
 alembic = "^1.7.4"
 click = "7.1.2"
 bcrypt = "^3.2.0"
-redis = "^3.5.3"
 aioredis = "^2.0.0"
 rq = "^1.10.0"
 PyJWT = "^2.3.0"
@@ -43,7 +42,7 @@ serial = "^0.0.97"
 pymongo = "^4.4.1"
 certifi = "2023.7.22"
 slowapi = "^0.1.8"
-
+fastapi-limiter = "^0.1.5"
 [tool.poetry.dev-dependencies]
 
 [tool.poetry.scripts]

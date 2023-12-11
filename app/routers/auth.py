@@ -2,7 +2,9 @@ import hashlib
 import os
 import redis
 import logging
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
+from fastapi_limiter.depends import RateLimiter
+
 
 # ati code imports
 import app.routers.dependencies as dpd
@@ -20,11 +22,11 @@ router = APIRouter(
     responses={404: {"description": "Not found"}},
 )
 
+
 # performs user authentication
-
-
-@router.post("/login")
-async def login(user_login: rqm.UserLogin):
+# This route is rate-limited
+@router.post("/login", dependencies=[Depends(RateLimiter(times=5, seconds=60))])
+async def login(user_login: rqm.UserLogin, request: Request):
     response = {}
 
     hashed_password = hashlib.sha256(user_login.password.encode("utf-8")).hexdigest()
