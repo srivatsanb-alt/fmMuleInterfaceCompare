@@ -101,7 +101,7 @@ class Handlers:
             )
 
     def run_health_check(self):
-        # have not seperated queries and DB - Need to be done
+        # have not seperated queries and update DB - Need to be done
         hutils.check_sherpa_status(self.dbsession)
         hutils.delete_notifications(self.dbsession)
         redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
@@ -111,7 +111,7 @@ class Handlers:
         logging.getLogger("status_updates").info("Ran a FM health check")
 
     def run_misc_processes(self):
-        # have not seperated queries and DB - Need to be done
+        # have not seperated queries and update DB - Need to be done
         hutils.update_sherpa_oee(self.dbsession)
 
     def get_sherpa_trips(self, sherpa_name):
