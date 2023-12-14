@@ -269,6 +269,14 @@ async def upload_file(
         finally:
             uploaded_file.file.close()
 
+        if file_upload_req.type == "diagnostics":
+            diagnostics_msg = f"New diagnostics data uploaded by {sherpa_name}"
+            log_level = mm.NotificationLevels.alert
+            module = mm.NotificationModules.generic
+            utils_util.maybe_add_notification(
+                dbsession, [fleet_name], diagnostics_msg, log_level, module
+            )
+
         response.append(file_path)
 
     return response
