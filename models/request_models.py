@@ -45,6 +45,7 @@ class AccessType(str, Enum):
 class PasstoSherpaEndpoints:
     RESET_POSE = "reset_pose"
     DIAGNOSTICS = "diagnostics"
+    QUICK_DIAGNOSTICS = "quick_diagnostics"
     PAUSE_RESUME = "pause_resume"
     SWITCH_MODE = "switch_mode"
     IMG_UPDATE = "img_update"
@@ -489,6 +490,12 @@ class ResetPoseReq(FMReq):
 
 class DiagnosticsReq(FMReq):
     endpoint: str = PasstoSherpaEndpoints.DIAGNOSTICS
+    sherpa_name: str
+    type = MessageType.PASS_TO_SHERPA
+
+
+class QuickDiagnosticsReq(FMReq):
+    endpoint: str = PasstoSherpaEndpoints.QUICK_DIAGNOSTICS
     sherpa_name: str
     type = MessageType.PASS_TO_SHERPA
 
