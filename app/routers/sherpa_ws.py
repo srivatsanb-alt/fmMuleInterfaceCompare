@@ -207,8 +207,9 @@ async def reader(websocket, sherpa):
                 continue
 
             if msg.get("sherpa_name") != sherpa:
+                temp = msg.get("sherpa_name")
                 logger.error(
-                    f"sherpa name mismatch, sherpa name in DB: {sherpa}, sherpa_name sent by sherpa: {status_msg.sherpa_name}, will not enqueue sherpa_status msg"
+                    f"sherpa name mismatch, sherpa name in DB: {sherpa}, sherpa_name sent by sherpa: {temp}, will not enqueue sherpa_status msg"
                 )
                 continue
 
