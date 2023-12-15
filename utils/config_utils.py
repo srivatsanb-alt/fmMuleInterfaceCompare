@@ -191,7 +191,7 @@ class ConfigValidator:
                 },
                 "mfm_port": {
                     "bsonType": "string",
-                    "enum": ["443", "5001"],
+                    "enum": ["443", "5001", "9010"],
                     "description": "Port through which sanjaya/master_fm server can be accessed",
                 },
                 "mfm_cert_file": {
