@@ -16,8 +16,10 @@ if __name__ == "__main__":
     if sys.argv[1] == "establish_all_sherpa_ws" and simulator_config["simulate"]:
         mule_ws = MuleWS()
         getattr(mule_ws, sys.argv[1])()
+
+        ## wait indefinitely
         while True:
-            pass
+            time.sleep(1e3)
 
     if sys.argv[1] == "simulate" and simulator_config["simulate"]:
         fs = FleetSimulator()

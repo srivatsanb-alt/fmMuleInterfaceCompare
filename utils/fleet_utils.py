@@ -647,7 +647,12 @@ class ExclusionZoneUtils:
             prev_zone = gate_name
 
             for linked_gate in linked_gates:
-                next_zone = gates_dict[str(linked_gate)]["name"]
+                try:
+                    next_zone = gates_dict[str(linked_gate)]["name"]
+                except Exception as e:
+                    raise ValueError(
+                        f"No gate with id: {linked_gate}, check linked gate ids of gate: {gate_name}"
+                    )
                 cls.create_links_between_zones(dbsession, prev_zone, next_zone)
 
     @classmethod
