@@ -280,11 +280,11 @@ class OptimalDispatch:
         )
         priority_matrix = np.zeros((len(self.pickup_q), len(self.sherpa_q)))
         num_router_calls = 0
+        max_router_calls = max_trips_to_consider * len(self.sherpa_q)
         i = 0
         for pickup_q, pickup_q_val in self.pickup_q.items():
             j = 0
             for sherpa_q, sherpa_q_val in self.sherpa_q.items():
-
                 pose_1 = sherpa_q_val["pose"]
                 pose_2 = pickup_q_val["pose"]
                 pickup_priority = pickup_q_val["priority"]
@@ -295,6 +295,7 @@ class OptimalDispatch:
                     for station in pickup_q_val["route"]
                     if station in sherpa_q_val["exclude_stations"]
                 ]
+
                 if len(temp_stations) > 0:
                     self.logger.info(
                         f"cannot use {sherpa_q} for trip_id: {pickup_q}, reason: sherpa restricted from going to {temp_stations}"
@@ -311,9 +312,9 @@ class OptimalDispatch:
                 ):
                     self.logger.info(f"cannot send {sherpa_q} to {route}, fleet stopped")
                     total_eta = np.inf
-                elif num_router_calls > max_trips_to_consider:
+                elif num_router_calls > max_router_calls:
                     self.logger.info(
-                        f"cannot send {sherpa_q} to {route}, num trips to consider for optimal_dispatch exceeded : {max_trips_to_consider}, trip num: {num_router_calls}"
+                        f"cannot send {sherpa_q} to {route}, num_router_calls exceeded max_router_calls: {max_router_calls}, num_router_calls: {num_router_calls}"
                     )
                     total_eta = np.inf
                 elif sherpa_name and sherpa_name != sherpa_q:
