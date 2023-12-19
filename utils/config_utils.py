@@ -1,5 +1,5 @@
 class CreateColKwargs:
-    capped_default = {"capped": True, "max": 1, "size": 10}
+    capped_default = {"capped": True, "max": 1, "size": 1024}
 
 
 class FrontendUsersValidator:
