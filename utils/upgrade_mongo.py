@@ -3,7 +3,7 @@ import toml
 # ati code imports
 from models.mongo_client import FMMongo
 
-AVAILABLE_UPGRADES = ["4.0", "4.02"]
+AVAILABLE_UPGRADES = ["4.0"]
 
 
 def read_fm_config_toml_and_update_mongo_db(fm_mongo, fc_db):
