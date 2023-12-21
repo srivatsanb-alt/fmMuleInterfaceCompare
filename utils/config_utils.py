@@ -55,7 +55,7 @@ class ConfigValidator:
                 "prioritise_waiting_stations",
                 "eta_power_factor",
                 "priority_power_factor",
-                "max_trips_to_consider_per_sherpa",
+                "max_trips_to_consider",
             ],
             "properties": {
                 "method": {
@@ -79,10 +79,10 @@ class ConfigValidator:
                     "maximum": 1.0,
                     "description": "Modifier - actual trip priority will be modified to trip_priority^priority_power_factor",
                 },
-                "max_trips_to_consider_per_sherpa": {
+                "max_trips_to_consider": {
                     "bsonType": "int",
                     "minimum": 1,
-                    "maximum": 5,
+                    "maximum": 25,
                     "description": "Max number of trips that will be considered for optimal dispatch, decrease to lessen computational cost",
                 },
             },
@@ -399,7 +399,7 @@ class ConfigDefaults:
         "prioritise_waiting_stations": True,
         "eta_power_factor": 0.1,
         "priority_power_factor": 0.7,
-        "max_trips_to_consider_per_sherpa": 2,
+        "max_trips_to_consider": 5,
     }
     data_backup = {
         "keep_size_mb": 1000,

@@ -62,14 +62,6 @@ class MongoUpgrade:
         read_conditional_trips_toml_and_update_mongo_db(fm_mongo, fc_db)
         read_fm_config_toml_and_update_mongo_db(fm_mongo, fc_db)
 
-    def upgrade_to_4_02(self, fm_mongo):
-        fc_db = fm_mongo.get_database("fm_config")
-        optimal_dispatch_col = fm_mongo.get_collection("optimal_dispatch", fc_db)
-        optimal_dispatch_config = fm_mongo.get_document_from_fm_config("optimal_dispatch")
-        del optimal_dispatch_config["max_trips_to_consider"]
-        optimal_dispatch_config["max_trips_to_consider_per_sherpa"] = 2
-        optimal_dispatch_col.insert_one(optimal_dispatch_config)
-
 
 def upgrade_mongo_schema():
     sorted_upgrades = sorted(AVAILABLE_UPGRADES, key=float)
