@@ -114,11 +114,12 @@ def decode_token(token: str):
         return None
 
 
-def generate_jwt_token(username: str):
+def generate_jwt_token(username: str, role=None):
     redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
     access_token = jwt.encode(
         {
             "sub": username,
+            "role": role,
             "exp": time.time() + int(redis_conn.get("token_expiry_time_sec").decode()),
         },
         redis_conn.get("FM_SECRET_TOKEN"),
