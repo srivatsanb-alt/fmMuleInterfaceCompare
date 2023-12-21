@@ -271,7 +271,7 @@ class OptimalDispatch:
     def assemble_cost_matrix(self, fleet_name):
         w1 = self.config["eta_power_factor"]
         w2 = self.config["priority_power_factor"]
-        max_trips_to_consider = self.config["max_trips_to_consider"]
+        max_trips_to_consider_per_sherpa = self.config["max_trips_to_consider_per_sherpa"]
         redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
 
         cost_matrix = np.ones((len(self.pickup_q), len(self.sherpa_q))) * np.inf
@@ -280,7 +280,7 @@ class OptimalDispatch:
         )
         priority_matrix = np.zeros((len(self.pickup_q), len(self.sherpa_q)))
         num_router_calls = 0
-        max_router_calls = max_trips_to_consider * len(self.sherpa_q)
+        max_router_calls = max_trips_to_consider_per_sherpa * len(self.sherpa_q)
         i = 0
         for pickup_q, pickup_q_val in self.pickup_q.items():
             j = 0
