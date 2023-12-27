@@ -46,7 +46,7 @@ def upload_map_files(mfm_context: mu.MFMContext):
             i = 0
             for fleet in all_fleets:
                 map_path = os.path.join(os.environ["FM_STATIC_DIR"], f"{fleet.name}/map/")
-                all_map_files = os.listdir(map_path)
+                all_map_files = [f for f in os.listdir(map_path) if os.path.isfile(f)]
                 upload_done = []
                 while not send_reset_map_dir_req(mfm_context, fleet.name):
                     time.sleep(30)
