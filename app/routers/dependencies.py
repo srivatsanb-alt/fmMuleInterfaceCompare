@@ -184,7 +184,6 @@ async def process_req_with_response(queue, req, user: str):
         async with aioredis.from_url(os.getenv("FM_REDIS_URI")) as async_redis_conn:
             await async_redis_conn.brpop(job_completion_key)
         # Re-fetch or refresh the job to get the updated status
-        redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
         job = Job.fetch(job.id, connection=redis_conn)
         job.refresh()
         status = job.get_status()
