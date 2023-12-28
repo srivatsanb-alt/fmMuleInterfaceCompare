@@ -219,55 +219,5 @@ async def process_req_with_response(queue, req, user: str):
         status_code = 500
         raise HTTPException(status_code=status_code, detail=error_detail)
 
-
-
-
-""" async def process_req_with_response(queue, req, user: str):
-    redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
-
-    job: Job = process_req(queue, req, user, redis_conn)
-    add_job_to_queued_jobs(job.id, req.source, redis_conn)
-
-    error_detail = "Unable to process request"
-    status_code = 500  # internal server error
-
-    job = Job.fetch(job.id, connection=redis_conn)
-    while True:
-        job.refresh()
-        status = job.get_status()
-
-        if status in ["finished", "failed"]:
-            remove_job_from_queued_jobs(job.id, req.source, redis_conn)
-
-        if status == "finished":
-            response = job.result
-            if response is None:
-                job = Job.fetch(job.id, connection=redis_conn)
-                job.refresh()
-                new_response = job.result
-                logging.getLogger("fm_debug").warning(
-                    f"Got a null response from rq initially, req: {req}, new_response after refesh {new_response}"
-                )
-                response = new_response
-            break
-
-        if status == "failed":
-            await asyncio.sleep(0.1)
-
-            job_meta = job.get_meta(refresh=True)
-            error_value = job_meta.get("error_value")
-
-            if isinstance(error_value, ValueError):
-                error_detail = str(error_value)
-                status_code = 409  # request conflicts with the current state of the server.
-
-            job.cancel()
-            raise HTTPException(status_code=status_code, detail=error_detail)
-
-        await asyncio.sleep(0.005)
-
-    return response """
-
-
 def handle(handler, msg, **kwargs):
     return handler.handle(msg)
