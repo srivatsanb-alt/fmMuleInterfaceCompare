@@ -70,21 +70,28 @@ class Queues:
     def get_queue(cls, qname):
         return getattr(cls, qname)
 
+def signal_job_completion(job_id):
+    redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
+    job_completion_key = f"job_{job_id}_completion"
+    redis_conn.rpush(job_completion_key, "completed")
 
 def report_failure(job, connection, fail_type, value, traceback):
     # set error value
     job.meta["fail_type"] = fail_type
     job.meta["error_value"] = value
     job.save()
+   
 
     logging.getLogger().error(
         f"RQ job failed: error: {fail_type}, value {value}, func: {job.func_name}, timeout: {job.timeout}, ttl: {job.ttl}, args: {job.args}, kwargs: {job.kwargs}",
         exc_info=(fail_type, value, traceback),
     )
+    signal_job_completion(job.id)
 
 
 def report_success(job, connection, result, *args, **kwargs):
-    pass
+    signal_job_completion(job.id)
+    #pass
 
 
 def enqueue(queue: Queue, func, *args, **kwargs):
