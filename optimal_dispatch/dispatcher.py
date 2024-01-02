@@ -312,9 +312,12 @@ class OptimalDispatch:
                 ):
                     self.logger.info(f"cannot send {sherpa_q} to {route}, fleet stopped")
                     total_eta = np.inf
-                elif num_router_calls > max_router_calls:
+
+                # Should check all the available_sherpas for any pending_trip
+                # considering only few can lead to sub optimal assignment
+                elif num_router_calls + len(self.sherpa_q) - j > max_router_calls:
                     self.logger.info(
-                        f"cannot send {sherpa_q} to {route}, num_router_calls exceeded max_router_calls: {max_router_calls}, num_router_calls: {num_router_calls}"
+                        f"cannot send {sherpa_q} to {route}, num_router_calls will exceed max_router_calls: {max_router_calls}, num_router_calls: {num_router_calls}"
                     )
                     total_eta = np.inf
                 elif sherpa_name and sherpa_name != sherpa_q:
