@@ -13,6 +13,7 @@ import redis
 import os
 import json
 from concurrent.futures import ThreadPoolExecutor
+
 # ati code imports
 import core.handler_configuration as hc
 from utils.rq_utils import enqueue, enqueue_at, Queues
@@ -128,6 +129,7 @@ def generate_jwt_token(username: str, role=None):
     )
     return access_token
 
+
 # processes the requests in the job queue.
 def process_req(queue, req, user, redis_conn=None, dt=None):
     if not user:
@@ -171,18 +173,20 @@ def process_req(queue, req, user, redis_conn=None, dt=None):
 
     return job
 
+
 async def process_req_with_response(queue, req, user: str):
     redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
-    
+
     try:
         job = process_req(queue, req, user, redis_conn)
-        
+
         # Unique key for each job to signal completion
         job_completion_key = f"job_{job.id}_completion"
 
         # Wait for the job to complete using aioredis with BRPOP
         async with aioredis.from_url(os.getenv("FM_REDIS_URI")) as async_redis_conn:
             await async_redis_conn.brpop(job_completion_key)
+
         # Re-fetch or refresh the job to get the updated status
         job = Job.fetch(job.id, connection=redis_conn)
         job.refresh()
@@ -210,13 +214,14 @@ async def process_req_with_response(queue, req, user: str):
 
             job.cancel()
             raise HTTPException(status_code=status_code, detail=error_detail)
-        
+
         return response
 
     except Exception as e:
         error_detail = str(e)
         status_code = 500
         raise HTTPException(status_code=status_code, detail=error_detail)
+
 
 def handle(handler, msg, **kwargs):
     return handler.handle(msg)
