@@ -8,9 +8,11 @@ from fastapi import Header
 from fastapi.param_functions import Query
 from rq.job import Job
 from rq import Retry
+import aioredis
 import redis
 import os
 import json
+from concurrent.futures import ThreadPoolExecutor
 
 # ati code imports
 import core.handler_configuration as hc
@@ -131,7 +133,7 @@ def generate_jwt_token(username: str, role=None):
 # processes the requests in the job queue.
 def process_req(queue, req, user, redis_conn=None, dt=None):
     if not user:
-        raise HTTPException(status_code=403, detail=f"Unknown requester {user}")
+        raise HTTPException(status_code=403, detail=f"Unknown requeter {user}")
 
     if redis_conn is None:
         redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
@@ -172,35 +174,33 @@ def process_req(queue, req, user, redis_conn=None, dt=None):
     return job
 
 
-# processes the requests in the queue and responds back(request finished, failed, etc.)
 async def process_req_with_response(queue, req, user: str):
     redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
 
-    job: Job = process_req(queue, req, user, redis_conn)
-    add_job_to_queued_jobs(job.id, req.source, redis_conn)
+    try:
+        job = process_req(queue, req, user, redis_conn)
 
-    error_detail = "Unable to process request"
-    status_code = 500  # internal server error
+        # Unique key for each job to signal completion
+        job_completion_key = f"job_{job.id}_completion"
 
-    job = Job.fetch(job.id, connection=redis_conn)
-    while True:
+        # Wait for the job to complete using aioredis with BRPOP
+        async with aioredis.from_url(os.getenv("FM_REDIS_URI")) as async_redis_conn:
+            await async_redis_conn.brpop(job_completion_key)
+
+        # Re-fetch or refresh the job to get the updated status
+        job = Job.fetch(job.id, connection=redis_conn)
         job.refresh()
         status = job.get_status()
-
-        if status in ["finished", "failed"]:
-            remove_job_from_queued_jobs(job.id, req.source, redis_conn)
-
-        if status == "finished":
-            response = job.result
-            if response is None:
-                job = Job.fetch(job.id, connection=redis_conn)
-                job.refresh()
-                new_response = job.result
-                logging.getLogger("fm_debug").warning(
-                    f"Got a null response from rq initially, req: {req}, new_response after refesh {new_response}"
-                )
-                response = new_response
-            break
+        # Fetching the job result
+        response = job.result
+        if response is None:
+            job = Job.fetch(job.id, connection=redis_conn)
+            job.refresh()
+            new_response = job.result
+            logging.getLogger("fm_debug").warning(
+                f"Got a null response from rq initially, req: {req}, new_response after refesh {new_response}"
+            )
+            response = new_response
 
         if status == "failed":
             await asyncio.sleep(0.1)
@@ -215,9 +215,12 @@ async def process_req_with_response(queue, req, user: str):
             job.cancel()
             raise HTTPException(status_code=status_code, detail=error_detail)
 
-        await asyncio.sleep(0.005)
+        return response
 
-    return response
+    except Exception as e:
+        error_detail = str(e)
+        status_code = 500
+        raise HTTPException(status_code=status_code, detail=error_detail)
 
 
 def handle(handler, msg, **kwargs):
