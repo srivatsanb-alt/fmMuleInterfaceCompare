@@ -268,3 +268,15 @@ def good_password_check(password):
             return True
 
     return False
+
+
+def format_fm_incident(fm_incident):
+    temp = {}
+    temp.update({"code": fm_incident.code})
+    temp.update({"message": fm_incident.message})
+    temp.update({"description": fm_incident.display_message})
+    temp.update({"how_to_recover": fm_incident.recovery_message})
+    temp.update({"reported_at": dt_to_str(fm_incident.created_at)})
+    temp.update({"module": fm_incident.module})
+    temp.update({"other_info": fm_incident.other_info})
+    return temp
