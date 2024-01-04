@@ -405,6 +405,7 @@ class GiveRouteWPS(ClientReq):
 class GetFMIncidents(ClientReq):
     sherpa_name: str
     num_of_incidents: int = 1
+    historic: Optional[bool] = False
 
 
 class SaveRouteReq(ClientReq):
