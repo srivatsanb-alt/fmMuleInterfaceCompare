@@ -2,7 +2,6 @@ import time
 import logging
 import os
 import datetime
-import shutil
 import redis
 import json
 from sqlalchemy import or_, func
@@ -183,8 +182,8 @@ def update_trip_info(
 
     new_trips = (
         dbsession.session.query(tm.Trip)
-        .filter(tm.Trip.updated_at > last_trip_update_dt)
-        .filter(tm.Trip.updated_at > recent_dt)
+        .filter(tm.Trip.end_time > last_trip_update_dt)
+        .filter(tm.Trip.end_time > recent_dt)
         .filter(tm.Trip.status.in_(tm.COMPLETED_TRIP_STATUS))
         .all()
     )
