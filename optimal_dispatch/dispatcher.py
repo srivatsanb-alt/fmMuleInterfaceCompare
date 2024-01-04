@@ -279,8 +279,6 @@ class OptimalDispatch:
             np.ones((len(self.pickup_q), len(self.sherpa_q))) * np.inf
         )
         priority_matrix = np.zeros((len(self.pickup_q), len(self.sherpa_q)))
-        num_router_calls = 0
-        max_router_calls = max_trips_to_consider * len(self.sherpa_q)
         i = 0
         for pickup_q, pickup_q_val in self.pickup_q.items():
             j = 0
@@ -313,11 +311,9 @@ class OptimalDispatch:
                     self.logger.info(f"cannot send {sherpa_q} to {route}, fleet stopped")
                     total_eta = np.inf
 
-                # Should check all the available_sherpas for any pending_trip
-                # considering only few can lead to sub optimal assignment
-                elif num_router_calls + len(self.sherpa_q) - j > max_router_calls:
+                elif i + 1 > max_trips_to_consider:
                     self.logger.info(
-                        f"cannot send {sherpa_q} to {route}, num_router_calls will exceed max_router_calls: {max_router_calls}, num_router_calls: {num_router_calls}"
+                        f"cannot send {sherpa_q} to {route}, num trips greater than max_trips_to_consider, num_trips: {i+1}"
                     )
                     total_eta = np.inf
                 elif sherpa_name and sherpa_name != sherpa_q:
@@ -330,7 +326,6 @@ class OptimalDispatch:
                         pose_1, pose_2, fleet_name, redis_conn
                     )
                     total_eta = route_length + sherpa_q_val["remaining_eta"]
-                    num_router_calls += 1
 
                 # to handle w1 == 0  and eta == np.inf case
                 weighted_total_eta = (
