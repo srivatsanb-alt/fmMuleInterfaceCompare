@@ -12,7 +12,6 @@ import aioredis
 import redis
 import os
 import json
-from concurrent.futures import ThreadPoolExecutor
 
 # ati code imports
 import core.handler_configuration as hc
