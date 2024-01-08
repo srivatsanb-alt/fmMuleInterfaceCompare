@@ -104,17 +104,16 @@ async def async_send_ws_msgs_to_mfm():
     if mfm_context.send_updates is False:
         return
 
+    ssl_context = ssl.SSLContext()
+    ssl_context.verify_mode = ssl.CERT_REQUIRED
+    ws_url = mu.get_mfm_ws_url(mfm_context)
+    if "wss" in ws_url:
+        ssl_context.load_verify_locations(mfm_context.cert_file)
+    else:
+        ssl_context = None
+    ssl_context_set = True if ssl_context else False
+
     while True:
-        ssl_context = ssl.SSLContext()
-        ssl_context.verify_mode = ssl.CERT_REQUIRED
-        ws_url = mu.get_mfm_ws_url(mfm_context)
-
-        if "wss" in ws_url:
-            ssl_context.load_verify_locations(mfm_context.cert_file)
-        else:
-            ssl_context = None
-
-        ssl_context_set = True if ssl_context else False
         try:
             logging.getLogger("mfm_updates").info(
                 f"Will attempt to connect to {ws_url}, is ssl_context set {ssl_context_set}"
