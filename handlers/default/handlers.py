@@ -177,6 +177,43 @@ class Handlers:
                     f"Cannot accept the trip booking since {station.name} is disabled"
                 )
 
+    def create_new_trip_from_pending_trip(self, pending_trip, metadata):
+        new_trip: tm.Trip = self.dbsession.create_trip(
+            pending_trip.trip.route,
+            pending_trip.trip.priority,
+            metadata,
+            pending_trip.trip.booking_id,
+            pending_trip.trip.fleet_name,
+            pending_trip.trip.booked_by,
+        )
+        self.dbsession.create_pending_trip(new_trip.id)
+
+    def maybe_repeat_for_multiple_days(self, pending_trip: tm.PendingTrip):
+        trip_metadata = pending_trip.trip.trip_metadata
+        num_days_to_repeat = int(trip_metadata.get("num_days_to_repeat", "0"))
+        repeat_count = int(trip_metadata.get("repeat_count", "0"))
+        if repeat_count < num_days_to_repeat:
+            new_metadata = trip_metadata
+            actual_start_time_str = trip_metadata["actual_start_time"]
+            actual_end_time_str = trip_metadata["actual_end_time"]
+            logging.getLogger().info(
+                f"recreating trip {pending_trip.trip.id}, scheduled trip needs to be repeated for {num_days_to_repeat} days"
+            )
+            new_start_time = utils_util.str_to_dt(
+                actual_start_time_str
+            ) + datetime.timedelta(days=1)
+            new_end_time = utils_util.str_to_dt(actual_end_time_str) + datetime.timedelta(
+                days=1
+            )
+            new_metadata["scheduled_start_time"] = utils_util.dt_to_str(new_start_time)
+            new_metadata["scheduled_end_time"] = utils_util.dt_to_str(new_end_time)
+            new_metadata["repeat_count"] = str(repeat_count + 1)
+            logging.getLogger().info(f"scheduled new metadata {new_metadata}")
+            self.create_new_trip_from_pending_trip(pending_trip, new_metadata)
+            return True
+
+        return False
+
     def should_recreate_scheduled_trip(self, pending_trip: tm.PendingTrip):
         trip_metadata = pending_trip.trip.trip_metadata
         scheduled_end_time = utils_util.str_to_dt(trip_metadata["scheduled_end_time"])
@@ -200,15 +237,9 @@ class Handlers:
             new_start_time = utils_util.dt_to_str(new_start_time)
             new_metadata["scheduled_start_time"] = new_start_time
             logging.getLogger().info(f"scheduled new metadata {new_metadata}")
-            new_trip: tm.Trip = self.dbsession.create_trip(
-                pending_trip.trip.route,
-                pending_trip.trip.priority,
-                new_metadata,
-                pending_trip.trip.booking_id,
-                pending_trip.trip.fleet_name,
-                pending_trip.trip.booked_by,
-            )
-            self.dbsession.create_pending_trip(new_trip.id)
+            self.create_new_trip_from_pending_trip(pending_trip, new_metadata)
+        elif not self.maybe_repeat_for_multiple_days(pending_trip):
+            pass
         else:
             logging.getLogger().info(
                 f"will not recreate trip {pending_trip.trip.id}, scheduled_end_time past current time"
