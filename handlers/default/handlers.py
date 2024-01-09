@@ -201,9 +201,9 @@ class Handlers:
             )
             new_start_time = utils_util.str_to_dt(
                 actual_start_time_str
-            ) + datetime.timedelta(days=1)
+            ) + datetime.timedelta(days=repeat_count)
             new_end_time = utils_util.str_to_dt(actual_end_time_str) + datetime.timedelta(
-                days=1
+                days=repeat_count
             )
             new_metadata["scheduled_start_time"] = utils_util.dt_to_str(new_start_time)
             new_metadata["scheduled_end_time"] = utils_util.dt_to_str(new_end_time)
