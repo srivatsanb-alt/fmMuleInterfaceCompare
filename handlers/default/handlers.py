@@ -1632,6 +1632,8 @@ class Handlers:
 
         # query db
         sherpa: fm.Sherpa = self.dbsession.get_sherpa(req.sherpa_name)
+        route_tag = f"parking_{req.sherpa_name}"
+        saved_route = self.dbsession.get_saved_route(route_tag)
 
         if sherpa.parking_id is None:
             raise ValueError(
@@ -1652,8 +1654,6 @@ class Handlers:
             if sherpa.status.trip_id is not None:
                 req = rqm.ForceDeleteOngoingTripReq(sherpa_name=req.sherpa_name)
                 self.handle_force_delete_ongoing_trip(req)
-            route_tag = f"parking_{req.sherpa_name}"
-            saved_route = self.dbsession.get_saved_route(route_tag)
             if saved_route is None:
                 raise ValueError("No parking station found")
             trip_metadata = {"booked_by": f"manual_park_{req.sherpa_name}"}
@@ -1661,6 +1661,11 @@ class Handlers:
                 trips=[rqm.TripMsg(route=saved_route.route, metadata=trip_metadata)]
             )
             self.handle_book(booking_req)
+
+        fleet_name = sherpa.fleet.name
+        if fleet_name not in req_ctxt.fleet_names:
+            req_ctxt.fleet_names.append(fleet_name)
+
         return response
 
     def handle_pass_to_sherpa(self, req):
