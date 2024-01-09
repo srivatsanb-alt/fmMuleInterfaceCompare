@@ -1640,7 +1640,10 @@ class Handlers:
         route_tag = f"parking_{req.sherpa_name}"
         saved_route = self.dbsession.get_saved_route(route_tag)
         if saved_route is None:
-            raise ValueError("No parking station found")
+            raise ValueError("No parking route found")
+
+        if sherpa.status.parking_id == saved_route.route[-1]:
+            raise ValueError(f"Sherpa already parked at {saved_route.route[-1]}")
 
         # end transaction
         self.dbsession.session.commit()
@@ -1651,9 +1654,6 @@ class Handlers:
 
         sherpa.status.other_info.update({"parking_mode": req.activate})
         flag_modified(sherpa.status, "other_info")
-
-        if sherpa.status.parking_id == saved_route.route[-1]:
-            raise ValueError(f"Sherpa already parked at {saved_route.route[-1]}")
 
         if req.activate is True:
             if sherpa.status.trip_id is not None:
