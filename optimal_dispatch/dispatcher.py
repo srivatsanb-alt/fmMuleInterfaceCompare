@@ -159,6 +159,9 @@ class OptimalDispatch:
             available_sherpa = dbsession.get_sherpa(available_sherpa_name)
             trip_id = available_sherpa.status.trip_id
             pose = available_sherpa.status.pose
+            parking_mode = False
+            if available_sherpa.status.other_info is not None:
+                parking_mode = available_sherpa.status.other_info.get("parking_mode", False)
             remaining_eta = 0
 
             if trip_id:
@@ -190,6 +193,7 @@ class OptimalDispatch:
                             dbsession, available_sherpa.name
                         ),
                         "fleet_status": available_sherpa.fleet.status,
+                        "parking_mode": parking_mode,
                     }
                 }
             )
@@ -306,11 +310,18 @@ class OptimalDispatch:
                     total_eta = np.inf
                 elif (
                     sherpa_q_val["fleet_status"] == FleetStatus.STOPPED
-                    and f"auto_park_{sherpa_q}" != pickup_q_val["booked_by"]
+                    and pickup_q_val["booked_by"].find(f"park_{sherpa_q}") == -1
                 ):
                     self.logger.info(f"cannot send {sherpa_q} to {route}, fleet stopped")
                     total_eta = np.inf
-
+                elif (
+                    sherpa_q_val["parking_mode"] is True
+                    and pickup_q_val["booked_by"].find(f"park_{sherpa_q}") == -1
+                ):
+                    self.logger.info(
+                        f"cannot send {sherpa_q} to {route}, sherpa in parking mode"
+                    )
+                    total_eta = np.inf
                 elif i + 1 > max_trips_to_consider:
                     self.logger.info(
                         f"cannot send {sherpa_q} to {route}, num trips greater than max_trips_to_consider, num_trips: {i+1}"

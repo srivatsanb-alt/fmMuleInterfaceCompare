@@ -359,3 +359,21 @@ def restart_fm(user_name=Depends(dpd.get_user_from_header)):
     redis_conn.set("restart_fm", json.dumps(True))
 
     return response
+
+
+@router.get("/manual_park/{sherpa_name}/{activate}")
+async def manual_park(
+    activate: bool, sherpa_name: str, user_name=Depends(dpd.get_user_from_header)
+):
+    response = {}
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    activate_parking_mode_req = rqm.ActivateParkingMode(
+        activate=activate, sherpa_name=sherpa_name
+    )
+    response = await dpd.process_req_with_response(
+        None, activate_parking_mode_req, user_name
+    )
+
+    return response

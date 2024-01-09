@@ -226,7 +226,7 @@ class Handlers:
             return False
 
         if fleet.status == cc.FleetStatus.STOPPED:
-            if pending_trip.trip.booked_by == f"auto_park_{sherpa.name}":
+            if pending_trip.trip.booked_by.find(f"park_{sherpa.name}") != -1:
                 logging.getLogger(sherpa.name).info(
                     f"fleet {fleet.name} is stopped, but will allow auto_park trip"
                 )
@@ -836,6 +836,8 @@ class Handlers:
                 trip_msg.metadata = {}
 
             booked_by = req.source
+            if trip_msg.metadata.get("booked_by") is not None:
+                booked_by = trip_msg.metadata.get("booked_by")
 
             trip: tm.Trip = self.dbsession.create_trip(
                 trip_msg.route,
@@ -1592,6 +1594,42 @@ class Handlers:
             f"Sending request {image_update_req} to update docker image on {sherpa.name}"
         )
         utils_comms.send_req_to_sherpa(self.dbsession, sherpa, image_update_req)
+        return response
+
+    def handle_activate_parking_mode(self, req):
+        response = {}
+
+        # query db
+        sherpa: fm.Sherpa = self.dbsession.get_sherpa(req.sherpa_name)
+
+        if sherpa.parking_id is None:
+            raise ValueError(
+                "Parking mode can be activated only if sherpa is present at station"
+            )
+
+        # end transaction
+        self.dbsession.session.commit()
+
+        # update transaction
+        if sherpa.status.other_info is None:
+            sherpa.status.other_info = {}
+
+        sherpa.status.other_info.update({"parking_mode": req.activate})
+        flag_modified(sherpa.status, "other_info")
+
+        if req.activate is True:
+            if sherpa.status.trip_id is not None:
+                req = rqm.ForceDeleteOngoingTripReq(sherpa_name=req.sherpa_name)
+                self.handle_force_delete_ongoing_trip(req)
+            route_tag = f"parking_{req.sherpa_name}"
+            saved_route = self.dbsession.get_saved_route(route_tag)
+            if saved_route is None:
+                raise ValueError("No parking station found")
+            trip_metadata = {"booked_by": f"manual_park_{req.sherpa_name}"}
+            booking_req = rqm.BookingReq(
+                trips=[rqm.TripMsg(route=saved_route.route, metadata=trip_metadata)]
+            )
+            self.handle_book(booking_req)
         return response
 
     def handle_pass_to_sherpa(self, req):

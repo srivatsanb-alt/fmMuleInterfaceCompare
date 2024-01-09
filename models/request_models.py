@@ -425,6 +425,12 @@ class UpdateSherpaMetaDataReq(ClientReq):
     info: Dict[str, str]
 
 
+class ActivateParkingMode(ClientReq):
+    activate: bool
+    sherpa_name: str
+    type: str = MessageType.ACTIVATE_PARKING_MODE
+
+
 #################################################
 # Messages to sherpas
 class FMReq(BaseModel):

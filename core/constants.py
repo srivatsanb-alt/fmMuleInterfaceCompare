@@ -18,6 +18,7 @@ class MessageType:
     FORCE_DELETE_ONGOING_TRIP = "force_delete_ongoing_trip"
     SAVE_ROUTE = "save_route"
     TRIGGER_OPTIMAL_DISPATCH = "trigger_optimal_dispatch"
+    ACTIVATE_PARKING_MODE = "activate_parking_mode"
 
 
 OptimalDispatchInfluencers = [
@@ -27,6 +28,7 @@ OptimalDispatchInfluencers = [
     MessageType.INDUCT_SHERPA,
     MessageType.PASS_TO_SHERPA,
     MessageType.FLEET_START_STOP,
+    MessageType.ACTIVATE_PARKING_MODE,
 ]
 
 UpdateMsgs = [MessageType.SHERPA_STATUS, MessageType.TRIP_STATUS]
