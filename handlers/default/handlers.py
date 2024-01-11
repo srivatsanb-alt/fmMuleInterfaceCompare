@@ -1660,7 +1660,10 @@ class Handlers:
                 req = rqm.ForceDeleteOngoingTripReq(sherpa_name=req.sherpa_name)
                 self.handle_force_delete_ongoing_trip(req)
 
-            trip_metadata = {"booked_by": f"manual_park_{req.sherpa_name}"}
+            trip_metadata = {
+                "booked_by": f"manual_park_{req.sherpa_name}",
+                "sherpa_name": req.sherpa_name,
+            }
             booking_req = rqm.BookingReq(
                 trips=[rqm.TripMsg(route=saved_route.route, metadata=trip_metadata)]
             )
