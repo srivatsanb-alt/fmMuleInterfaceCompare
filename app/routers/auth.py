@@ -181,7 +181,6 @@ async def delete_frontend_user(
 
     return response
 
-
 @router.get("/get_all_frontend_users_info")
 async def get_all_frontend_users(
     user_name=Depends(dpd.get_user_from_header),
@@ -194,4 +193,9 @@ async def get_all_frontend_users(
     with FMMongo() as fm_mongo:
         all_user_details = fm_mongo.get_all_frontend_users()
 
+    # Modify each user detail to replace hashed_password with "Confidential"
+    for user_detail in all_user_details:
+        user_detail['hashed_password'] = "Confidential"
+
     return all_user_details
+
