@@ -280,7 +280,7 @@ class Handlers:
         sherpa_status: fm.SherpaStatus = sherpa.status
         sherpa_status.continue_curr_task = False
 
-        if hutils.is_sherpa_available_for_new_trip(sherpa_status) is False:
+        if hutils.is_sherpa_available_for_new_trip(self.dbsession, sherpa_status) is False:
             logging.getLogger(sherpa.name).info(
                 f"{sherpa.name} not available for {pending_trip.trip_id}"
             )
@@ -1062,7 +1062,6 @@ class Handlers:
                 mm.NotificationLevels.alert,
                 mm.NotificationModules.errors,
             )
-
         _, _ = self.should_assign_next_task(sherpa, ongoing_trip, pending_trip)
 
         if req.mode == status.mode:
