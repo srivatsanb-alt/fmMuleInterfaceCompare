@@ -391,6 +391,20 @@ class ConfigValidator:
             },
         }
     }
+    low_battery = {
+        "$jsonSchema": {
+            "bsonType": "object",
+            "required": ["battery_thresh"],
+            "properties": {
+                "battery_thresh": {
+                    "bsonType": "int",
+                    "description": "No new trip will be assigned if battery percent is less than battery_thresh",
+                    "minimum": -1.0,
+                    "maximum": 100,
+                },
+            },
+        }
+    }
 
 
 class ConfigDefaults:
@@ -456,6 +470,7 @@ class ConfigDefaults:
     trip_metadata = {"metadata": {"description": []}}
     fm_version = {"version": 3.3}
     app_security = {"token_expiry_time": 3600}
+    low_battery = {"battery_thresh": -1}
 
 
 class DefaultFrontendUser:
