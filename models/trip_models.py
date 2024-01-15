@@ -318,6 +318,7 @@ class OngoingTrip(Base, TimestampMixin):
     def get_basic_trip_description(self):
         trip_metadata = self.trip.trip_metadata
 
+        desc = None
         if trip_metadata is not None:
             desc = trip_metadata.get("description")
 
