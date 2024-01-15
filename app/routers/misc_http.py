@@ -328,9 +328,10 @@ async def get_fm_incidents(
             )
             if last_sherpa_mode_change is None or len(fm_incidents) == 0:
                 pass
-            elif (
-                last_sherpa_mode_change.mode == "error"
-                and last_sherpa_mode_change.started_at < fm_incidents[0].created_at
+            elif last_sherpa_mode_change.mode == "error" and (
+                last_sherpa_mode_change.started_at < fm_incidents[0].created_at
+                or (fm_incidents[0].created_at - last_sherpa_mode_change.started_at).seconds
+                < 60
             ):
                 incident_id = fm_incidents[0].incident_id
                 response[incident_id] = utils_util.format_fm_incident(fm_incidents[0])
