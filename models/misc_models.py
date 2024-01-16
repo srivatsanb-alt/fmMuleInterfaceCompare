@@ -29,7 +29,7 @@ NotificationTimeout = {
     NotificationLevels.info: 120,
     NotificationLevels.action_request: 120,
     NotificationLevels.alert: 120,
-    NotificationLevels.stale_alert_or_action: 300,
+    NotificationLevels.stale_alert_or_action: 10,
 }
 
 
