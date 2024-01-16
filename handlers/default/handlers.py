@@ -1631,18 +1631,8 @@ class Handlers:
 
         # query db
         sherpa: fm.Sherpa = self.dbsession.get_sherpa(req.sherpa_name)
-        if sherpa.parking_id is None:
-            raise ValueError(
-                "Parking mode can be activated only if sherpa is present at station"
-            )
-
         route_tag = f"parking_{req.sherpa_name}"
         saved_route = self.dbsession.get_saved_route(route_tag)
-        if saved_route is None:
-            raise ValueError("No parking route found")
-
-        if sherpa.parking_id == saved_route.route[-1]:
-            raise ValueError(f"Sherpa already parked at {saved_route.route[-1]}")
 
         # end transaction
         self.dbsession.session.commit()
@@ -1655,10 +1645,20 @@ class Handlers:
         flag_modified(sherpa.status, "other_info")
 
         if req.activate is True:
+            if sherpa.parking_id is None:
+                raise ValueError(
+                    "Parking mode can be activated only if sherpa is present at station"
+                )
+
+            if saved_route is None:
+                raise ValueError("No parking station found")
+
+            if sherpa.parking_id == saved_route.route[-1]:
+                raise ValueError(f"Sherpa already parked at {saved_route.route[-1]}")
+
             if sherpa.status.trip_id is not None:
                 req = rqm.ForceDeleteOngoingTripReq(sherpa_name=req.sherpa_name)
                 self.handle_force_delete_ongoing_trip(req)
-
             trip_metadata = {
                 "booked_by": f"manual_park_{req.sherpa_name}",
                 "sherpa_name": req.sherpa_name,
