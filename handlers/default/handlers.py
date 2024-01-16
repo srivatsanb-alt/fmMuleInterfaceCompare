@@ -1641,7 +1641,7 @@ class Handlers:
         if saved_route is None:
             raise ValueError("No parking route found")
 
-        if sherpa.status.parking_id == saved_route.route[-1]:
+        if sherpa.parking_id == saved_route.route[-1]:
             raise ValueError(f"Sherpa already parked at {saved_route.route[-1]}")
 
         # end transaction
