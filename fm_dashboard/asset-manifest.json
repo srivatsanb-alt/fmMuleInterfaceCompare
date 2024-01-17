@@ -1,7 +1,7 @@
 {
   "files": {
-    "main.css": "/static/css/main.608331be.css",
-    "main.js": "/static/js/main.569513e3.js",
+    "main.css": "/static/css/main.79a7fa76.css",
+    "main.js": "/static/js/main.88bf1300.js",
     "static/js/787.7298e13e.chunk.js": "/static/js/787.7298e13e.chunk.js",
     "static/media/Login Image.png": "/static/media/Login Image.885a80af3ca6e7d909a4.png",
     "static/media/OpenSans-Regular-400.ttf": "/static/media/OpenSans-Regular-400.57cd57a648021fa1c396.ttf",
@@ -48,12 +48,12 @@
     "static/media/stop-ops.svg": "/static/media/stop-ops.6c7b29fbe8941d0af4a88cc140a38fbf.svg",
     "static/media/resume-ops.svg": "/static/media/resume-ops.7eaed0ce19cc32d0d9d68e2c29c4ed05.svg",
     "static/media/parking.svg": "/static/media/parking.37d3fcac97912ba986dd45e852e4a3ac.svg",
-    "main.608331be.css.map": "/static/css/main.608331be.css.map",
-    "main.569513e3.js.map": "/static/js/main.569513e3.js.map",
+    "main.79a7fa76.css.map": "/static/css/main.79a7fa76.css.map",
+    "main.88bf1300.js.map": "/static/js/main.88bf1300.js.map",
     "787.7298e13e.chunk.js.map": "/static/js/787.7298e13e.chunk.js.map"
   },
   "entrypoints": [
-    "static/css/main.608331be.css",
-    "static/js/main.569513e3.js"
+    "static/css/main.79a7fa76.css",
+    "static/js/main.88bf1300.js"
   ]
 }
