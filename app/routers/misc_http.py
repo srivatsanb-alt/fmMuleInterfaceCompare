@@ -313,8 +313,7 @@ async def get_fm_incidents(
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    # set default response
-    response = {0: "No errors"}
+    response = {}
     with DBSession() as dbsession:
         fm_incidents = dbsession.get_recent_fm_incident(
             get_fm_incident.sherpa_name, n=get_fm_incident.num_of_incidents
