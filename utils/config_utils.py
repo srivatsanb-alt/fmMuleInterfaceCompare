@@ -1,5 +1,5 @@
 class CreateColKwargs:
-    capped_default = {"capped": True, "max": 1, "size": 10}
+    capped_default = {"capped": True, "max": 1, "size": 1024}
 
 
 class FrontendUsersValidator:
@@ -82,8 +82,8 @@ class ConfigValidator:
                 "max_trips_to_consider": {
                     "bsonType": "int",
                     "minimum": 1,
-                    "maximum": 20,
-                    "description": "Max number of trips that will be considered for optimal dispatch, decrease to lessen conputational cost",
+                    "maximum": 25,
+                    "description": "Max number of trips that will be considered for optimal dispatch, decrease to lessen computational cost",
                 },
             },
         },
@@ -191,7 +191,7 @@ class ConfigValidator:
                 },
                 "mfm_port": {
                     "bsonType": "string",
-                    "enum": ["443", "9010"],
+                    "enum": ["443", "5001", "9010"],
                     "description": "Port through which sanjaya/master_fm server can be accessed",
                 },
                 "mfm_cert_file": {
@@ -391,6 +391,20 @@ class ConfigValidator:
             },
         }
     }
+    low_battery = {
+        "$jsonSchema": {
+            "bsonType": "object",
+            "required": ["battery_thresh"],
+            "properties": {
+                "battery_thresh": {
+                    "bsonType": "int",
+                    "description": "No new trip will be assigned if battery percent is less than battery_thresh",
+                    "minimum": -1.0,
+                    "maximum": 100,
+                },
+            },
+        }
+    }
 
 
 class ConfigDefaults:
@@ -456,6 +470,7 @@ class ConfigDefaults:
     trip_metadata = {"metadata": {"description": []}}
     fm_version = {"version": 3.3}
     app_security = {"token_expiry_time": 3600}
+    low_battery = {"battery_thresh": -1}
 
 
 class DefaultFrontendUser:

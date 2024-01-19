@@ -170,7 +170,11 @@ def update_leg_next_station(next_station: fm.Station, sherpa_name: str):
 
 
 # checks the status of sherpa(initialized, inducted) and checks if the sherpa is available for a trip
-def is_sherpa_available_for_new_trip(sherpa_status):
+def is_sherpa_available_for_new_trip(dbsession: DBSession, sherpa_status: fm.SherpaStatus):
+    with FMMongo() as fm_mongo:
+        low_battery_config = fm_mongo.get_document_from_fm_config("low_battery")
+        battery_thresh = low_battery_config["battery_thresh"]
+
     AVAILABLE = "available"
     reason = None
     if not reason and not sherpa_status.inducted:
@@ -179,9 +183,26 @@ def is_sherpa_available_for_new_trip(sherpa_status):
         reason = "not idle"
     if not reason and not sherpa_status.initialized:
         reason = "not initialized"
+    if not reason and sherpa_status.battery_status < battery_thresh:
+        reason = "battery low"
+        utils_util.maybe_add_notification(
+            dbsession,
+            [
+                sherpa_status.sherpa_name,
+                sherpa_status.sherpa.fleet.name,
+                sherpa_status.sherpa.fleet.customer,
+            ],
+            f"{sherpa_status.sherpa_name} battery level less than {battery_thresh}, cannot do new trip",
+            mm.NotificationLevels.alert,
+            mm.NotificationModules.generic,
+        )
     if not reason:
         reason = AVAILABLE
-    return reason == AVAILABLE, reason
+    else:
+        logging.getLogger(sherpa_status.sherpa_name).info(
+            f"Sherpa not available for new trips, reason: {reason}"
+        )
+    return reason == AVAILABLE
 
 
 # FM HEALTH CHECK #

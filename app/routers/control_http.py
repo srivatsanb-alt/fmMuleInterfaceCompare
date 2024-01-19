@@ -46,6 +46,32 @@ async def diagnostics(
     return response
 
 
+# returns the sherpa status(name, assigned, initialized, idle, disabled, inducted, etc.)
+@router.get("/sherpa/{entity_name}/quick_diagnostics")
+async def quick_diagnostics(
+    entity_name=Union[str, None],
+    user_name=Depends(dpd.get_user_from_header),
+):
+
+    response = {}
+
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    if not entity_name:
+        dpd.raise_error("No entity name")
+
+    with DBSession() as dbsession:
+        sherpa_status = dbsession.get_sherpa_status(entity_name)
+        if not sherpa_status:
+            dpd.raise_error("Bad sherpa name")
+
+        req = rqm.QuickDiagnosticsReq(sherpa_name=entity_name)
+        response = await send_async_req_to_sherpa(dbsession, sherpa_status.sherpa, req)
+
+    return response
+
+
 # restarts the mule docker container.
 @router.get("/sherpa/{entity_name}/restart_mule_docker")
 async def restart_mule_docker(
@@ -331,5 +357,23 @@ def restart_fm(user_name=Depends(dpd.get_user_from_header)):
 
     redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
     redis_conn.set("restart_fm", json.dumps(True))
+
+    return response
+
+
+@router.get("/manual_park/{sherpa_name}/{activate}")
+async def manual_park(
+    activate: bool, sherpa_name: str, user_name=Depends(dpd.get_user_from_header)
+):
+    response = {}
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    activate_parking_mode_req = rqm.ActivateParkingMode(
+        activate=activate, sherpa_name=sherpa_name
+    )
+    response = await dpd.process_req_with_response(
+        None, activate_parking_mode_req, user_name
+    )
 
     return response

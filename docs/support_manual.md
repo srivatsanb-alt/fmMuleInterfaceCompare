@@ -232,7 +232,9 @@ activate_plugin: true
 
 1. Connect summon button to your laptop via USB to flash firmware
 
-2.  Download FlashTool_SB.tar from downloads section on the dashboard and run the same
+2. Dowload fm_cert_file to your laptop. It should be available in FM server   <fm_static_dir>/certs/fm_rev_proxy_cert.pem
+
+3.  Download FlashTool_SB.tar from downloads section on the dashboard and run the same
 ```
 tar -xvf FlashTool_SB.tar (This is for Linux, use similar commands to extract files in other os)
 cd FlashTool_SB
@@ -240,31 +242,33 @@ sudo bash ./install.sh
 sudo bash ./flashtool_8mb.sh
 ```
 
-3. Upon flashing, reconnect the summon button usb.
+4. Upon flashing, reconnect the summon button usb.
 
-4. Press and hold the summon button until LED on the summon button turns blue, and connect to summon button via wifi. For instance you would see something like Summon_192049 in the available/known wifi networks. Upon successful connection to summon button wifi, you will see a summon button UI.
+5. Press and hold the summon button until LED on the summon button turns blue, and connect to summon button via wifi. For instance you would see something like Summon_192049 in the available/known wifi networks. Upon successful connection to summon button wifi, you will see a summon button UI. The password for connecting to summon_button network : 12345678
 
-5. Press configure WiFi, choose the preferred network and add the wifi password for the same, save it. Wait unitl summon button led turns from yellow to blinking red .
+6. Press configure WiFi, choose the preferred network and add the wifi password for the same, save it. Wait unitl summon button led turns from yellow to blinking red .
 
-6. Repeat step 4 and continue with the steps below
+7. Repeat step 4 and continue with the steps below
 
-7. Now press configure device, add FM plugin url to HOST. PLUGIN_PORT by default would be 8002
+8. Now press configure device, add FM plugin url to HOST. PLUGIN_PORT by default would be 443.
 ```
-ws://<FM_IP>:<PLUGIN_PORT>/plugin/ws/api/v1/summon_button
+wss://<FM_IP>:<PLUGIN_PORT>/plugin/ws/api/v1/summon_button
 ```
 
-8. Set wifi type: WPA/WPA2
+9. Set wifi type: WPA/WPA2
 
-9. Set Mode to WiFi-Only
+10. Set Mode to WiFi-Only
 
-10. Set HEARTBEAT to disable
+11. Set HEARTBEAT to disable
 
-11. Set APIKEY and save.
+12. Set APIKEY and save.
 ```
 X-API-Key:<api_key_generated_with_summon_button_id>
 ```
 
-12. Press restart device in summon button UI.
+13. Upload fm_rev_proxy_cert.pem  
+
+14. Press restart device in summon button UI.
 
 ## Setup plugin IES ## 
 

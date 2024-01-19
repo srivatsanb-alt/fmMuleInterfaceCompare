@@ -321,24 +321,26 @@ async def get_fm_incidents(
         )
 
         if fm_incidents is None:
-            return response
+            fm_incidents = []
 
-        if len(fm_incidents) != 0:
-            response = {}
+        if get_fm_incident.historic is False:
+            last_sherpa_mode_change = dbsession.get_last_sherpa_mode_change(
+                get_fm_incident.sherpa_name
+            )
+            if last_sherpa_mode_change is None or len(fm_incidents) == 0:
+                pass
+            elif last_sherpa_mode_change.mode == "error" and (
+                last_sherpa_mode_change.started_at < fm_incidents[0].created_at
+                or (last_sherpa_mode_change.started_at - fm_incidents[0].created_at).seconds
+                < 60
+            ):
+                incident_id = fm_incidents[0].incident_id
+                response[incident_id] = utils_util.format_fm_incident(fm_incidents[0])
+
+        else:
             for fm_incident in fm_incidents:
                 incident_id = fm_incident.incident_id
-                response[incident_id] = {}
-                response[incident_id].update({"code": fm_incident.code})
-                response[incident_id].update({"message": fm_incident.message})
-                response[incident_id].update({"description": fm_incident.display_message})
-                response[incident_id].update(
-                    {"how_to_recover": fm_incident.recovery_message}
-                )
-                response[incident_id].update(
-                    {"reported_at": utils_util.dt_to_str(fm_incident.created_at)}
-                )
-                response[incident_id].update({"module": fm_incident.module})
-                response[incident_id].update({"other_info": fm_incident.other_info})
+                response[incident_id] = utils_util.format_fm_incident(fm_incident)
 
     return response
 

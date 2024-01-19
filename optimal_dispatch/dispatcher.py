@@ -159,6 +159,9 @@ class OptimalDispatch:
             available_sherpa = dbsession.get_sherpa(available_sherpa_name)
             trip_id = available_sherpa.status.trip_id
             pose = available_sherpa.status.pose
+            parking_mode = False
+            if available_sherpa.status.other_info is not None:
+                parking_mode = available_sherpa.status.other_info.get("parking_mode", False)
             remaining_eta = 0
 
             if trip_id:
@@ -190,6 +193,7 @@ class OptimalDispatch:
                             dbsession, available_sherpa.name
                         ),
                         "fleet_status": available_sherpa.fleet.status,
+                        "parking_mode": parking_mode,
                     }
                 }
             )
@@ -271,7 +275,7 @@ class OptimalDispatch:
     def assemble_cost_matrix(self, fleet_name):
         w1 = self.config["eta_power_factor"]
         w2 = self.config["priority_power_factor"]
-        max_trips_to_consider = self.config.get("max_trips_to_consider", 15)
+        max_trips_to_consider = self.config["max_trips_to_consider"]
         redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
 
         cost_matrix = np.ones((len(self.pickup_q), len(self.sherpa_q))) * np.inf
@@ -279,8 +283,6 @@ class OptimalDispatch:
             np.ones((len(self.pickup_q), len(self.sherpa_q))) * np.inf
         )
         priority_matrix = np.zeros((len(self.pickup_q), len(self.sherpa_q)))
-        num_router_calls = 0
-        max_router_calls = max_trips_to_consider * len(self.sherpa_q)
         i = 0
         for pickup_q, pickup_q_val in self.pickup_q.items():
             j = 0
@@ -308,13 +310,21 @@ class OptimalDispatch:
                     total_eta = np.inf
                 elif (
                     sherpa_q_val["fleet_status"] == FleetStatus.STOPPED
-                    and f"auto_park_{sherpa_q}" != pickup_q_val["booked_by"]
+                    and pickup_q_val["booked_by"].find(f"park_{sherpa_q}") == -1
                 ):
                     self.logger.info(f"cannot send {sherpa_q} to {route}, fleet stopped")
                     total_eta = np.inf
-                elif num_router_calls > max_router_calls:
+                elif (
+                    sherpa_q_val["parking_mode"] is True
+                    and pickup_q_val["booked_by"].find(f"park_{sherpa_q}") == -1
+                ):
                     self.logger.info(
-                        f"cannot send {sherpa_q} to {route}, num_router_calls exceeded max_router_calls: {max_router_calls}, num_router_calls: {num_router_calls}"
+                        f"cannot send {sherpa_q} to {route}, sherpa in parking mode"
+                    )
+                    total_eta = np.inf
+                elif i + 1 > max_trips_to_consider:
+                    self.logger.info(
+                        f"cannot send {sherpa_q} to {route}, num trips greater than max_trips_to_consider, num_trips: {i+1}"
                     )
                     total_eta = np.inf
                 elif sherpa_name and sherpa_name != sherpa_q:
@@ -327,7 +337,6 @@ class OptimalDispatch:
                         pose_1, pose_2, fleet_name, redis_conn
                     )
                     total_eta = route_length + sherpa_q_val["remaining_eta"]
-                    num_router_calls += 1
 
                 # to handle w1 == 0  and eta == np.inf case
                 weighted_total_eta = (

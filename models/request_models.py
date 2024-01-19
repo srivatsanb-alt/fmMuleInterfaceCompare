@@ -45,6 +45,7 @@ class AccessType(str, Enum):
 class PasstoSherpaEndpoints:
     RESET_POSE = "reset_pose"
     DIAGNOSTICS = "diagnostics"
+    QUICK_DIAGNOSTICS = "quick_diagnostics"
     PAUSE_RESUME = "pause_resume"
     SWITCH_MODE = "switch_mode"
     IMG_UPDATE = "img_update"
@@ -404,6 +405,7 @@ class GiveRouteWPS(ClientReq):
 class GetFMIncidents(ClientReq):
     sherpa_name: str
     num_of_incidents: int = 1
+    historic: Optional[bool] = False
 
 
 class SaveRouteReq(ClientReq):
@@ -423,12 +425,19 @@ class UpdateSherpaMetaDataReq(ClientReq):
     info: Dict[str, str]
 
 
+class ActivateParkingMode(ClientReq):
+    activate: bool
+    sherpa_name: str
+    type: str = MessageType.ACTIVATE_PARKING_MODE
+
+
 #################################################
 # Messages to sherpas
 class FMReq(BaseModel):
     source: Union[str, None] = None
     endpoint: str
     ttl: Optional[int] = None
+    ack_reqd: Optional[bool] = True
 
 
 class InitReq(FMReq):
@@ -488,6 +497,12 @@ class ResetPoseReq(FMReq):
 
 class DiagnosticsReq(FMReq):
     endpoint: str = PasstoSherpaEndpoints.DIAGNOSTICS
+    sherpa_name: str
+    type = MessageType.PASS_TO_SHERPA
+
+
+class QuickDiagnosticsReq(FMReq):
+    endpoint: str = PasstoSherpaEndpoints.QUICK_DIAGNOSTICS
     sherpa_name: str
     type = MessageType.PASS_TO_SHERPA
 

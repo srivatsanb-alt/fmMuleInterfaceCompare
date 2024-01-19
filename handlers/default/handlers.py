@@ -101,7 +101,7 @@ class Handlers:
             )
 
     def run_health_check(self):
-        # have not seperated queries and DB - Need to be done
+        # have not seperated queries and update DB - Need to be done
         hutils.check_sherpa_status(self.dbsession)
         hutils.delete_notifications(self.dbsession)
         redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
@@ -111,7 +111,7 @@ class Handlers:
         logging.getLogger("status_updates").info("Ran a FM health check")
 
     def run_misc_processes(self):
-        # have not seperated queries and DB - Need to be done
+        # have not seperated queries and update DB - Need to be done
         hutils.update_sherpa_oee(self.dbsession)
 
     def get_sherpa_trips(self, sherpa_name):
@@ -177,6 +177,43 @@ class Handlers:
                     f"Cannot accept the trip booking since {station.name} is disabled"
                 )
 
+    def create_new_trip_from_pending_trip(self, pending_trip, metadata):
+        new_trip: tm.Trip = self.dbsession.create_trip(
+            pending_trip.trip.route,
+            pending_trip.trip.priority,
+            metadata,
+            pending_trip.trip.booking_id,
+            pending_trip.trip.fleet_name,
+            pending_trip.trip.booked_by,
+        )
+        self.dbsession.create_pending_trip(new_trip.id)
+
+    def maybe_repeat_for_multiple_days(self, pending_trip: tm.PendingTrip):
+        trip_metadata = pending_trip.trip.trip_metadata
+        num_days_to_repeat = int(trip_metadata.get("num_days_to_repeat", "0"))
+        repeat_count = int(trip_metadata.get("repeat_count", "0"))
+        if repeat_count < num_days_to_repeat:
+            new_metadata = trip_metadata
+            actual_start_time_str = trip_metadata["actual_start_time"]
+            actual_end_time_str = trip_metadata["actual_end_time"]
+            logging.getLogger().info(
+                f"recreating trip {pending_trip.trip.id}, scheduled trip needs to be repeated for {num_days_to_repeat} days"
+            )
+            new_start_time = utils_util.str_to_dt(
+                actual_start_time_str
+            ) + datetime.timedelta(days=repeat_count)
+            new_end_time = utils_util.str_to_dt(actual_end_time_str) + datetime.timedelta(
+                days=repeat_count
+            )
+            new_metadata["scheduled_start_time"] = utils_util.dt_to_str(new_start_time)
+            new_metadata["scheduled_end_time"] = utils_util.dt_to_str(new_end_time)
+            new_metadata["repeat_count"] = str(repeat_count + 1)
+            logging.getLogger().info(f"scheduled new metadata {new_metadata}")
+            self.create_new_trip_from_pending_trip(pending_trip, new_metadata)
+            return True
+
+        return False
+
     def should_recreate_scheduled_trip(self, pending_trip: tm.PendingTrip):
         trip_metadata = pending_trip.trip.trip_metadata
         scheduled_end_time = utils_util.str_to_dt(trip_metadata["scheduled_end_time"])
@@ -200,15 +237,9 @@ class Handlers:
             new_start_time = utils_util.dt_to_str(new_start_time)
             new_metadata["scheduled_start_time"] = new_start_time
             logging.getLogger().info(f"scheduled new metadata {new_metadata}")
-            new_trip: tm.Trip = self.dbsession.create_trip(
-                pending_trip.trip.route,
-                pending_trip.trip.priority,
-                new_metadata,
-                pending_trip.trip.booking_id,
-                pending_trip.trip.fleet_name,
-                pending_trip.trip.booked_by,
-            )
-            self.dbsession.create_pending_trip(new_trip.id)
+            self.create_new_trip_from_pending_trip(pending_trip, new_metadata)
+        elif not self.maybe_repeat_for_multiple_days(pending_trip):
+            pass
         else:
             logging.getLogger().info(
                 f"will not recreate trip {pending_trip.trip.id}, scheduled_end_time past current time"
@@ -226,7 +257,7 @@ class Handlers:
             return False
 
         if fleet.status == cc.FleetStatus.STOPPED:
-            if pending_trip.trip.booked_by == f"auto_park_{sherpa.name}":
+            if pending_trip.trip.booked_by.find(f"park_{sherpa.name}") != -1:
                 logging.getLogger(sherpa.name).info(
                     f"fleet {fleet.name} is stopped, but will allow auto_park trip"
                 )
@@ -249,7 +280,7 @@ class Handlers:
         sherpa_status: fm.SherpaStatus = sherpa.status
         sherpa_status.continue_curr_task = False
 
-        if not hutils.is_sherpa_available_for_new_trip(sherpa_status):
+        if hutils.is_sherpa_available_for_new_trip(self.dbsession, sherpa_status) is False:
             logging.getLogger(sherpa.name).info(
                 f"{sherpa.name} not available for {pending_trip.trip_id}"
             )
@@ -279,6 +310,8 @@ class Handlers:
             return
         sherpa_name = ongoing_trip.sherpa_name
         hutils.end_trip(self.dbsession, ongoing_trip, sherpa, success)
+        if success:
+            self.send_terminate_trip_req(sherpa, ongoing_trip, ack_reqd=False)
         logging.getLogger(sherpa_name).info(f"trip {ongoing_trip.trip_id} finished")
 
     def start_leg(
@@ -440,6 +473,14 @@ class Handlers:
             trip_metadata.update({"total_dispatch_wait_time": str(disaptch_wait.seconds)})
             del trip_metadata["dispatch_wait_start"]
             flag_modified(ongoing_trip.trip, "trip_metadata")
+
+    def send_terminate_trip_req(self, sherpa, ongoing_trip, ack_reqd=True):
+        terminate_trip_msg = rqm.TerminateTripReq(
+            trip_id=ongoing_trip.trip_id,
+            trip_leg_id=ongoing_trip.trip_leg_id,
+            ack_reqd=ack_reqd,
+        )
+        _ = utils_comms.send_req_to_sherpa(self.dbsession, sherpa, terminate_trip_msg)
 
     def add_dispatch_start_to_ongoing_trip(
         self, ongoing_trip: tm.OngoingTrip, sherpa: fm.Sherpa, timeout=False
@@ -673,13 +714,7 @@ class Handlers:
             ongoing_trip.trip.cancel()
 
             if not force_delete:
-                terminate_trip_msg = rqm.TerminateTripReq(
-                    trip_id=ongoing_trip.trip_id, trip_leg_id=ongoing_trip.trip_leg_id
-                )
-
-                _ = utils_comms.send_req_to_sherpa(
-                    self.dbsession, sherpa, terminate_trip_msg
-                )
+                self.send_terminate_trip_req(sherpa, ongoing_trip)
             else:
                 logging.getLogger().info(
                     f"Not sending terminate_trip request to {sherpa.name}"
@@ -832,6 +867,8 @@ class Handlers:
                 trip_msg.metadata = {}
 
             booked_by = req.source
+            if trip_msg.metadata.get("booked_by") is not None:
+                booked_by = trip_msg.metadata.get("booked_by")
 
             trip: tm.Trip = self.dbsession.create_trip(
                 trip_msg.route,
@@ -1025,7 +1062,6 @@ class Handlers:
                 mm.NotificationLevels.alert,
                 mm.NotificationModules.errors,
             )
-
         _, _ = self.should_assign_next_task(sherpa, ongoing_trip, pending_trip)
 
         if req.mode == status.mode:
@@ -1588,6 +1624,54 @@ class Handlers:
             f"Sending request {image_update_req} to update docker image on {sherpa.name}"
         )
         utils_comms.send_req_to_sherpa(self.dbsession, sherpa, image_update_req)
+        return response
+
+    def handle_activate_parking_mode(self, req):
+        response = {}
+
+        # query db
+        sherpa: fm.Sherpa = self.dbsession.get_sherpa(req.sherpa_name)
+        route_tag = f"parking_{req.sherpa_name}"
+        saved_route = self.dbsession.get_saved_route(route_tag)
+
+        # end transaction
+        self.dbsession.session.commit()
+
+        # update transaction
+        if sherpa.status.other_info is None:
+            sherpa.status.other_info = {}
+
+        sherpa.status.other_info.update({"parking_mode": req.activate})
+        flag_modified(sherpa.status, "other_info")
+
+        if req.activate is True:
+            if sherpa.parking_id is None:
+                raise ValueError(
+                    "Parking mode can be activated only if sherpa is present at station"
+                )
+
+            if saved_route is None:
+                raise ValueError("No parking station found")
+
+            if sherpa.parking_id == saved_route.route[-1]:
+                raise ValueError(f"Sherpa already parked at {saved_route.route[-1]}")
+
+            if sherpa.status.trip_id is not None:
+                req = rqm.ForceDeleteOngoingTripReq(sherpa_name=req.sherpa_name)
+                self.handle_force_delete_ongoing_trip(req)
+            trip_metadata = {
+                "booked_by": f"manual_park_{req.sherpa_name}",
+                "sherpa_name": req.sherpa_name,
+            }
+            booking_req = rqm.BookingReq(
+                trips=[rqm.TripMsg(route=saved_route.route, metadata=trip_metadata)]
+            )
+            self.handle_book(booking_req)
+
+        fleet_name = sherpa.fleet.name
+        if fleet_name not in req_ctxt.fleet_names:
+            req_ctxt.fleet_names.append(fleet_name)
+
         return response
 
     def handle_pass_to_sherpa(self, req):

@@ -2,7 +2,9 @@ import hashlib
 import os
 import redis
 import logging
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
+from fastapi_limiter.depends import RateLimiter
+
 
 # ati code imports
 import app.routers.dependencies as dpd
@@ -20,11 +22,11 @@ router = APIRouter(
     responses={404: {"description": "Not found"}},
 )
 
+
 # performs user authentication
-
-
-@router.post("/login")
-async def login(user_login: rqm.UserLogin):
+# This route is rate-limited
+@router.post("/login", dependencies=[Depends(RateLimiter(times=5, seconds=60))])
+async def login(user_login: rqm.UserLogin, request: Request):
     response = {}
 
     hashed_password = hashlib.sha256(user_login.password.encode("utf-8")).hexdigest()
@@ -180,7 +182,6 @@ async def delete_frontend_user(
 
     return response
 
-
 @router.get("/get_all_frontend_users_info")
 async def get_all_frontend_users(
     user_name=Depends(dpd.get_user_from_header),
@@ -193,4 +194,9 @@ async def get_all_frontend_users(
     with FMMongo() as fm_mongo:
         all_user_details = fm_mongo.get_all_frontend_users()
 
+    # Modify each user detail to replace hashed_password with "Confidential"
+    for user_detail in all_user_details:
+        user_detail['hashed_password'] = "Confidential"
+
     return all_user_details
+

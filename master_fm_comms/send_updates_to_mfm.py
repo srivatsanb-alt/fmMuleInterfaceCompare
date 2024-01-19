@@ -2,7 +2,6 @@ import time
 import logging
 import os
 import datetime
-import shutil
 import redis
 import json
 from sqlalchemy import or_, func
@@ -46,7 +45,11 @@ def upload_map_files(mfm_context: mu.MFMContext):
             i = 0
             for fleet in all_fleets:
                 map_path = os.path.join(os.environ["FM_STATIC_DIR"], f"{fleet.name}/map/")
-                all_map_files = os.listdir(map_path)
+                all_map_files = [
+                    f
+                    for f in os.listdir(map_path)
+                    if os.path.isfile(os.path.join(map_path, f))
+                ]
                 upload_done = []
                 while not send_reset_map_dir_req(mfm_context, fleet.name):
                     time.sleep(30)
@@ -183,8 +186,8 @@ def update_trip_info(
 
     new_trips = (
         dbsession.session.query(tm.Trip)
-        .filter(tm.Trip.updated_at > last_trip_update_dt)
-        .filter(tm.Trip.updated_at > recent_dt)
+        .filter(tm.Trip.end_time > last_trip_update_dt)
+        .filter(tm.Trip.end_time > recent_dt)
         .filter(tm.Trip.status.in_(tm.COMPLETED_TRIP_STATUS))
         .all()
     )

@@ -155,7 +155,6 @@ class Trip(Base, TimestampMixin):
                 self.scheduled = True
                 start_time = str_to_dt(metadata["scheduled_start_time"])
                 end_time = str_to_dt(metadata["scheduled_end_time"])
-
                 if end_time < start_time:
                     raise ValueError("trip end time less than start time")
 
@@ -163,6 +162,18 @@ class Trip(Base, TimestampMixin):
 
                 if self.time_period <= 0:
                     raise ValueError("trip time period should be greater than zero")
+
+                num_days_to_repeat = int(metadata.get("num_days_to_repeat", "0"))
+                repeat_count = int(metadata.get("repeat_count", "0"))
+                if num_days_to_repeat > 0 and repeat_count == 0:
+                    if start_time.date() != end_time.date():
+                        raise ValueError("Cannot repeat trip spanning over multiple days")
+                    self.trip_metadata["actual_start_time"] = metadata[
+                        "scheduled_start_time"
+                    ]
+                    self.trip_metadata["actual_end_time"] = metadata["scheduled_end_time"]
+                    self.trip_metadata["repeat_count"] = "1"
+                    flag_modified(self, "trip_metadata")
 
         self.augmented_route = route
         self.aug_idxs_booked = list(range(len(self.route)))
@@ -307,6 +318,7 @@ class OngoingTrip(Base, TimestampMixin):
     def get_basic_trip_description(self):
         trip_metadata = self.trip.trip_metadata
 
+        desc = None
         if trip_metadata is not None:
             desc = trip_metadata.get("description")
 
