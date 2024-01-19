@@ -95,6 +95,29 @@ async def restart_mule_docker(
     return response
 
 
+# restarts the powercycle
+@router.get("/sherpa/{entity_name}/powercycle")
+async def powercycle(
+    entity_name=Union[str, None],
+    user_name=Depends(dpd.get_user_from_header),
+):
+
+    response = {}
+
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    if not entity_name:
+        dpd.raise_error("No entity name")
+
+    with DBSession() as dbsession:
+        sherpa_status = dbsession.get_sherpa_status(entity_name)
+        req = {"endpoint": "powercycle", "source": user_name}
+        response = await send_async_req_to_sherpa(dbsession, sherpa_status.sherpa, req)
+
+    return response
+
+
 # updates sherpa docker image
 @router.get("/sherpa/{entity_name}/update_sherpa_img")
 async def update_sherpa_img(
