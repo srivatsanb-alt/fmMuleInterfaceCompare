@@ -71,8 +71,9 @@ async def share_secrets_to_plugin(
         if hashed_api_key_db != hashed_api_key:
             dpd.raise_error("Unknown requester", 401)
 
-        redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
-        response["FM_SECRET_TOKEN"] = redis_conn.get("FM_SECRET_TOKEN")
+        # redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
+        with redis.from_url(os.getenv("FM_REDIS_URI")) as redis_conn:
+            response["FM_SECRET_TOKEN"] = redis_conn.get("FM_SECRET_TOKEN")
 
     return response
 

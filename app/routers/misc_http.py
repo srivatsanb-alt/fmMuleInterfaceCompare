@@ -497,9 +497,10 @@ async def fm_health_stats(
         response["disk_usage"] = total_disk_usage
 
     # get current folder
-    redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
-    fm_backup_path = os.path.join(os.getenv("FM_STATIC_DIR"), "data_backup")
-    current_data = redis_conn.get("current_data_folder").decode()
+    # redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
+    with redis.from_url(os.getenv("FM_REDIS_URI")) as redis_conn:
+        fm_backup_path = os.path.join(os.getenv("FM_STATIC_DIR"), "data_backup")
+        current_data = redis_conn.get("current_data_folder").decode()
     response["current_data_folder"] = os.path.join(fm_backup_path, current_data)
 
     return response

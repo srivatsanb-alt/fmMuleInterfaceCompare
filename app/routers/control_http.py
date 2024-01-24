@@ -378,8 +378,9 @@ def restart_fm(user_name=Depends(dpd.get_user_from_header)):
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
-    redis_conn.set("restart_fm", json.dumps(True))
+    # redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
+    with redis.from_url(os.getenv("FM_REDIS_URI")) as redis_conn:
+        redis_conn.set("restart_fm", json.dumps(True))
 
     return response
 
