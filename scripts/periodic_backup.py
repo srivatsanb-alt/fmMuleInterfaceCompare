@@ -33,26 +33,27 @@ def backup_data():
     fm_backup_path = os.path.join(os.getenv("FM_STATIC_DIR"), "data_backup")
     start_time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
     current_data = f"{start_time}_data"
-    redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
-    redis_conn.set("current_data_folder", current_data)
-    run_backup_path = os.path.join(fm_backup_path, current_data)
-    if not os.path.exists(fm_backup_path):
-        os.mkdir(fm_backup_path)
-    os.mkdir(run_backup_path)
-    logs_save_path = os.path.join(run_backup_path, "logs")
-    with open(os.path.join(run_backup_path, "info.txt"), "w") as info_file:
-        info_file.write(os.getenv("FM_IMAGE_INFO"))
+    # redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
+    with redis.from_url(os.getenv("FM_REDIS_URI")) as redis_conn:
+        redis_conn.set("current_data_folder", current_data)
+        run_backup_path = os.path.join(fm_backup_path, current_data)
+        if not os.path.exists(fm_backup_path):
+            os.mkdir(fm_backup_path)
+        os.mkdir(run_backup_path)
+        logs_save_path = os.path.join(run_backup_path, "logs")
+        with open(os.path.join(run_backup_path, "info.txt"), "w") as info_file:
+            info_file.write(os.getenv("FM_IMAGE_INFO"))
 
-    # wait for plugin init
-    logging.getLogger().info(f"Will check for plugin init")
-    plugin_init = False
-    while not plugin_init:
-        plugin_init = redis_conn.get("plugin_init")
-        if plugin_init is not None:
-            plugin_init = json.loads(plugin_init)
-        logging.getLogger().info(f"Waiting for plugin init")
-        time.sleep(10)
-    logging.getLogger().info(f"plugin init done!")
+        # wait for plugin init
+        logging.getLogger().info(f"Will check for plugin init")
+        plugin_init = False
+        while not plugin_init:
+            plugin_init = redis_conn.get("plugin_init")
+            if plugin_init is not None:
+                plugin_init = json.loads(plugin_init)
+            logging.getLogger().info(f"Waiting for plugin init")
+            time.sleep(10)
+        logging.getLogger().info(f"plugin init done!")
 
     # get all databases
     all_databases = [
