@@ -51,7 +51,6 @@ def start_trip(
     start_pose = sherpa_status.pose
     fleet_name = ongoing_trip.trip.fleet_name
 
-    # redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
     with redis.from_url(os.getenv("FM_REDIS_URI")) as redis_conn:
         etas_at_start = []
         route_lengths = []

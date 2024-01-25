@@ -104,7 +104,6 @@ class Handlers:
         # have not seperated queries and update DB - Need to be done
         hutils.check_sherpa_status(self.dbsession)
         hutils.delete_notifications(self.dbsession)
-        # redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
         with redis.from_url(os.getenv("FM_REDIS_URI")) as redis_conn:
             current_data_folder = redis_conn.get("current_data_folder").decode()
         hutils.record_cpu_perf(current_data_folder)

@@ -155,7 +155,6 @@ async def verify_fleet_files(sherpa: str = Depends(dpd.get_sherpa)):
 
 @router.post("/req_ack/{req_id}")
 async def ws_ack(req: rqm.WSResp, req_id: str):
-    # redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
     with redis.from_url(os.getenv("FM_REDIS_URI")) as redis_conn:
         if req.success:
             if req.response is None:

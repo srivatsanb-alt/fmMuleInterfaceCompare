@@ -276,7 +276,6 @@ class OptimalDispatch:
         w1 = self.config["eta_power_factor"]
         w2 = self.config["priority_power_factor"]
         max_trips_to_consider = self.config["max_trips_to_consider"]
-        # redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
         with redis.from_url(os.getenv("FM_REDIS_URI")) as redis_conn:
             cost_matrix = np.ones((len(self.pickup_q), len(self.sherpa_q))) * np.inf
             priority_normalised_cost_matrix = (
@@ -312,7 +311,9 @@ class OptimalDispatch:
                         sherpa_q_val["fleet_status"] == FleetStatus.STOPPED
                         and pickup_q_val["booked_by"].find(f"park_{sherpa_q}") == -1
                     ):
-                        self.logger.info(f"cannot send {sherpa_q} to {route}, fleet stopped")
+                        self.logger.info(
+                            f"cannot send {sherpa_q} to {route}, fleet stopped"
+                        )
                         total_eta = np.inf
                     elif (
                         sherpa_q_val["parking_mode"] is True

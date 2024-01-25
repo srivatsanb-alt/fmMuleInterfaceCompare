@@ -33,7 +33,6 @@ def init_routers():
 
 
 def start_router_module():
-    # redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
     with redis.from_url(os.getenv("FM_REDIS_URI")) as redis_conn:
         logger = logging.getLogger("control_module_router")
         all_router_modules = init_routers()
@@ -133,7 +132,12 @@ def start_router_module():
                     try:
                         final_route, visa_obj, rl = rm.get_route(pose_1, pose_2)
                         x_vals, y_vals, t_vals, _ = get_dense_path(final_route)
-                        dp_rl_result = [x_vals.tolist(), y_vals.tolist(), t_vals.tolist(), rl]
+                        dp_rl_result = [
+                            x_vals.tolist(),
+                            y_vals.tolist(),
+                            t_vals.tolist(),
+                            rl,
+                        ]
                     except Exception as e:
                         logger.info(
                             f"unable to find route between {pose_1} and {pose_2} of {fleet_name} \n Exception {e}"
