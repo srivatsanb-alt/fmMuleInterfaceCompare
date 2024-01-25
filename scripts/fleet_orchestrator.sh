@@ -26,6 +26,16 @@ run_simulator() {
   poetry run python debug.py simulate > $LOGS/simulator.log 2>&1 &
 }
 
+set_max_connections() {
+  MC="150"
+  n=$(cat /app/static/psql/psql_backup/postgresql.conf | grep "max_connections = $MC" | wc -l)
+  if [ "$n" -eq "1" ] ; then
+     echo "Already modified psql max connections to $MC"
+  else
+     echo "max_connections = $MC" >> /app/static/psql/psql_backup/postgresql.conf
+     echo "Will set psql max connections to $MC"
+  fi
+}
 
 
 update_run_on_host_service() {
@@ -56,7 +66,7 @@ update_run_on_host_service() {
 
 }
 
-
+set_max_connections
 redis-server --port $REDIS_PORT > $LOGS/redis.log 2>&1 &
 sleep 2
 fm_init
@@ -69,5 +79,6 @@ run_simulator
 cd /app
 
 update_run_on_host_service
+
 
 poetry run python scripts/restart.py 2>&1
