@@ -6,6 +6,7 @@ import logging
 import pytz
 from fastapi import Depends, APIRouter, File, UploadFile
 from sqlalchemy.orm.attributes import flag_modified
+from fastapi_limiter.depends import RateLimiter
 
 # ati code imports
 from models.db_session import DBSession
@@ -115,7 +116,11 @@ async def resource_access(
     return rqm.ResourceResp.from_json(response)
 
 
-@router.get("/verify_fleet_files", response_model=rqm.VerifyFleetFilesResp)
+@router.get(
+    "/verify_fleet_files",
+    response_model=rqm.VerifyFleetFilesResp,
+    dependencies=[Depends(RateLimiter(times=4, seconds=60))],
+)
 async def verify_fleet_files(sherpa: str = Depends(dpd.get_sherpa)):
     import utils.fleet_utils as fu
 
