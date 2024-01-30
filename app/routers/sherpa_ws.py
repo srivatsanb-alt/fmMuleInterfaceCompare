@@ -124,7 +124,7 @@ async def sherpa_status(
     logger.info(f"websocket connection initiated by {sherpa_name}")
     logger.info(f"websocket connection has to be accepeted for {sherpa_name}")
 
-    with DBSession() as dbsession:
+    with DBSession(pool=True) as dbsession:
         sherpa = dbsession.get_sherpa(sherpa_name)
         if sherpa.status.other_info is None:
             sherpa.status.other_info = {}

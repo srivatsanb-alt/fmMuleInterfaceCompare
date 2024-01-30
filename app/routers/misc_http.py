@@ -30,7 +30,7 @@ async def site_info(user_name=Depends(dpd.get_user_from_header)):
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession() as dbsession:
+    with DBSession(pool=True) as dbsession:
         fleet_names = dbsession.get_all_fleet_names()
         software_compatability = dbsession.get_compatability_info()
         compatible_sherpa_versions = software_compatability.info.get("sherpa_versions", [])
@@ -74,7 +74,7 @@ async def master_data(
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession() as dbsession:
+    with DBSession(pool=True) as dbsession:
         fleet_names = dbsession.get_all_fleet_names()
 
         if master_data_info.fleet_name not in fleet_names:
@@ -133,7 +133,7 @@ async def sherpa_summary(
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession() as dbsession:
+    with DBSession(pool=True) as dbsession:
         recent_events = dbsession.get_sherpa_events(sherpa_name)
         result = []
         for recent_event in recent_events:
@@ -162,7 +162,7 @@ async def update_sherpa_metadata(
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession() as dbsession:
+    with DBSession(pool=True) as dbsession:
         sherpa_name = update_sherpa_metadata_req.sherpa_name
         sherpa_metadata = dbsession.get_sherpa_metadata(sherpa_name)
 
@@ -183,7 +183,7 @@ async def get_sherpa_metadata(
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession() as dbsession:
+    with DBSession(pool=True) as dbsession:
         sherpa_metadata = dbsession.get_sherpa_metadata(sherpa_name)
         if not sherpa_metadata:
             dpd.raise_error(f"sherpa metadata for {sherpa_name} not found")
@@ -210,7 +210,7 @@ async def get_route_wps(
 
     response = {}
 
-    with DBSession() as dbsession:
+    with DBSession(pool=True) as dbsession:
         stations_poses = []
         fleet_name = dbsession.get_fleet_name_from_route(route_preview_req.route)
         for station_name in route_preview_req.route:
@@ -248,7 +248,7 @@ async def get_sherpa_live_route(
 
     response = {}
 
-    with DBSession() as dbsession:
+    with DBSession(pool=True) as dbsession:
         ongoing_trip = dbsession.get_enroute_trip(live_route_req.sherpa_name)
 
         if not ongoing_trip:
@@ -267,7 +267,7 @@ async def sherpa_build_info(sherpa_name: str, user_name=Depends(dpd.get_user_fro
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession() as dbsession:
+    with DBSession(pool=True) as dbsession:
         sherpa_status = dbsession.get_sherpa_status(sherpa_name)
 
         if not sherpa_status:
@@ -296,7 +296,7 @@ async def create_generic_alerts(
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession() as dbsession:
+    with DBSession(pool=True) as dbsession:
         utils_util.maybe_add_notification(
             dbsession,
             dbsession.get_customer_names(),
@@ -314,7 +314,7 @@ async def get_fm_incidents(
         dpd.raise_error("Unknown requester", 401)
 
     response = {}
-    with DBSession() as dbsession:
+    with DBSession(pool=True) as dbsession:
         fm_incidents = dbsession.get_recent_fm_incident(
             get_fm_incident.sherpa_name, n=get_fm_incident.num_of_incidents
         )
@@ -349,7 +349,7 @@ async def get_visa_assignments(user_name=Depends(dpd.get_user_from_header)):
     response = []
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
-    with DBSession() as dbsession:
+    with DBSession(pool=True) as dbsession:
         zone_ids = dbsession.session.query(vm.ExclusionZone.zone_id).all()
         response = jsonable_encoder(zone_ids)
         for item in response:
@@ -376,7 +376,7 @@ async def get_sherpa_oee(
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession() as dbsession:
+    with DBSession(pool=True) as dbsession:
         from_dt = utils_util.str_to_dt(generic_time_req.from_dt)
         to_dt = utils_util.str_to_dt(generic_time_req.to_dt)
 

@@ -22,23 +22,24 @@ def connect():
     )
 
 
-def get_engine(database_uri):
+def get_engine(database_uri, pool=False):
     # don't pool - multiprocessing
-    engine = create_engine(
-        database_uri,
-        poolclass=NullPool,
-        creator=connect,
-        # pool_pre_ping=True,
-        # pool_size=100,
-        # max_overflow=30,
-    )
+    kwargs = {"poolclass": NullPool, "creator": connect}
+    if pool:
+        kwargs = {
+            "pool_pre_ping": True,
+            "pool_size": 50,
+            "max_overflow": 20,
+            "creator": connect,
+        }
+    engine = create_engine(database_uri, **kwargs)
     return engine
 
 
-def get_session(database_uri):
+def get_session(database_uri, pool=False):
     # session can be created by calling session_maker
     session_maker = sessionmaker(
-        autocommit=False, autoflush=True, bind=get_engine(database_uri)
+        autocommit=False, autoflush=True, bind=get_engine(database_uri, pool)
     )
     session = session_maker()
     return session

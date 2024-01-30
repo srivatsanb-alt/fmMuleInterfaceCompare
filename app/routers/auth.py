@@ -37,7 +37,7 @@ async def login(user_login: rqm.UserLogin, request: Request):
             dpd.raise_error("Unknown requester", 401)
 
         if hashed_password == cu.DefaultFrontendUser.admin["hashed_password"]:
-            with DBSession() as dbsession:
+            with DBSession(pool=True) as dbsession:
                 default_password_log = f"Please change password for user: {user_login.name}, reason: weak password"
                 utils_util.maybe_add_notification(
                     dbsession,
@@ -181,6 +181,7 @@ async def delete_frontend_user(
 
     return response
 
+
 @router.get("/get_all_frontend_users_info")
 async def get_all_frontend_users(
     user_name=Depends(dpd.get_user_from_header),
@@ -195,7 +196,6 @@ async def get_all_frontend_users(
 
     # Modify each user detail to replace hashed_password with "Confidential"
     for user_detail in all_user_details:
-        user_detail['hashed_password'] = "Confidential"
+        user_detail["hashed_password"] = "Confidential"
 
     return all_user_details
-
