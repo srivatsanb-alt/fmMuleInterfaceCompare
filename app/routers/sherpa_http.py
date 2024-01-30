@@ -58,7 +58,10 @@ async def basic_info(sherpa_name: str = Depends(dpd.get_sherpa)):
 
 
 # checks connection of sherpa with fleet manager
-@router.get("/is_sherpa_version_compatible/{version}")
+@router.get(
+    "/is_sherpa_version_compatible/{version}",
+    dependencies=[Depends(RateLimiter(times=4, seconds=60))],
+)
 async def is_sherpa_version_compatible(
     version: str, sherpa_name: str = Depends(dpd.get_sherpa)
 ):
