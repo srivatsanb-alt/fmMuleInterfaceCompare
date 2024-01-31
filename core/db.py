@@ -29,7 +29,8 @@ def get_engine(database_uri, pool=False):
         kwargs = {
             "pool_pre_ping": True,
             "pool_size": 50,
-            "max_overflow": 20,
+            "max_overflow": 30,
+            "pool_timeout": 10,
             "creator": connect,
         }
     engine = create_engine(database_uri, **kwargs)

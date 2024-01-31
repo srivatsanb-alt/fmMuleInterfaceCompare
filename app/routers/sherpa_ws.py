@@ -13,7 +13,8 @@ from redis import Redis
 
 # ati code imports
 import core.handler_configuration as hc
-from core.constants import MessageType
+from core.constants import MessageType, WebSocketCloseCode
+
 from models.db_session import DBSession
 import models.misc_models as mm
 import models.request_models as rqm
@@ -104,6 +105,24 @@ def accept_message(sherpa: str, msg):
     return True, None
 
 
+def freq_ws_req(sherpa_name):
+    rkey = f"{sherpa_name}_num_conn_req"
+    rkey_expiry_ms = 60 * 1000
+    max_conn = 4
+    if redis.setnx(rkey, 1):
+        redis.expire(rkey, rkey_expiry_ms)
+    else:
+        num_conn = redis.get(rkey)
+        if num_conn is not None:
+            num_conn = int(num_conn.decode())
+            num_conn += 1
+            if num_conn > max_conn:
+                return True
+            redis.set(rkey, num_conn)
+
+    return False
+
+
 @router.websocket("/ws/api/v1/sherpa/")
 async def sherpa_status(
     websocket: WebSocket,
@@ -119,6 +138,13 @@ async def sherpa_status(
             f"websocket connection initiated with an invalid api_key or sherpa has not been added to DB. WS request came from ip: {x_real_ip}"
         )
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
+
+    if freq_ws_req(sherpa_name):
+        logger.warning(
+            f"Too many websocket connection request from {sherpa_name}, not accepting"
+        )
+        await websocket.close(code=WebSocketCloseCode.RATE_LIMIT_EXCEEDED)
         return
 
     logger.info(f"websocket connection initiated by {sherpa_name}")

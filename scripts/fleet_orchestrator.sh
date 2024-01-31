@@ -27,7 +27,7 @@ run_simulator() {
 }
 
 set_max_connections() {
-  MC="150"
+  MC="300"
   n=$(cat /app/static/psql/psql_backup/postgresql.conf | grep "max_connections = $MC" | wc -l)
   if [ "$n" -eq "1" ] ; then
      echo "Already modified psql max connections to $MC"
