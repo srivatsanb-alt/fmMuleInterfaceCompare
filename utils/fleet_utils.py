@@ -695,10 +695,10 @@ class ExclusionZoneUtils:
                     f"Link between {prev_zone_id} and {next_zone_id} already exsists"
                 )
             else:
-                lane_link = vm.LinkedGates(
+                new_link = vm.LinkedGates(
                     prev_zone_id=prev_zone_id, next_zone_id=next_zone_id
                 )
-                dbsession.add_to_session(lane_link)
+                dbsession.add_to_session(new_link)
                 logger.info(f"Created a link between {prev_zone_id} and {next_zone_id}")
 
     @classmethod
