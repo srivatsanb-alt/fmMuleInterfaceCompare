@@ -6,6 +6,7 @@ import logging
 import pytz
 from fastapi import Depends, APIRouter, File, UploadFile
 from sqlalchemy.orm.attributes import flag_modified
+from fastapi_limiter.depends import RateLimiter
 
 # ati code imports
 from models.db_session import DBSession
@@ -40,7 +41,7 @@ async def basic_info(sherpa_name: str = Depends(dpd.get_sherpa)):
     if not sherpa_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession() as dbsession:
+    with DBSession(pool=True) as dbsession:
         sherpa: fm.Sherpa = dbsession.get_sherpa(sherpa_name)
         response = {
             "fleet_name": sherpa.fleet.name,
@@ -57,7 +58,10 @@ async def basic_info(sherpa_name: str = Depends(dpd.get_sherpa)):
 
 
 # checks connection of sherpa with fleet manager
-@router.get("/is_sherpa_version_compatible/{version}")
+@router.get(
+    "/is_sherpa_version_compatible/{version}",
+    dependencies=[Depends(RateLimiter(times=4, seconds=60))],
+)
 async def is_sherpa_version_compatible(
     version: str, sherpa_name: str = Depends(dpd.get_sherpa)
 ):
@@ -65,7 +69,7 @@ async def is_sherpa_version_compatible(
     if not sherpa_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession() as dbsession:
+    with DBSession(pool=True) as dbsession:
         sherpa: fm.Sherpa = dbsession.get_sherpa(sherpa_name)
         software_compatability = dbsession.get_compatability_info()
         sherpa_versions = software_compatability.info.get("sherpa_versions", [])
@@ -115,7 +119,11 @@ async def resource_access(
     return rqm.ResourceResp.from_json(response)
 
 
-@router.get("/verify_fleet_files", response_model=rqm.VerifyFleetFilesResp)
+@router.get(
+    "/verify_fleet_files",
+    response_model=rqm.VerifyFleetFilesResp,
+    dependencies=[Depends(RateLimiter(times=4, seconds=60))],
+)
 async def verify_fleet_files(sherpa: str = Depends(dpd.get_sherpa)):
     import utils.fleet_utils as fu
 
@@ -126,7 +134,7 @@ async def verify_fleet_files(sherpa: str = Depends(dpd.get_sherpa)):
 
     logging.getLogger().info(f"Got a verify fleet files request from {sherpa}")
 
-    with DBSession() as dbsession:
+    with DBSession(pool=True) as dbsession:
         sherpa: fm.Sherpa = dbsession.get_sherpa(sherpa)
         fleet_name = sherpa.fleet.name
         map_files = dbsession.get_map_files(fleet_name)
@@ -155,17 +163,17 @@ async def verify_fleet_files(sherpa: str = Depends(dpd.get_sherpa)):
 
 @router.post("/req_ack/{req_id}")
 async def ws_ack(req: rqm.WSResp, req_id: str):
-    redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
-    if req.success:
-        if req.response is None:
-            req.response = {}
-        redis_conn.set(f"response_{req_id}", json.dumps(req.response))
+    with redis.from_url(os.getenv("FM_REDIS_URI")) as redis_conn:
+        if req.success:
+            if req.response is None:
+                req.response = {}
+            redis_conn.set(f"response_{req_id}", json.dumps(req.response))
 
-    redis_conn.setex(
-        f"success_{req_id}",
-        int(redis_conn.get("default_job_timeout_ms").decode()),
-        json.dumps(req.success),
-    )
+        redis_conn.setex(
+            f"success_{req_id}",
+            int(redis_conn.get("default_job_timeout_ms").decode()),
+            json.dumps(req.success),
+        )
 
     return {}
 
@@ -187,7 +195,7 @@ async def get_static_files_auth_credentials(sherpa: str = Depends(dpd.get_sherpa
 async def sherpa_alerts(
     alert_msg: rqm.SherpaAlertMsg, sherpa: str = Depends(dpd.get_sherpa)
 ):
-    with DBSession() as dbsession:
+    with DBSession(pool=True) as dbsession:
         sherpa_obj = dbsession.get_sherpa(sherpa)
         alert = f"Got an alert from {sherpa}, "
 
@@ -227,7 +235,7 @@ async def upload_file(
     if not sherpa_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession() as dbsession:
+    with DBSession(pool=True) as dbsession:
         sherpa = dbsession.get_sherpa(sherpa_name)
         fleet_name = sherpa.fleet.name
 
@@ -290,7 +298,7 @@ async def add_fm_incident(
     if not sherpa:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession() as dbsession:
+    with DBSession(pool=True) as dbsession:
         if add_fm_incident_req.type not in mm.FMIncidentTypes:
             dpd.raise_error(
                 f"Will only accept incidents of type {mm.FMIncidentTypes} requester"
@@ -325,7 +333,7 @@ async def update_fm_incident_data_details(
     if not sherpa:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession() as dbsession:
+    with DBSession(pool=True) as dbsession:
         fm_incident = dbsession.get_fm_incident(
             update_incident_data_details_req.incident_id
         )

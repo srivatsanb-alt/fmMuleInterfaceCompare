@@ -50,7 +50,7 @@ async def clear_notification(
     if not user_name:
         dpd.raise_error("Unknown requeter")
 
-    with DBSession() as dbsession:
+    with DBSession(pool=True) as dbsession:
         notification = dbsession.get_notifications_with_id(id)
         if not notification:
             dpd.raise_error(f"No notification found with id: {id}")
@@ -70,7 +70,7 @@ async def clear_notifications(token: str, user_name=Depends(dpd.get_user_from_qu
     if not user_name:
         dpd.raise_error("Unknown requeter")
 
-    with DBSession() as dbsession:
+    with DBSession(pool=True) as dbsession:
         all_notifications = dbsession.get_notifications()
         for notification in all_notifications:
 
@@ -91,7 +91,7 @@ async def clear_notifications_log_level(
     if not user_name:
         dpd.raise_error("Unknown requeter")
 
-    with DBSession() as dbsession:
+    with DBSession(pool=True) as dbsession:
         all_notifications = dbsession.get_notifications_filter_with_log_level(log_level)
         for notification in all_notifications:
 

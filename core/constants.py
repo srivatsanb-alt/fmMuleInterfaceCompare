@@ -1,3 +1,10 @@
+import enum
+
+
+class WebSocketCloseCode(enum.IntEnum):
+    RATE_LIMIT_EXCEEDED = 4001
+
+
 class MessageType:
     INIT = "init"
     REACHED = "reached"

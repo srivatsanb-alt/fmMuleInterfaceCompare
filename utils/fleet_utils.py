@@ -683,42 +683,23 @@ class ExclusionZoneUtils:
         zone_types = ["_lane", "_station"]
         for zone_type in zone_types:
             prev_zone_id = prev_zone + zone_type
-            next_zone_st = next_zone + "_station"
-            next_zone_lane = next_zone + "_lane"
-            lane_link = (
+            next_zone_id = next_zone + zone_type
+            link = (
                 dbsession.session.query(vm.LinkedGates)
                 .filter(vm.LinkedGates.prev_zone_id == prev_zone_id)
-                .filter(vm.LinkedGates.next_zone_id == next_zone_lane)
+                .filter(vm.LinkedGates.next_zone_id == next_zone_id)
                 .one_or_none()
             )
-            st_link = (
-                dbsession.session.query(vm.LinkedGates)
-                .filter(vm.LinkedGates.prev_zone_id == prev_zone_id)
-                .filter(vm.LinkedGates.next_zone_id == next_zone_st)
-                .one_or_none()
-            )
-
-            if lane_link:
+            if link:
                 logger.info(
-                    f"Link between {prev_zone_id} and {next_zone_lane} already exsists"
+                    f"Link between {prev_zone_id} and {next_zone_id} already exsists"
                 )
             else:
-                lane_link = vm.LinkedGates(
-                    prev_zone_id=prev_zone_id, next_zone_id=next_zone_lane
+                new_link = vm.LinkedGates(
+                    prev_zone_id=prev_zone_id, next_zone_id=next_zone_id
                 )
-                dbsession.add_to_session(lane_link)
-                logger.info(f"Created a link between {prev_zone_id} and {next_zone_lane}")
-
-            if st_link:
-                logger.info(
-                    f"Link between {prev_zone_id} and {next_zone_st} already exsists"
-                )
-            else:
-                st_link = vm.LinkedGates(
-                    prev_zone_id=prev_zone_id, next_zone_id=next_zone_st
-                )
-                dbsession.add_to_session(st_link)
-                logger.info(f"Created a link between {prev_zone_id} and {next_zone_st}")
+                dbsession.add_to_session(new_link)
+                logger.info(f"Created a link between {prev_zone_id} and {next_zone_id}")
 
     @classmethod
     def delete_exclusion_zones(

@@ -1,4 +1,4 @@
-import redis
+import aioredis
 import os
 import json
 from typing import Union
@@ -35,7 +35,7 @@ async def diagnostics(
     if not entity_name:
         dpd.raise_error("No entity name")
 
-    with DBSession() as dbsession:
+    with DBSession(pool=True) as dbsession:
         sherpa_status = dbsession.get_sherpa_status(entity_name)
         if not sherpa_status:
             dpd.raise_error("Bad sherpa name")
@@ -61,7 +61,7 @@ async def quick_diagnostics(
     if not entity_name:
         dpd.raise_error("No entity name")
 
-    with DBSession() as dbsession:
+    with DBSession(pool=True) as dbsession:
         sherpa_status = dbsession.get_sherpa_status(entity_name)
         if not sherpa_status:
             dpd.raise_error("Bad sherpa name")
@@ -87,9 +87,32 @@ async def restart_mule_docker(
     if not entity_name:
         dpd.raise_error("No entity name")
 
-    with DBSession() as dbsession:
+    with DBSession(pool=True) as dbsession:
         sherpa_status = dbsession.get_sherpa_status(entity_name)
         req = {"endpoint": "restart_mule_docker", "source": user_name}
+        response = await send_async_req_to_sherpa(dbsession, sherpa_status.sherpa, req)
+
+    return response
+
+
+# restarts the powercycle
+@router.get("/sherpa/{entity_name}/powercycle")
+async def powercycle(
+    entity_name=Union[str, None],
+    user_name=Depends(dpd.get_user_from_header),
+):
+
+    response = {}
+
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    if not entity_name:
+        dpd.raise_error("No entity name")
+
+    with DBSession(pool=True) as dbsession:
+        sherpa_status = dbsession.get_sherpa_status(entity_name)
+        req = {"endpoint": "powercycle", "source": user_name}
         response = await send_async_req_to_sherpa(dbsession, sherpa_status.sherpa, req)
 
     return response
@@ -110,7 +133,7 @@ async def update_sherpa_img(
     if not entity_name:
         dpd.raise_error("No entity name")
 
-    with DBSession() as dbsession:
+    with DBSession(pool=True) as dbsession:
         sherpa_status = dbsession.get_sherpa_status(entity_name)
         update_image_req = rqm.SherpaImgUpdateCtrlReq(sherpa_name=entity_name)
         _ = await dpd.process_req_with_response(None, update_image_req, user_name)
@@ -150,7 +173,7 @@ async def emergency_stop(
     if not entity_name:
         dpd.raise_error("No entity name")
 
-    with DBSession() as dbsession:
+    with DBSession(pool=True) as dbsession:
         fleet: fm.Fleet = dbsession.get_fleet(entity_name)
         if not fleet:
             dpd.raise_error("Fleet not found")
@@ -219,7 +242,7 @@ async def sherpa_emergency_stop(
     if not entity_name:
         dpd.raise_error("No entity name")
 
-    with DBSession() as dbsession:
+    with DBSession(pool=True) as dbsession:
         sherpa_status: fm.SherpaStatus = dbsession.get_sherpa_status(entity_name)
         if not sherpa_status:
             dpd.raise_error("Bad sherpa name")
@@ -261,7 +284,7 @@ async def switch_mode(
     if not entity_name:
         dpd.raise_error("No entity name")
 
-    with DBSession() as dbsession:
+    with DBSession(pool=True) as dbsession:
         sherpa_status = dbsession.get_sherpa_status(entity_name)
 
         if not sherpa_status:
@@ -295,7 +318,7 @@ async def reset_pose(
     if not reset_pose_ctrl_req.fleet_station:
         dpd.raise_error("No fleet staion detail")
 
-    with DBSession() as dbsession:
+    with DBSession(pool=True) as dbsession:
         sherpa_status = dbsession.get_sherpa_status(entity_name)
         if not sherpa_status:
             dpd.raise_error("Bad sherpa name")
@@ -327,7 +350,7 @@ async def induct_sherpa(
     respone = {}
     sherpa_induct_req.sherpa_name = sherpa_name
 
-    with DBSession() as dbsession:
+    with DBSession(pool=True) as dbsession:
         sherpa = dbsession.get_sherpa(sherpa_name)
 
         if sherpa is None:
@@ -350,13 +373,13 @@ async def induct_sherpa(
 
 
 @router.get("/restart_fleet_manager")
-def restart_fm(user_name=Depends(dpd.get_user_from_header)):
+async def restart_fm(user_name=Depends(dpd.get_user_from_header)):
     response = {}
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
-    redis_conn.set("restart_fm", json.dumps(True))
+    async with aioredis.Redis.from_url(os.getenv("FM_REDIS_URI")) as aredis_conn:
+        await aredis_conn.set("restart_fm", json.dumps(True))
 
     return response
 

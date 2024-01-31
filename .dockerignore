@@ -25,3 +25,4 @@ logs/
 static/
 !static/certs
 fm_plugins
+misc/default_certs

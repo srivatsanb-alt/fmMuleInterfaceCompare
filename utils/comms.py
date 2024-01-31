@@ -48,88 +48,88 @@ def convert_to_dict(msg):
 
 # utility for communication between sherpa and fleet manager
 def send_req_to_sherpa(dbsession, sherpa: Sherpa, msg: FMReq) -> Dict:
-    redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
+    # redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
+    with redis.from_url(os.getenv("FM_REDIS_URI")) as redis_conn:
+        body = convert_to_dict(msg)
 
-    body = convert_to_dict(msg)
+        body["timestamp"] = time.time()
+        body.pop("source")
 
-    body["timestamp"] = time.time()
-    body.pop("source")
+        if body.get("type", "no_type") == "pass_to_sherpa":
+            body.pop("type")
+            body.pop("sherpa_name")
 
-    if body.get("type", "no_type") == "pass_to_sherpa":
-        body.pop("type")
-        body.pop("sherpa_name")
+        req_id = utils_util.generate_random_job_id()
+        body["req_id"] = req_id
 
-    req_id = utils_util.generate_random_job_id()
-    body["req_id"] = req_id
+        if sherpa.status.disabled_reason == cc.DisabledReason.STALE_HEARTBEAT:
+            raise ValueError("Sherpa disconnected, cannot send req to sherpa")
 
-    if sherpa.status.disabled_reason == cc.DisabledReason.STALE_HEARTBEAT:
-        raise ValueError("Sherpa disconnected, cannot send req to sherpa")
+        logging.getLogger().info(f"Sending req: {body} to {sherpa.name}")
 
-    logging.getLogger().info(f"Sending req: {body} to {sherpa.name}")
+        sherpa_event: SherpaEvent = SherpaEvent(
+            sherpa_name=sherpa.name,
+            msg_type=body["endpoint"],
+            context="sent to sherpa",
+        )
+        dbsession.add_to_session(sherpa_event)
 
-    sherpa_event: SherpaEvent = SherpaEvent(
-        sherpa_name=sherpa.name,
-        msg_type=body["endpoint"],
-        context="sent to sherpa",
-    )
-    dbsession.add_to_session(sherpa_event)
-
-    send_ws_msg_to_sherpa(body, sherpa)
-    time.sleep(0.005)
-
-    if body["ack_reqd"] is False:
-        logging.getLogger().info(f"Ack not reqd for req_id: {req_id}")
-        return
-
-    while redis_conn.get(f"success_{req_id}") is None:
+        send_ws_msg_to_sherpa(body, sherpa)
         time.sleep(0.005)
 
-    success = json.loads(redis_conn.get(f"success_{req_id}"))
-    if success:
-        response = json.loads(redis_conn.get(f"response_{req_id}"))
-        redis_conn.delete(f"success_{req_id}")
-        logging.getLogger().info(f"Response from sherpa {response}")
-        return response
-    else:
-        raise Exception(f"req id {req_id} failed, req sent: {body}")
+        if body["ack_reqd"] is False:
+            logging.getLogger().info(f"Ack not reqd for req_id: {req_id}")
+            return
+
+        while redis_conn.get(f"success_{req_id}") is None:
+            time.sleep(0.005)
+
+        success = json.loads(redis_conn.get(f"success_{req_id}"))
+        if success:
+            response = json.loads(redis_conn.get(f"response_{req_id}"))
+            redis_conn.delete(f"success_{req_id}")
+            logging.getLogger().info(f"Response from sherpa {response}")
+            return response
+        else:
+            raise Exception(f"req id {req_id} failed, req sent: {body}")
 
 
 async def send_async_req_to_sherpa(dbsession, sherpa: Sherpa, msg: FMReq) -> Dict:
-    redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
+    # redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
+    with redis.from_url(os.getenv("FM_REDIS_URI")) as redis_conn:
+        body = convert_to_dict(msg)
 
-    body = convert_to_dict(msg)
+        body["timestamp"] = time.time()
+        body.pop("source")
 
-    body["timestamp"] = time.time()
-    body.pop("source")
+        if body.get("type", "no_type") == "pass_to_sherpa":
+            body.pop("type")
+            body.pop("sherpa_name")
 
-    if body.get("type", "no_type") == "pass_to_sherpa":
-        body.pop("type")
-        body.pop("sherpa_name")
+        req_id = utils_util.generate_random_job_id()
+        body["req_id"] = req_id
 
-    req_id = utils_util.generate_random_job_id()
-    body["req_id"] = req_id
+        if sherpa.status.disabled_reason == cc.DisabledReason.STALE_HEARTBEAT:
+            raise ValueError("Sherpa disconnected, cannot send req to sherpa")
 
-    if sherpa.status.disabled_reason == cc.DisabledReason.STALE_HEARTBEAT:
-        raise ValueError("Sherpa disconnected, cannot send req to sherpa")
+        logging.getLogger().info(f"Sending req: {body} to {sherpa.name}")
 
-    logging.getLogger().info(f"Sending req: {body} to {sherpa.name}")
-
-    send_ws_msg_to_sherpa(body, sherpa)
-    await asyncio.sleep(0.005)
-
-    while redis_conn.get(f"success_{req_id}") is None:
+        send_ws_msg_to_sherpa(body, sherpa)
         await asyncio.sleep(0.005)
 
-    success = json.loads(redis_conn.get(f"success_{req_id}"))
-    if success:
-        response = json.loads(redis_conn.get(f"response_{req_id}"))
-        redis_conn.delete(f"success_{req_id}")
-        logging.getLogger().info(
-            f"Response from sherpa {response}, req_id: {req_id} successful"
-        )
-        return response
-    else:
-        raise Exception(f"req id {req_id} failed, req sent: {body}")
+        while redis_conn.get(f"success_{req_id}") is None:
+            await asyncio.sleep(0.005)
+
+        success = json.loads(redis_conn.get(f"success_{req_id}"))
+        if success:
+            response = json.loads(redis_conn.get(f"response_{req_id}"))
+            redis_conn.delete(f"success_{req_id}")
+            logging.getLogger().info(
+                f"Response from sherpa {response}, req_id: {req_id} successful"
+            )
+            return response
+        else:
+            raise Exception(f"req id {req_id} failed, req sent: {body}")
 
 
 def send_move_msg(
@@ -170,25 +170,26 @@ def close_websocket_for_sherpa(sherpa_name):
 
 # conveyor related comms
 def cancel_jobs_from_user(user, event):
-    redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
-    while True:
-        if event.is_set():
-            break
-        queued_jobs = redis_conn.get("queued_jobs")
-        if queued_jobs is None:
-            queued_jobs = b"{}"
-        queued_jobs = json.loads(queued_jobs)
+    # redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
+    with redis.from_url(os.getenv("FM_REDIS_URI")) as redis_conn:
+        while True:
+            if event.is_set():
+                break
+            queued_jobs = redis_conn.get("queued_jobs")
+            if queued_jobs is None:
+                queued_jobs = b"{}"
+            queued_jobs = json.loads(queued_jobs)
 
-        jobs_source = queued_jobs.get(user)
-        if jobs_source is None:
-            jobs_source = []
+            jobs_source = queued_jobs.get(user)
+            if jobs_source is None:
+                jobs_source = []
 
-        for job_id in jobs_source:
-            logging.getLogger().info(f"Will cancel job(id:{job_id} from {user})")
-            job = Job.fetch(job_id, connection=redis_conn)
-            job.cancel()
+            for job_id in jobs_source:
+                logging.getLogger().info(f"Will cancel job(id:{job_id} from {user})")
+                job = Job.fetch(job_id, connection=redis_conn)
+                job.cancel()
 
-        time.sleep(0.05)
+            time.sleep(0.05)
 
 
 def send_msg_to_plugin(msg_to_forward, channel_name):

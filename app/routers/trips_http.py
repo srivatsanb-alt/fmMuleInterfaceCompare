@@ -44,7 +44,7 @@ async def force_delete_ongoing_trip(
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession() as dbsession:
+    with DBSession(pool=True) as dbsession:
         sherpa = dbsession.get_sherpa(sherpa_name)
 
         if sherpa.status.disabled_reason not in [
@@ -72,7 +72,7 @@ async def delete_ongoing_trip(
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession() as dbsession:
+    with DBSession(pool=True) as dbsession:
         trips = dbsession.get_trip_with_booking_id(booking_id)
         if not trips:
             dpd.raise_error("no trip with the given booking_id")
@@ -108,7 +108,7 @@ async def delete_pending_trip(
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession() as dbsession:
+    with DBSession(pool=True) as dbsession:
         trips = dbsession.get_trip_with_booking_id(booking_id)
 
         if not trips:
@@ -187,7 +187,7 @@ async def trip_status_with_type(
     else:
         dpd.raise_error("Query sent for an invalid trip type")
 
-    with DBSession() as dbsession:
+    with DBSession(pool=True) as dbsession:
         if trip_status_req.from_dt and trip_status_req.to_dt:
             trip_status_req.from_dt = str_to_dt(trip_status_req.from_dt)
             trip_status_req.to_dt = str_to_dt(trip_status_req.to_dt)
@@ -245,7 +245,7 @@ async def trip_status_pg_with_type(
         f"trip_status_req: {jsonable_encoder(trip_status_req)}"
     )
 
-    with DBSession() as dbsession:
+    with DBSession(pool=True) as dbsession:
         if trip_status_req.from_dt and trip_status_req.to_dt:
             trip_status_req.from_dt = str_to_dt(trip_status_req.from_dt)
             trip_status_req.to_dt = str_to_dt(trip_status_req.to_dt)
@@ -276,7 +276,7 @@ async def trip_status(
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession() as dbsession:
+    with DBSession(pool=True) as dbsession:
         all_trips = None
         if trip_status_req.from_dt and trip_status_req.to_dt:
             trip_status_req.from_dt = str_to_dt(trip_status_req.from_dt)
@@ -311,7 +311,7 @@ async def ongoing_trip_status(user_name=Depends(dpd.get_user_from_header)):
         dpd.raise_error("Unknown requester", 401)
 
     response = {}
-    with DBSession() as dbsession:
+    with DBSession(pool=True) as dbsession:
         all_ongoing_trips = dbsession.get_all_ongoing_trips()
         for ongoing_trip in all_ongoing_trips:
             response.update({ongoing_trip.trip_id: tu.get_trip_status(ongoing_trip.trip)})
@@ -331,7 +331,7 @@ async def trip_analytics_pg(
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession() as dbsession:
+    with DBSession(pool=True) as dbsession:
         if trip_analytics_req.from_dt and trip_analytics_req.to_dt:
             trip_analytics_req.from_dt = str_to_dt(trip_analytics_req.from_dt)
             trip_analytics_req.to_dt = str_to_dt(trip_analytics_req.to_dt)
@@ -359,7 +359,7 @@ async def trip_analytics(
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession() as dbsession:
+    with DBSession(pool=True) as dbsession:
         if trip_analytics_req.from_dt and trip_analytics_req.to_dt:
             trip_analytics_req.from_dt = str_to_dt(trip_analytics_req.from_dt)
             trip_analytics_req.to_dt = str_to_dt(trip_analytics_req.to_dt)
@@ -400,7 +400,7 @@ async def add_trip_metadata(
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession() as dbsession:
+    with DBSession(pool=True) as dbsession:
         trip: tm.Trip = dbsession.get_trip(trip_id)
         if trip.trip_metadata is None:
             trip.trip_metadata = {}
@@ -419,7 +419,7 @@ async def add_trip_description(
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession() as dbsession:
+    with DBSession(pool=True) as dbsession:
         trip: tm.Trip = dbsession.get_trip(trip_id)
         if trip.trip_metadata is None:
             trip.trip_metadata = {}
@@ -440,7 +440,7 @@ async def populate_route(
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession() as dbsession:
+    with DBSession(pool=True) as dbsession:
         populate_routes = dbsession.get_popular_routes(fleet_name)
 
     for route in populate_routes[:num_routes]:
@@ -469,7 +469,7 @@ async def get_saved_routes(
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession() as dbsession:
+    with DBSession(pool=True) as dbsession:
         saved_routes = dbsession.get_saved_routes_fleet(fleet_name)
 
         for saved_route in saved_routes:
@@ -505,7 +505,7 @@ async def get_saved_route(route_tag: str, user_name=Depends(dpd.get_user_from_he
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession() as dbsession:
+    with DBSession(pool=True) as dbsession:
         saved_route = dbsession.get_saved_route(route_tag)
 
         if saved_route is None:
@@ -522,7 +522,7 @@ async def delete_saved_route(tag: str, user_name=Depends(dpd.get_user_from_heade
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession() as dbsession:
+    with DBSession(pool=True) as dbsession:
         saved_route = dbsession.get_saved_route(tag)
 
         if saved_route is None:
@@ -547,7 +547,7 @@ async def update_saved_route_metadata(
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession() as dbsession:
+    with DBSession(pool=True) as dbsession:
         saved_route = dbsession.get_saved_route(update_saved_route_req.tag)
 
         if saved_route is None:
@@ -571,7 +571,7 @@ async def export_analytics_data(
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession() as dbsession:
+    with DBSession(pool=True) as dbsession:
         if trip_analytics_req.from_dt and trip_analytics_req.to_dt:
             trip_analytics_req.from_dt = str_to_dt(trip_analytics_req.from_dt)
             trip_analytics_req.to_dt = str_to_dt(trip_analytics_req.to_dt)

@@ -22,7 +22,7 @@ async def allow_new_sherpa_version(
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession() as dbsession:
+    with DBSession(pool=True) as dbsession:
         software_compatability = dbsession.get_compatability_info()
         sherpa_versions = software_compatability.info.get("sherpa_versions", [])
 
@@ -43,7 +43,7 @@ async def disallow_sherpa_version(
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession() as dbsession:
+    with DBSession(pool=True) as dbsession:
         software_compatability = dbsession.get_compatability_info()
         sherpa_versions = software_compatability.info.get("sherpa_versions", [])
         if version in sherpa_versions:

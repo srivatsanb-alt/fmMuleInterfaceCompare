@@ -15,8 +15,8 @@ from utils.util import check_if_timestamp_has_passed, str_to_dt
 
 
 class DBSession:
-    def __init__(self):
-        self.session: Session = get_session(os.getenv("FM_DATABASE_URI"))
+    def __init__(self, pool=False):
+        self.session: Session = get_session(os.getenv("FM_DATABASE_URI"), pool)
 
     def __enter__(self):
         return self
