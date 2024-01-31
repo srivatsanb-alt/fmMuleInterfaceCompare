@@ -1,4 +1,4 @@
-import redis
+import aioredis
 import os
 import json
 from typing import Union
@@ -373,13 +373,13 @@ async def induct_sherpa(
 
 
 @router.get("/restart_fleet_manager")
-def restart_fm(user_name=Depends(dpd.get_user_from_header)):
+async def restart_fm(user_name=Depends(dpd.get_user_from_header)):
     response = {}
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
-    redis_conn.set("restart_fm", json.dumps(True))
+    async with aioredis.Redis.from_url(os.getenv("FM_REDIS_URI")) as aredis_conn:
+        await aredis_conn.set("restart_fm", json.dumps(True))
 
     return response
 
