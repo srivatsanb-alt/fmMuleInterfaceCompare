@@ -32,6 +32,7 @@ set_max_connections() {
   if [ "$n" -eq "1" ] ; then
      echo "Already modified psql max connections to $MC"
   else
+     sed -i "s/max_connections/#max_connections/g" /app/static/psql/psql_backup/postgresql.conf
      echo "max_connections = $MC" >> /app/static/psql/psql_backup/postgresql.conf
      echo "Will set psql max connections to $MC"
   fi
