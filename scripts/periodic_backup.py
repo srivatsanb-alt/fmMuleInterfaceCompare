@@ -100,6 +100,7 @@ def backup_data():
                     pass
 
             session.close()
+            db_engine.dispose()
 
         try:
             shutil.rmtree(logs_save_path)
