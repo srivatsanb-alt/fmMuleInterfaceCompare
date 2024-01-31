@@ -81,6 +81,7 @@ def assign_next_task():
                         process_req(None, assign_next_task_req, "self")
 
                     schdeuled_job_id = enqueue_scheduled_trips(db_session, schdeuled_job_id)
+                    db_session.session.expire_all()
                     time.sleep(2)
 
         except Exception as e:
