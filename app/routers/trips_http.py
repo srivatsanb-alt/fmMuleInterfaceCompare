@@ -6,6 +6,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm.attributes import flag_modified
 import asyncio
 import pandas as pd
+from datetime import datetime
 
 # ati code imports
 import app.routers.dependencies as dpd
@@ -571,7 +572,7 @@ async def export_analytics_data(
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession(pool=True) as dbsession:
+    with DBSession() as dbsession:
         if trip_analytics_req.from_dt and trip_analytics_req.to_dt:
             trip_analytics_req.from_dt = str_to_dt(trip_analytics_req.from_dt)
             trip_analytics_req.to_dt = str_to_dt(trip_analytics_req.to_dt)
@@ -583,16 +584,22 @@ async def export_analytics_data(
         else:
             if not trip_analytics_req.trip_ids:
                 return response
-                all_trip_analytics = dbsession.get_trip_analytics_with_trip_ids(
-                    trip_analytics_req.trip_ids
-                )
+            all_trip_analytics = dbsession.get_trip_analytics_with_trip_ids(
+                trip_analytics_req.trip_ids
+            )
 
         logging.getLogger("uvicorn").info(
             f"normalised json: {jsonable_encoder(all_trip_analytics)}"
         )
 
+        # Format the time fields
+        for trip in all_trip_analytics:
+            trip['start_time'] = format_datetime(trip['start_time'])
+            trip['end_time'] = format_datetime(trip['end_time'])
+
         df = pd.DataFrame(
             jsonable_encoder(all_trip_analytics),
+            
             columns=[
                 "sherpa_name",
                 "trip_id",
@@ -614,8 +621,18 @@ async def export_analytics_data(
             ],
         )
 
+    csv_data = df_to_csv_formatted(df)
     return StreamingResponse(
-        iter([df.to_csv(index=False)]),
+        iter([csv_data]),
         media_type="text/csv",
         headers={"Content-Disposition": f"attachment; filename=detail_analytics.csv"},
     )
+
+def format_datetime(dt_str):
+    # Parse the datetime string and format it in a desired format
+    dt_format = "%Y-%m-%d %H:%M:%S"  # Modify this format as needed
+    return datetime.strptime(dt_str, dt_format).strftime(dt_format)
+
+def df_to_csv_formatted(dataframe):
+    # Custom function to convert DataFrame to CSV
+    return dataframe.to_csv(index=False)
