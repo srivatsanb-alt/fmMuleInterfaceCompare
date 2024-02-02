@@ -144,7 +144,10 @@ async def sherpa_status(
         logger.warning(
             f"Too many websocket connection request from {sherpa_name}, not accepting"
         )
-        await websocket.close(code=WebSocketCloseCode.RATE_LIMIT_EXCEEDED)
+        await websocket.close(
+            code=WebSocketCloseCode.RATE_LIMIT_EXCEEDED,
+            detail="Too many connection request",
+        )
         return
 
     logger.info(f"websocket connection initiated by {sherpa_name}")
