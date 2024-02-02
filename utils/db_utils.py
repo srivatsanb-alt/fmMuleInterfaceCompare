@@ -67,6 +67,30 @@ def maybe_add_default_admin_user(fm_mongo):
     maybe_add_plugin_user(fm_mongo, fu_db)
 
 
+def maybe_add_psql_db_config(fm_mongo):
+    fm_mongo.create_database("psql_db_config")
+    psql_config = fm_mongo.get_database("psql_db_config")
+    config_val_members = inspect.getmembers(cu.PSQLDBConfigValidator)
+    all_collection_names = []
+    for val in config_val_members:
+        if not val[0].startswith("__"):
+            all_collection_names.append(val[0])
+
+    for collection_name in all_collection_names:
+        fm_mongo.create_collection(collection_name, psql_config)
+        fm_mongo.add_validator(
+            collection_name,
+            psql_config,
+            getattr(cu.PSQLDBConfigValidator, collection_name),
+        )
+        c = fm_mongo.get_collection(collection_name, psql_config)
+        if c.find_one(filter={}) is None:
+            default_config = getattr(cu.PSQLDBConfigDefaults, collection_name)
+            c.insert_one(default_config)
+
+        print(f"Created psql_db config")
+
+
 def create_mongo_collection(fm_mongo, fc_db, collection_name):
     create_col_kwargs = getattr(cu.CreateColKwargs, "capped_default")
     fm_mongo.create_collection(collection_name, fc_db, **create_col_kwargs)
@@ -90,6 +114,7 @@ def create_mongo_collection(fm_mongo, fc_db, collection_name):
 
 def setfm_mongo_config(fm_mongo):
     maybe_add_default_admin_user(fm_mongo)
+    maybe_add_psql_db_config(fm_mongo)
     fm_mongo.create_database("fm_config")
     fc_db = fm_mongo.get_database("fm_config")
     config_val_members = inspect.getmembers(cu.ConfigValidator)
