@@ -6,7 +6,6 @@ import logging
 import pytz
 from fastapi import Depends, APIRouter, File, UploadFile
 from sqlalchemy.orm.attributes import flag_modified
-from fastapi_limiter.depends import RateLimiter
 
 # ati code imports
 from models.db_session import DBSession
@@ -58,10 +57,7 @@ async def basic_info(sherpa_name: str = Depends(dpd.get_sherpa)):
 
 
 # checks connection of sherpa with fleet manager
-@router.get(
-    "/is_sherpa_version_compatible/{version}",
-    dependencies=[Depends(RateLimiter(times=4, seconds=60))],
-)
+@router.get("/is_sherpa_version_compatible/{version}")
 async def is_sherpa_version_compatible(
     version: str, sherpa_name: str = Depends(dpd.get_sherpa)
 ):
@@ -122,7 +118,6 @@ async def resource_access(
 @router.get(
     "/verify_fleet_files",
     response_model=rqm.VerifyFleetFilesResp,
-    dependencies=[Depends(RateLimiter(times=4, seconds=60))],
 )
 async def verify_fleet_files(sherpa: str = Depends(dpd.get_sherpa)):
     import utils.fleet_utils as fu

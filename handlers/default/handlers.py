@@ -1552,14 +1552,16 @@ class Handlers:
                 if sherpa in ezone.waiting_sherpas:
                     ezone.waiting_sherpas.remove(sherpa)
         else:
-            for ezone, visa_reject in zip(set(reqd_ezones), visa_rejects):
-                if visa_reject is None:
-                    vr = vm.VisaRejects(reason=reason)
-                    vr.zone_id = ezone.zone_id
-                    vr.sherpa_name = sherpa.name
-                    self.dbsession.add_to_session(vr)
-                else:
-                    visa_reject.reason = reason
+            # Add to visa rejects only if sherpa is inducted
+            if sherpa.status.inducted:
+                for ezone, visa_reject in zip(set(reqd_ezones), visa_rejects):
+                    if visa_reject is None:
+                        vr = vm.VisaRejects(reason=reason)
+                        vr.zone_id = ezone.zone_id
+                        vr.sherpa_name = sherpa.name
+                        self.dbsession.add_to_session(vr)
+                    else:
+                        visa_reject.reason = reason
 
         granted_message = "granted" if granted else "not granted"
         visa_log = f"{sherpa.name} {granted_message} {req.visa_type} type visa to zone {req.zone_name}, reason: {reason}"
@@ -1568,6 +1570,7 @@ class Handlers:
         response: rqm.ResourceResp = rqm.ResourceResp(
             granted=granted, visa=req, access_type=rqm.AccessType.REQUEST
         )
+
         utils_util.maybe_add_notification(
             self.dbsession,
             [sherpa.name, sherpa.fleet.name, sherpa.fleet.customer],
