@@ -37,7 +37,7 @@ async def login(user_login: rqm.UserLogin, request: Request):
             dpd.raise_error("Unknown requester", 401)
 
         if hashed_password == cu.DefaultFrontendUser.admin["hashed_password"]:
-            with DBSession(pool=True) as dbsession:
+            with DBSession(engine=dpd.engine) as dbsession:
                 default_password_log = f"Please change password for user: {user_login.name}, reason: weak password"
                 utils_util.maybe_add_notification(
                     dbsession,

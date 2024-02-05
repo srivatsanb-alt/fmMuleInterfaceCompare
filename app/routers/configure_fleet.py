@@ -36,7 +36,7 @@ async def get_all_sherpa_info(user_name=Depends(dpd.get_user_from_header)):
         dpd.raise_error("Unknown requester", 401)
 
     response = {}
-    with DBSession(pool=True) as dbsession:
+    with DBSession(engine=dpd.engine) as dbsession:
         all_sherpas = dbsession.get_all_sherpas()
         if all_sherpas:
             for sherpa in all_sherpas:
@@ -63,7 +63,7 @@ async def add_edit_sherpa(
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession(pool=True) as dbsession:
+    with DBSession(engine=dpd.engine) as dbsession:
         all_sherpa_names = dbsession.get_all_sherpa_names()
 
         fleet = dbsession.get_fleet(add_edit_sherpa.fleet_name)
@@ -111,7 +111,7 @@ async def delete_sherpa(
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession(pool=True) as dbsession:
+    with DBSession(engine=dpd.engine) as dbsession:
         sherpa_status: fm.SherpaStatus = dbsession.get_sherpa_status(sherpa_name)
         if not sherpa_status:
             dpd.raise_error(f"Sherpa {sherpa_name} not found")
@@ -153,7 +153,7 @@ async def get_all_fleet_info(user_name=Depends(dpd.get_user_from_header)):
         dpd.raise_error("Unknown requester", 401)
 
     response = {}
-    with DBSession(pool=True) as dbsession:
+    with DBSession(engine=dpd.engine) as dbsession:
         all_fleets = dbsession.get_all_fleets()
         for fleet in all_fleets:
             response.update(
@@ -179,7 +179,7 @@ async def get_all_available_maps(
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession(pool=True) as dbsession:
+    with DBSession(engine=dpd.engine) as dbsession:
         all_fleets = dbsession.get_all_fleet_names()
         new_fleet = False if fleet_name in all_fleets else True
         if new_fleet:
@@ -208,7 +208,7 @@ async def add_fleet(
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession(pool=True) as dbsession:
+    with DBSession(engine=dpd.engine) as dbsession:
         all_fleets = dbsession.get_all_fleet_names()
         new_fleet = False if fleet_name in all_fleets else True
         try:
@@ -251,7 +251,7 @@ async def delete_fleet(
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession(pool=True) as dbsession:
+    with DBSession(engine=dpd.engine) as dbsession:
         fleet: fm.Fleet = dbsession.get_fleet(fleet_name)
         if not fleet:
             dpd.raise_error("Bad detail invalid fleet name")
@@ -301,7 +301,7 @@ async def update_map(
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession(pool=True) as dbsession:
+    with DBSession(engine=dpd.engine) as dbsession:
         fleet_name = update_map_req.fleet_name
 
         if update_map_req.map_path != "use current map":

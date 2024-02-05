@@ -40,7 +40,7 @@ async def basic_info(sherpa_name: str = Depends(dpd.get_sherpa)):
     if not sherpa_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession(pool=True) as dbsession:
+    with DBSession(engine=dpd.engine) as dbsession:
         sherpa: fm.Sherpa = dbsession.get_sherpa(sherpa_name)
         response = {
             "fleet_name": sherpa.fleet.name,
@@ -65,7 +65,7 @@ async def is_sherpa_version_compatible(
     if not sherpa_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession(pool=True) as dbsession:
+    with DBSession(engine=dpd.engine) as dbsession:
         sherpa: fm.Sherpa = dbsession.get_sherpa(sherpa_name)
         software_compatability = dbsession.get_compatability_info()
         sherpa_versions = software_compatability.info.get("sherpa_versions", [])
@@ -129,7 +129,7 @@ async def verify_fleet_files(sherpa: str = Depends(dpd.get_sherpa)):
 
     logging.getLogger().info(f"Got a verify fleet files request from {sherpa}")
 
-    with DBSession(pool=True) as dbsession:
+    with DBSession(engine=dpd.engine) as dbsession:
         sherpa: fm.Sherpa = dbsession.get_sherpa(sherpa)
         fleet_name = sherpa.fleet.name
         map_files = dbsession.get_map_files(fleet_name)
@@ -190,7 +190,7 @@ async def get_static_files_auth_credentials(sherpa: str = Depends(dpd.get_sherpa
 async def sherpa_alerts(
     alert_msg: rqm.SherpaAlertMsg, sherpa: str = Depends(dpd.get_sherpa)
 ):
-    with DBSession(pool=True) as dbsession:
+    with DBSession(engine=dpd.engine) as dbsession:
         sherpa_obj = dbsession.get_sherpa(sherpa)
         alert = f"Got an alert from {sherpa}, "
 
@@ -230,7 +230,7 @@ async def upload_file(
     if not sherpa_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession(pool=True) as dbsession:
+    with DBSession(engine=dpd.engine) as dbsession:
         sherpa = dbsession.get_sherpa(sherpa_name)
         fleet_name = sherpa.fleet.name
 
@@ -293,7 +293,7 @@ async def add_fm_incident(
     if not sherpa:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession(pool=True) as dbsession:
+    with DBSession(engine=dpd.engine) as dbsession:
         if add_fm_incident_req.type not in mm.FMIncidentTypes:
             dpd.raise_error(
                 f"Will only accept incidents of type {mm.FMIncidentTypes} requester"
@@ -328,7 +328,7 @@ async def update_fm_incident_data_details(
     if not sherpa:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession(pool=True) as dbsession:
+    with DBSession(engine=dpd.engine) as dbsession:
         fm_incident = dbsession.get_fm_incident(
             update_incident_data_details_req.incident_id
         )

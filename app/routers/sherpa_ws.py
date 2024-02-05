@@ -146,14 +146,14 @@ async def sherpa_status(
         )
         await websocket.close(
             code=WebSocketCloseCode.RATE_LIMIT_EXCEEDED,
-            detail="Too many connection request",
+            reason="Too many connection request",
         )
         return
 
     logger.info(f"websocket connection initiated by {sherpa_name}")
     logger.info(f"websocket connection has to be accepeted for {sherpa_name}")
 
-    with DBSession(pool=True) as dbsession:
+    with DBSession(engine=dpd.engine) as dbsession:
         sherpa = dbsession.get_sherpa(sherpa_name)
         if sherpa.status.other_info is None:
             sherpa.status.other_info = {}

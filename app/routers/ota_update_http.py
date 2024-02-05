@@ -120,7 +120,7 @@ async def update_fm(
         dpd.raise_error(f"Unable to complete the update process")
 
     update_log = f"Update to {fm_version} successful! Please switch to {fm_version} with the change FM version button in maintenance page"
-    with DBSession(pool=True) as dbsession:
+    with DBSession(engine=dpd.engine) as dbsession:
         dbsession.add_notification(
             dbsession.get_customer_names(),
             update_log,
