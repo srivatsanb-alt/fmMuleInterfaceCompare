@@ -87,8 +87,7 @@ def maybe_add_psql_db_config(fm_mongo):
         if c.find_one(filter={}) is None:
             default_config = getattr(cu.PSQLDBConfigDefaults, collection_name)
             c.insert_one(default_config)
-
-        print(f"Created psql_db config")
+            print(f"Created psql_db config")
 
 
 def create_mongo_collection(fm_mongo, fc_db, collection_name):
