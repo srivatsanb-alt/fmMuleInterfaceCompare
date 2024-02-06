@@ -21,7 +21,7 @@ import utils.comms as utils_comms
 import utils.util as utils_util
 import utils.visa_utils as utils_visa
 import core.constants as cc
-
+import core.common as ccm
 from optimal_dispatch.dispatcher import OptimalDispatch
 import handlers.default.handler_utils as hutils
 
@@ -422,7 +422,7 @@ class Handlers:
                     if not isinstance(msg, rqm.ResetPoseReq):
                         run_opt_d = False
             if run_opt_d:
-                with DBSession() as dbsession:
+                with DBSession(engine=ccm.engine) as dbsession:
                     self.dbsession = dbsession
                     self.run_optimal_dispatch(req_ctxt.fleet_names)
         except Exception as e:
@@ -1764,7 +1764,7 @@ class Handlers:
         self.dbsession = None
         init_request_context(msg)
 
-        with DBSession() as dbsession:
+        with DBSession(engine=ccm.engine) as dbsession:
             self.dbsession = dbsession
 
             if msg.type == cc.MessageType.FM_HEALTH_CHECK:
