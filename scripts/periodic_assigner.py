@@ -10,7 +10,7 @@ import models.request_models as rqm
 from models.fleet_models import SherpaStatus
 from app.routers.dependencies import process_req
 from models.trip_models import PendingTrip
-from utils.util import check_if_timestamp_has_passed, str_to_dt
+from utils.util import check_if_timestamp_has_passed, str_to_dt, report_error, proc_retry
 
 
 # adds scheduled trips to the job queue.
@@ -46,44 +46,37 @@ def enqueue_scheduled_trips(db_session: DBSession, schdeuled_job_id):
 
 
 # assigns next task to the sherpa.
+@proc_retry(times=50)
+@report_error
 def assign_next_task():
-
     with FMMongo() as fm_mongo:
         rq_params = fm_mongo.get_document_from_fm_config("rq")
 
     job_timeout = rq_params["generic_handler_job_timeout"]
 
-    while True:
-        schdeuled_job_id = []
-        sleep_time = 20
-        logging.getLogger().info(f"Will Wait for {sleep_time} seconds for the DB to be up")
-        time.sleep(sleep_time)
-        try:
-            logging.getLogger().info("starting periodic assigner script")
-            with DBSession() as db_session:
-                while True:
-                    all_sherpa_status = (
-                        db_session.session.query(SherpaStatus)
-                        .filter(SherpaStatus.assign_next_task.is_(True))
-                        .filter(not_(SherpaStatus.disabled.is_(True)))
-                        .all()
-                    )
-                    for sherpa_status in all_sherpa_status:
-                        logging.getLogger("status_updates").info(
-                            f"will send assign task request for {sherpa_status.sherpa_name}"
-                        )
-                        assign_next_task_req = rqm.AssignNextTask(
-                            sherpa_name=sherpa_status.sherpa_name,
-                            ttl=int(0.5 * job_timeout),
-                        )
+    schdeuled_job_id = []
+    logging.getLogger().info("starting periodic assigner script")
+    with DBSession() as db_session:
+        while True:
+            all_sherpa_status = (
+                db_session.session.query(SherpaStatus)
+                .filter(SherpaStatus.assign_next_task.is_(True))
+                .filter(not_(SherpaStatus.disabled.is_(True)))
+                .all()
+            )
+            for sherpa_status in all_sherpa_status:
+                logging.getLogger("status_updates").info(
+                    f"will send assign task request for {sherpa_status.sherpa_name}"
+                )
 
-                        # should not clog the generic handler
-                        process_req(None, assign_next_task_req, "self")
+                # should not clog the generic handler
+                assign_next_task_req = rqm.AssignNextTask(
+                    sherpa_name=sherpa_status.sherpa_name,
+                    ttl=int(0.5 * job_timeout),
+                )
 
-                    schdeuled_job_id = enqueue_scheduled_trips(db_session, schdeuled_job_id)
-                    db_session.session.expire_all()
-                    time.sleep(2)
+                process_req(None, assign_next_task_req, "self")
 
-        except Exception as e:
-            logging.getLogger().info(f"exception in periodic assigner script {e}")
-            time.sleep(1)
+            schdeuled_job_id = enqueue_scheduled_trips(db_session, schdeuled_job_id)
+            db_session.session.expire_all()
+            time.sleep(2)

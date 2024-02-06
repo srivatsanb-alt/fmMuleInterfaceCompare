@@ -5,16 +5,14 @@ import logging
 from models.request_models import FMHealthCheck
 from app.routers.dependencies import process_req
 from utils.rq_utils import Queues
+from utils.util import report_error
 
 
+@report_error
 def periodic_health_check():
     logging.getLogger().info(f"started periodic_health_check script")
     while True:
-        try:
-            fm_health_check = FMHealthCheck(ttl=2)
-            q = Queues.queues_dict.get("misc_handler")
-            process_req(q, fm_health_check, "self")
-        except Exception as e:
-            logging.getLogger().info(f"exception in periodic fm fm_health_check script {e}")
-
+        fm_health_check = FMHealthCheck(ttl=2)
+        q = Queues.queues_dict.get("misc_handler")
+        process_req(q, fm_health_check, "self")
         time.sleep(10)

@@ -29,9 +29,6 @@ def modify_pool_settings_dynamically(engine, pool_config):
 
             engine.pool.size = dyn_pool_size
             engine.pool._max_overflow = dyn_overflow
-
-            logging.info(f"pool size: {dyn_pool_size}, overflow: {dyn_overflow}")
-
     return
 
 

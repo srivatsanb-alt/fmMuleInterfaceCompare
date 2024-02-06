@@ -5,9 +5,6 @@ LOGS=$FM_LOG_DIR
 TS=$(date +'%H%M%S')
 
 start() {
-    echo "starting control_module router"
-    poetry run python /app/optimal_dispatch/router.py &
-
     echo "starting fleet manager workers"
     poetry run python /app/main.py > $LOGS/fm.out 2>&1 &
 

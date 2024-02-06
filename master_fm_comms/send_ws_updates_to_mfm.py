@@ -11,7 +11,6 @@ import json
 # ati code imports
 import master_fm_comms.mfm_utils as mu
 
-
 async def send_ongoing_trip_status(ws, mfm_context: mu.MFMContext):
     redis = aioredis.Redis.from_url(
         os.getenv("FM_REDIS_URI"), max_connections=10, decode_responses=True
@@ -51,7 +50,6 @@ async def send_ongoing_trip_status(ws, mfm_context: mu.MFMContext):
                 logging.getLogger("mfm_updates").info(
                     f"sent an ongoing_trip status msg for {fleet_name} to master fm"
                 )
-
 
 async def send_fleet_status(ws, mfm_context: mu.MFMContext):
     redis = aioredis.Redis.from_url(
@@ -95,7 +93,6 @@ async def send_fleet_status(ws, mfm_context: mu.MFMContext):
                 logging.getLogger("mfm_updates").info(
                     f"sent a fleet_status msg for {fleet_name} to master fm"
                 )
-
 
 async def async_send_ws_msgs_to_mfm():
     logging.getLogger("mfm_updates").info("started async_send_ws_msgs_to_mfm script")
