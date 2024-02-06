@@ -14,7 +14,7 @@ import app.routers.dependencies as dpd
 from utils.comms import send_async_req_to_sherpa
 import models.misc_models as mm
 from utils.rq_utils import Queues
-
+import logging
 
 router = APIRouter(
     prefix="/api/v1/control",
@@ -404,20 +404,14 @@ async def manual_park(
     return response
 
 
-@router.post("/manual_visa_release", response_model=rqm.ResourceResp)
+@router.post("/manual_visa_release")
 async def resource_release(
-    sherpa_name: str, visa: rqm.VisaReq, user_name=Depends(dpd.get_user_from_header)
+    resource_release_req: rqm.ManualReleaseReq, user_name=Depends(dpd.get_user_from_header)
 ):
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession() as dbsession:
-        if dbsession.get_sherpa(sherpa_name) is None:
-            dpd.raise_error(f"Invalid sherpa name: {sherpa_name}")
-
-    resource_release_req = rqm.ResourceReq(
-        timestamp=time.time(), visa=visa, access_type=rqm.AccessType.RELEASE
-    )
-    queue = Queues.queues_dict["resource_handler"]
-    response = await dpd.process_req_with_response(queue, resource_release_req, sherpa_name)
-    return rqm.ResourceResp.from_json(response)
+    queues = Queues.queues_dict["resource_handler"]
+    response = await dpd.process_req_with_response(queues, resource_release_req, resource_release_req.sherpa_name)
+    
+    return response

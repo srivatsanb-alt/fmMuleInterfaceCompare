@@ -148,6 +148,12 @@ class ResourceReq(SherpaReq):
     type = MessageType.RESOURCE_ACCESS
 
 
+class ManualReleaseReq(SherpaReq):   
+    sherpa_name: str
+    zone_id: str
+    type = MessageType.MANUAL_RELEASE
+
+
 # messages from sherpa not going to queue
 class FileUploadReq(BaseModel):
     filename: str

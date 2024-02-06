@@ -1602,6 +1602,19 @@ class Handlers:
 
         return response.to_json()
 
+    def handle_manual_release(self, req):
+        zone_name, Zonetype = utils_visa.split_zone_id(req.zone_id)
+        ez = self.dbsession.get_exclusion_zone(zone_name, Zonetype)
+        sherpa = self.dbsession.get_sherpa(req.sherpa_name)
+
+        if ez in sherpa.exclusion_zones:
+            sherpa.exclusion_zones.remove(ez)
+            
+        response = f"{sherpa.name} doesn't hold {ez.zone_id} anymore, visa release done"
+        logging.getLogger("visa").info(response)
+        
+        return response
+    
     def handle_sherpa_img_update(self, req: rqm.SherpaImgUpdateCtrlReq):
         response = {}
         # query db
