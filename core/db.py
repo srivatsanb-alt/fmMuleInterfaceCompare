@@ -1,8 +1,6 @@
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
 from sqlalchemy.pool import NullPool
-import psycopg2
-import os
 import psutil
 from sqlalchemy import event
 
@@ -32,26 +30,9 @@ def modify_pool_settings_dynamically(engine, pool_config):
     return
 
 
-def connect():
-    keepalive_kwargs = {
-        "keepalives": 1,
-        "keepalives_idle": 60,
-        "keepalives_interval": 10,
-        "keepalives_count": 5,
-    }
-
-    return psycopg2.connect(
-        database=os.getenv("PGDATABASE"),
-        host=os.getenv("PGHOST"),
-        user=os.getenv("PGUSER"),
-        password=os.getenv("PGPASSWORD"),
-        **keepalive_kwargs,
-    )
-
-
 def get_engine(database_uri, pool=False, pool_config={}):
-    # don't pool - multiprocessing
-    kwargs = {"poolclass": NullPool, "creator": connect}
+    # don't pool by default - multiprocessing
+    kwargs = {"poolclass": NullPool}
     if pool:
         kwargs = {
             "pool_pre_ping": True,
@@ -59,7 +40,6 @@ def get_engine(database_uri, pool=False, pool_config={}):
             "max_overflow": pool_config["max_overflow"],
             "pool_timeout": pool_config["pool_timeout"],
             "pool_recycle": pool_config["pool_recycle"],
-            "creator": connect,
         }
     engine = create_engine(database_uri, **kwargs)
 
