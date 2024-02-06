@@ -29,6 +29,7 @@ def modify_pool_settings_dynamically(engine, pool_config):
 
             engine.pool.size = dyn_pool_size
             engine.pool._max_overflow = dyn_overflow
+
     return
 
 
@@ -58,6 +59,7 @@ def get_engine(database_uri, pool=False, pool_config={}):
             "pool_size": pool_config["pool_size"],
             "max_overflow": pool_config["max_overflow"],
             "pool_timeout": pool_config["pool_timeout"],
+            "pool_recycle": pool_config["pool_recycle"],
             "creator": connect,
         }
     engine = create_engine(database_uri, **kwargs)
