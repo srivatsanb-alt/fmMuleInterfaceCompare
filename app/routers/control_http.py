@@ -1,7 +1,6 @@
 import redis
 import os
 import json
-import time
 from typing import Union
 
 # ati code imports
