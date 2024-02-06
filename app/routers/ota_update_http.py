@@ -12,6 +12,7 @@ import models.misc_models as mm
 import master_fm_comms.mfm_utils as mu
 import app.routers.dependencies as dpd
 import utils.util as utils_util
+import core.common as ccm
 
 
 router = APIRouter(
@@ -120,7 +121,7 @@ async def update_fm(
         dpd.raise_error(f"Unable to complete the update process")
 
     update_log = f"Update to {fm_version} successful! Please switch to {fm_version} with the change FM version button in maintenance page"
-    with DBSession(engine=dpd.engine) as dbsession:
+    with DBSession(engine=ccm.engine) as dbsession:
         dbsession.add_notification(
             dbsession.get_customer_names(),
             update_log,

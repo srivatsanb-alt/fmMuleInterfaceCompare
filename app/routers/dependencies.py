@@ -15,30 +15,9 @@ import json
 
 # ati code imports
 import core.handler_configuration as hc
-from core.db import get_engine
 from utils.rq_utils import enqueue, enqueue_at, Queues
 from models.request_models import SherpaReq
 from models.db_session import DBSession
-
-
-def get_db_pool_config():
-    pool_config = {
-        "pool_size": 30,
-        "max_overflow": 10,
-        "pool_timeout": 10,
-        "pool_limit": 70,
-        "overflow_limit": 30,
-        "dynamic_pooling": True,
-        "pid_based": True,
-        "pid_pool_factor": 0.3,
-        "pid_overflow_factor": 0.1,
-    }
-    return pool_config
-
-
-engine = get_engine(
-    os.getenv("FM_DATABASE_URI"), pool=True, pool_config=get_db_pool_config()
-)
 
 
 # upon assignment of a task, it gets added into the job queue
