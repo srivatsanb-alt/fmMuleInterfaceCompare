@@ -4,7 +4,6 @@ from sqlalchemy.pool import NullPool
 import psycopg2
 import os
 import psutil
-import logging
 from sqlalchemy import event
 
 
