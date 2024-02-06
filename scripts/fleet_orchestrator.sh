@@ -5,9 +5,6 @@ LOGS=$FM_LOG_DIR
 TS=$(date +'%H%M%S')
 
 start() {
-    echo "starting control_module router"
-    poetry run python /app/optimal_dispatch/router.py &
-
     echo "starting fleet manager workers"
     poetry run python /app/main.py > $LOGS/fm.out 2>&1 &
 
@@ -27,7 +24,13 @@ run_simulator() {
 }
 
 set_max_connections() {
-  MC="300"
+  MC=$(poetry run python -c "from scripts.psql_connection_settings import get_max_psql_connections_from_mongo; get_max_psql_connections_from_mongo();")
+
+  # set env var
+  export PSQL_MAX_CONNECTIONS=$MC
+
+  echo "Setting PSQL_MAX_CONNECTIONS to $MC"
+  #modify psql conf
   n=$(cat /app/static/psql/psql_backup/postgresql.conf | grep "max_connections = $MC" | wc -l)
   if [ "$n" -eq "1" ] ; then
      echo "Already modified psql max connections to $MC"
@@ -36,6 +39,7 @@ set_max_connections() {
      echo "max_connections = $MC" >> /app/static/psql/psql_backup/postgresql.conf
      echo "Will set psql max connections to $MC"
   fi
+
 }
 
 

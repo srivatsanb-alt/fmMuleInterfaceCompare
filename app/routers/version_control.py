@@ -4,6 +4,7 @@ from sqlalchemy.orm.attributes import flag_modified
 # ati code imports
 from models.db_session import DBSession
 import app.routers.dependencies as dpd
+import core.common as ccm
 
 
 router = APIRouter(
@@ -22,7 +23,7 @@ async def allow_new_sherpa_version(
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession(pool=True) as dbsession:
+    with DBSession(engine=ccm.engine) as dbsession:
         software_compatability = dbsession.get_compatability_info()
         sherpa_versions = software_compatability.info.get("sherpa_versions", [])
 
@@ -43,7 +44,7 @@ async def disallow_sherpa_version(
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession(pool=True) as dbsession:
+    with DBSession(engine=ccm.engine) as dbsession:
         software_compatability = dbsession.get_compatability_info()
         sherpa_versions = software_compatability.info.get("sherpa_versions", [])
         if version in sherpa_versions:

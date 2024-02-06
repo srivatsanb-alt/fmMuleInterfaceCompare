@@ -14,7 +14,6 @@ from redis import Redis
 # ati code imports
 import core.handler_configuration as hc
 from core.constants import MessageType, WebSocketCloseCode
-
 from models.db_session import DBSession
 import models.misc_models as mm
 import models.request_models as rqm
@@ -22,6 +21,8 @@ import app.routers.dependencies as dpd
 import utils.log_utils as lu
 import utils.util as utils_util
 from utils.rq_utils import Queues, enqueue
+import core.common as ccm
+
 
 MSG_INVALID = "msg_invalid"
 MSG_TYPE_REPEATED = "msg_type_repeated_within_time_window"
@@ -146,14 +147,14 @@ async def sherpa_status(
         )
         await websocket.close(
             code=WebSocketCloseCode.RATE_LIMIT_EXCEEDED,
-            detail="Too many connection request",
+            reason="Too many connection request",
         )
         return
 
     logger.info(f"websocket connection initiated by {sherpa_name}")
     logger.info(f"websocket connection has to be accepeted for {sherpa_name}")
 
-    with DBSession(pool=True) as dbsession:
+    with DBSession(engine=ccm.engine) as dbsession:
         sherpa = dbsession.get_sherpa(sherpa_name)
         if sherpa.status.other_info is None:
             sherpa.status.other_info = {}

@@ -12,6 +12,7 @@ import models.trip_models as tm
 import models.fleet_models as fm
 import models.request_models as rqm
 import app.routers.dependencies as dpd
+from utils.util import report_error
 
 
 def get_conditional_trip_config():
@@ -333,6 +334,7 @@ class BookConditionalTrip:
                 )
 
 
+@report_error
 def book_conditional_trips():
     logging.getLogger("misc").info("Started book conditional trips script")
 

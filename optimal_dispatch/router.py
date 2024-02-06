@@ -6,10 +6,11 @@ import sys
 import numpy as np
 import logging
 import logging.config
-from utils.router_utils import get_dense_path
 
 
 # ati code imports
+from utils.router_utils import get_dense_path
+from utils.util import report_error, proc_retry
 import utils.log_utils as lu
 from models.db_session import DBSession
 
@@ -32,12 +33,13 @@ def init_routers():
     return all_router_modules
 
 
+@proc_retry(times=50)
+@report_error
 def start_router_module():
     with redis.from_url(os.getenv("FM_REDIS_URI")) as redis_conn:
         logger = logging.getLogger("control_module_router")
         all_router_modules = init_routers()
         logger.info(f"Intialized the router modules")
-
         while True:
             add_router_for = redis_conn.get("add_router_for")
             update_router_for = redis_conn.get("update_router_for")
@@ -150,13 +152,4 @@ def start_router_module():
                 )
                 redis_conn.delete(key)
 
-            time.sleep(0.2)
-
-
-if __name__ == "__main__":
-    while True:
-        try:
-            start_router_module()
-        except Exception as e:
-            logging.getLogger().error(f"Exception in router, exception: {e}")
-            time.sleep(10)
+        time.sleep(0.2)

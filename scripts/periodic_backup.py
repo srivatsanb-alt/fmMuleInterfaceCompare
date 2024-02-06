@@ -14,6 +14,7 @@ import json
 # ati code imports
 from core.db import get_engine
 from models.mongo_client import FMMongo
+from utils.util import report_error
 
 
 def prune_unused_images(backup_config):
@@ -25,6 +26,7 @@ def prune_unused_images(backup_config):
             logging.getLogger("misc").warning(f"Unable to prune old({temp}h) docker images")
 
 
+@report_error
 def backup_data():
     with FMMongo() as fm_mongo:
         backup_config = fm_mongo.get_document_from_fm_config("data_backup")
@@ -127,15 +129,10 @@ def backup_data():
 
         logging.getLogger("misc").info(f"Backed up data")
 
-        try:
-            # default keep size is 1000MB
-            keep_size_mb = backup_config["keep_size_mb"]
-            cleanup_data(current_data, keep_size_mb)
+        # default keep size is 1000MB
+        keep_size_mb = backup_config["keep_size_mb"]
+        cleanup_data(current_data, keep_size_mb)
 
-        except Exception as e:
-            logging.getLogger("misc").error(
-                f"couldn't cleanup old backed up data, exception: {e}"
-            )
         time.sleep(freq)
 
 
@@ -176,6 +173,7 @@ def sort_and_remove_directories(directory, target_size, current_data):
             break
 
 
+@report_error
 def cleanup_data(current_data, keep_size_mb=1000):
     fm_backup_path = os.path.join(os.getenv("FM_STATIC_DIR"), "data_backup")
     data_backup_size = get_directory_size(fm_backup_path)
