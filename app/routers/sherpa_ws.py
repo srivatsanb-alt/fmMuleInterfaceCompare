@@ -108,19 +108,20 @@ def accept_message(sherpa: str, msg):
 
 def freq_ws_req(sherpa_name):
     rkey = f"{sherpa_name}_num_conn_req"
-    rkey_expiry_ms = 60 * 1000
+    rkey_ts = f"{sherpa_name}_num_conn_req_ts"
     max_conn = 4
-    if redis.setnx(rkey, 1):
-        redis.expire(rkey, rkey_expiry_ms)
+    if redis.setnx(rkey_ts, 1):
+        redis.set(rkey, 1)
+        rkey_expiry_ms = timedelta(milliseconds=60000)
+        redis.expire(rkey_ts, rkey_expiry_ms)
     else:
         num_conn = redis.get(rkey)
         if num_conn is not None:
             num_conn = int(num_conn.decode())
             num_conn += 1
+            redis.set(rkey, num_conn)
             if num_conn > max_conn:
                 return True
-            redis.set(rkey, num_conn)
-
     return False
 
 
