@@ -19,7 +19,9 @@ class DBSession:
         if engine:
             self.session: Session = get_session_with_engine(engine)
         else:
-            self.session: Session = get_session(os.getenv("FM_DATABASE_URI"))
+            self.session: Session = get_session(
+                os.path.join(os.getenv("FM_DATABASE_URI"), os.getenv("DEFAULT_DB"))
+            )
 
     def __enter__(self):
         return self
