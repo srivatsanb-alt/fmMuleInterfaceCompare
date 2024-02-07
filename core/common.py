@@ -23,5 +23,7 @@ def get_db_pool_config():
 
 
 engine = get_engine(
-    os.getenv("FM_DATABASE_URI"), pool=True, pool_config=get_db_pool_config()
+    os.path.join(os.getenv("FM_DATABASE_URI"), os.getenv("DEFAULT_DB")),
+    pool=True,
+    pool_config=get_db_pool_config(),
 )

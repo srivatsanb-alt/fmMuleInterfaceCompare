@@ -733,7 +733,11 @@ class Handlers:
         next_task = "no new task to assign"
         sherpa_status: fm.SherpaStatus = sherpa.status
 
-        if not ongoing_trip and pending_trip:
+        if (
+            not ongoing_trip
+            and pending_trip
+            and hutils.is_sherpa_available_for_new_trip(self.dbsession, sherpa_status)
+        ):
             done = True
             next_task = "assign_new_trip"
 
