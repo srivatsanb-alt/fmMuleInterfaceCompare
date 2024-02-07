@@ -24,13 +24,15 @@ run_simulator() {
 }
 
 set_max_connections() {
+  poetry run python -c "from scripts.psql_connection_settings import create_psql_db_config; create_psql_db_config();"
+
   MC=$(poetry run python -c "from scripts.psql_connection_settings import get_max_psql_connections_from_mongo; get_max_psql_connections_from_mongo();")
 
   # set env var
   export PSQL_MAX_CONNECTIONS=$MC
 
   echo "Setting PSQL_MAX_CONNECTIONS to $MC"
-  
+
   #modify psql conf
   n=$(cat /app/static/psql/psql_backup/postgresql.conf | grep "max_connections = $MC" | wc -l)
   if [ "$n" -eq "1" ] ; then
@@ -39,7 +41,7 @@ set_max_connections() {
      sed -i "s/max_connections/#max_connections/g" /app/static/psql/psql_backup/postgresql.conf
      echo "max_connections = $MC" >> /app/static/psql/psql_backup/postgresql.conf
      echo "Will set psql max connections to $MC"
-     docker restart fleet_db 
+     docker restart fleet_db
      echo "Restarted fleet_db container"
   fi
 }
