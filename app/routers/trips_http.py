@@ -7,7 +7,7 @@ from sqlalchemy.orm.attributes import flag_modified
 import asyncio
 import pandas as pd
 from datetime import datetime
-
+import io
 # ati code imports
 import app.routers.dependencies as dpd
 import models.request_models as rqm
@@ -19,6 +19,9 @@ import utils.trip_utils as tu
 import core.constants as cc
 import utils.util as utils_util
 import core.common as ccm
+from openpyxl import Workbook
+from openpyxl.worksheet.page import PageMargins
+
 
 router = APIRouter(
     prefix="/api/v1/trips",
@@ -568,72 +571,50 @@ async def update_saved_route_metadata(
 async def export_analytics_data(
     trip_analytics_req: rqm.TripStatusReq, user_name=Depends(dpd.get_user_from_header)
 ):
-    response = {}
     if not user_name:
-        dpd.raise_error("Unknown requester", 401)
+        raise HTTPException(status_code=401, detail="Unknown requester")
 
-    with DBSession(engine=ccm.engine) as dbsession:
+    response = {}
+    with DBSession() as dbsession:
         if trip_analytics_req.from_dt and trip_analytics_req.to_dt:
+            # Convert string dates to datetime objects
             trip_analytics_req.from_dt = str_to_dt(trip_analytics_req.from_dt)
             trip_analytics_req.to_dt = str_to_dt(trip_analytics_req.to_dt)
-
             all_trip_analytics = dbsession.get_trip_analytics_with_timestamp(
                 trip_analytics_req.from_dt, trip_analytics_req.to_dt
             )
-
-        else:
-            if not trip_analytics_req.trip_ids:
-                return response
+        elif trip_analytics_req.trip_ids:
             all_trip_analytics = dbsession.get_trip_analytics_with_trip_ids(
                 trip_analytics_req.trip_ids
             )
+        else:
+            return response
 
-        logging.getLogger("uvicorn").info(
-            f"normalised json: {jsonable_encoder(all_trip_analytics)}"
-        )
+        # Convert to DataFrame
+        df = pd.DataFrame(all_trip_analytics)
 
-        # Format the time fields
-        for trip in all_trip_analytics:
-            trip["start_time"] = format_datetime(trip["start_time"])
-            trip["end_time"] = format_datetime(trip["end_time"])
+    # Convert DataFrame to Excel
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name='Analytics')
 
-        df = pd.DataFrame(
-            jsonable_encoder(all_trip_analytics),
-            columns=[
-                "sherpa_name",
-                "trip_id",
-                "trip_leg_id",
-                "start_time",
-                "end_time",
-                "from_station",
-                "to_station",
-                "cte",
-                "te",
-                "expected_trip_time",
-                "actual_trip_time",
-                "time_elapsed_obstacle_stoppages",
-                "time_elapsed_visa_stoppages",
-                "time_elapsed_other_stoppages",
-                "num_trip_msg",
-                "created_at",
-                "updated_at",
-            ],
-        )
+        # Get the workbook and the sheet for formatting
+        workbook = writer.book
+        worksheet = writer.sheets['Analytics']
 
-    csv_data = df_to_csv_formatted(df)
+        # Set up the worksheet for A4 printing
+        worksheet.page_setup.paperSize = worksheet.PAPERSIZE_A4
+        worksheet.page_margins = PageMargins(left=0.7, right=0.7, top=0.75, bottom=0.75, header=0.3, footer=0.3)
+
+        # Optional: Auto-adjust columns' width
+        for column_cells in worksheet.columns:
+            length = max(len(str(cell.value)) for cell in column_cells)
+            worksheet.column_dimensions[column_cells[0].column_letter].width = length
+
+    # Prepare the response
+    output.seek(0)
     return StreamingResponse(
-        iter([csv_data]),
-        media_type="text/csv",
-        headers={"Content-Disposition": f"attachment; filename=detail_analytics.csv"},
+        output,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=detail_analytics.xlsx"}
     )
-
-
-def format_datetime(dt_str):
-    # Parse the datetime string and format it in a desired format
-    dt_format = "%Y-%m-%d %H:%M:%S"  # Modify this format as needed
-    return datetime.strptime(dt_str, dt_format).strftime(dt_format)
-
-
-def df_to_csv_formatted(dataframe):
-    # Custom function to convert DataFrame to CSV
-    return dataframe.to_csv(index=False)
