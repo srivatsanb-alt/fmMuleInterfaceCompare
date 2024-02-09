@@ -23,7 +23,7 @@ def get_db_pool_config():
 
 
 engine = get_engine(
-    os.path.join(os.getenv("FM_DATABASE_URI"), os.getenv("DEFAULT_DB")),
+    os.path.join(os.getenv("FM_DATABASE_URI"), os.getenv("PGDATABASE")),
     pool=True,
     pool_config=get_db_pool_config(),
 )
