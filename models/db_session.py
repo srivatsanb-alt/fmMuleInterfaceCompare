@@ -20,7 +20,7 @@ class DBSession:
             self.session: Session = get_session_with_engine(engine)
         else:
             self.session: Session = get_session(
-                os.path.join(os.getenv("FM_DATABASE_URI"), os.getenv("DEFAULT_DB"))
+                os.path.join(os.getenv("FM_DATABASE_URI"), os.getenv("PGDATABASE"))
             )
 
     def __enter__(self):

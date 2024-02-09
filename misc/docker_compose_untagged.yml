@@ -27,7 +27,11 @@ services:
       FM_REDIS_URI: redis://localhost:6379
       PGTZ: Asia/Kolkata
       TZ: Asia/Kolkata
-      DEFAULT_DB: ati_fleet
+      PGHOST: db
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: ati_fleet
       FM_DATABASE_URI: postgresql://postgres:postgres@db:5432
       FM_MONGO_DATABASE_URI: mongodb://ati:atiMongo@mongo:27017
 
