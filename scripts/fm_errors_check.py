@@ -23,6 +23,7 @@ def update_fm_incident(dbsession: DBSession, incident_id):
         
         flag_modified(fm_incident, "other_info")
         logging.getLogger().info("Updated FM incident {incident_id}")
+
     
 def has_error_repeated(error_dict):
     last_error = {}
@@ -33,9 +34,9 @@ def has_error_repeated(error_dict):
             last_error = json.load(f)
 
         if last_error.get("error_msg") == error_dict["error_msg"]:
-            return True
+            return True, last_error["incident_id"]
 
-    return False
+    return False, None
 
 
 def add_fm_incident(dbsession, error_dict):
@@ -103,8 +104,9 @@ def periodic_error_check():
                 if match is not None:
                     random_id = match.group(1)
                     error_dict["incident_id"] = random_id
-                    if has_error_repeated(error_dict):
-                        update_fm_incident(dbsession, error_dict["incident_id"])
+                    error_repeat, last_incident_id = has_error_repeated(error_dict)
+                    if error_repeat:
+                        update_fm_incident(dbsession, last_incident_id)
                     else:
                         add_fm_incident(dbsession, error_dict)
                         add_fm_error_file_upload(dbsession, error_dict)
