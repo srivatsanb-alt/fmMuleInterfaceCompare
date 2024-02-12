@@ -46,7 +46,7 @@ def enqueue_scheduled_trips(db_session: DBSession, schdeuled_job_id):
 
 
 # assigns next task to the sherpa.
-@proc_retry(times=50)
+@proc_retry()
 @report_error
 def assign_next_task():
     with FMMongo() as fm_mongo:

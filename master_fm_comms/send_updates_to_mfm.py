@@ -28,8 +28,8 @@ def str_to_dt(dt_str, tdelta_h=None):
 
 
 class SendEventUpdates2MFM:
-    def __init__(self):
-        self.redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
+    def __init__(self,redis_conn):
+        self.redis_conn = redis_conn
         self.mfm_context: mu.MFMContext = mu.get_mfm_context()
         self.mfm_upload_dt_info = None
         self.any_updates_sent = False
@@ -575,23 +575,24 @@ def send_mfm_updates():
     if mfm_context.send_updates is False:
         return
 
-    send_mfm_updates_with_retry(mfm_context)
+    send_mfm_updates_with_decorators(mfm_context)
 
 
-@utils_util.proc_retry(times=50, sleep_time=30)
+@utils_util.proc_retry(sleep_time=30)
 @utils_util.report_error
-def send_mfm_updates_with_retry(mfm_context):
+def send_mfm_updates_with_decorators(mfm_context):
     send_conf_to_mfm(mfm_context)
-    event_updater = SendEventUpdates2MFM()
-    while True:
-        with DBSession() as dbsession:
-            event_updater.maybe_send_conf_to_mfm()
-            event_updater.get_master_data_upload_info(dbsession)
-            update_trip_info(event_updater, dbsession)
-            update_trip_analytics(event_updater, dbsession)
-            update_sherpa_oee(event_updater, dbsession)
-            update_fm_incidents(event_updater, dbsession)
-            upload_important_files(event_updater, dbsession)
-            event_updater.update_master_data_upload_info()
+    with redis.from_url(os.getenv("FM_REDIS_URI")) as redis_conn:
+        event_updater = SendEventUpdates2MFM(redis_conn)
+        while True:
+            with DBSession() as dbsession:
+                event_updater.maybe_send_conf_to_mfm()
+                event_updater.get_master_data_upload_info(dbsession)
+                update_trip_info(event_updater, dbsession)
+                update_trip_analytics(event_updater, dbsession)
+                update_sherpa_oee(event_updater, dbsession)
+                update_fm_incidents(event_updater, dbsession)
+                upload_important_files(event_updater, dbsession)
+                event_updater.update_master_data_upload_info()
 
-        time.sleep(mfm_context.update_freq)
+            time.sleep(mfm_context.update_freq)

@@ -317,7 +317,7 @@ def report_error(func):
             proc_exception(func,e)
     return wrapper
 
-def proc_retry(times, sleep_time=5):
+def proc_retry(times=np.inf, sleep_time=5):
     def decorator(func):
         def wrapper(*args, **kwargs):
             attempt = 0
@@ -339,6 +339,7 @@ def async_report_error(func):
             return result
         except Exception as e:
             logging.exception(f"Exception occurred in {func.__name__}: {e}")
+            proc_exception(func,e)
             raise e
     return async_wrapper
 

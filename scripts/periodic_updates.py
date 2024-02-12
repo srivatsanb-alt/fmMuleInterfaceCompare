@@ -148,7 +148,7 @@ def send_fleet_level_notifications(dbsession, fleet_name):
     send_notification(all_infos)
     send_notification(action_requests)
 
-@proc_retry(times=50)
+@proc_retry()
 @report_error
 def send_periodic_updates():
     logging.getLogger().info("starting periodic updates script")

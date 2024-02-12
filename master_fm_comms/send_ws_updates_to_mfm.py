@@ -10,93 +10,96 @@ import json
 
 # ati code imports
 import master_fm_comms.mfm_utils as mu
+import utils.util as utils_util 
 
-
+@utils_util.async_report_error
 async def send_ongoing_trip_status(ws, mfm_context: mu.MFMContext):
-    redis = aioredis.Redis.from_url(
+    async with aioredis.Redis.from_url(
         os.getenv("FM_REDIS_URI"), max_connections=10, decode_responses=True
-    )
-    psub = redis.pubsub()
-    await psub.subscribe("channel:status_updates")
+    ) as redis_conn:
+   
+        psub = redis_conn.pubsub()
+        await psub.subscribe("channel:status_updates")
 
-    all_fleet_names = await redis.get("all_fleet_names")
-    all_fleet_names = json.loads(all_fleet_names)
+        all_fleet_names = await redis_conn.get("all_fleet_names")
+        all_fleet_names = json.loads(all_fleet_names)
 
-    last_update_dt = {}
-    for fleet_name in all_fleet_names:
-        last_update_dt.update({fleet_name: datetime.datetime.now()})
+        last_update_dt = {}
+        for fleet_name in all_fleet_names:
+            last_update_dt.update({fleet_name: datetime.datetime.now()})
 
-    while True:
-        message = await psub.get_message(ignore_subscribe_messages=True, timeout=5)
-        if message:
-            data = ast.literal_eval(message["data"])
+        while True:
+            message = await psub.get_message(ignore_subscribe_messages=True, timeout=5)
+            if message:
+                data = ast.literal_eval(message["data"])
 
-            if data.get("type") != "ongoing_trips_status":
-                continue
+                if data.get("type") != "ongoing_trips_status":
+                    continue
 
-            elif not data.get("fleet_name"):
-                continue
+                elif not data.get("fleet_name"):
+                    continue
 
-            fleet_name = data.get("fleet_name")
-            temp = last_update_dt.get(fleet_name)
+                fleet_name = data.get("fleet_name")
+                temp = last_update_dt.get(fleet_name)
 
-            if temp is None:
-                raise Exception("New fleet has been added, reconnect again")
+                if temp is None:
+                    raise Exception("New fleet has been added, reconnect again")
 
-            time_delta = datetime.datetime.now() - temp
+                time_delta = datetime.datetime.now() - temp
 
-            if time_delta.seconds > mfm_context.ws_update_freq:
-                await ws.send(json.dumps(data))
-                last_update_dt.update({fleet_name: datetime.datetime.now()})
-                logging.getLogger("mfm_updates_ws").info(
-                    f"sent an ongoing_trip status msg for {fleet_name} to master fm"
-                )
+                if time_delta.seconds > mfm_context.ws_update_freq:
+                    await ws.send(json.dumps(data))
+                    last_update_dt.update({fleet_name: datetime.datetime.now()})
+                    logging.getLogger("mfm_updates_ws").info(
+                        f"sent an ongoing_trip status msg for {fleet_name} to master fm"
+                    )
 
-
+@utils_util.async_report_error
 async def send_fleet_status(ws, mfm_context: mu.MFMContext):
-    redis = aioredis.Redis.from_url(
+    async with aioredis.Redis.from_url(
         os.getenv("FM_REDIS_URI"), max_connections=10, decode_responses=True
-    )
-    psub = redis.pubsub()
-    await psub.subscribe("channel:status_updates")
+    ) as redis_conn:
+   
+        psub = redis_conn.pubsub()
+        await psub.subscribe("channel:status_updates")
 
-    all_fleet_names = await redis.get("all_fleet_names")
-    all_fleet_names = json.loads(all_fleet_names)
+        all_fleet_names = await redis_conn.get("all_fleet_names")
+        all_fleet_names = json.loads(all_fleet_names)
 
-    last_update_dt = {}
-    for fleet_name in all_fleet_names:
-        last_update_dt.update({fleet_name: datetime.datetime.now()})
+        last_update_dt = {}
+        for fleet_name in all_fleet_names:
+            last_update_dt.update({fleet_name: datetime.datetime.now()})
 
-    while True:
-        message = await psub.get_message(ignore_subscribe_messages=True, timeout=5)
-        if message:
-            data = ast.literal_eval(message["data"])
+        while True:
+            message = await psub.get_message(ignore_subscribe_messages=True, timeout=5)
+            if message:
+                data = ast.literal_eval(message["data"])
 
-            if data.get("type") != "fleet_status":
-                continue
+                if data.get("type") != "fleet_status":
+                    continue
 
-            elif not data.get("fleet_name"):
-                continue
+                elif not data.get("fleet_name"):
+                    continue
 
-            fleet_name = data.get("fleet_name")
+                fleet_name = data.get("fleet_name")
 
-            temp = last_update_dt.get(fleet_name)
-            if temp is None:
-                raise Exception("New fleet has been added, reconnect again")
+                temp = last_update_dt.get(fleet_name)
+                if temp is None:
+                    raise Exception("New fleet has been added, reconnect again")
 
-            time_delta = datetime.datetime.now() - temp
+                time_delta = datetime.datetime.now() - temp
 
-            if time_delta.seconds > mfm_context.ws_update_freq:
-                pruned_fleet_status = mu.prune_fleet_status(data)
+                if time_delta.seconds > mfm_context.ws_update_freq:
+                    pruned_fleet_status = mu.prune_fleet_status(data)
 
-                await ws.send(json.dumps(pruned_fleet_status))
+                    await ws.send(json.dumps(pruned_fleet_status))
 
-                last_update_dt.update({fleet_name: datetime.datetime.now()})
-                logging.getLogger("mfm_updates_ws").info(
-                    f"sent a fleet_status msg for {fleet_name} to master fm"
-                )
+                    last_update_dt.update({fleet_name: datetime.datetime.now()})
+                    logging.getLogger("mfm_updates_ws").info(
+                        f"sent a fleet_status msg for {fleet_name} to master fm"
+                    )
 
-
+@utils_util.async_report_error
 async def async_send_ws_msgs_to_mfm():
     logging.getLogger("mfm_updates_ws").info("started async_send_ws_msgs_to_mfm script")
     mfm_context: mu.MFMContext = mu.get_mfm_context()
@@ -137,6 +140,6 @@ async def async_send_ws_msgs_to_mfm():
             await asyncio.sleep(sl)
 
 
-
+@utils_util.proc_retry()
 def send_ws_msgs_to_mfm():
     asyncio.get_event_loop().run_until_complete(async_send_ws_msgs_to_mfm())
