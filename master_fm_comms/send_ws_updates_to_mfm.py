@@ -11,6 +11,7 @@ import json
 # ati code imports
 import master_fm_comms.mfm_utils as mu
 
+
 async def send_ongoing_trip_status(ws, mfm_context: mu.MFMContext):
     redis = aioredis.Redis.from_url(
         os.getenv("FM_REDIS_URI"), max_connections=10, decode_responses=True
@@ -47,9 +48,10 @@ async def send_ongoing_trip_status(ws, mfm_context: mu.MFMContext):
             if time_delta.seconds > mfm_context.ws_update_freq:
                 await ws.send(json.dumps(data))
                 last_update_dt.update({fleet_name: datetime.datetime.now()})
-                logging.getLogger("mfm_updates").info(
+                logging.getLogger("mfm_updates_ws").info(
                     f"sent an ongoing_trip status msg for {fleet_name} to master fm"
                 )
+
 
 async def send_fleet_status(ws, mfm_context: mu.MFMContext):
     redis = aioredis.Redis.from_url(
@@ -90,12 +92,13 @@ async def send_fleet_status(ws, mfm_context: mu.MFMContext):
                 await ws.send(json.dumps(pruned_fleet_status))
 
                 last_update_dt.update({fleet_name: datetime.datetime.now()})
-                logging.getLogger("mfm_updates").info(
+                logging.getLogger("mfm_updates_ws").info(
                     f"sent a fleet_status msg for {fleet_name} to master fm"
                 )
 
+
 async def async_send_ws_msgs_to_mfm():
-    logging.getLogger("mfm_updates").info("started async_send_ws_msgs_to_mfm script")
+    logging.getLogger("mfm_updates_ws").info("started async_send_ws_msgs_to_mfm script")
     mfm_context: mu.MFMContext = mu.get_mfm_context()
 
     if mfm_context.send_updates is False:
@@ -112,7 +115,7 @@ async def async_send_ws_msgs_to_mfm():
 
     while True:
         try:
-            logging.getLogger("mfm_updates").info(
+            logging.getLogger("mfm_updates_ws").info(
                 f"Will attempt to connect to {ws_url}, is ssl_context set {ssl_context_set}"
             )
             async with websockets.connect(
@@ -120,7 +123,7 @@ async def async_send_ws_msgs_to_mfm():
                 ssl=ssl_context,
                 extra_headers=(("X-API-Key", mfm_context.x_api_key),),
             ) as ws:
-                logging.getLogger("mfm_updates").info(f"connected to {ws_url}")
+                logging.getLogger("mfm_updates_ws").info(f"connected to {ws_url}")
                 await asyncio.gather(
                     send_ongoing_trip_status(ws, mfm_context),
                     send_fleet_status(ws, mfm_context),
@@ -128,12 +131,11 @@ async def async_send_ws_msgs_to_mfm():
 
         except Exception as e:
             sl = 10
-            logging.getLogger("mfm_updates").info(
+            logging.getLogger("mfm_updates_ws").info(
                 f"websocket disconnected, {e}. will try to reconnect in {sl} seconds..."
             )
             await asyncio.sleep(sl)
 
-    logging.getLogger("mfm_updates").info("closed websocket connection with fleet manager")
 
 
 def send_ws_msgs_to_mfm():

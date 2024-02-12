@@ -13,6 +13,7 @@ def get_other_loggers():
     others_loggers.append("status_updates")
     others_loggers.append("visa")
     others_loggers.append("mfm_updates")
+    others_loggers.append("mfm_updates_ws")
     others_loggers.append("misc")
     others_loggers.append("control_module_router")
     others_loggers.append("process_times")
