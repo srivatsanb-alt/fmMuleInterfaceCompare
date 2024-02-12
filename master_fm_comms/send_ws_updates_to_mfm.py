@@ -98,6 +98,7 @@ async def send_fleet_status(ws, mfm_context: mu.MFMContext):
                     logging.getLogger("mfm_updates_ws").info(
                         f"sent a fleet_status msg for {fleet_name} to master fm"
                     )
+                    raise Exception("ABD")
 
 @utils_util.async_report_error
 async def async_send_ws_msgs_to_mfm():
