@@ -1,7 +1,7 @@
 {
   "files": {
-    "main.css": "/static/css/main.c47ab056.css",
-    "main.js": "/static/js/main.0753ba3f.js",
+    "main.css": "/static/css/main.6e569a5f.css",
+    "main.js": "/static/js/main.0171fdfb.js",
     "static/js/27.25cb0711.chunk.js": "/static/js/27.25cb0711.chunk.js",
     "static/media/Login Image.png": "/static/media/Login Image.885a80af3ca6e7d909a4.png",
     "static/media/OpenSans-Regular-400.ttf": "/static/media/OpenSans-Regular-400.57cd57a648021fa1c396.ttf",
@@ -50,7 +50,7 @@
     "static/media/parking.svg": "/static/media/parking.37d3fcac97912ba986dd45e852e4a3ac.svg"
   },
   "entrypoints": [
-    "static/css/main.c47ab056.css",
-    "static/js/main.0753ba3f.js"
+    "static/css/main.6e569a5f.css",
+    "static/js/main.0171fdfb.js"
   ]
 }
