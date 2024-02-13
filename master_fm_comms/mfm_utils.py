@@ -181,7 +181,7 @@ def prune_fleet_status(fleet_status_msg: dict):
         pruned_sherpa_status.update({"trip_id": sherpa_status["trip_id"]})
         pruned_sherpa_status.update({"battery_status": sherpa_status["battery_status"]})
         pruned_sherpa_status.update({"ip_address": sherpa_status["ip_address"]})
-        #pruned_sherpa_status.update({"other_info": sherpa_status["other_info"]})
+        pruned_sherpa_status.update({"other_info": sherpa_status["other_info"]})
 
         # update new_sherpa_status
         new_sherpa_status.update({sherpa_name: pruned_sherpa_status})
