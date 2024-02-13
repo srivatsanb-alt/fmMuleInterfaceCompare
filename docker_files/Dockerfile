@@ -48,6 +48,8 @@ COPY ./misc/FlashTool_SB.tar /app/downloads/.
 COPY ./master_fm_comms/mfm_rev_tunnel.tar /app/downloads/.
 
 RUN mkdir /app/logs
+RUN mkdir /app/tmp
+
 RUN cd /app
 RUN chmod +x scripts/fleet_orchestrator.sh
 CMD exec scripts/fleet_orchestrator.sh

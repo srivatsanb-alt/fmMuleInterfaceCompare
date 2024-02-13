@@ -33,7 +33,7 @@ def init_routers():
     return all_router_modules
 
 
-@proc_retry(times=50)
+@proc_retry()
 @report_error
 def start_router_module():
     with redis.from_url(os.getenv("FM_REDIS_URI")) as redis_conn:
