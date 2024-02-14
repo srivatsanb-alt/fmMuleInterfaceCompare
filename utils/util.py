@@ -13,7 +13,6 @@ import time
 import logging
 from rq import Worker
 import sys
-import asyncio
 import functools 
 
 
@@ -309,6 +308,7 @@ def proc_exception(func,e):
     )
     sys.exit(1)
 
+
 def report_error(func):
     def wrapper(*args, **kwargs):
         try:
@@ -316,6 +316,7 @@ def report_error(func):
         except Exception as e:
             proc_exception(func,e)
     return wrapper
+
 
 def proc_retry(times=np.inf, sleep_time=5):
     def decorator(func):
@@ -330,6 +331,7 @@ def proc_retry(times=np.inf, sleep_time=5):
             return func(*args, **kwargs)
         return wrapper
     return decorator
+
 
 def async_report_error(func):
     @functools.wraps(func)
