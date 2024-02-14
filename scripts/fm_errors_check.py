@@ -8,7 +8,7 @@ from sqlalchemy.orm.attributes import flag_modified
 
 # ati code imports
 from models.db_session import DBSession
-from utils.util import proc_retry,report_error
+from utils.util import proc_retry, report_error
 import models.misc_models as mm
 
 
@@ -40,7 +40,7 @@ def has_error_repeated(error_dict):
 
 
 def add_fm_incident(dbsession, error_dict):
-    module= error_dict["module"]
+    module = error_dict["module"]
     fm_incident = mm.FMIncidents(
         type="fm_error",
         code=error_dict["code"],
@@ -111,4 +111,4 @@ def periodic_error_check():
                         add_fm_incident(dbsession, error_dict)
                         add_fm_error_file_upload(dbsession, error_dict)
 
-        time.sleep(20)
+        time.sleep(120)
