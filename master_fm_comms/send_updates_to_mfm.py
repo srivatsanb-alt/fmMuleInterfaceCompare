@@ -132,15 +132,15 @@ def send_reset_map_dir_req(mfm_context, fleet_name: str):
     return True
 
 
-def upload_map_files_fleet(mfm_context: mu.MFMContext, fleet):
-    map_path = os.path.join(os.environ["FM_STATIC_DIR"], f"{fleet.name}/map/")
+def upload_map_files_fleet(mfm_context: mu.MFMContext, fleet_name):
+    map_path = os.path.join(os.environ["FM_STATIC_DIR"], f"{fleet_name}/map/")
     all_map_files = [
         f for f in os.listdir(map_path) if os.path.isfile(os.path.join(map_path, f))
     ]
     upload_done = []
     ignored_large_files = []
 
-    while not send_reset_map_dir_req(mfm_context, fleet.name):
+    while not send_reset_map_dir_req(mfm_context, fleet_name):
         time.sleep(10)
 
     for file_name in all_map_files:
@@ -154,23 +154,23 @@ def upload_map_files_fleet(mfm_context: mu.MFMContext, fleet):
             req_json=None,
             files=files,
             params=None,
-            query=fleet.name,
+            query=fleet_name,
         )
         if response_status_code == 200:
             logging.getLogger("mfm_updates").info(
-                f"uploaded map file {file_name} of {fleet.name} to master fm successfully"
+                f"uploaded map file {file_name} of {fleet_name} to master fm successfully"
             )
             upload_done.append(file_name)
 
         elif response_status_code == 413:
             logging.getLogger("mfm_updates").warning(
-                f"Ignoring to upload map file {file_name} of {fleet.name}, file size too large"
+                f"Ignoring to upload map file {file_name} of {fleet_name}, file size too large"
             )
             ignored_large_files.append(file_name)
 
         else:
             logging.getLogger("mfm_updates").info(
-                f"unable to upload map_file {file_name} of {fleet.name} to master fm, status_code {response_status_code}"
+                f"unable to upload map_file {file_name} of {fleet_name} to master fm, status_code {response_status_code}"
             )
             time.sleep(5)
             break
@@ -180,14 +180,17 @@ def upload_map_files_fleet(mfm_context: mu.MFMContext, fleet):
 
 def upload_map_files(mfm_context: mu.MFMContext):
     map_files_uploaded = [False]
+    all_fleet_names = []
+    with DBSession() as dbsession:
+        all_fleet_names = dbsession.get_all_fleet_names()
+
+    map_files_uploaded = [False] * len(all_fleet_names)
     while not all(map_files_uploaded):
-        with DBSession() as dbsession:
-            all_fleets = dbsession.get_all_fleets()
-            map_files_uploaded = [False] * len(all_fleets)
-            i = 0
-            for fleet in all_fleets:
-                map_files_uploaded[i] = upload_map_files_fleet(mfm_context, fleet)
-                i += 1
+        i = 0
+        for fleet_name in all_fleet_names:
+            if map_files_uploaded[i] is False:
+                map_files_uploaded[i] = upload_map_files_fleet(mfm_context, fleet_name)
+            i += 1
 
 
 def update_fleet_info(mfm_context: mu.MFMContext):
