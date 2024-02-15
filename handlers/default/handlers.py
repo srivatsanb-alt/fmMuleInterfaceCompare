@@ -930,7 +930,7 @@ class Handlers:
 
         for trip, pending_trip in zip(all_to_be_cancelled_trips, all_pending_trips):
             self.dbsession.delete_pending_trip(pending_trip)
-            trip.status = tm.TripStatus.CANCELLED
+            trip.cancel()
             logging.getLogger().info(
                 f"Successfully deleted booked trip trip_id: {trip.id}, booking_id: {trip.booking_id}"
             )
