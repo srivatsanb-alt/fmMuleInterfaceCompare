@@ -102,6 +102,8 @@ def send_http_req_to_mfm(
     auth=None,
 ):
     response_json = None
+    response_status_code = None
+
     url = get_mfm_url(mfm_context, endpoint, query)
 
     req_method = getattr(requests, req_type)
@@ -134,8 +136,6 @@ def send_http_req_to_mfm(
         logging.getLogger("mfm_updates").info(
             f"unable to send http req to {url}, req_json: {req_json}, files: {files}, exception: {e}"
         )
-        response_status_code = 400
-
     return response_status_code, response_json
 
 
