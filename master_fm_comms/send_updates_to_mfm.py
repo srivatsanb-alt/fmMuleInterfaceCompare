@@ -512,21 +512,15 @@ def upload_important_files(
     dbsession: DBSession,
 ):
 
-    # ensure not more than a day's data is uploaded
-    temp_last_file_update_dt = max(
-        event_updater.last_file_upload_dt,
-        (datetime.datetime.now() + datetime.timedelta(hours=event_updater.recent_hours)),
-    )
-
     # upload files that are recent, sorted old->new
     file_uploads = (
         dbsession.session.query(mm.FileUploads)
         .filter(
             or_(
                 func.date_trunc("seconds", mm.FileUploads.updated_at)
-                > temp_last_file_update_dt,
+                > event_updater.last_file_upload_dt,
                 func.date_trunc("seconds", mm.FileUploads.created_at)
-                > temp_last_file_update_dt,
+                > event_updater.last_file_upload_dt,
             ),
         )
         .filter(
