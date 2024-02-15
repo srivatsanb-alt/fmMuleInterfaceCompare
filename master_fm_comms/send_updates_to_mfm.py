@@ -28,7 +28,7 @@ def str_to_dt(dt_str, tdelta_h=None):
 
 
 class SendEventUpdates2MFM:
-    def __init__(self,redis_conn):
+    def __init__(self, redis_conn):
         self.redis_conn = redis_conn
         self.mfm_context: mu.MFMContext = mu.get_mfm_context()
         self.mfm_upload_dt_info = None
@@ -56,7 +56,7 @@ class SendEventUpdates2MFM:
             send_conf_to_mfm(self.mfm_context)
             self.last_conf_sent_unix_dt = time.time()
 
-    def get_master_data_upload_info(self, dbsession):
+    def get_master_data_upload_info(self, dbsession: DBSession):
         self.mfm_upload_dt_info = dbsession.get_master_data_upload_info()
         self.recent_dt = datetime.datetime.now() + datetime.timedelta(
             hours=-self.recent_hours
@@ -89,10 +89,16 @@ class SendEventUpdates2MFM:
         if self.any_updates_sent:
             self.mfm_upload_dt_info.info.update(
                 {
-                    "last_trip_analytics_update_dt": utils_util.dt_to_str(self.last_trip_analytics_update_dt),
+                    "last_trip_analytics_update_dt": utils_util.dt_to_str(
+                        self.last_trip_analytics_update_dt
+                    ),
                     "last_trip_update_dt": utils_util.dt_to_str(self.last_trip_update_dt),
-                    "last_sherpa_oee_update_dt": utils_util.dt_to_str(self.last_sherpa_oee_update_dt),
-                    "last_fm_incidents_update_dt": utils_util.dt_to_str(self.last_fm_incidents_update_dt),
+                    "last_sherpa_oee_update_dt": utils_util.dt_to_str(
+                        self.last_sherpa_oee_update_dt
+                    ),
+                    "last_fm_incidents_update_dt": utils_util.dt_to_str(
+                        self.last_fm_incidents_update_dt
+                    ),
                     "last_file_upload_dt": utils_util.dt_to_str(self.last_file_upload_dt),
                 }
             )
@@ -132,7 +138,7 @@ def send_reset_map_dir_req(mfm_context, fleet_name: str):
     return True
 
 
-def upload_map_files_fleet(mfm_context: mu.MFMContext, fleet_name):
+def upload_map_files_fleet(mfm_context: mu.MFMContext, fleet_name: str):
     map_path = os.path.join(os.environ["FM_STATIC_DIR"], f"{fleet_name}/map/")
     all_map_files = [
         f for f in os.listdir(map_path) if os.path.isfile(os.path.join(map_path, f))
@@ -450,13 +456,12 @@ def update_fm_incidents(
         logging.getLogger("mfm_updates").info(
             f"sent fm_incidents to mfm successfully, details: {req_json}"
         )
-        event_updater.last_fm_incidents_update_dt =  datetime.datetime.now()
+        event_updater.last_fm_incidents_update_dt = datetime.datetime.now()
         event_updater.any_updates_sent = True
     else:
         logging.getLogger("mfm_updates").info(
             f"unable to send fm_incidents to mfm,  status_code {response_status_code}"
         )
-
 
 
 def update_sherpa_oee(
