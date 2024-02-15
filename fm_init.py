@@ -108,7 +108,6 @@ def main():
 
     with DBSession() as dbsession:
         fu.add_software_compatability(dbsession)
-        fu.add_master_fm_data_upload(dbsession)
         fu.add_sherpa_metadata(dbsession)
 
         # populate redis with basic info

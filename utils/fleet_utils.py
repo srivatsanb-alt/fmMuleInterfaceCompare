@@ -18,7 +18,6 @@ import models.fleet_models as fm
 import models.visa_models as vm
 import models.misc_models as mm
 import models.trip_models as tm
-import utils.util as utils_util
 from models.base_models import StationProperties
 import utils.log_utils as lu
 
@@ -155,26 +154,6 @@ def add_software_compatability(dbsession: DBSession):
     if software_compatability is None:
         sc = mm.SoftwareCompatability(info={"sherpa_versions": []})
         dbsession.add_to_session(sc)
-
-
-def add_master_fm_data_upload(dbsession: DBSession):
-    master_fm_data_upload_info = dbsession.get_master_data_upload_info()
-
-    if master_fm_data_upload_info is None:
-        mfm_du = mm.MasterFMDataUpload(
-            info={
-                "last_trip_update_dt": utils_util.dt_to_str(datetime.datetime.now()),
-                "last_trip_analytics_update_dt": utils_util.dt_to_str(
-                    datetime.datetime.now()
-                ),
-                "last_sherpa_oee_update_dt": utils_util.dt_to_str(datetime.datetime.now()),
-                "last_fm_incidents_update_dt": utils_util.dt_to_str(
-                    datetime.datetime.now()
-                ),
-                "last_file_upload_dt": utils_util.dt_to_str(datetime.datetime.now()),
-            }
-        )
-        dbsession.add_to_session(mfm_du)
 
 
 def add_sherpa_metadata(dbsession: DBSession):
