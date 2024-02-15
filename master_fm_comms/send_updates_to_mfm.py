@@ -35,13 +35,7 @@ class SendEventUpdates2MFM:
         self.any_updates_sent = False
         self.recent_hours = 24
         self.recent_dt = None
-
         self.last_conf_sent_unix_dt = time.time()
-        self.last_trip_update_dt = None
-        self.last_trip_analytics_update_dt = None
-        self.last_sherpa_oee_update_dt = None
-        self.last_file_upload_dt = None
-        self.last_fm_incidents_update_dt = None
 
     def maybe_send_conf_to_mfm(self):
         temp = self.redis_conn.get("send_conf_to_mfm_unix_dt")
@@ -56,59 +50,31 @@ class SendEventUpdates2MFM:
             send_conf_to_mfm(self.mfm_context)
             self.last_conf_sent_unix_dt = time.time()
 
+    def update_db(self, dbsession: DBSession):
+        dbsession.session.commit()
+
+    def initialize_master_data_upload_info(self, dbsession: DBSession):
+        mfm_upload_dt_info = mm.MasterFMDataUploadts()
+        dbsession.add_to_session(mfm_upload_dt_info)
+        self.update_db(dbsession) 
+        
+
     def get_master_data_upload_info(self, dbsession: DBSession):
         self.mfm_upload_dt_info = dbsession.get_master_data_upload_info()
+        
+        if self.mfm_upload_dt_info is None:
+            self.initialize_master_data_upload_info(dbsession)
+            self.mfm_upload_dt_info = dbsession.get_master_data_upload_info()
+  
         self.recent_dt = datetime.datetime.now() + datetime.timedelta(
             hours=-self.recent_hours
         )
 
-        self.last_trip_update_dt = str_to_dt(
-            self.mfm_upload_dt_info.info.get("last_trip_update_dt", None)
-        )
-
-        self.last_trip_analytics_update_dt = str_to_dt(
-            self.mfm_upload_dt_info.info.get("last_trip_analytics_update_dt", None)
-        )
-
-        self.last_sherpa_oee_update_dt = str_to_dt(
-            self.mfm_upload_dt_info.info.get("last_sherpa_oee_update_dt", None),
-            -self.recent_hours,
-        )
-
-        self.last_file_upload_dt = str_to_dt(
-            self.mfm_upload_dt_info.info.get("last_file_upload_dt", None),
-            -self.recent_hours,
-        )
-
-        self.last_fm_incidents_update_dt = str_to_dt(
-            self.mfm_upload_dt_info.info.get("last_fm_incidents_update_dt", None),
-            -self.recent_hours,
-        )
-
-    def update_master_data_upload_info(self):
-        if self.any_updates_sent:
-            self.mfm_upload_dt_info.info.update(
-                {
-                    "last_trip_analytics_update_dt": utils_util.dt_to_str(
-                        self.last_trip_analytics_update_dt
-                    ),
-                    "last_trip_update_dt": utils_util.dt_to_str(self.last_trip_update_dt),
-                    "last_sherpa_oee_update_dt": utils_util.dt_to_str(
-                        self.last_sherpa_oee_update_dt
-                    ),
-                    "last_fm_incidents_update_dt": utils_util.dt_to_str(
-                        self.last_fm_incidents_update_dt
-                    ),
-                    "last_file_upload_dt": utils_util.dt_to_str(self.last_file_upload_dt),
-                }
-            )
-            flag_modified(self.mfm_upload_dt_info, "info")
-
     def update_file_upload_dt(self, file_upload: mm.FileUploads):
-        self.any_updates_sent = True
-        self.last_file_upload_dt = file_upload.created_at
+        last_file_upload_dt = file_upload.created_at
         if file_upload.updated_at:
-            self.last_file_upload_dt = file_upload.updated_at
+            last_file_upload_dt = file_upload.updated_at
+        self.mfm_upload_dt_info.last_file_upload_dt = last_file_upload_dt
 
 
 def send_conf_to_mfm(mfm_context):
@@ -287,7 +253,7 @@ def update_trip_info(
 
     new_trips = (
         dbsession.session.query(tm.Trip)
-        .filter(tm.Trip.end_time > event_updater.last_trip_update_dt)
+        .filter(tm.Trip.end_time > event_updater.mfm_upload_dt_info.last_trip_update_dt)
         .filter(tm.Trip.end_time > event_updater.recent_dt)
         .filter(tm.Trip.status.in_(tm.COMPLETED_TRIP_STATUS))
         .all()
@@ -318,8 +284,8 @@ def update_trip_info(
         logging.getLogger("mfm_updates").info(
             f"sent trip_info of trip_ids: {trip_ids} to mfm successfully"
         )
-        event_updater.last_trip_update_dt = datetime.datetime.now()
-        event_updater.any_updates_sent = True
+        event_updater.mfm_upload_dt_info.last_trip_update_dt = datetime.datetime.now()
+        event_updater.update_db(dbsession)
     else:
         logging.getLogger("mfm_updates").info(
             f"unable to send trip_info to mfm,  status_code {response_status_code}"
@@ -334,7 +300,10 @@ def update_trip_analytics(
     new_trip_analytics = (
         dbsession.session.query(tm.TripAnalytics)
         .join(tm.Trip, tm.Trip.id == tm.TripAnalytics.trip_id)
-        .filter(tm.Trip.end_time > event_updater.last_trip_analytics_update_dt)
+        .filter(
+            tm.Trip.end_time
+            > event_updater.mfm_upload_dt_info.last_trip_analytics_update_dt
+        )
         .filter(tm.Trip.end_time > event_updater.recent_dt)
         .filter(tm.Trip.status.in_(tm.COMPLETED_TRIP_STATUS))
         .all()
@@ -367,8 +336,10 @@ def update_trip_analytics(
         logging.getLogger("mfm_updates").info(
             f"sent trip_analytics to mfm successfully, details: {req_json}"
         )
-        event_updater.last_trip_analytics_update_dt = datetime.datetime.now()
-        event_updater.any_updates_sent = True
+        event_updater.mfm_upload_dt_info.last_trip_analytics_update_dt = (
+            datetime.datetime.now()
+        )
+        event_updater.update_db(dbsession)
     else:
         logging.getLogger("mfm_updates").info(
             f"unable to send trip_analytics to mfm,  status_code {response_status_code}"
@@ -417,8 +388,10 @@ def update_fm_incidents(
         dbsession.session.query(mm.FMIncidents)
         .filter(
             or_(
-                mm.FMIncidents.created_at > event_updater.last_fm_incidents_update_dt,
-                mm.FMIncidents.updated_at > event_updater.last_fm_incidents_update_dt,
+                mm.FMIncidents.created_at
+                > event_updater.mfm_upload_dt_info.last_fm_incidents_update_dt,
+                mm.FMIncidents.updated_at
+                > event_updater.mfm_upload_dt_info.last_fm_incidents_update_dt,
             )
         )
         .all()
@@ -456,8 +429,10 @@ def update_fm_incidents(
         logging.getLogger("mfm_updates").info(
             f"sent fm_incidents to mfm successfully, details: {req_json}"
         )
-        event_updater.last_fm_incidents_update_dt = datetime.datetime.now()
-        event_updater.any_updates_sent = True
+        event_updater.mfm_upload_dt_info.last_fm_incidents_update_dt = (
+            datetime.datetime.now()
+        )
+        event_updater.update_db(dbsession)
     else:
         logging.getLogger("mfm_updates").info(
             f"unable to send fm_incidents to mfm,  status_code {response_status_code}"
@@ -472,7 +447,8 @@ def update_sherpa_oee(
     sherpa_oees = (
         dbsession.session.query(mm.SherpaOEE)
         .filter(
-            func.date(mm.SherpaOEE.dt) >= func.date(event_updater.last_sherpa_oee_update_dt)
+            func.date(mm.SherpaOEE.dt)
+            >= func.date(event_updater.mfm_upload_dt_info.last_sherpa_oee_update_dt)
         )
         .all()
     )
@@ -498,9 +474,8 @@ def update_sherpa_oee(
 
     if response_status_code == 200:
         logging.getLogger("mfm_updates").info(f"sent sherpa oee to mfm successfully")
-        event_updater.last_sherpa_oee_update_dt = datetime.datetime.now()
-        event_updater.any_updates_sent = True
-
+        event_updater.mfm_upload_dt_info.last_sherpa_oee_update_dt = datetime.datetime.now()
+        event_updater.update_db(dbsession)
     else:
         logging.getLogger("mfm_updates").info(
             f"unable to send sherpa oee to mfm,  status_code: {response_status_code}"
@@ -518,9 +493,9 @@ def upload_important_files(
         .filter(
             or_(
                 func.date_trunc("seconds", mm.FileUploads.updated_at)
-                > event_updater.last_file_upload_dt,
+                > event_updater.mfm_upload_dt_info.last_file_upload_dt,
                 func.date_trunc("seconds", mm.FileUploads.created_at)
-                > event_updater.last_file_upload_dt,
+                > event_updater.mfm_upload_dt_info.last_file_upload_dt,
             ),
         )
         .filter(
@@ -568,6 +543,7 @@ def upload_important_files(
             break
 
         event_updater.update_file_upload_dt(file_upload)
+        event_updater.update_db(dbsession)
 
 
 def send_mfm_updates():
@@ -595,6 +571,5 @@ def send_mfm_updates_with_decorators(mfm_context):
                 update_sherpa_oee(event_updater, dbsession)
                 update_fm_incidents(event_updater, dbsession)
                 upload_important_files(event_updater, dbsession)
-                event_updater.update_master_data_upload_info()
 
             time.sleep(mfm_context.update_freq)

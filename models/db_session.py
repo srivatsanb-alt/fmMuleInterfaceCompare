@@ -768,7 +768,7 @@ class DBSession:
         return self.session.query(mm.SoftwareCompatability).one_or_none()
 
     def get_master_data_upload_info(self):
-        return self.session.query(mm.MasterFMDataUpload).one_or_none()
+        return self.session.query(mm.MasterFMDataUploadts).one_or_none()
 
     def get_fm_incidents(
         self, from_datetime, to_datetime=datetime.datetime.now(), entity_name=None

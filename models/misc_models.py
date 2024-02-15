@@ -1,6 +1,7 @@
 from models.base_models import Base, TimestampMixin
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy import Column, Integer, String, ARRAY, Boolean, DateTime
+import datetime
 
 # FM incident types
 FMIncidentTypes = ["mule_error", "fm_error"]
@@ -52,12 +53,6 @@ class FMVersion(Base):
 
 class SoftwareCompatability(Base):
     __tablename__ = "software_compatability"
-    id = Column(Integer, primary_key=True)
-    info = Column(JSONB)
-
-
-class MasterFMDataUpload(Base):
-    __tablename__ = "master_fm_data_upload"
     id = Column(Integer, primary_key=True)
     info = Column(JSONB)
 
@@ -114,3 +109,13 @@ class FileUploads(Base, TimestampMixin):
     uploaded_by = Column(String, nullable=False, index=True)
     fm_incident_id = Column(String, index=True)
     other_info = Column(JSONB)
+
+
+class MasterFMDataUploadts(Base):
+    __tablename__ = "master_fm_data_uploadts"
+    id = Column(Integer, primary_key=True)
+    last_trip_update_dt = Column(DateTime, default=datetime.datetime.now())
+    last_trip_analytics_update_dt = Column(DateTime, default=datetime.datetime.now())
+    last_sherpa_oee_update_dt = Column(DateTime, default=datetime.datetime.now())
+    last_file_upload_dt = Column(DateTime, default=datetime.datetime.now())
+    last_fm_incidents_update_dt = Column(DateTime, default=datetime.datetime.now())

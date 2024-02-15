@@ -5,7 +5,18 @@ from core.db import get_session, get_engine
 from models.misc_models import FMVersion
 
 
-AVAILABLE_UPGRADES = ["2.2", "3.0", "3.01", "3.1", "3.2", "3.3", "4.0", "4.01", "4.02"]
+AVAILABLE_UPGRADES = [
+    "2.2",
+    "3.0",
+    "3.01",
+    "3.1",
+    "3.2",
+    "3.3",
+    "4.0",
+    "4.01",
+    "4.02",
+    "4.1",
+]
 NO_SCHEMA_CHANGES = ["3.0", "3.01", "3.1"]
 
 
@@ -100,6 +111,12 @@ class DBUpgrade:
         with get_engine(os.getenv("FM_DATABASE_URI")).connect() as conn:
             conn.execute("commit")
             conn.execute("alter role postgres with connection limit -1")
+            print("Set no-limit to num connections")
+
+    def upgrade_to_4_1(self):
+        with get_engine(os.getenv("FM_DATABASE_URI")).connect() as conn:
+            conn.execute("commit")
+            conn.execute("drop table master_fm_data_upload")
             print("Set no-limit to num connections")
 
 
