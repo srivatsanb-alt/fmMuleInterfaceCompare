@@ -1,7 +1,7 @@
 {
   "files": {
-    "main.css": "/static/css/main.6e569a5f.css",
-    "main.js": "/static/js/main.0171fdfb.js",
+    "main.css": "/static/css/main.7f733931.css",
+    "main.js": "/static/js/main.59f6d5b6.js",
     "static/js/27.25cb0711.chunk.js": "/static/js/27.25cb0711.chunk.js",
     "static/media/Login Image.png": "/static/media/Login Image.885a80af3ca6e7d909a4.png",
     "static/media/OpenSans-Regular-400.ttf": "/static/media/OpenSans-Regular-400.57cd57a648021fa1c396.ttf",
@@ -31,7 +31,6 @@
     "static/media/refresh.svg": "/static/media/refresh.9eb64de880537c6c7837a0e2dd970feb.svg",
     "index.html": "/index.html",
     "static/media/Tags.svg": "/static/media/Tags.4c5c473c683dfb3feedcf0f741a2971b.svg",
-    "static/media/edit.svg": "/static/media/edit.8dc48206a359229d815523c3805a0e29.svg",
     "static/media/analytics.svg": "/static/media/analytics.9627364cc7bf6593484fdbd480e57628.svg",
     "static/media/delete.svg": "/static/media/delete.d5ed251e860147d1334b285bcd37f070.svg",
     "static/media/new-trip.svg": "/static/media/new-trip.5c24ead3ecaec583413ebbb4d4f0bafb.svg",
@@ -50,7 +49,7 @@
     "static/media/parking.svg": "/static/media/parking.37d3fcac97912ba986dd45e852e4a3ac.svg"
   },
   "entrypoints": [
-    "static/css/main.6e569a5f.css",
-    "static/js/main.0171fdfb.js"
+    "static/css/main.7f733931.css",
+    "static/js/main.59f6d5b6.js"
   ]
 }

@@ -28,7 +28,7 @@ def str_to_dt(dt_str, tdelta_h=None):
 
 
 class SendEventUpdates2MFM:
-    def __init__(self,redis_conn):
+    def __init__(self, redis_conn):
         self.redis_conn = redis_conn
         self.mfm_context: mu.MFMContext = mu.get_mfm_context()
         self.mfm_upload_dt_info = None
@@ -56,7 +56,7 @@ class SendEventUpdates2MFM:
             send_conf_to_mfm(self.mfm_context)
             self.last_conf_sent_unix_dt = time.time()
 
-    def get_master_data_upload_info(self, dbsession):
+    def get_master_data_upload_info(self, dbsession: DBSession):
         self.mfm_upload_dt_info = dbsession.get_master_data_upload_info()
         self.recent_dt = datetime.datetime.now() + datetime.timedelta(
             hours=-self.recent_hours
@@ -89,10 +89,16 @@ class SendEventUpdates2MFM:
         if self.any_updates_sent:
             self.mfm_upload_dt_info.info.update(
                 {
-                    "last_trip_analytics_update_dt": utils_util.dt_to_str(self.last_trip_analytics_update_dt),
+                    "last_trip_analytics_update_dt": utils_util.dt_to_str(
+                        self.last_trip_analytics_update_dt
+                    ),
                     "last_trip_update_dt": utils_util.dt_to_str(self.last_trip_update_dt),
-                    "last_sherpa_oee_update_dt": utils_util.dt_to_str(self.last_sherpa_oee_update_dt),
-                    "last_fm_incidents_update_dt": utils_util.dt_to_str(self.last_fm_incidents_update_dt),
+                    "last_sherpa_oee_update_dt": utils_util.dt_to_str(
+                        self.last_sherpa_oee_update_dt
+                    ),
+                    "last_fm_incidents_update_dt": utils_util.dt_to_str(
+                        self.last_fm_incidents_update_dt
+                    ),
                     "last_file_upload_dt": utils_util.dt_to_str(self.last_file_upload_dt),
                 }
             )
@@ -132,15 +138,15 @@ def send_reset_map_dir_req(mfm_context, fleet_name: str):
     return True
 
 
-def upload_map_files_fleet(mfm_context: mu.MFMContext, fleet):
-    map_path = os.path.join(os.environ["FM_STATIC_DIR"], f"{fleet.name}/map/")
+def upload_map_files_fleet(mfm_context: mu.MFMContext, fleet_name: str):
+    map_path = os.path.join(os.environ["FM_STATIC_DIR"], f"{fleet_name}/map/")
     all_map_files = [
         f for f in os.listdir(map_path) if os.path.isfile(os.path.join(map_path, f))
     ]
     upload_done = []
     ignored_large_files = []
 
-    while not send_reset_map_dir_req(mfm_context, fleet.name):
+    while not send_reset_map_dir_req(mfm_context, fleet_name):
         time.sleep(10)
 
     for file_name in all_map_files:
@@ -154,23 +160,23 @@ def upload_map_files_fleet(mfm_context: mu.MFMContext, fleet):
             req_json=None,
             files=files,
             params=None,
-            query=fleet.name,
+            query=fleet_name,
         )
         if response_status_code == 200:
             logging.getLogger("mfm_updates").info(
-                f"uploaded map file {file_name} of {fleet.name} to master fm successfully"
+                f"uploaded map file {file_name} of {fleet_name} to master fm successfully"
             )
             upload_done.append(file_name)
 
         elif response_status_code == 413:
             logging.getLogger("mfm_updates").warning(
-                f"Ignoring to upload map file {file_name} of {fleet.name}, file size too large"
+                f"Ignoring to upload map file {file_name} of {fleet_name}, file size too large"
             )
             ignored_large_files.append(file_name)
 
         else:
             logging.getLogger("mfm_updates").info(
-                f"unable to upload map_file {file_name} of {fleet.name} to master fm, status_code {response_status_code}"
+                f"unable to upload map_file {file_name} of {fleet_name} to master fm, status_code {response_status_code}"
             )
             time.sleep(5)
             break
@@ -180,14 +186,17 @@ def upload_map_files_fleet(mfm_context: mu.MFMContext, fleet):
 
 def upload_map_files(mfm_context: mu.MFMContext):
     map_files_uploaded = [False]
+    all_fleet_names = []
+    with DBSession() as dbsession:
+        all_fleet_names = dbsession.get_all_fleet_names()
+
+    map_files_uploaded = [False] * len(all_fleet_names)
     while not all(map_files_uploaded):
-        with DBSession() as dbsession:
-            all_fleets = dbsession.get_all_fleets()
-            map_files_uploaded = [False] * len(all_fleets)
-            i = 0
-            for fleet in all_fleets:
-                map_files_uploaded[i] = upload_map_files_fleet(mfm_context, fleet)
-                i += 1
+        i = 0
+        for fleet_name in all_fleet_names:
+            if map_files_uploaded[i] is False:
+                map_files_uploaded[i] = upload_map_files_fleet(mfm_context, fleet_name)
+            i += 1
 
 
 def update_fleet_info(mfm_context: mu.MFMContext):
@@ -447,13 +456,12 @@ def update_fm_incidents(
         logging.getLogger("mfm_updates").info(
             f"sent fm_incidents to mfm successfully, details: {req_json}"
         )
-        event_updater.last_fm_incidents_update_dt =  datetime.datetime.now()
+        event_updater.last_fm_incidents_update_dt = datetime.datetime.now()
         event_updater.any_updates_sent = True
     else:
         logging.getLogger("mfm_updates").info(
             f"unable to send fm_incidents to mfm,  status_code {response_status_code}"
         )
-
 
 
 def update_sherpa_oee(
