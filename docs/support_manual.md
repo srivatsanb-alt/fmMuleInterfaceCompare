@@ -506,14 +506,16 @@ mkdir -p <fleet_manager_static_dir>/all_maps/<version 1>
 mkdir -p <fleet_manager_static_dir>/all_maps/<version 2>
 ```
 
-2. Copy different sets of map files to the folders created above
+2. Do not modify or delete the existing map folder (<fleet_manager_static_dir>/map). This folder has to be present
 
-3. Press Maintenance button in the web page header
+3. Copy different sets of map files to the folders created above
 
-4. Use dashboard, switch to corresponding fleet and press update_map button on the webpage header. 
+4. Press Maintenance button in the web page header
+
+5. Use dashboard, switch to corresponding fleet and press update_map button on the webpage header. 
 A pop would help you to choose the required map version. 
 
-5. Press Start ops button in the web page header
+6. Press Start ops button in the web page header
 
 
 ## Simulate summon_button/conveyor with postman ##
