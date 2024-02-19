@@ -191,8 +191,7 @@ async def process_req_with_response(queue, req, user: str):
     job.refresh()
     status = job.get_status()
 
-    if status in ["finished", "failed"]:
-        remove_job_from_queued_jobs(job.id, req.source, redis_conn)
+    remove_job_from_queued_jobs(job.id, req.source, redis_conn)
 
     if status == "failed":
         error_detail = "Unable to process request"
