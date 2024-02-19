@@ -153,7 +153,9 @@ def upload_map_files_fleet(mfm_context: mu.MFMContext, fleet_name: str):
 
 
     for filename in files_to_del:
-        delete_map_file(mfm_context, fleet_name, filename)
+        delete_success= False
+        while not delete_success:
+            delete_success = delete_map_file(mfm_context, fleet_name, filename)   
 
     for filename_fq in files_to_upload:
         files = []
