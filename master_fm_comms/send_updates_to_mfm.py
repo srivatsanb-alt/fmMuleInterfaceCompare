@@ -124,7 +124,19 @@ def get_info_map_file(mfm_context: mu.MFMContext, fleet_name):
     )
 
     return True, response_json
+
+
+def upload_or_delete(mfm_context: mu.MFMContext, fleet_name: str,map_path):
+    status=False
+    while not status:
+        status, response_json_get_info = get_info_map_file(mfm_context,fleet_name)
+        time.sleep(10)
+   
+    files_to_del = [file_name for file_name in response_json_get_info.keys() if file_name not in os.listdir(map_path)]
     
+    for file_to_del in files_to_del:
+        delete_map_file(mfm_context,fleet_name, file_to_del)
+    return response_json_get_info
 
 
 def upload_map_files_fleet(mfm_context: mu.MFMContext, fleet_name: str):
@@ -136,15 +148,7 @@ def upload_map_files_fleet(mfm_context: mu.MFMContext, fleet_name: str):
     ignored_large_files = []
     files_to_upload = []
 
-    status=False
-    while not status:
-        status, response_json_get_info = get_info_map_file(mfm_context,fleet_name)
-        time.sleep(10)
-   
-    files_to_del = [file_name for file_name in response_json_get_info.keys() if file_name not in os.listdir(map_path)]
-    
-    for file_to_del in files_to_del:
-        delete_map_file(mfm_context,fleet_name, file_to_del)
+    response_json_get_info = upload_or_delete(mfm_context, fleet_name, map_path)
     
     for file_name in all_map_files:
         files = []
