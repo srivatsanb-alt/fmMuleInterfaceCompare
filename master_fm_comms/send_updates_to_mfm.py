@@ -13,6 +13,7 @@ import models.misc_models as mm
 import master_fm_comms.mfm_utils as mu
 import utils.trip_utils as tu
 import utils.util as utils_util
+import utils.fleet_utils as fu
 from models.db_session import DBSession
 
 
@@ -84,24 +85,46 @@ def send_conf_to_mfm(mfm_context):
     update_sherpa_info(mfm_context)
 
 
-def send_reset_map_dir_req(mfm_context, fleet_name: str):
+def delete_map_file(mfm_context, fleet_name: str, file_name: str):
+    
+    del_req = {"fleet_name": fleet_name, "filename":  file_name}
     response_status_code, response_json = mu.send_http_req_to_mfm(
         mfm_context,
-        "reset_map_dir",
-        "get",
-        query=fleet_name,
+        "delete_map_file",
+        "post",
+        req_json=del_req
     )
     if response_status_code != 200:
         logging.getLogger("mfm_updates").warning(
-            f"Unable to reset map dir for fleet_name: {fleet_name}"
+            f"Unable to delete map file {file_name} for fleet_name: {fleet_name}"
         )
         return False
 
     logging.getLogger("mfm_updates").info(
-        f"Reset map dir of the fleet: {fleet_name} successfully"
+        f"Delete map file {file_name} of the fleet: {fleet_name} successfully"
     )
 
     return True
+
+def get_info_map_file(mfm_context: mu.MFMContext, fleet_name):
+    endpoint = "get_map_file_info"
+    response_status_code, response_json = mu.send_http_req_to_mfm(
+        mfm_context,
+        endpoint,
+        "get",
+        query=fleet_name
+    )
+    if response_status_code != 200:
+        logging.getLogger("mfm_updates").warning(
+            f"Unable to get map_file info of {fleet_name}"
+        )
+        return False , response_json
+    logging.getLogger("mfm_updates").info(
+        f"Got map_file info of {fleet_name} successfully"
+    )
+
+    return True, response_json
+    
 
 
 def upload_map_files_fleet(mfm_context: mu.MFMContext, fleet_name: str):
@@ -111,43 +134,57 @@ def upload_map_files_fleet(mfm_context: mu.MFMContext, fleet_name: str):
     ]
     upload_done = []
     ignored_large_files = []
+    files_to_upload = []
 
-    while not send_reset_map_dir_req(mfm_context, fleet_name):
+    status=False
+    while not status:
+        status, response_json_get_info = get_info_map_file(mfm_context,fleet_name)
         time.sleep(10)
-
+   
+    files_to_del = [file_name for file_name in response_json_get_info.keys() if file_name not in os.listdir(map_path)]
+    
+    for file_to_del in files_to_del:
+        delete_map_file(mfm_context,fleet_name, file_to_del)
+    
     for file_name in all_map_files:
         files = []
-        files.append(("uploaded_files", open(os.path.join(map_path, file_name), "rb")))
-        endpoint = "upload_map_file"
-        response_status_code, response_json = mu.send_http_req_to_mfm(
-            mfm_context,
-            endpoint,
-            "post",
-            req_json=None,
-            files=files,
-            params=None,
-            query=fleet_name,
-        )
-        if response_status_code == 200:
-            logging.getLogger("mfm_updates").info(
-                f"uploaded map file {file_name} of {fleet_name} to master fm successfully"
-            )
-            upload_done.append(file_name)
+        map_file_path=os.path.join(map_path, file_name)
+        files.append(("uploaded_files", open(os.path.join(map_path, file_name), "rb"))) 
+        if response_json_get_info.get(file_name) != fu.compute_sha1_hash(map_file_path):
+            files_to_upload.append(file_name)
+            endpoint = "upload_map_file"
+            response_status_code, response_json = mu.send_http_req_to_mfm(
+                        mfm_context,
+                        endpoint,
+                        "post",
+                        req_json=None,
+                        files=files,
+                        params=None,
+                        query=fleet_name,
+                    )
+            if response_status_code == 200:
+                logging.getLogger("mfm_updates").info(
+                    f"uploaded map file {file_name} of {fleet_name} to master fm successfully"
+                )
+                upload_done.append(file_name)
 
-        elif response_status_code == 413:
-            logging.getLogger("mfm_updates").warning(
-                f"Ignoring to upload map file {file_name} of {fleet_name}, file size too large"
-            )
-            ignored_large_files.append(file_name)
+            elif response_status_code == 413:
+                logging.getLogger("mfm_updates").warning(
+                    f"Ignoring to upload map file {file_name} of {fleet_name}, file size too large"
+                )
+                ignored_large_files.append(file_name)
 
+            else:
+                logging.getLogger("mfm_updates").info(
+                    f"unable to upload map_file {file_name} of {fleet_name} to master fm, status_code {response_status_code}"
+                )
+                time.sleep(5)
         else:
             logging.getLogger("mfm_updates").info(
-                f"unable to upload map_file {file_name} of {fleet_name} to master fm, status_code {response_status_code}"
-            )
-            time.sleep(5)
-            break
+                    f"Already uploaded map_file {file_name} of {fleet_name} to master fm"
+                )     
 
-    return len(upload_done) + len(ignored_large_files) == len(all_map_files)
+    return len(upload_done) + len(ignored_large_files) == len(files_to_upload)
 
 
 def upload_map_files(mfm_context: mu.MFMContext):
