@@ -116,6 +116,7 @@
           "color": {
             "mode": "continuous-YlBl"
           },
+          "displayName": "${__field.labels}",
           "mappings": [],
           "min": 0,
           "noValue": "---",
@@ -202,6 +203,7 @@
           "color": {
             "mode": "continuous-YlBl"
           },
+          "displayName": "${__field.labels}",
           "mappings": [],
           "min": 0,
           "thresholds": {
@@ -373,6 +375,7 @@
             "fixedColor": "#4d3434",
             "mode": "continuous-YlBl"
           },
+          "displayName": "${__field.labels}",
           "mappings": [],
           "max": 100,
           "min": 0,
