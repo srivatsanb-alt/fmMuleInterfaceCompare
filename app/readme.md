@@ -36,3 +36,15 @@ Fastapi raises HTTPException(status_code=422) if the incomming request body does
 Any incomming request either gets processed directly inside the endpoint or gets passed to handler function([handlers/default/handlers.py](../handlers/default/handlers.py)). If the request is simply to fetch some data from the database, we would directly process the same get it done inside the endpoint block, but if something in the database has to be updated while processing the request we pass it on to the handlers.
 
 To maintain the availability of the app and to preserve time order(process the requests in the same order in which they were received) we call the handler functions from the app using RQ(redis-queue). RQ is a FIFO job queue.
+
+
+## App Security ##
+
+1. When user login response is send with unique access_token and it is generated with an expiration time of one hour for each user ([generate_jwt_token](routers/dependencies.py#generate_jwt_token())).
+
+2. We are generating API key of sherpa by appending a randomly generated 32-byte string to the Hardware ID ([gen_api_key](../utils/api_key_gen.py)).
+
+## Custom Middleware ##
+
+Custom middleware is to enhance the request-response cycle. It measures the processing time of each request and logs it. ([custom_fm_mw](main.py#@app.middleware("http")))
+
