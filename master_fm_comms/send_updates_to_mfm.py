@@ -96,7 +96,7 @@ def delete_map_file(mfm_context, fleet_name: str, file_name: str):
         return False
 
     logging.getLogger("mfm_updates").info(
-        f"Delete map file {file_name} of the fleet: {fleet_name} successfully"
+        f"Deleted map file {file_name} of the fleet: {fleet_name} successfully"
     )
 
     return True
