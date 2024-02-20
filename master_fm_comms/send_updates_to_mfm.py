@@ -297,7 +297,7 @@ def update_trip_info(
     )
 
     if len(new_trips) == 0:
-        logging.getLogger("mfm_updates").info(f"no new trip updates to be sent")
+        logging.getLogger("mfm_updates").info("no new trip updates to be sent")
         return
 
     trips_info = []
@@ -510,7 +510,7 @@ def update_sherpa_oee(
     )
 
     if response_status_code == 200:
-        logging.getLogger("mfm_updates").info(f"sent sherpa oee to mfm successfully")
+        logging.getLogger("mfm_updates").info("sent sherpa oee to mfm successfully")
         event_updater.mfm_upload_dt_info.last_sherpa_oee_update_dt = datetime.datetime.now()
         event_updater.update_db(dbsession)
     else:

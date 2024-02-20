@@ -5,6 +5,7 @@ import secrets
 import logging
 import logging.config
 import json
+import time
 import datetime
 from typing import List, Dict
 from core.constants import FleetStatus
@@ -435,7 +436,7 @@ class SherpaUtils:
             logger.info(f"updated sherpa {sherpa_name}, with hwid: {hwid}")
         else:
             if api_key is None or hwid is None:
-                raise ValueError(f"API Key/Hardware id cannot be None")
+                raise ValueError("API Key/Hardware id cannot be None")
 
             temp = dbsession.get_sherpa_with_hwid(hwid)
             if temp:
@@ -725,3 +726,11 @@ class ExclusionZoneUtils:
         for link in all_links:
             logger.info(f"deleted link between {link.prev_zone_id} and {link.next_zone_id}")
             dbsession.session.delete(link)
+
+
+async def update_fleet_conf_in_redis(dbsession: DBSession, aredis_conn):
+    all_sherpa_names = dbsession.get_all_sherpa_names()
+    all_fleet_names = dbsession.get_all_fleet_names()
+    await aredis_conn.set("all_sherpas", json.dumps(all_sherpa_names))
+    await aredis_conn.set("all_fleet_names", json.dumps(all_fleet_names))
+    await aredis_conn.set("send_conf_to_mfm_unix_dt", time.time())
