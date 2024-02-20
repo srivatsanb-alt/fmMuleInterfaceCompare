@@ -5,7 +5,6 @@ import datetime
 import redis
 import json
 from sqlalchemy import or_, func
-from sqlalchemy.orm.attributes import flag_modified
 
 # ati code imports
 import models.trip_models as tm
@@ -129,9 +128,7 @@ def get_files_to_upload_delete(mfm_context: mu.MFMContext, fleet_name: str):
     files_to_upload = []
 
     files_to_del = [
-        filename
-        for filename in map_files_info.keys()
-        if filename not in all_map_files
+        filename for filename in map_files_info.keys() if filename not in all_map_files
     ]
 
     for filename in all_map_files:
@@ -151,11 +148,10 @@ def upload_map_files_fleet(mfm_context: mu.MFMContext, fleet_name: str):
     upload_done = []
     ignored_large_files = []
 
-
     for filename in files_to_del:
-        delete_success= False
+        delete_success = False
         while not delete_success:
-            delete_success = delete_map_file(mfm_context, fleet_name, filename)   
+            delete_success = delete_map_file(mfm_context, fleet_name, filename)
 
     for filename_fq in files_to_upload:
         files = []

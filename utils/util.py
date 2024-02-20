@@ -288,19 +288,19 @@ def write_fm_error_to_json_file(module: str, error_detail: dict):
         logging.getLogger().info(f"Error occurred when trying to write to file: {e}")
 
 
-def proc_exception(func,e):
+def proc_exception(func, e):
     error_dict = {
         "module": func.__name__,
         "error_type": type(e).__name__,
         "error_msg": str(e),
-        "code": "generic"
+        "code": "generic",
     }
 
     db_strs = ["psycop", "sqlalchemy"]
 
-    if any([db_str in error_dict['error_msg'] for db_str in db_strs ]):
+    if any([db_str in error_dict["error_msg"] for db_str in db_strs]):
         error_dict["code"] = "db"
-        
+
     write_fm_error_to_json_file(error_dict["module"], error_dict)
     logging.info(
         f"Error occurred when trying to Monitor the Process {error_dict['module']}: {e}"
@@ -313,7 +313,8 @@ def report_error(func):
         try:
             return func(*args, **kwargs)
         except Exception as e:
-            proc_exception(func,e)
+            proc_exception(func, e)
+
     return wrapper
 
 
@@ -328,7 +329,9 @@ def proc_retry(times=np.inf, sleep_time=5):
                     attempt += 1
                     time.sleep(sleep_time)
             return func(*args, **kwargs)
+
         return wrapper
+
     return decorator
 
 
@@ -340,9 +343,11 @@ def async_report_error(func):
             return result
         except Exception as e:
             logging.exception(f"Exception occurred in {func.__name__}: {e}")
-            proc_exception(func,e)
+            proc_exception(func, e)
             raise e
+
     return async_wrapper
+
 
 def format_fm_incident(fm_incident):
     temp = {}
