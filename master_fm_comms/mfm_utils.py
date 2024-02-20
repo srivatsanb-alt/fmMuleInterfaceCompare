@@ -52,9 +52,6 @@ def get_mfm_url(mfm_context: MFMContext, endpoint, query=""):
         "upload_map_file": os.path.join(
             mfm_url, "api/v1/master_fm/fm_client/upload_map_file", str(query)
         ),
-        "reset_map_dir": os.path.join(
-            mfm_url, "api/v1/master_fm/fm_client/reset_map_dir", str(query)
-        ),
         "update_trip_info": os.path.join(
             mfm_url, "api/v1/master_fm/fm_client/update_trip_info"
         ),
@@ -76,6 +73,9 @@ def get_mfm_url(mfm_context: MFMContext, endpoint, query=""):
         ),
         "download_file": os.path.join(mfm_url, "api/static/downloads", str(query)),
         "get_basic_auth": os.path.join(mfm_url, "api/v1/master_fm/user/get_basic_auth"),
+        "delete_map_file": os.path.join(mfm_url, "api/v1/master_fm/fm_client/delete_map_file"),
+        "get_map_file_info": os.path.join(mfm_url, "api/v1/master_fm/fm_client/get_map_file_info",str(query)),
+
     }
     return fm_endpoints.get(endpoint, None)
 
