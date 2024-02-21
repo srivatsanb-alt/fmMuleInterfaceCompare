@@ -1,13 +1,13 @@
 ## Introduction ##
 
-FM backend is a ASGI RESPI Implementation using [FastAPI](https://fastapi.tiangolo.com/) 
+FM backend is an ASGI RESPI Implementation using [FastAPI](https://fastapi.tiangolo.com/) 
 
 [app/main.py](main.py) is the REST API ASGI server implementation. FastAPI app has multiple routers pertaining to different functions. Each of the routers host multiple http, ws endpoints. 
 
 REST API is stateless, all the states gets stored in the database
 
 
-## Advantages of using Fastapi ##
+## Advantages of using FastAPI ##
 
 1. FastApi is more suited, faster for backend application compared to other packages(Flask, Django)
 
@@ -171,7 +171,7 @@ When a user shares access_token in the request header, backend would be able to 
 
 ## How do users get access token ## 
 
-Access token is shared to the user in the response to login endpoint [Auth](router/auth.py)
+Access token is shared to the user in the response to login endpoint [Auth](routers/auth.py)
 
 
 ## API key ## 
