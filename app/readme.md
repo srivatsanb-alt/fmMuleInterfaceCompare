@@ -171,7 +171,7 @@ When a user shares access_token in the request header, backend would be able to 
 
 ## How do users get access token ## 
 
-Access token is shared to the user in the response to login endpoint [Auth](routers/auth.py)
+Access token is shared to the user in the response to the login endpoint [Auth](routers/auth.py)
 
 
 ## API key ## 
