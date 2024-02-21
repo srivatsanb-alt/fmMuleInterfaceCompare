@@ -122,7 +122,7 @@ If the request is simply to fetch some data from the database, for instance a re
 
 To maintain the availability of the app and to preserve time order(process the requests in the same order in which they were received) we use job queue .
 
-To get more details on how we interact with database check [Interaction with DB]
+To get more details on how we interact with database check [Interaction with DB](../core/readme.md)
 
 ## Queuing a job ## 
 
