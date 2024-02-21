@@ -19,7 +19,7 @@ http://<fm_ip>:8001/docs
 3. [Inbuilt Type validation](#inbuilt-type-validation)
 
 
-# Inbuilt type validation ##
+## Inbuilt type validation ##
 
 Fastapi raises HTTPException(status_code=422) if the incomming request body doesn't match the pre-defined pydantic model
 
