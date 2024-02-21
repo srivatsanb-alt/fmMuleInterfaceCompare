@@ -47,15 +47,15 @@ def backup_data():
             info_file.write(os.getenv("FM_IMAGE_INFO"))
 
         # wait for plugin init
-        logging.getLogger().info(f"Will check for plugin init")
+        logging.getLogger().info("Will check for plugin init")
         plugin_init = False
         while not plugin_init:
             plugin_init = redis_conn.get("plugin_init")
             if plugin_init is not None:
                 plugin_init = json.loads(plugin_init)
-            logging.getLogger().info(f"Waiting for plugin init")
+            logging.getLogger().info("Waiting for plugin init")
             time.sleep(10)
-        logging.getLogger().info(f"plugin init done!")
+        logging.getLogger().info("plugin init done!")
 
     # get all databases
     all_databases = [

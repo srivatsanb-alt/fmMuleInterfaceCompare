@@ -6,7 +6,7 @@ We use ORM called [sqlalchemy](https://www.sqlalchemy.org/) to connect to the po
 
 Session is the in-memory snap-shot of the data in the DB
 
-1. We have defined a custom class DBSession(../models/db_session.py) which can be used to obtaine a sqlalchemy session, access the tables present in the DB. All the sqlalchemy models have been in files like [fleet_models](../models/fleet_models.py), [trip_models](../models/trip_models.py) etc. Please check [DB schema](../models/readme.md)
+1. We have defined a custom class [DBSession](../models/db_session.py) which can be used to obtaine a sqlalchemy session, access the tables present in the DB. All the sqlalchemy models have been in files like [fleet_models](../models/fleet_models.py), [trip_models](../models/trip_models.py) etc. Please check [DB schema](../models/readme.md)
 
 ```
 from models.db_session import DBSession
