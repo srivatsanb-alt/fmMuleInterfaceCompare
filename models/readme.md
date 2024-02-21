@@ -17,6 +17,8 @@ Explaining base models and fleet models in this doc. The same is extendable to a
 
 5. [Use of association table](#use-of-association-table)
 
+6. [Use of mongo db](#use-of-mongo-db)
+
 
 ## TimestampMixin ##
 
@@ -61,3 +63,26 @@ You can notice the usage of many-to-many relationship between [ExclusionZone](vi
 
 Check the section[Many To Many
 ](https://docs.sqlalchemy.org/en/20/orm/basic_relationships.html)
+
+
+## Use of mongo db ## 
+
+We use mongo db to store unstructured data such as config. We use a package called [pymongo](https://pypi.org/project/pymongo/) to connect to mongo db.
+
+Mongo db can be accessed using the custom class [FMMongo](mongo_client.py#classFMMongo).
+```
+with FMMongo() as fm_mongo:
+    optimal_dispatch_config = fm_mongo.get_document_from_fm_config(
+        "optimal_dispatch"
+    )
+```
+
+Though we use mongo db to store unstructured data, we do add some validators to ensure sanity of the data added/updated to mongo db.
+
+We have multiple databases like fm_config, frontend_users, plugin_config etc. Each database will have multiple collections, each collection can have multiple documents.
+
+Any member in class [ConfigValidator](../utils/config_utils.py#classConfigValidator) if not present in the database fm_config is created during the course of [fm_init](../fm_init.py) by the method [setfm_mongo_config](../utils/db_utils.py#defsetfm_mongo_config(fm_mongo)).
+
+The collections are created, schema validations are added using the definition present in [ConfigValidator](../utils/config_utils.py#classConfigValidator) .Default document is added to collection using values present in [ConfigDefaults](../utils/config_utils.py#classConfigDefaults). By default we cap the number of documents in any collection to 1. This is done using [CreateColKwargs](../utils/config_utils.py#classCreateColKwargs)
+
+Similarly collections pertaining to plugin would be defined under [PluginConfigValidator](../utils/config_utils.py#classPluginConfigValidator)
