@@ -318,6 +318,18 @@ def report_error(func):
     return wrapper
 
 
+def async_report_error(func):
+    @functools.wraps(func)
+    async def async_wrapper(*args, **kwargs):
+        try:
+            result = await func(*args, **kwargs)
+            return result
+        except Exception as e:
+            proc_exception(func, e)
+
+    return async_wrapper
+
+
 def proc_retry(times=np.inf, sleep_time=5):
     def decorator(func):
         def wrapper(*args, **kwargs):
@@ -333,20 +345,6 @@ def proc_retry(times=np.inf, sleep_time=5):
         return wrapper
 
     return decorator
-
-
-def async_report_error(func):
-    @functools.wraps(func)
-    async def async_wrapper(*args, **kwargs):
-        try:
-            result = await func(*args, **kwargs)
-            return result
-        except Exception as e:
-            logging.exception(f"Exception occurred in {func.__name__}: {e}")
-            proc_exception(func, e)
-            raise e
-
-    return async_wrapper
 
 
 def format_fm_incident(fm_incident):

@@ -21,7 +21,7 @@ def update_fm_incident(dbsession: DBSession, incident_id):
         error_repeats = fm_incident.other_info.get("error_repeats", 0)
         fm_incident.other_info["error_repeats"] = error_repeats + 1
         flag_modified(fm_incident, "other_info")
-        logging.getLogger().info("Updated FM incident {incident_id}")
+        logging.getLogger().info(f"Updated FM incident {incident_id}")
 
 
 def has_error_repeated(error_dict):
