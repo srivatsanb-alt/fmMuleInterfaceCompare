@@ -10,7 +10,7 @@ from utils.util import report_error
 
 @report_error
 def periodic_health_check():
-    logging.getLogger().info(f"started periodic_health_check script")
+    logging.getLogger().info("started periodic_health_check script")
     while True:
         fm_health_check = FMHealthCheck(ttl=2)
         q = Queues.queues_dict.get("misc_handler")

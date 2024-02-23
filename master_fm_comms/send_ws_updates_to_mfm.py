@@ -18,7 +18,6 @@ async def send_ongoing_trip_status(ws, mfm_context: mu.MFMContext):
     async with aioredis.Redis.from_url(
         os.getenv("FM_REDIS_URI"), max_connections=10, decode_responses=True
     ) as redis_conn:
-   
         psub = redis_conn.pubsub()
         await psub.subscribe("channel:status_updates")
 
@@ -44,7 +43,11 @@ async def send_ongoing_trip_status(ws, mfm_context: mu.MFMContext):
                 temp = last_update_dt.get(fleet_name)
 
                 if temp is None:
-                    raise Exception("New fleet has been added, reconnect again")
+                    logging.getLogger("mfm_updates_ws").info(
+                        "New fleet has been added, reconnect again"
+                    )
+                    await ws.close()
+                    return
 
                 time_delta = datetime.datetime.now() - temp
 
@@ -61,7 +64,6 @@ async def send_fleet_status(ws, mfm_context: mu.MFMContext):
     async with aioredis.Redis.from_url(
         os.getenv("FM_REDIS_URI"), max_connections=10, decode_responses=True
     ) as redis_conn:
-   
         psub = redis_conn.pubsub()
         await psub.subscribe("channel:status_updates")
 
@@ -87,7 +89,11 @@ async def send_fleet_status(ws, mfm_context: mu.MFMContext):
 
                 temp = last_update_dt.get(fleet_name)
                 if temp is None:
-                    raise Exception("New fleet has been added, reconnect again")
+                    logging.getLogger("mfm_updates_ws").info(
+                        "New fleet has been added, reconnect again"
+                    )
+                    await ws.close()
+                    return
 
                 time_delta = datetime.datetime.now() - temp
 
@@ -143,6 +149,5 @@ async def async_send_ws_msgs_to_mfm():
             await asyncio.sleep(sl)
 
 
-@utils_util.proc_retry()
 def send_ws_msgs_to_mfm():
     asyncio.get_event_loop().run_until_complete(async_send_ws_msgs_to_mfm())

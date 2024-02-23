@@ -248,26 +248,24 @@ class FleetSimulator:
                 self.visas_held[sherpa.name] = []
                 self.visa_needed[sherpa.name] = []
 
-                time.sleep(5)
-
-                for sherpa in sherpas:
-                    station_fleet_name = None
-                    station_name = self.initialize_sherpas_at.get(sherpa.name)
-                    print(f"Initializing sherpa {sherpa.name} station_name {station_name}")
-                    try:
-                        st = dbsession.get_station(station_name)
-                    except:
-                        st = None
-                    station_fleet_name = st.fleet.name if st else None
-                    print(
-                        f"sherpa fleet {sherpa.fleet.name} station_fleet_name {station_fleet_name}"
-                    )
-                    while sherpa.fleet.name != station_fleet_name:
-                        i = np.random.randint(0, len(stations))
-                        station_fleet_name = stations[i].fleet.name
-                        st = stations[i]
-                        print("Randomizing the start station")
-                    self.send_sherpa_status(sherpa.name, mode="fleet", pose=st.pose)
+            for sherpa in sherpas:
+                station_fleet_name = None
+                station_name = self.initialize_sherpas_at.get(sherpa.name)
+                print(f"Initializing sherpa {sherpa.name} station_name {station_name}")
+                try:
+                    st = dbsession.get_station(station_name)
+                except:
+                    st = None
+                station_fleet_name = st.fleet.name if st else None
+                print(
+                    f"sherpa fleet {sherpa.fleet.name} station_fleet_name {station_fleet_name}"
+                )
+                while sherpa.fleet.name != station_fleet_name:
+                    i = np.random.randint(0, len(stations))
+                    station_fleet_name = stations[i].fleet.name
+                    st = stations[i]
+                    print("Randomizing the start station")
+                self.send_sherpa_status(sherpa.name, mode="fleet", pose=st.pose)
 
     def book_trip(self, route, trip_metadata={}):
         generic_q = Queues.queues_dict["generic_handler"]

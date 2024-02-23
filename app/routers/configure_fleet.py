@@ -93,8 +93,7 @@ async def add_edit_sherpa(
             lu.set_log_config_dict(all_sherpa_names)
 
             async with aioredis.Redis.from_url(os.getenv("FM_REDIS_URI")) as aredis_conn:
-                await aredis_conn.set("all_sherpas", json.dumps(all_sherpa_names))
-                await aredis_conn.set("send_conf_to_mfm_unix_dt", time.time())
+                await fu.update_fleet_conf_in_redis(dbsession, aredis_conn)
 
             new_qs = [f"{sherpa_name}_update_handler", f"{sherpa_name}_trip_update_handler"]
             for new_q in new_qs:
@@ -132,11 +131,8 @@ async def delete_sherpa(
         close_websocket_for_sherpa(sherpa_name)
         fu.SherpaUtils.delete_sherpa(dbsession, sherpa_name)
 
-    all_sherpa_names = dbsession.get_all_sherpa_names()
-
     async with aioredis.Redis.from_url(os.getenv("FM_REDIS_URI")) as aredis_conn:
-        await aredis_conn.set("all_sherpas", json.dumps(all_sherpa_names))
-        await aredis_conn.set("send_conf_to_mfm_unix_dt", time.time())
+        await fu.update_fleet_conf_in_redis(dbsession, aredis_conn)
 
         queues_to_delete = [
             f"{sherpa_name}_update_handler",
@@ -236,10 +232,8 @@ async def add_fleet(
 
         if new_fleet:
             async with aioredis.Redis.from_url(os.getenv("FM_REDIS_URI")) as aredis_conn:
-                all_fleet_names = dbsession.get_all_fleet_names()
-                await aredis_conn.set("all_fleet_names", json.dumps(all_fleet_names))
+                await fu.update_fleet_conf_in_redis(dbsession, aredis_conn)
                 await aredis_conn.set("add_router_for", fleet_name)
-                await aredis_conn.set("send_conf_to_mfm_unix_dt", time.time())
 
     return response
 
@@ -283,9 +277,7 @@ async def delete_fleet(
         fu.FleetUtils.delete_fleet(dbsession, fleet_name)
 
         async with aioredis.Redis.from_url(os.getenv("FM_REDIS_URI")) as aredis_conn:
-            all_fleet_names = dbsession.get_all_fleet_names()
-            await aredis_conn.set("all_fleet_names", json.dumps(all_fleet_names))
-            await aredis_conn.set("send_conf_to_mfm_unix_dt", time.time())
+            await fu.update_fleet_conf_in_redis(dbsession, aredis_conn)
 
     return response
 
@@ -352,7 +344,7 @@ async def update_map(
                 raise e
 
         async with aioredis.Redis.from_url(os.getenv("FM_REDIS_URI")) as aredis_conn:
+            await fu.update_fleet_conf_in_redis(dbsession, aredis_conn)
             await aredis_conn.set("update_router_for", fleet_name)
-            await aredis_conn.set("send_conf_to_mfm_unix_dt", time.time())
 
     return response

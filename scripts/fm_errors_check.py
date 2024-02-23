@@ -18,13 +18,12 @@ def update_fm_incident(dbsession: DBSession, incident_id):
         if fm_incident.other_info is None:
             fm_incident.other_info = {}
 
-        error_repeats = fm_incident.other_info.get("error_repeats", 0)        
+        error_repeats = fm_incident.other_info.get("error_repeats", 0)
         fm_incident.other_info["error_repeats"] = error_repeats + 1
-        
         flag_modified(fm_incident, "other_info")
-        logging.getLogger().info("Updated FM incident {incident_id}")
+        logging.getLogger().info(f"Updated FM incident {incident_id}")
 
-    
+
 def has_error_repeated(error_dict):
     last_error = {}
     module = error_dict["module"]
@@ -74,7 +73,7 @@ def add_fm_error_file_upload(dbsession, error_dict):
 @proc_retry()
 @report_error
 def periodic_error_check():
-    logging.getLogger().info(f"started periodic_error_check script")
+    logging.getLogger().info("started periodic_error_check script")
 
     while True:
         with DBSession() as dbsession:
@@ -92,7 +91,7 @@ def periodic_error_check():
                 file_upload = dbsession.get_file_upload(filename)
 
                 if file_upload:
-                    logging.getLogger().info(f"File is already present")
+                    logging.getLogger().info("File is already present")
                     continue
 
                 pattern = r"_([A-Z0-9]+)\.log"

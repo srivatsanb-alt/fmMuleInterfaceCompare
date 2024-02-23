@@ -6,6 +6,7 @@
 3. [Setup FM on air-gapped servers](#setup-fm-on-air-gapped-servers)
 4. [Start using fleet manager](#start-using-fleet_manager)
 5. [Run CI](#run-ci)
+6. [Learn about FM backend](#learn-about-fm-backend)
 
 ## System requirements ## 
 
@@ -165,5 +166,8 @@ arg 3 - Sanjaya login password
     f. Pushes the images created to registry in sanjaya.atimotors.com 
 
 
+## Learn about FM backend ##
+
+Please check [Working of FM backend](app/readme.md)
 
 

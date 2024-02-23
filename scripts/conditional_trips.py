@@ -186,7 +186,7 @@ class BookConditionalTrip:
         idling_sherpa_status = self.get_idling_sherpa_status(idling_thresh)
 
         if len(idling_sherpa_status) == 0:
-            logging.getLogger("misc").warning(f"No idling sherpas")
+            logging.getLogger("misc").warning("No idling sherpas")
 
         for sherpa_status in idling_sherpa_status:
             self.dbsession.session.refresh(sherpa_status)
@@ -288,7 +288,7 @@ class BookConditionalTrip:
         low_battery_sherpa_status = self.get_low_battery_sherpa_status(battery_level_thresh)
 
         if len(low_battery_sherpa_status) == 0:
-            logging.getLogger("misc").warning(f"No low battery sherpas")
+            logging.getLogger("misc").warning("No low battery sherpas")
 
         for sherpa_status in low_battery_sherpa_status:
             sherpa_name = sherpa_status.sherpa_name
