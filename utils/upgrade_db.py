@@ -115,9 +115,11 @@ class DBUpgrade:
 
     def upgrade_to_4_1(self):
         with get_engine(os.getenv("FM_DATABASE_URI")).connect() as conn:
-            conn.execute("commit")
-            conn.execute("drop table master_fm_data_upload")
-            print("Set no-limit to num connections")
+            try:
+                conn.execute("commit")
+                conn.execute("drop table master_fm_data_upload")
+            except Exception as e:
+                print(f"Unable to drop master_fm_data_upload, exception: {e}")
 
 
 def upgrade_db_schema():
