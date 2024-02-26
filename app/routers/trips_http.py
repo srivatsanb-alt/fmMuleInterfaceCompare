@@ -8,6 +8,7 @@ import asyncio
 import pandas as pd
 from datetime import datetime
 import io
+
 # ati code imports
 import app.routers.dependencies as dpd
 import models.request_models as rqm
@@ -572,7 +573,7 @@ async def export_analytics_data(
     trip_analytics_req: rqm.TripStatusReq, user_name=Depends(dpd.get_user_from_header)
 ):
     if not user_name:
-        raise HTTPException(status_code=401, detail="Unknown requester")
+        dpd.raise_error("Unknown requester", 401)
 
     response = {}
     with DBSession() as dbsession:
@@ -595,16 +596,18 @@ async def export_analytics_data(
 
     # Convert DataFrame to Excel
     output = io.BytesIO()
-    with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False, sheet_name='Analytics')
+    with pd.ExcelWriter(output, engine="openpyxl") as writer:
+        df.to_excel(writer, index=False, sheet_name="Analytics")
 
         # Get the workbook and the sheet for formatting
         workbook = writer.book
-        worksheet = writer.sheets['Analytics']
+        worksheet = writer.sheets["Analytics"]
 
         # Set up the worksheet for A4 printing
         worksheet.page_setup.paperSize = worksheet.PAPERSIZE_A4
-        worksheet.page_margins = PageMargins(left=0.7, right=0.7, top=0.75, bottom=0.75, header=0.3, footer=0.3)
+        worksheet.page_margins = PageMargins(
+            left=0.7, right=0.7, top=0.75, bottom=0.75, header=0.3, footer=0.3
+        )
 
         # Optional: Auto-adjust columns' width
         for column_cells in worksheet.columns:
@@ -616,5 +619,5 @@ async def export_analytics_data(
     return StreamingResponse(
         output,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": "attachment; filename=detail_analytics.xlsx"}
+        headers={"Content-Disposition": "attachment; filename=detail_analytics.xlsx"},
     )
