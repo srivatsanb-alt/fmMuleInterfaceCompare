@@ -253,8 +253,8 @@ class FleetSimulator:
                 station_name = self.initialize_sherpas_at.get(sherpa.name)
                 print(f"Initializing sherpa {sherpa.name} station_name {station_name}")
                 try:
-                    station_name = "ECFA start"
                     st = dbsession.get_station(station_name)
+                    sherpa.parking_id = station_name
                 except:
                     st = None
                 station_fleet_name = st.fleet.name if st else None
