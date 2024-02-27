@@ -254,6 +254,7 @@ class FleetSimulator:
                 print(f"Initializing sherpa {sherpa.name} station_name {station_name}")
                 try:
                     st = dbsession.get_station(station_name)
+                    sherpa.parking_id = station_name
                 except:
                     st = None
                 station_fleet_name = st.fleet.name if st else None
@@ -396,7 +397,6 @@ class FleetSimulator:
             eta_at_start = route_length
 
             traj = x_vals, y_vals, t_vals
-            # sleep_time = 1
             steps = 1000
             sleep_time = self.sim_speedup_factor
             print(
@@ -518,7 +518,7 @@ class FleetSimulator:
                 kwargs = {"ttl": 1}
                 kwargs.update({"job_timeout": TIMEOUT})
                 enqueue(sherpa_trip_q, handle, *args, **kwargs)
-                time.sleep(sleep_time)
+                time.sleep(1)
                 session.session.expire_all()
 
             dest_pose = [x_vals[-1], y_vals[-1], t_vals[-1]]

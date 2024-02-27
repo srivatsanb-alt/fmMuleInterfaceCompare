@@ -188,99 +188,88 @@ def upload_map_files_fleet(mfm_context: mu.MFMContext, fleet_name: str):
 
 
 def upload_map_files(mfm_context: mu.MFMContext):
-    map_files_uploaded = [False]
     all_fleet_names = []
     with DBSession() as dbsession:
         all_fleet_names = dbsession.get_all_fleet_names()
 
-    map_files_uploaded = [False] * len(all_fleet_names)
-    while not all(map_files_uploaded):
-        i = 0
-        for fleet_name in all_fleet_names:
-            if map_files_uploaded[i] is False:
-                map_files_uploaded[i] = upload_map_files_fleet(mfm_context, fleet_name)
-            i += 1
+    for fleet_name in all_fleet_names:
+        if not upload_map_files_fleet(mfm_context, fleet_name):
+            raise Exception(f"Unable to upload map files of fleet: {fleet_name}")
 
 
 def update_fleet_info(mfm_context: mu.MFMContext):
-    fleet_info_sent = False
-    while not fleet_info_sent:
-        with DBSession() as dbsession:
-            fleet_names = []
-            master_fleet_info = []
-            all_fleets = dbsession.get_all_fleets()
-            for fleet in all_fleets:
-                fleet_names.append(fleet.name)
-                fleet_info = {
-                    "name": fleet.name,
-                    "customer": fleet.customer,
-                    "site": fleet.site,
-                    "location": fleet.location,
-                }
-                master_fleet_info.append(fleet_info)
-
-            req_json = {
-                "fleet_names": fleet_names,
-                "master_fleet_info": master_fleet_info,
+    with DBSession() as dbsession:
+        fleet_names = []
+        master_fleet_info = []
+        all_fleets = dbsession.get_all_fleets()
+        for fleet in all_fleets:
+            fleet_names.append(fleet.name)
+            fleet_info = {
+                "name": fleet.name,
+                "customer": fleet.customer,
+                "site": fleet.site,
+                "location": fleet.location,
             }
+            master_fleet_info.append(fleet_info)
 
-            endpoint = "update_fleet_info"
-            req_type = "post"
+        req_json = {
+            "fleet_names": fleet_names,
+            "master_fleet_info": master_fleet_info,
+        }
 
-            response_status_code, response_json = mu.send_http_req_to_mfm(
-                mfm_context, endpoint, req_type, req_json
+        endpoint = "update_fleet_info"
+        req_type = "post"
+
+        response_status_code, response_json = mu.send_http_req_to_mfm(
+            mfm_context, endpoint, req_type, req_json
+        )
+
+        if response_status_code == 200:
+            logging.getLogger("mfm_updates").info(
+                f"sent fleet_info to mfm successfully, details: {req_json}"
             )
-
-            if response_status_code == 200:
-                logging.getLogger("mfm_updates").info(
-                    f"sent fleet_info to mfm successfully, details: {req_json}"
-                )
-                fleet_info_sent = True
-            else:
-                logging.getLogger("mfm_updates").info(
-                    f"unable to send fleet_info to mfm,  status_code {response_status_code}"
-                )
-                time.sleep(10)
+        else:
+            logging.getLogger("mfm_updates").info(
+                f"unable to send fleet_info to mfm,  status_code {response_status_code}"
+            )
+            raise Exception(f"Unable to send fleet_info info")
 
 
 def update_sherpa_info(mfm_context: mu.MFMContext):
-    sherpa_info_sent = False
-    while not sherpa_info_sent:
-        with DBSession() as dbsession:
-            sherpa_names = []
-            master_sherpa_info = []
-            all_sherpas = dbsession.get_all_sherpas()
-            for sherpa in all_sherpas:
-                sherpa_names.append(sherpa.name)
-                sherpa_info = {
-                    "name": sherpa.name,
-                    "hwid": sherpa.hwid,
-                    "fleet_name": sherpa.fleet.name,
-                }
-                master_sherpa_info.append(sherpa_info)
-
-            req_json = {
-                "sherpa_names": sherpa_names,
-                "master_sherpa_info": master_sherpa_info,
+    with DBSession() as dbsession:
+        sherpa_names = []
+        master_sherpa_info = []
+        all_sherpas = dbsession.get_all_sherpas()
+        for sherpa in all_sherpas:
+            sherpa_names.append(sherpa.name)
+            sherpa_info = {
+                "name": sherpa.name,
+                "hwid": sherpa.hwid,
+                "fleet_name": sherpa.fleet.name,
             }
+            master_sherpa_info.append(sherpa_info)
 
-            endpoint = "update_sherpa_info"
-            req_type = "post"
+        req_json = {
+            "sherpa_names": sherpa_names,
+            "master_sherpa_info": master_sherpa_info,
+        }
 
-            response_status_code, response_json = mu.send_http_req_to_mfm(
-                mfm_context, endpoint, req_type, req_json
+        endpoint = "update_sherpa_info"
+        req_type = "post"
+
+        response_status_code, response_json = mu.send_http_req_to_mfm(
+            mfm_context, endpoint, req_type, req_json
+        )
+
+        if response_status_code == 200:
+            logging.getLogger("mfm_updates").info(
+                f"sent sherpa_info to mfm successfully, details: {req_json}"
             )
-
-            if response_status_code == 200:
-                logging.getLogger("mfm_updates").info(
-                    f"sent sherpa_info to mfm successfully, details: {req_json}"
-                )
-                sherpa_info_sent = True
-            else:
-                logging.getLogger("mfm_updates").info(
-                    f"unable to send sherpa_info to mfm,  status_code {response_status_code}"
-                )
-                time.sleep(10)
+        else:
+            logging.getLogger("mfm_updates").info(
+                f"unable to send sherpa_info to mfm,  status_code {response_status_code}"
+            )
+            raise Exception(f"Unable to send sherpa info")
 
 
 def update_trip_info(
@@ -384,36 +373,31 @@ def update_trip_analytics(
 
 
 def update_fm_version_info(mfm_context: mu.MFMContext):
-    fm_version_info_sent = False
-    while not fm_version_info_sent:
-        with DBSession() as dbsession:
-            software_compatability = dbsession.get_compatability_info()
-            compatible_sherpa_versions = software_compatability.info.get(
-                "sherpa_versions", []
+    with DBSession() as dbsession:
+        software_compatability = dbsession.get_compatability_info()
+        compatible_sherpa_versions = software_compatability.info.get("sherpa_versions", [])
+
+        req_json = {
+            "fm_tag": os.getenv("FM_TAG"),
+            "compatible_sherpa_tags": compatible_sherpa_versions,
+        }
+
+        endpoint = "update_fm_version_info"
+        req_type = "post"
+
+        response_status_code, response_json = mu.send_http_req_to_mfm(
+            mfm_context, endpoint, req_type, req_json
+        )
+
+        if response_status_code == 200:
+            logging.getLogger("mfm_updates").info(
+                f"sent fm_version_info to mfm successfully, details: {req_json}"
             )
-
-            req_json = {
-                "fm_tag": os.getenv("FM_TAG"),
-                "compatible_sherpa_tags": compatible_sherpa_versions,
-            }
-
-            endpoint = "update_fm_version_info"
-            req_type = "post"
-
-            response_status_code, response_json = mu.send_http_req_to_mfm(
-                mfm_context, endpoint, req_type, req_json
+        else:
+            logging.getLogger("mfm_updates").info(
+                f"unable to send fm_version_info_sent to mfm,  status_code {response_status_code}"
             )
-
-            if response_status_code == 200:
-                logging.getLogger("mfm_updates").info(
-                    f"sent fm_version_info to mfm successfully, details: {req_json}"
-                )
-                fm_version_info_sent = True
-            else:
-                logging.getLogger("mfm_updates").info(
-                    f"unable to send fm_version_info_sent to mfm,  status_code {response_status_code}"
-                )
-                time.sleep(10)
+            raise Exception("Unable to send FM version info")
 
 
 def update_fm_incidents(
