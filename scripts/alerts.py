@@ -9,6 +9,7 @@ from slack_sdk.webhook import WebhookClient
 import asyncio
 
 # ati code imports
+from utils.util import report_error
 import utils.log_utils as lu
 import models.misc_models as mm
 from models.mongo_client import FMMongo
@@ -35,39 +36,36 @@ async def forward_alerts(alert_config):
     sent_notification_ids = []
 
     while True:
-        try:
-            message = await psub.get_message(ignore_subscribe_messages=True, timeout=5)
-            if message:
-                data = ast.literal_eval(message["data"])
-                if data["type"] != mm.NotificationLevels.alert:
+        message = await psub.get_message(ignore_subscribe_messages=True, timeout=5)
+        if message:
+            data = ast.literal_eval(message["data"])
+            if data["type"] != mm.NotificationLevels.alert:
+                continue
+
+            for id, details in data.items():
+                alert_sent = False
+                if not isinstance(details, dict):
                     continue
+                elif id in sent_notification_ids:
+                    continue
+                sent_notification_ids.append(id)
+                alert_msg = details.get("log")
+                if alert_msg:
+                    entity_names = details.get("entity_names")
+                    alert_msg += f"\n entity_names: {entity_names}"
+                    response = webhook.send(text=alert_msg)
 
-                for id, details in data.items():
-                    alert_sent = False
-                    if not isinstance(details, dict):
-                        continue
-                    elif id in sent_notification_ids:
-                        continue
-                    sent_notification_ids.append(id)
-                    alert_msg = details.get("log")
-                    if alert_msg:
-                        entity_names = details.get("entity_names")
-                        alert_msg += f"\n entity_names: {entity_names}"
-                        response = webhook.send(text=alert_msg)
+                    if response.status_code == 200:
+                        alert_sent = True
 
-                        if response.status_code == 200:
-                            alert_sent = True
-
-                    if alert_sent:
-                        logger.info(f"Sent alert msg: {alert_msg}")
-                    else:
-                        logger.warning(f"Unable to send alert msg: {alert_msg}")
-        except Exception as e:
-            logger.error(f"Exception in alerts script, exception: {e}")
+                if alert_sent:
+                    logger.info(f"Sent alert msg: {alert_msg}")
+                else:
+                    logger.warning(f"Unable to send alert msg: {alert_msg}")
 
 
+@report_error
 def send_slack_alerts():
-
     with FMMongo() as fm_mongo:
         alert_config = fm_mongo.get_document_from_fm_config("alerts")
 

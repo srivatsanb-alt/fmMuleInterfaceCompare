@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from fastapi.encoders import jsonable_encoder
 
 # ati code imports
-from core.db import get_session
+from core.db import get_session, get_session_with_engine
 import models.misc_models as mm
 import models.fleet_models as fm
 import models.trip_models as tm
@@ -15,8 +15,13 @@ from utils.util import check_if_timestamp_has_passed, str_to_dt
 
 
 class DBSession:
-    def __init__(self):
-        self.session: Session = get_session(os.getenv("FM_DATABASE_URI"))
+    def __init__(self, engine=None):
+        if engine:
+            self.session: Session = get_session_with_engine(engine)
+        else:
+            self.session: Session = get_session(
+                os.path.join(os.getenv("FM_DATABASE_URI"), os.getenv("PGDATABASE"))
+            )
 
     def __enter__(self):
         return self
@@ -763,7 +768,7 @@ class DBSession:
         return self.session.query(mm.SoftwareCompatability).one_or_none()
 
     def get_master_data_upload_info(self):
-        return self.session.query(mm.MasterFMDataUpload).one_or_none()
+        return self.session.query(mm.MasterFMDataUploadts).one_or_none()
 
     def get_fm_incidents(
         self, from_datetime, to_datetime=datetime.datetime.now(), entity_name=None

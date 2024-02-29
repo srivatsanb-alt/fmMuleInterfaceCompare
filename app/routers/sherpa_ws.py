@@ -13,7 +13,7 @@ from redis import Redis
 
 # ati code imports
 import core.handler_configuration as hc
-from core.constants import MessageType
+from core.constants import MessageType, WebSocketCloseCode
 from models.db_session import DBSession
 import models.misc_models as mm
 import models.request_models as rqm
@@ -21,6 +21,8 @@ import app.routers.dependencies as dpd
 import utils.log_utils as lu
 import utils.util as utils_util
 from utils.rq_utils import Queues, enqueue
+import core.common as ccm
+
 
 MSG_INVALID = "msg_invalid"
 MSG_TYPE_REPEATED = "msg_type_repeated_within_time_window"
@@ -104,6 +106,25 @@ def accept_message(sherpa: str, msg):
     return True, None
 
 
+def freq_ws_req(sherpa_name):
+    rkey = f"{sherpa_name}_num_conn_req"
+    rkey_ts = f"{sherpa_name}_num_conn_req_ts"
+    max_conn = 4
+    if redis.setnx(rkey_ts, 1):
+        redis.set(rkey, 1)
+        rkey_expiry_ms = timedelta(milliseconds=60000)
+        redis.expire(rkey_ts, rkey_expiry_ms)
+    else:
+        num_conn = redis.get(rkey)
+        if num_conn is not None:
+            num_conn = int(num_conn.decode())
+            num_conn += 1
+            redis.set(rkey, num_conn)
+            if num_conn > max_conn:
+                return True
+    return False
+
+
 @router.websocket("/ws/api/v1/sherpa/")
 async def sherpa_status(
     websocket: WebSocket,
@@ -121,10 +142,20 @@ async def sherpa_status(
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
 
+    if freq_ws_req(sherpa_name):
+        logger.warning(
+            f"Too many websocket connection request from {sherpa_name}, not accepting"
+        )
+        await websocket.close(
+            code=WebSocketCloseCode.RATE_LIMIT_EXCEEDED,
+            reason="Too many connection request",
+        )
+        return
+
     logger.info(f"websocket connection initiated by {sherpa_name}")
     logger.info(f"websocket connection has to be accepeted for {sherpa_name}")
 
-    with DBSession() as dbsession:
+    with DBSession(engine=ccm.engine) as dbsession:
         sherpa = dbsession.get_sherpa(sherpa_name)
         if sherpa.status.other_info is None:
             sherpa.status.other_info = {}

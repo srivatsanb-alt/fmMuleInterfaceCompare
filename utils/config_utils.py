@@ -2,6 +2,23 @@ class CreateColKwargs:
     capped_default = {"capped": True, "max": 1, "size": 1024}
 
 
+class PSQLDBConfigValidator:
+    connection_settings = {
+        "$jsonSchema": {
+            "bsonType": "object",
+            "required": ["max_connections"],
+            "properties": {
+                "max_connections": {
+                    "bsonType": "int",
+                    "description": "Max number of psql DB connections that can be opened simultaneously",
+                    "minimum": 100,
+                    "maximum": 500,
+                },
+            },
+        }
+    }
+
+
 class FrontendUsersValidator:
     user_details = {
         "$jsonSchema": {
@@ -487,3 +504,7 @@ class PluginConfigDefaults:
         "plugin_port": "8002",
         "hashed_api_key": "a6a333480615e7339fbac0fa699559ce950a90df85d93a1f114a0c79dfc0750b",
     }
+
+
+class PSQLDBConfigDefaults:
+    connection_settings = {"max_connections": 300}

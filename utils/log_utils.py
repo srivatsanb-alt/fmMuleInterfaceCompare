@@ -13,6 +13,7 @@ def get_other_loggers():
     others_loggers.append("status_updates")
     others_loggers.append("visa")
     others_loggers.append("mfm_updates")
+    others_loggers.append("mfm_updates_ws")
     others_loggers.append("misc")
     others_loggers.append("control_module_router")
     others_loggers.append("process_times")
@@ -92,16 +93,18 @@ def set_log_config_dict(all_sherpas: List[str] = []):
         add_handler(log_name, log_config)
         add_logger(log_name, log_config)
 
-    redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
-    redis_conn.set("log_dict_config", json.dumps(log_config))
+    # redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
+    with redis.from_url(os.getenv("FM_REDIS_URI")) as redis_conn:
+        redis_conn.set("log_dict_config", json.dumps(log_config))
 
 
 def get_log_config_dict():
-    redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
-    log_config_dict = redis_conn.get("log_dict_config")
-
-    if log_config_dict is None:
-        set_log_config_dict()
+    # redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
+    with redis.from_url(os.getenv("FM_REDIS_URI")) as redis_conn:
         log_config_dict = redis_conn.get("log_dict_config")
+
+        if log_config_dict is None:
+            set_log_config_dict()
+            log_config_dict = redis_conn.get("log_dict_config")
 
     return json.loads(log_config_dict)

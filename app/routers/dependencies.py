@@ -177,6 +177,8 @@ async def process_req_with_response(queue, req, user: str):
     redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
     job = process_req(queue, req, user, redis_conn)
 
+    add_job_to_queued_jobs(job.id, req.source, redis_conn)
+
     # Unique key for each job to signal completion
     job_completion_key = f"job_{job.id}_completion"
 
@@ -189,8 +191,12 @@ async def process_req_with_response(queue, req, user: str):
     job.refresh()
     status = job.get_status()
 
+    remove_job_from_queued_jobs(job.id, req.source, redis_conn)
+
     if status == "failed":
+        error_detail = "Unable to process request"
         status_code = 500
+
         await asyncio.sleep(0.1)
         job_meta = job.get_meta(refresh=True)
         error_value = job_meta.get("error_value")

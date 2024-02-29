@@ -10,8 +10,10 @@ import redis
 import json
 import yaml
 import time
+import logging
 from rq import Worker
-
+import sys
+import functools
 
 TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
 IES_TIME_FORMAT = "%Y-%m-%dT%H:%M:%S.%f"
@@ -268,6 +270,81 @@ def good_password_check(password):
             return True
 
     return False
+
+
+def write_fm_error_to_json_file(module: str, error_detail: dict):
+    random_id = generate_random_job_id()
+    dir_to_save = os.path.join(os.getenv("FM_STATIC_DIR"), "fm_errors")
+    fm_errors_path = os.path.join(
+        os.getenv("FM_STATIC_DIR"), "fm_errors", f"{module}_{random_id}.log"
+    )
+    if not os.path.exists(dir_to_save):
+        os.makedirs(dir_to_save)
+    error_detail["random_id"] = random_id
+    try:
+        with open(fm_errors_path, "w") as f:
+            json.dump(error_detail, f, default=str)
+    except Exception as e:
+        logging.getLogger().info(f"Error occurred when trying to write to file: {e}")
+
+
+def proc_exception(func, e):
+    error_dict = {
+        "module": func.__name__,
+        "error_type": type(e).__name__,
+        "error_msg": str(e),
+        "code": "generic",
+    }
+
+    db_strs = ["psycop", "sqlalchemy"]
+
+    if any([db_str in error_dict["error_msg"] for db_str in db_strs]):
+        error_dict["code"] = "db"
+
+    write_fm_error_to_json_file(error_dict["module"], error_dict)
+    logging.info(
+        f"Error occurred when trying to Monitor the Process {error_dict['module']}: {e}"
+    )
+    sys.exit(1)
+
+
+def report_error(func):
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            proc_exception(func, e)
+
+    return wrapper
+
+
+def async_report_error(func):
+    @functools.wraps(func)
+    async def async_wrapper(*args, **kwargs):
+        try:
+            result = await func(*args, **kwargs)
+            return result
+        except Exception as e:
+            proc_exception(func, e)
+
+    return async_wrapper
+
+
+def proc_retry(times=np.inf, sleep_time=5):
+    def decorator(func):
+        def wrapper(*args, **kwargs):
+            attempt = 0
+            while attempt < times:
+                try:
+                    return func(*args, **kwargs)
+                except:
+                    attempt += 1
+                    time.sleep(sleep_time)
+            return func(*args, **kwargs)
+
+        return wrapper
+
+    return decorator
 
 
 def format_fm_incident(fm_incident):

@@ -21,7 +21,7 @@ import utils.comms as utils_comms
 import utils.util as utils_util
 import utils.visa_utils as utils_visa
 import core.constants as cc
-
+import core.common as ccm
 from optimal_dispatch.dispatcher import OptimalDispatch
 import handlers.default.handler_utils as hutils
 
@@ -104,8 +104,8 @@ class Handlers:
         # have not seperated queries and update DB - Need to be done
         hutils.check_sherpa_status(self.dbsession)
         hutils.delete_notifications(self.dbsession)
-        redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
-        current_data_folder = redis_conn.get("current_data_folder").decode()
+        with redis.from_url(os.getenv("FM_REDIS_URI")) as redis_conn:
+            current_data_folder = redis_conn.get("current_data_folder").decode()
         hutils.record_cpu_perf(current_data_folder)
         hutils.record_rq_perf(current_data_folder)
         logging.getLogger("status_updates").info("Ran a FM health check")
@@ -422,7 +422,7 @@ class Handlers:
                     if not isinstance(msg, rqm.ResetPoseReq):
                         run_opt_d = False
             if run_opt_d:
-                with DBSession() as dbsession:
+                with DBSession(engine=ccm.engine) as dbsession:
                     self.dbsession = dbsession
                     self.run_optimal_dispatch(req_ctxt.fleet_names)
         except Exception as e:
@@ -733,7 +733,11 @@ class Handlers:
         next_task = "no new task to assign"
         sherpa_status: fm.SherpaStatus = sherpa.status
 
-        if not ongoing_trip and pending_trip:
+        if (
+            not ongoing_trip
+            and pending_trip
+            and hutils.is_sherpa_available_for_new_trip(self.dbsession, sherpa_status)
+        ):
             done = True
             next_task = "assign_new_trip"
 
@@ -926,7 +930,7 @@ class Handlers:
 
         for trip, pending_trip in zip(all_to_be_cancelled_trips, all_pending_trips):
             self.dbsession.delete_pending_trip(pending_trip)
-            trip.status = tm.TripStatus.CANCELLED
+            trip.cancel()
             logging.getLogger().info(
                 f"Successfully deleted booked trip trip_id: {trip.id}, booking_id: {trip.booking_id}"
             )
@@ -1552,14 +1556,16 @@ class Handlers:
                 if sherpa in ezone.waiting_sherpas:
                     ezone.waiting_sherpas.remove(sherpa)
         else:
-            for ezone, visa_reject in zip(set(reqd_ezones), visa_rejects):
-                if visa_reject is None:
-                    vr = vm.VisaRejects(reason=reason)
-                    vr.zone_id = ezone.zone_id
-                    vr.sherpa_name = sherpa.name
-                    self.dbsession.add_to_session(vr)
-                else:
-                    visa_reject.reason = reason
+            # Add to visa rejects only if sherpa is inducted
+            if sherpa.status.inducted:
+                for ezone, visa_reject in zip(set(reqd_ezones), visa_rejects):
+                    if visa_reject is None:
+                        vr = vm.VisaRejects(reason=reason)
+                        vr.zone_id = ezone.zone_id
+                        vr.sherpa_name = sherpa.name
+                        self.dbsession.add_to_session(vr)
+                    else:
+                        visa_reject.reason = reason
 
         granted_message = "granted" if granted else "not granted"
         visa_log = f"{sherpa.name} {granted_message} {req.visa_type} type visa to zone {req.zone_name}, reason: {reason}"
@@ -1568,6 +1574,7 @@ class Handlers:
         response: rqm.ResourceResp = rqm.ResourceResp(
             granted=granted, visa=req, access_type=rqm.AccessType.REQUEST
         )
+
         utils_util.maybe_add_notification(
             self.dbsession,
             [sherpa.name, sherpa.fleet.name, sherpa.fleet.customer],
@@ -1761,7 +1768,7 @@ class Handlers:
         self.dbsession = None
         init_request_context(msg)
 
-        with DBSession() as dbsession:
+        with DBSession(engine=ccm.engine) as dbsession:
             self.dbsession = dbsession
 
             if msg.type == cc.MessageType.FM_HEALTH_CHECK:

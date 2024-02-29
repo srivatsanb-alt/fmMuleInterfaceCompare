@@ -7,6 +7,7 @@ import models.trip_models as tm
 from models.base_models import StationProperties
 from models.db_session import DBSession
 import app.routers.dependencies as dpd
+import core.common as ccm
 
 
 router = APIRouter(
@@ -28,7 +29,7 @@ async def get_station_info(entity_name: str, user_name=Depends(dpd.get_user_from
     if not entity_name:
         dpd.raise_error("No entity name")
 
-    with DBSession() as dbsession:
+    with DBSession(engine=ccm.engine) as dbsession:
         station_status: fm.StationStatus = dbsession.get_station_status(entity_name)
         if not station_status:
             dpd.raise_error("Bad station name")
@@ -60,7 +61,7 @@ async def disable_station(
     if not entity_name:
         dpd.raise_error("Bad detail")
 
-    with DBSession() as dbsession:
+    with DBSession(engine=ccm.engine) as dbsession:
         if disable:
             all_ongoing_trips: List[tm.OngoingTrip] = dbsession.get_all_ongoing_trips()
             for ongoing_trip in all_ongoing_trips:
