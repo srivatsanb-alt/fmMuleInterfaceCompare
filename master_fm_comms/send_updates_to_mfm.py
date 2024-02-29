@@ -36,6 +36,7 @@ class SendEventUpdates2MFM:
         self.recent_hours = 24
         self.recent_dt = None
         self.last_conf_sent_unix_dt = time.time()
+        self.sherpa_oee_send_freq = 30 * 60  #  every 30 minutes
 
     def maybe_send_conf_to_mfm(self):
         temp = self.redis_conn.get("send_conf_to_mfm_unix_dt")
@@ -464,6 +465,13 @@ def update_sherpa_oee(
     event_updater: SendEventUpdates2MFM,
     dbsession: DBSession,
 ):
+
+    ts_diff = (
+        datetime.datetime.now() - event_updater.mfm_upload_dt_info.last_sherpa_oee_update_dt
+    )
+
+    if ts_diff < event_updater.sherpa_oee_send_freq:
+        return
 
     sherpa_oees = (
         dbsession.session.query(mm.SherpaOEE)

@@ -13,7 +13,7 @@ import master_fm_comms.mfm_utils as mu
 import utils.util as utils_util
 
 
-@utils_util.async_report_error
+# @utils_util.async_report_error
 async def send_ongoing_trip_status(ws, mfm_context: mu.MFMContext):
     async with aioredis.Redis.from_url(
         os.getenv("FM_REDIS_URI"), max_connections=10, decode_responses=True
@@ -59,7 +59,7 @@ async def send_ongoing_trip_status(ws, mfm_context: mu.MFMContext):
                     )
 
 
-@utils_util.async_report_error
+# @utils_util.async_report_error
 async def send_fleet_status(ws, mfm_context: mu.MFMContext):
     async with aioredis.Redis.from_url(
         os.getenv("FM_REDIS_URI"), max_connections=10, decode_responses=True
@@ -108,7 +108,7 @@ async def send_fleet_status(ws, mfm_context: mu.MFMContext):
                     )
 
 
-@utils_util.async_report_error
+# @utils_util.async_report_error
 async def async_send_ws_msgs_to_mfm():
     logging.getLogger("mfm_updates_ws").info("started async_send_ws_msgs_to_mfm script")
     mfm_context: mu.MFMContext = mu.get_mfm_context()
@@ -149,5 +149,7 @@ async def async_send_ws_msgs_to_mfm():
             await asyncio.sleep(sl)
 
 
+@utils_util.proc_retry(sleep_time=30)
+@utils_util.report_error
 def send_ws_msgs_to_mfm():
     asyncio.get_event_loop().run_until_complete(async_send_ws_msgs_to_mfm())
