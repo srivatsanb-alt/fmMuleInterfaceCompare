@@ -470,7 +470,7 @@ def update_sherpa_oee(
         datetime.datetime.now() - event_updater.mfm_upload_dt_info.last_sherpa_oee_update_dt
     )
 
-    if ts_diff < event_updater.sherpa_oee_send_freq:
+    if ts_diff.seconds < event_updater.sherpa_oee_send_freq:
         return
 
     sherpa_oees = (
