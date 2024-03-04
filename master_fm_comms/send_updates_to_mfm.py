@@ -35,16 +35,22 @@ class SendEventUpdates2MFM:
         self.any_updates_sent = False
         self.recent_hours = 24
         self.recent_dt = None
-        self.last_conf_sent_unix_dt = time.time()
+        self.last_conf_sent_unix_dt = self.get_send_conf_to_mfm_unix_dt(time.time())
         self.sherpa_oee_send_freq = 30 * 60  #  every 30 minutes
 
-    def maybe_send_conf_to_mfm(self):
+    def get_send_conf_to_mfm_unix_dt(self, default=None):
         temp = self.redis_conn.get("send_conf_to_mfm_unix_dt")
         if temp is None:
-            return
+            temp = default
+        else:
+            temp = float(temp.decode())
+        return temp
 
-        temp = float(temp.decode())
-        if temp > self.last_conf_sent_unix_dt:
+    def maybe_send_conf_to_mfm(self):
+        temp = self.get_send_conf_to_mfm_unix_dt()
+        if temp is None:
+            return
+        elif self.last_conf_sent_unix_dt <= temp:
             logging.getLogger("mfm_updates").info(
                 "Will send all fleet configuration to master fm again"
             )
