@@ -35,16 +35,22 @@ class SendEventUpdates2MFM:
         self.any_updates_sent = False
         self.recent_hours = 24
         self.recent_dt = None
-        self.last_conf_sent_unix_dt = time.time()
+        self.last_conf_sent_unix_dt = self.get_send_conf_to_mfm_unix_dt(time.time())
         self.sherpa_oee_send_freq = 30 * 60  #  every 30 minutes
 
-    def maybe_send_conf_to_mfm(self):
+    def get_send_conf_to_mfm_unix_dt(self, default=None):
         temp = self.redis_conn.get("send_conf_to_mfm_unix_dt")
         if temp is None:
-            return
+            temp = default
+        else:
+            temp = float(temp.decode())
+        return temp
 
-        temp = float(temp.decode())
-        if temp > self.last_conf_sent_unix_dt:
+    def maybe_send_conf_to_mfm(self):
+        temp = self.get_send_conf_to_mfm_unix_dt()
+        if temp is None:
+            return
+        elif self.last_conf_sent_unix_dt <= temp:
             logging.getLogger("mfm_updates").info(
                 "Will send all fleet configuration to master fm again"
             )
@@ -283,6 +289,7 @@ def update_trip_info(
         .filter(tm.Trip.end_time > event_updater.mfm_upload_dt_info.last_trip_update_dt)
         .filter(tm.Trip.end_time > event_updater.recent_dt)
         .filter(tm.Trip.status.in_(tm.COMPLETED_TRIP_STATUS))
+        .order_by(tm.Trip.end_time)
         .all()
     )
 
@@ -298,6 +305,8 @@ def update_trip_info(
         del trip_info["trip_details"]["updated_at"]
         trips_info.append(trip_info)
 
+    last_trip_end_time = trip.end_time
+
     req_json = {"trips_info": trips_info}
 
     endpoint = "update_trip_info"
@@ -311,7 +320,7 @@ def update_trip_info(
         logging.getLogger("mfm_updates").info(
             f"sent trip_info of trip_ids: {trip_ids} to mfm successfully"
         )
-        event_updater.mfm_upload_dt_info.last_trip_update_dt = datetime.datetime.now()
+        event_updater.mfm_upload_dt_info.last_trip_update_dt = last_trip_end_time
         event_updater.update_db(dbsession)
     else:
         logging.getLogger("mfm_updates").info(
@@ -325,7 +334,7 @@ def update_trip_analytics(
 ):
 
     new_trip_analytics = (
-        dbsession.session.query(tm.TripAnalytics)
+        dbsession.session.query(tm.TripAnalytics, tm.Trip.end_time)
         .join(tm.Trip, tm.Trip.id == tm.TripAnalytics.trip_id)
         .filter(
             tm.Trip.end_time
@@ -333,25 +342,26 @@ def update_trip_analytics(
         )
         .filter(tm.Trip.end_time > event_updater.recent_dt)
         .filter(tm.Trip.status.in_(tm.COMPLETED_TRIP_STATUS))
+        .order_by(tm.Trip.end_time)
         .all()
     )
 
-    trips_analytics = []
-    trip_ids = []
-
-    for trip_analytics in new_trip_analytics:
-        ta = tu.get_trip_analytics(trip_analytics)
-        del ta["updated_at"]
-        del ta["created_at"]
-        trips_analytics.append(ta)
-        trip_ids.append(trip_analytics.trip_id)
-
-    if len(trips_analytics) == 0:
+    if len(new_trip_analytics) == 0:
         logging.getLogger("mfm_updates").info("no new trip analytics to be updated")
         return
 
-    req_json = {"trips_analytics": trips_analytics}
+    trips_analytics = []
+    trip_ids = []
+    for trip_analytics in new_trip_analytics:
+        ta = tu.get_trip_analytics(trip_analytics[0])
+        del ta["updated_at"]
+        del ta["created_at"]
+        trips_analytics.append(ta)
+        trip_ids.append(trip_analytics[0].trip_id)
 
+    last_trip_end_time = trip_analytics[1]
+
+    req_json = {"trips_analytics": trips_analytics}
     endpoint = "update_trip_analytics"
     req_type = "post"
 
@@ -363,9 +373,7 @@ def update_trip_analytics(
         logging.getLogger("mfm_updates").info(
             f"sent trip_analytics to mfm successfully, details: {req_json}"
         )
-        event_updater.mfm_upload_dt_info.last_trip_analytics_update_dt = (
-            datetime.datetime.now()
-        )
+        event_updater.mfm_upload_dt_info.last_trip_analytics_update_dt = last_trip_end_time
         event_updater.update_db(dbsession)
     else:
         logging.getLogger("mfm_updates").info(
@@ -418,6 +426,7 @@ def update_fm_incidents(
         )
         .all()
     )
+    update_to_dt = datetime.datetime.now()
 
     all_fm_incidents = []
     for fm_incident in fm_incidents:
@@ -451,9 +460,7 @@ def update_fm_incidents(
         logging.getLogger("mfm_updates").info(
             f"sent fm_incidents to mfm successfully, details: {req_json}"
         )
-        event_updater.mfm_upload_dt_info.last_fm_incidents_update_dt = (
-            datetime.datetime.now()
-        )
+        event_updater.mfm_upload_dt_info.last_fm_incidents_update_dt = update_to_dt
         event_updater.update_db(dbsession)
     else:
         logging.getLogger("mfm_updates").info(
@@ -481,6 +488,7 @@ def update_sherpa_oee(
         )
         .all()
     )
+    update_to_dt = datetime.datetime.now()
 
     all_sherpa_oees = []
     for sherpa_oee in sherpa_oees:
@@ -503,7 +511,7 @@ def update_sherpa_oee(
 
     if response_status_code == 200:
         logging.getLogger("mfm_updates").info("sent sherpa oee to mfm successfully")
-        event_updater.mfm_upload_dt_info.last_sherpa_oee_update_dt = datetime.datetime.now()
+        event_updater.mfm_upload_dt_info.last_sherpa_oee_update_dt = update_to_dt
         event_updater.update_db(dbsession)
     else:
         logging.getLogger("mfm_updates").info(
@@ -533,7 +541,7 @@ def upload_important_files(
                 mm.FileUploads.updated_at > event_updater.recent_dt,
             )
         )
-        .order_by(func.least(mm.FileUploads.updated_at, mm.FileUploads.created_at))
+        .order_by(func.max(mm.FileUploads.updated_at, mm.FileUploads.created_at))
         .all()
     )
 
