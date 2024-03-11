@@ -592,8 +592,9 @@ class FleetSimulator:
         ):
             num_units = ongoing_trip.trip.trip_metadata.get("num_units")
             peripheral_response.conveyor = ConveyorReq(
-                direction=DirectionEnum.receive, num_units=0
+                direction=DirectionEnum.receive, num_units=num_units
             )
+            send_peripheral_resp = True
         elif self.peripheral_response_is_needed(
             ts.WAITING_STATION_CONV_SEND_START, ts.WAITING_STATION_CONV_SEND_END, states
         ):
