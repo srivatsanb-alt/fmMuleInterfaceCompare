@@ -910,7 +910,6 @@ class Handlers:
                 pending_trip: tm.PendingTrip = self.dbsession.get_pending_trip_with_trip_id(
                     trip.id
                 )
-
                 # add fleet_names to req_ctxt - this is for optimal_dispatch
                 fleet_name = trip.fleet_name
                 if fleet_name not in req_ctxt.fleet_names:
@@ -929,6 +928,10 @@ class Handlers:
             )
 
         for trip, pending_trip in zip(all_to_be_cancelled_trips, all_pending_trips):
+
+            if pending_trip is None:
+                raise ValueError(f"No pending trip for trip_id: {trip.id}")
+
             self.dbsession.delete_pending_trip(pending_trip)
             trip.cancel()
             logging.getLogger().info(
