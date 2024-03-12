@@ -91,20 +91,23 @@ async def is_sherpa_version_compatible(
 # initiates sherpa
 @router.post("/init")
 async def init_sherpa(init_msg: rqm.InitMsg, sherpa: str = Depends(dpd.get_sherpa)):
-    dpd.process_req(None, init_msg, sherpa)
+    response = await dpd.process_req_with_response(None, init_msg, sherpa)
+    return response
 
 
 # checks if sherpa has reached to its destination and completed its trip
 @router.post("/trip/reached")
 async def reached(reached_msg: rqm.ReachedReq, sherpa: str = Depends(dpd.get_sherpa)):
-    dpd.process_req(None, reached_msg, sherpa)
+    response = await dpd.process_req_with_response(None, reached_msg, sherpa)
+    return response
 
 
 @router.post("/peripherals")
 async def peripherals(
     peripherals_req: rqm.SherpaPeripheralsReq, sherpa: str = Depends(dpd.get_sherpa)
 ):
-    dpd.process_req(None, peripherals_req, sherpa)
+    response = await dpd.process_req_with_response(None, peripherals_req, sherpa)
+    return response
 
 
 @router.post("/access/resource", response_model=rqm.ResourceResp)
