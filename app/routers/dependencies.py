@@ -187,9 +187,12 @@ async def process_req_with_response(queue, req, user: str):
         await async_redis_conn.brpop(job_completion_key)
 
     # Re-fetch or refresh the job to get the updated status
-    job = Job.fetch(job.id, connection=redis_conn)
-    job.refresh()
-    status = job.get_status()
+    status = ""
+    while status not in ["finished", "failed"]:
+        job = Job.fetch(job.id, connection=redis_conn)
+        job.refresh()
+        status = job.get_status()
+        logging.debug(f"Job status: {status}")
 
     remove_job_from_queued_jobs(job.id, req.source, redis_conn)
 
