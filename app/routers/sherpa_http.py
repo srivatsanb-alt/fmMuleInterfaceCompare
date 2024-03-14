@@ -14,6 +14,7 @@ import models.misc_models as mm
 import models.request_models as rqm
 from utils.rq_utils import Queues
 import utils.util as utils_util
+import utils.fleet_utils as fu
 import app.routers.dependencies as dpd
 import core.constants as cc
 import core.common as ccm
@@ -220,6 +221,34 @@ async def sherpa_alerts(
             mm.NotificationLevels.alert,
             module,
         )
+
+@router.get("/get_config_file_info/{sherpa_name}")
+async def get_config_file_info(
+        sherpa_name: str = Depends(dpd.get_sherpa),
+):
+    response = {}
+    if not sherpa_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    with DBSession(engine=ccm.engine) as dbsession:
+        sherpa = dbsession.get_sherpa(sherpa_name)
+        fleet_name = sherpa.fleet.name
+
+        config_dir = os.path.join(
+            os.getenv("FM_STATIC_DIR"), "sherpa_uploads", fleet_name, "sherpa_config"
+        )
+        if not os.path.exists(config_dir):
+            pass
+        else:
+            file_names = os.listdir(config_dir)
+            config_file = f"config_{sherpa_name}.toml"
+            consolidated_file = f"consolidated_{sherpa_name}.toml"
+            for file_name in file_names:
+                if file_name == config_file or file_name == consolidated_file:
+                    fleet_map_path = os.path.join(config_dir,file_name)
+                    file_hash = fu.compute_sha1_hash(fleet_map_path)
+                    response.update({file_name:file_hash})
+    return response
 
 
 @router.post("/upload_file")
