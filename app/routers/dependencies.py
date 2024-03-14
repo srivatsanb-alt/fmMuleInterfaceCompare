@@ -7,7 +7,6 @@ from fastapi import HTTPException
 from fastapi import Header
 from fastapi.param_functions import Query
 from rq.job import Job
-from rq import Retry
 import aioredis
 import redis
 import os
@@ -16,7 +15,6 @@ import json
 # ati code imports
 import core.handler_configuration as hc
 from utils.rq_utils import enqueue, enqueue_at, Queues
-from models.request_models import SherpaReq
 from models.db_session import DBSession
 
 
@@ -160,10 +158,6 @@ def process_req(queue, req, user, redis_conn=None, dt=None):
 
     kwargs.update({"job_timeout": timeout})
 
-    # add retry only for SherpaReq(req comes from Sherpa)
-    if isinstance(req, SherpaReq):
-        kwargs.update({"retry": Retry(max=2, interval=[0.5, 2])})
-
     if dt:
         job = enqueue_at(queue, dt, handle, *args, **kwargs)
         return job
@@ -187,9 +181,12 @@ async def process_req_with_response(queue, req, user: str):
         await async_redis_conn.brpop(job_completion_key)
 
     # Re-fetch or refresh the job to get the updated status
-    job = Job.fetch(job.id, connection=redis_conn)
-    job.refresh()
-    status = job.get_status()
+    status = ""
+    while status not in ["finished", "failed"]:
+        job = Job.fetch(job.id, connection=redis_conn)
+        job.refresh()
+        status = job.get_status()
+        logging.debug(f"Job status: {status}")
 
     remove_job_from_queued_jobs(job.id, req.source, redis_conn)
 
