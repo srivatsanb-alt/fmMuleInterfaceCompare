@@ -541,7 +541,7 @@ def upload_important_files(
                 mm.FileUploads.updated_at > event_updater.recent_dt,
             )
         )
-        .order_by(func.max(mm.FileUploads.updated_at, mm.FileUploads.created_at))
+        .order_by(func.greatest(mm.FileUploads.updated_at, mm.FileUploads.created_at))
         .all()
     )
 
