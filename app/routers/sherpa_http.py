@@ -222,9 +222,10 @@ async def sherpa_alerts(
             module,
         )
 
+
 @router.get("/get_config_file_info/{sherpa_name}")
 async def get_config_file_info(
-        sherpa_name: str = Depends(dpd.get_sherpa),
+    sherpa_name: str = Depends(dpd.get_sherpa),
 ):
     response = {}
     if not sherpa_name:
@@ -245,9 +246,9 @@ async def get_config_file_info(
             consolidated_file = f"consolidated_{sherpa_name}.toml"
             for file_name in file_names:
                 if file_name == config_file or file_name == consolidated_file:
-                    fleet_map_path = os.path.join(config_dir,file_name)
+                    fleet_map_path = os.path.join(config_dir, file_name)
                     file_hash = fu.compute_sha1_hash(fleet_map_path)
-                    response.update({file_name:file_hash})
+                    response.update({file_name: file_hash})
     return response
 
 
@@ -277,9 +278,7 @@ async def upload_file(
         new_file_name = file_upload_req.filename
         file_path = os.path.join(dir_to_save, new_file_name)
         try:
-            with open(file_path, "wb") as f:
-                f.write(await uploaded_file.read())
-
+            await utils_util.write_to_file_async(file_path, await uploaded_file.read())
             logging.getLogger("uvicorn").info(f"Uploaded file:{file_path} successfully")
 
             file_upload = dbsession.get_file_upload(new_file_name)
