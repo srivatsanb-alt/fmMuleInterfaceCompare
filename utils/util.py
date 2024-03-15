@@ -14,6 +14,7 @@ import logging
 from rq import Worker
 import sys
 import functools
+import aiofiles
 
 TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
 IES_TIME_FORMAT = "%Y-%m-%dT%H:%M:%S.%f"
@@ -357,3 +358,8 @@ def format_fm_incident(fm_incident):
     temp.update({"module": fm_incident.module})
     temp.update({"other_info": fm_incident.other_info})
     return temp
+
+
+async def write_to_file_async(filename, data):
+    async with aiofiles.open(filename, mode="wb") as file:
+        await file.write(data)
