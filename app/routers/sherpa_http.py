@@ -234,7 +234,7 @@ async def sherpa_alerts(
         )
 
 
-@router.get("/get_config_file_info/{sherpa_name}")
+@router.get("/get_config_file_info")
 async def get_config_file_info(
     sherpa_name: str = Depends(dpd.get_sherpa),
 ):
