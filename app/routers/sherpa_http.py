@@ -6,6 +6,7 @@ import logging
 import pytz
 from fastapi import Depends, APIRouter, File, UploadFile
 from sqlalchemy.orm.attributes import flag_modified
+from fastapi_limiter.depends import RateLimiter
 
 # ati code imports
 from models.db_session import DBSession
@@ -111,7 +112,11 @@ async def peripherals(
     return response
 
 
-@router.post("/access/resource", response_model=rqm.ResourceResp)
+@router.post(
+    "/access/resource",
+    response_model=rqm.ResourceResp,
+    dependencies=[Depends(RateLimiter(times=15, seconds=60))],
+)
 async def resource_access(
     resource_req: rqm.ResourceReq, sherpa: str = Depends(dpd.get_sherpa)
 ):
