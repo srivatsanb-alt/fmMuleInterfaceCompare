@@ -116,8 +116,14 @@ async def resource_access(
     resource_req: rqm.ResourceReq, sherpa: str = Depends(dpd.get_sherpa)
 ):
     queue = Queues.queues_dict["resource_handler"]
-    response = await dpd.process_req_with_response(queue, resource_req, sherpa)
-    return rqm.ResourceResp.from_json(response)
+    _response = await dpd.process_req_with_response(queue, resource_req, sherpa)
+
+    try:
+        response = rqm.ResourceResp.from_json(_response)
+    except:
+        dpd.raise_error("Unable to obtain resource access response from RQ")
+
+    return response
 
 
 @router.get(
