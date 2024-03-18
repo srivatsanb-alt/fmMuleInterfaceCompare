@@ -456,7 +456,6 @@ class FleetSimulator:
                         print(f"Is Visa needed? {visa_params}")
                         if visa_params is not None:
                             self.visa_needed[sherpa_name] = visa_params[0]
-                        if len(self.visa_needed[sherpa_name]) > 0:
                             print(
                                 f"Visa for zone: {self.visa_needed[sherpa_name]}, needed for {sherpa_name}"
                             )
