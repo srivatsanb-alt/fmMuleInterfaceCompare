@@ -16,7 +16,7 @@ def get_db_pool_config():
         "overflow_limit": int(int(os.getenv("PSQL_MAX_CONNECTIONS")) / 10),
         "dynamic_pooling": True,
         "pid_based": True,
-        "pid_pool_factor": 0.2,
+        "pid_pool_factor": 0.25,
         "pid_overflow_factor": 0.1,
     }
     return pool_config
