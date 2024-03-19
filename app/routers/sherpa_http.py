@@ -4,6 +4,7 @@ import json
 import os
 import logging
 import pytz
+import asyncio
 from fastapi import Depends, APIRouter, File, UploadFile
 from sqlalchemy.orm.attributes import flag_modified
 from fastapi_limiter.depends import RateLimiter
@@ -263,7 +264,10 @@ async def get_config_file_info(
     return response
 
 
-@router.post("/upload_file")
+@router.post(
+    "/upload_file",
+    dependencies=[Depends(RateLimiter(times=4, seconds=60))],
+)
 async def upload_file(
     file_upload_req: rqm.FileUploadReq = Depends(),
     uploaded_file: UploadFile = File(...),
@@ -289,7 +293,7 @@ async def upload_file(
         new_file_name = file_upload_req.filename
         file_path = os.path.join(dir_to_save, new_file_name)
         try:
-            await utils_util.write_to_file_async(file_path, await uploaded_file.read())
+            await utils_util.write_to_file_async(file_path, uploaded_file)
             logging.getLogger("uvicorn").info(f"Uploaded file:{file_path} successfully")
 
             file_upload = dbsession.get_file_upload(new_file_name)

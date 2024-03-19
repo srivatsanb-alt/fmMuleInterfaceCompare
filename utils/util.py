@@ -360,6 +360,9 @@ def format_fm_incident(fm_incident):
     return temp
 
 
-async def write_to_file_async(filename, data):
+async def write_to_file_async(filename, in_file):
     async with aiofiles.open(filename, mode="wb") as file:
-        await file.write(data)
+        buffer = 1
+        while buffer:
+            buffer = await in_file.read(1024)
+            await file.write(buffer)
