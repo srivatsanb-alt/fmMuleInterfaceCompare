@@ -1,5 +1,6 @@
 import os
-
+import logging
+import time
 
 # ati code imports
 from core.db import get_engine
@@ -22,8 +23,10 @@ def get_db_pool_config():
     return pool_config
 
 
+t1 = time.time()
 engine = get_engine(
     os.path.join(os.getenv("FM_DATABASE_URI"), os.getenv("PGDATABASE")),
     pool=True,
     pool_config=get_db_pool_config(),
 )
+logging.getLogger("fm_debug").info(f"Engine import time: {(time.time()-t1)*1000} ms")
