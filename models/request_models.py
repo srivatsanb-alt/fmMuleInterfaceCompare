@@ -145,6 +145,7 @@ class ResourceReq(SherpaReq):
     parking_slot: str = None
     charging_bay: str = None
     access_type: AccessType = None
+    ttl = 5
     type = MessageType.RESOURCE_ACCESS
 
 

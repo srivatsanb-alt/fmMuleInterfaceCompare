@@ -97,12 +97,12 @@ def report_failure(job, connection, fail_type, value, traceback):
         "code": "rq",
     }
     utils_util.write_fm_error_to_json_file("rq_failure", error_dict)
-    signal_job_completion(job.id, connection)
+    # signal_job_completion(job.id, connection)
 
 
 def report_success(job, connection, result, *args, **kwargs):
-    signal_job_completion(job.id, connection)
-    # pass
+    pass
+    # signal_job_completion(job.id, connection)
 
 
 def enqueue(queue: Queue, func, *args, **kwargs):

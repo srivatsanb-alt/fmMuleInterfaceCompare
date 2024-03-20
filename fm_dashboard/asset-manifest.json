@@ -1,7 +1,7 @@
 {
   "files": {
     "main.css": "/static/css/main.7f733931.css",
-    "main.js": "/static/js/main.3278ee96.js",
+    "main.js": "/static/js/main.1450dafe.js",
     "static/js/27.25cb0711.chunk.js": "/static/js/27.25cb0711.chunk.js",
     "static/media/Login Image.png": "/static/media/Login Image.885a80af3ca6e7d909a4.png",
     "static/media/OpenSans-Regular-400.ttf": "/static/media/OpenSans-Regular-400.57cd57a648021fa1c396.ttf",
@@ -50,6 +50,6 @@
   },
   "entrypoints": [
     "static/css/main.7f733931.css",
-    "static/js/main.3278ee96.js"
+    "static/js/main.1450dafe.js"
   ]
 }

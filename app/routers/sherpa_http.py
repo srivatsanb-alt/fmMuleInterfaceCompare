@@ -4,8 +4,10 @@ import json
 import os
 import logging
 import pytz
+import asyncio
 from fastapi import Depends, APIRouter, File, UploadFile
 from sqlalchemy.orm.attributes import flag_modified
+from fastapi_limiter.depends import RateLimiter
 
 # ati code imports
 from models.db_session import DBSession
@@ -111,7 +113,11 @@ async def peripherals(
     return response
 
 
-@router.post("/access/resource", response_model=rqm.ResourceResp)
+@router.post(
+    "/access/resource",
+    response_model=rqm.ResourceResp,
+    dependencies=[Depends(RateLimiter(times=15, seconds=60))],
+)
 async def resource_access(
     resource_req: rqm.ResourceReq, sherpa: str = Depends(dpd.get_sherpa)
 ):
@@ -229,7 +235,7 @@ async def sherpa_alerts(
         )
 
 
-@router.get("/get_config_file_info/{sherpa_name}")
+@router.get("/get_config_file_info")
 async def get_config_file_info(
     sherpa_name: str = Depends(dpd.get_sherpa),
 ):
@@ -241,24 +247,23 @@ async def get_config_file_info(
         sherpa = dbsession.get_sherpa(sherpa_name)
         fleet_name = sherpa.fleet.name
 
-        config_dir = os.path.join(
-            os.getenv("FM_STATIC_DIR"), "sherpa_uploads", fleet_name, "sherpa_config"
-        )
-        if not os.path.exists(config_dir):
-            pass
-        else:
-            file_names = os.listdir(config_dir)
-            config_file = f"config_{sherpa_name}.toml"
-            consolidated_file = f"consolidated_{sherpa_name}.toml"
-            for file_name in file_names:
-                if file_name == config_file or file_name == consolidated_file:
-                    fleet_map_path = os.path.join(config_dir, file_name)
-                    file_hash = fu.compute_sha1_hash(fleet_map_path)
-                    response.update({file_name: file_hash})
+    config_dir = os.path.join(
+        os.getenv("FM_STATIC_DIR"), "sherpa_uploads", fleet_name, "sherpa_config"
+    )
+    file_names = [f"config_{sherpa_name}.toml", f"consolidated_{sherpa_name}.toml"]
+    for file_name in file_names:
+        file_to_check = os.path.join(config_dir, file_name)
+        if os.path.exists(file_to_check):
+            file_hash = fu.compute_sha1_hash(file_to_check)
+            response.update({file_name: file_hash})
+
     return response
 
 
-@router.post("/upload_file")
+@router.post(
+    "/upload_file",
+    dependencies=[Depends(RateLimiter(times=4, seconds=60))],
+)
 async def upload_file(
     file_upload_req: rqm.FileUploadReq = Depends(),
     uploaded_file: UploadFile = File(...),
@@ -284,7 +289,7 @@ async def upload_file(
         new_file_name = file_upload_req.filename
         file_path = os.path.join(dir_to_save, new_file_name)
         try:
-            await utils_util.write_to_file_async(file_path, await uploaded_file.read())
+            await utils_util.write_to_file_async(file_path, uploaded_file)
             logging.getLogger("uvicorn").info(f"Uploaded file:{file_path} successfully")
 
             file_upload = dbsession.get_file_upload(new_file_name)

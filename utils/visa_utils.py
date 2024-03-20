@@ -122,6 +122,7 @@ def can_grant_visa(
     reqd_zone_types = get_reqd_zone_types(visa_type)
     reqd_zone_ids = get_reqd_zone_ids(zone_name, reqd_zone_types)
     unavailable_ezs = dbsession.get_unavailable_reqd_ezones(reqd_zone_ids)
+    reqd_ezones = dbsession.get_reqd_ezones(reqd_zone_ids)
 
     """
         ### Checking unavailable visas for two reasons ###
@@ -136,9 +137,8 @@ def can_grant_visa(
         zone_name = ezone.zone_id
         granted, reason = can_lock_exclusion_zone(dbsession, ezone, sherpa, exclusive)
         if not granted:
-            return granted, reason, []
+            return granted, reason, reqd_ezones
 
-    reqd_ezones = dbsession.get_reqd_ezones(reqd_zone_ids)
     if len(reqd_zone_ids) != len(reqd_ezones):
         available_zone_ids = [ezone.zone_id for ezone in reqd_ezones]
         raise ValueError(
@@ -169,7 +169,7 @@ def can_grant_visa(
             exclusive,
         )
         if not granted:
-            return granted, reason, []
+            return granted, reason, reqd_ezones
 
     reason = "all visas reqd are available"
     return True, reason, reqd_ezones

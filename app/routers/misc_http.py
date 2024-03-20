@@ -594,6 +594,6 @@ async def upload_map_file(
         os.makedirs(dir_to_save)
 
     file_path = os.path.join(dir_to_save, uploaded_file.filename)
-    await utils_util.write_to_file_async(file_path, await uploaded_file.read())
+    await utils_util.write_to_file_async(file_path, uploaded_file)
 
     return response
