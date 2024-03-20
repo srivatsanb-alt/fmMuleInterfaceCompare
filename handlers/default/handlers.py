@@ -1271,6 +1271,8 @@ class Handlers:
 
     def handle_reached(self, req: rqm.ReachedReq):
 
+        response = {}
+
         # query db
         sherpa: fm.Sherpa = self.dbsession.get_sherpa(req.source)
         ongoing_trip: tm.OngoingTrip = self.dbsession.get_ongoing_trip(sherpa.name)
@@ -1301,6 +1303,8 @@ class Handlers:
         sherpa.pose = req.destination_pose
         sherpa.parking_id = curr_station.name
         self.end_leg(ongoing_trip, sherpa, curr_station, trip_analytics)
+
+        return response
 
     def handle_induct_sherpa(self, req: rqm.SherpaInductReq):
         response = {}
@@ -1340,6 +1344,8 @@ class Handlers:
 
     def handle_peripherals(self, req: rqm.SherpaPeripheralsReq):
 
+        response = {}
+
         # query db
         sherpa: fm.Sherpa = self.dbsession.get_sherpa(req.source)
         ongoing_trip: tm.OngoingTrip = self.dbsession.get_ongoing_trip(sherpa.name)
@@ -1358,11 +1364,11 @@ class Handlers:
             logging.getLogger(sherpa.name).info(
                 f"ignoring peripherals request from {sherpa.name} without ongoing trip"
             )
-            return
+            return response
 
         if req.error_device:
             self.handle_peripheral_error(ongoing_trip, sherpa, curr_station, req)
-            return
+            return response
 
         if req.dispatch_button:
             self.handle_dispatch_button(
@@ -1378,6 +1384,8 @@ class Handlers:
                 self.handle_conveyor_ack(ongoing_trip, sherpa, curr_station, req.conveyor)
                 return
             self.handle_conveyor(ongoing_trip, sherpa, curr_station, req.conveyor)
+
+        return response
 
     def handle_peripheral_error(
         self,
