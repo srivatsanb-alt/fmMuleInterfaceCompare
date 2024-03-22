@@ -150,7 +150,7 @@ def get_directory_size(directory):
 
 
 def sort_dir_list(directory, list_dir):
-    list_dir.sort(key=lambda cdate: os.path.getctime(os.path.join(directory, cdate)))
+    list_dir.sort(key=lambda x: os.path.getctime(os.path.join(directory, x)))
 
 
 def sort_and_remove_directories(directory, target_size, current_data):
