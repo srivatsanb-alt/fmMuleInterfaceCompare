@@ -1,9 +1,10 @@
 import toml
+import os
 
 # ati code imports
 from models.mongo_client import FMMongo
 
-AVAILABLE_UPGRADES = ["4.0"]
+AVAILABLE_UPGRADES = ["4.0", "4.2"]
 
 
 def read_fm_config_toml_and_update_mongo_db(fm_mongo, fc_db):
@@ -61,6 +62,18 @@ class MongoUpgrade:
         read_master_fm_toml_and_update_mongo_db(fm_mongo, fc_db)
         read_conditional_trips_toml_and_update_mongo_db(fm_mongo, fc_db)
         read_fm_config_toml_and_update_mongo_db(fm_mongo, fc_db)
+
+    def upgrade_to_4_2(self, fm_mongo):
+        fc_db = fm_mongo.get_database("fm_config")
+        mule_config_col = fm_mongo.get_collection("mule_config", fc_db)
+        mule_config_doc = fm_mongo.get_document_from_fm_config("mule_config")
+        redis_conf = {
+            "port": int(os.getenv("REDIS_PORT")),
+            "url": os.getenv("FM_REDIS_URI"),
+        }
+        mule_config_doc["mule_site_config"].update({"redis": redis_conf})
+        mule_config_col.find_one_and_replace({}, mule_config_doc)
+        print("Updated FM redis conf to mule_config")
 
 
 def upgrade_mongo_schema():
