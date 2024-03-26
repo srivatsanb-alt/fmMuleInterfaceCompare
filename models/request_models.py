@@ -80,10 +80,10 @@ class VisaReq:
 
 
 class FrontendUserRoles:
-    operator = 0
-    supervisor = 1
-    support = 2
-
+    viewer = 0
+    operator = 1
+    supervisor = 2
+    support = 3
 
 #################################################
 # Messages from sherpa
