@@ -33,10 +33,11 @@ class SendEventUpdates2MFM:
         self.mfm_context: mu.MFMContext = mu.get_mfm_context()
         self.mfm_upload_dt_info = None
         self.any_updates_sent = False
-        self.recent_hours = 24
+        self.recent_hours = 168
         self.recent_dt = None
         self.last_conf_sent_unix_dt = self.get_send_conf_to_mfm_unix_dt(time.time())
         self.sherpa_oee_send_freq = 30 * 60  #  every 30 minutes
+        self.batch_size = 50
 
     def get_send_conf_to_mfm_unix_dt(self, default=None):
         temp = self.redis_conn.get("send_conf_to_mfm_unix_dt")
@@ -239,7 +240,7 @@ def update_fleet_info(mfm_context: mu.MFMContext):
             logging.getLogger("mfm_updates").info(
                 f"unable to send fleet_info to mfm,  status_code {response_status_code}"
             )
-            raise Exception(f"Unable to send fleet_info info")
+            raise Exception("Unable to send fleet_info info")
 
 
 def update_sherpa_info(mfm_context: mu.MFMContext):
@@ -276,7 +277,7 @@ def update_sherpa_info(mfm_context: mu.MFMContext):
             logging.getLogger("mfm_updates").info(
                 f"unable to send sherpa_info to mfm,  status_code {response_status_code}"
             )
-            raise Exception(f"Unable to send sherpa info")
+            raise Exception("Unable to send sherpa info")
 
 
 def update_trip_info(
@@ -297,6 +298,7 @@ def update_trip_info(
         logging.getLogger("mfm_updates").info("no new trip updates to be sent")
         return
 
+    batch_size = event_updater.batch_size
     trips_info = []
     trip_ids = []
     for trip in new_trips:
@@ -304,28 +306,29 @@ def update_trip_info(
         trip_ids.append(trip.id)
         del trip_info["trip_details"]["updated_at"]
         trips_info.append(trip_info)
+          
+    for i in range(0, len(trips_info), batch_size):
+        chunk_trips_info = trips_info[i: i + batch_size]
+        last_trip_end_time = new_trips[i + (batch_size - 1)].end_time if i + (batch_size - 1) < len(new_trips) else new_trips[-1].end_time
 
-    last_trip_end_time = trip.end_time
+        req_json = {"trips_info": chunk_trips_info}
+        endpoint = "update_trip_info"
+        req_type = "post"
 
-    req_json = {"trips_info": trips_info}
-
-    endpoint = "update_trip_info"
-    req_type = "post"
-
-    response_status_code, response_json = mu.send_http_req_to_mfm(
-        event_updater.mfm_context, endpoint, req_type, req_json
-    )
-
-    if response_status_code == 200:
-        logging.getLogger("mfm_updates").info(
-            f"sent trip_info of trip_ids: {trip_ids} to mfm successfully"
+        response_status_code, response_json = mu.send_http_req_to_mfm(
+            event_updater.mfm_context, endpoint, req_type, req_json
         )
-        event_updater.mfm_upload_dt_info.last_trip_update_dt = last_trip_end_time
-        event_updater.update_db(dbsession)
-    else:
-        logging.getLogger("mfm_updates").info(
-            f"unable to send trip_info to mfm,  status_code {response_status_code}"
-        )
+
+        if response_status_code == 200:
+            logging.getLogger("mfm_updates").info(
+                f"sent trip_info of trip_ids: {trip_ids} to mfm successfully"
+            )
+            event_updater.mfm_upload_dt_info.last_trip_update_dt = last_trip_end_time
+            event_updater.update_db(dbsession)
+        else:
+            logging.getLogger("mfm_updates").info(
+                f"unable to send trip_info to mfm,  status_code {response_status_code}"
+            )
 
 
 def update_trip_analytics(
@@ -350,35 +353,40 @@ def update_trip_analytics(
         logging.getLogger("mfm_updates").info("no new trip analytics to be updated")
         return
 
+    batch_size = event_updater.batch_size
     trips_analytics = []
+    trips_end_time = []
     trip_ids = []
     for trip_analytics in new_trip_analytics:
         ta = tu.get_trip_analytics(trip_analytics[0])
         del ta["updated_at"]
         del ta["created_at"]
         trips_analytics.append(ta)
+        trips_end_time.append(trip_analytics[1])
         trip_ids.append(trip_analytics[0].trip_id)
 
-    last_trip_end_time = trip_analytics[1]
+    for i in range(0, len(trips_analytics), batch_size):
+        chunk_trips_analytics = trips_analytics[i: i + batch_size]
+        last_trip_end_time = trips_end_time[i: i + batch_size]
 
-    req_json = {"trips_analytics": trips_analytics}
-    endpoint = "update_trip_analytics"
-    req_type = "post"
+        req_json = {"trips_analytics": chunk_trips_analytics}
+        endpoint = "update_trip_analytics"
+        req_type = "post"
 
-    response_status_code, response_json = mu.send_http_req_to_mfm(
-        event_updater.mfm_context, endpoint, req_type, req_json
-    )
-
-    if response_status_code == 200:
-        logging.getLogger("mfm_updates").info(
-            f"sent trip_analytics to mfm successfully, details: {req_json}"
+        response_status_code, response_json = mu.send_http_req_to_mfm(
+            event_updater.mfm_context, endpoint, req_type, req_json
         )
-        event_updater.mfm_upload_dt_info.last_trip_analytics_update_dt = last_trip_end_time
-        event_updater.update_db(dbsession)
-    else:
-        logging.getLogger("mfm_updates").info(
-            f"unable to send trip_analytics to mfm,  status_code {response_status_code}"
-        )
+
+        if response_status_code == 200:
+            logging.getLogger("mfm_updates").info(
+                f"sent trip_analytics to mfm successfully, details: {req_json}"
+            )
+            event_updater.mfm_upload_dt_info.last_trip_analytics_update_dt = last_trip_end_time
+            event_updater.update_db(dbsession)
+        else:
+            logging.getLogger("mfm_updates").info(
+                f"unable to send trip_analytics to mfm,  status_code {response_status_code}"
+            )
 
 
 def update_fm_version_info(mfm_context: mu.MFMContext):
