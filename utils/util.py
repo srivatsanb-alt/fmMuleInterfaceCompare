@@ -46,11 +46,16 @@ def str_to_dt_UTC(dt_str):
 
 def are_poses_close(pose1, pose2):
     mule_config = get_mule_config()
-    threshold = mule_config.get("control").get("common").get("station_dist_thresh", 0.8)
+    dist_threshold = (
+        mule_config.get("control").get("common").get("station_dist_thresh", 0.8)
+    )
+    theta_thresh = mule_config.get("control").get("common").get("station_theta_thresh", 0.2)
+
     pose1 = np.array(pose1)
     pose2 = np.array(pose2)
-    xy_close = np.linalg.norm(pose1[:2] - pose2[:2]) <= threshold
-    return xy_close
+    xy_close = np.linalg.norm(pose1[:2] - pose2[:2]) <= dist_threshold
+    theta_close = abs(pose1[2] - pose2[2]) <= theta_thresh
+    return xy_close and theta_close
 
 
 def get_table_as_dict(model, model_obj):
