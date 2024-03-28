@@ -138,12 +138,14 @@ def backup_data():
 
 def get_directory_size(directory):
     total_size = 0
-    for path, dirs, files in os.walk(directory):
-        for file in files:
-            file_path = os.path.join(path, file)
-
-            # returns size in bytes
-            total_size += os.path.getsize(file_path)
+    if os.path.isdir(directory):
+        for path, dirs, files in os.walk(directory):
+            for file in files:
+                file_path = os.path.join(path, file)
+                # returns size in bytes
+                total_size += os.path.getsize(file_path)
+    else:
+        total_size = os.path.getsize(directory)
 
     total_size_mb = total_size / (1024 * 1024)
     return total_size_mb

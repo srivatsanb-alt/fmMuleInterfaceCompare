@@ -32,7 +32,7 @@ class FrontendUsersValidator:
                 },
                 "role": {
                     "bsonType": "string",
-                    "enum": ["operator", "supervisor", "support"],
+                    "enum": ["viewer", "operator", "supervisor", "support"],
                     "description": "Role based access would be provided in the frontend app",
                 },
             },
