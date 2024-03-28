@@ -306,12 +306,11 @@ def update_trip_info(
         trip_ids.append(trip.id)
         del trip_info["trip_details"]["updated_at"]
         trips_info.append(trip_info)
-          
-    for i in range(0, len(trips_info), batch_size):
-        chunk_trips_info = trips_info[i: i + batch_size]
-        last_trip_end_time = new_trips[i + (batch_size - 1)].end_time if i + (batch_size - 1) < len(new_trips) else new_trips[-1].end_time
 
-        req_json = {"trips_info": chunk_trips_info}
+    for i in range(0, len(trips_info), batch_size):
+        trips_info_chunk = trips_info[i : i + batch_size]
+        last_trip_end_time = new_trips[min(i + batch_size - 1, len(new_trips) - 1)].end_time
+        req_json = {"trips_info": trips_info_chunk}
         endpoint = "update_trip_info"
         req_type = "post"
 
@@ -353,7 +352,6 @@ def update_trip_analytics(
         logging.getLogger("mfm_updates").info("no new trip analytics to be updated")
         return
 
-    batch_size = event_updater.batch_size
     trips_analytics = []
     trips_end_time = []
     trip_ids = []
@@ -365,14 +363,12 @@ def update_trip_analytics(
         trips_end_time.append(trip_analytics[1])
         trip_ids.append(trip_analytics[0].trip_id)
 
-    for i in range(0, len(trips_analytics), batch_size):
-        chunk_trips_analytics = trips_analytics[i: i + batch_size]
-        last_trip_end_time = trips_end_time[i: i + batch_size]
-
-        req_json = {"trips_analytics": chunk_trips_analytics}
+    for i in range(0, len(trips_analytics), event_updater.batch_size):
+        last_trip_end_time = trips_end_time[min(i + batch_size - 1, len(new_trips) - 1)]
+        trips_analytics_chunk = trips_analytics[i : i + batch_size]
+        req_json = {"trips_analytics": trips_analytics_chunk}
         endpoint = "update_trip_analytics"
         req_type = "post"
-
         response_status_code, response_json = mu.send_http_req_to_mfm(
             event_updater.mfm_context, endpoint, req_type, req_json
         )
@@ -381,7 +377,9 @@ def update_trip_analytics(
             logging.getLogger("mfm_updates").info(
                 f"sent trip_analytics to mfm successfully, details: {req_json}"
             )
-            event_updater.mfm_upload_dt_info.last_trip_analytics_update_dt = last_trip_end_time
+            event_updater.mfm_upload_dt_info.last_trip_analytics_update_dt = (
+                last_trip_end_time
+            )
             event_updater.update_db(dbsession)
         else:
             logging.getLogger("mfm_updates").info(
