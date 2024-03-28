@@ -167,7 +167,10 @@ def sort_and_remove_directories(directory, target_size, current_data):
     deleted_size = 0
     for dir_path in directories:
         dir_size = get_directory_size(dir_path)
-        shutil.rmtree(dir_path)
+        if os.path.isdir(directory):
+            shutil.rmtree(dir_path)
+        else:
+            os.remove(dir_path)
         deleted_size += dir_size
         logging.getLogger("misc").warning(f"Deleted {dir_path}")
         if deleted_size >= target_size:
