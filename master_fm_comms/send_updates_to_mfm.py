@@ -33,7 +33,7 @@ class SendEventUpdates2MFM:
         self.mfm_context: mu.MFMContext = mu.get_mfm_context()
         self.mfm_upload_dt_info = None
         self.any_updates_sent = False
-        self.recent_hours = 168
+        self.recent_hours = 24
         self.recent_dt = None
         self.last_conf_sent_unix_dt = self.get_send_conf_to_mfm_unix_dt(time.time())
         self.sherpa_oee_send_freq = 30 * 60  #  every 30 minutes
@@ -352,6 +352,7 @@ def update_trip_analytics(
         logging.getLogger("mfm_updates").info("no new trip analytics to be updated")
         return
 
+    batch_size = event_updater.batch_size
     trips_analytics = []
     trips_end_time = []
     trip_ids = []
@@ -363,8 +364,8 @@ def update_trip_analytics(
         trips_end_time.append(trip_analytics[1])
         trip_ids.append(trip_analytics[0].trip_id)
 
-    for i in range(0, len(trips_analytics), event_updater.batch_size):
-        last_trip_end_time = trips_end_time[min(i + batch_size - 1, len(new_trips) - 1)]
+    for i in range(0, len(trips_analytics), batch_size):
+        last_trip_end_time = trips_end_time[min(i + batch_size - 1, len(trip_analytics) - 1)]
         trips_analytics_chunk = trips_analytics[i : i + batch_size]
         req_json = {"trips_analytics": trips_analytics_chunk}
         endpoint = "update_trip_analytics"
