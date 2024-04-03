@@ -309,6 +309,7 @@ def update_trip_info(
 
     for i in range(0, len(trips_info), batch_size):
         trips_info_chunk = trips_info[i : i + batch_size]
+        trip_ids_chunk = trip_ids[i : i + batch_size]
         last_trip_end_time = new_trips[min(i + batch_size - 1, len(new_trips) - 1)].end_time
         req_json = {"trips_info": trips_info_chunk}
         endpoint = "update_trip_info"
@@ -320,7 +321,7 @@ def update_trip_info(
 
         if response_status_code == 200:
             logging.getLogger("mfm_updates").info(
-                f"sent trip_info of trip_ids: {trip_ids} to mfm successfully"
+                f"sent trip_info of trip_ids_chunk: {trip_ids_chunk} to mfm successfully"
             )
             event_updater.mfm_upload_dt_info.last_trip_update_dt = last_trip_end_time
             event_updater.update_db(dbsession)

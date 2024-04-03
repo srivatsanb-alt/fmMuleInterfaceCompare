@@ -42,7 +42,7 @@ def auto_update_fm():
 
         if os.path.exists(temp) is True:
             with open(temp, "r") as temp_f:
-            release_dt = temp_f.read()
+                release_dt = temp_f.read()
 
         status_code, available_updates_json = mu.get_available_updates_fm(mfm_context)
         if status_code != 200:
