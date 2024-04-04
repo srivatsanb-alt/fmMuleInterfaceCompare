@@ -14,7 +14,7 @@ import json
 # ati code imports
 from core.db import get_engine
 from models.mongo_client import FMMongo
-from utils.util import report_error
+from utils.util import report_error, proc_retry
 
 
 def prune_unused_images(backup_config):
@@ -75,6 +75,21 @@ def backup_data():
             logging.info(f"Will periodically backup {database_name} db")
             valid_dbs.append(database_name)
 
+    periodic_data_backup(
+        fm_backup_path,
+        run_backup_path,
+        logs_save_path,
+        current_data,
+        valid_dbs,
+        backup_config,
+    )
+
+
+@report_error
+@proc_retry
+def periodic_data_backup(
+    fm_backup_path, run_backup_path, logs_save_path, current_data, valid_dbs, backup_config
+):
     freq = 60
     last_prune_time = time.time()
     while True:
