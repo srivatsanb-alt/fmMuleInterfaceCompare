@@ -80,10 +80,10 @@ class VisaReq:
 
 
 class FrontendUserRoles:
-    operator = 0
-    supervisor = 1
-    support = 2
-
+    viewer = 0
+    operator = 1
+    supervisor = 2
+    support = 3
 
 #################################################
 # Messages from sherpa
@@ -145,6 +145,7 @@ class ResourceReq(SherpaReq):
     parking_slot: str = None
     charging_bay: str = None
     access_type: AccessType = None
+    ttl = 5
     type = MessageType.RESOURCE_ACCESS
 
 

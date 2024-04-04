@@ -1,5 +1,6 @@
 import os
-
+import logging
+import time
 
 # ati code imports
 from core.db import get_engine
@@ -16,14 +17,16 @@ def get_db_pool_config():
         "overflow_limit": int(int(os.getenv("PSQL_MAX_CONNECTIONS")) / 10),
         "dynamic_pooling": True,
         "pid_based": True,
-        "pid_pool_factor": 0.2,
+        "pid_pool_factor": 0.25,
         "pid_overflow_factor": 0.1,
     }
     return pool_config
 
 
+t1 = time.time()
 engine = get_engine(
     os.path.join(os.getenv("FM_DATABASE_URI"), os.getenv("PGDATABASE")),
     pool=True,
     pool_config=get_db_pool_config(),
 )
+logging.getLogger("fm_debug").info(f"Engine import time: {(time.time()-t1)*1000} ms")

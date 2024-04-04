@@ -456,7 +456,6 @@ class FleetSimulator:
                         print(f"Is Visa needed? {visa_params}")
                         if visa_params is not None:
                             self.visa_needed[sherpa_name] = visa_params[0]
-                        if len(self.visa_needed[sherpa_name]) > 0:
                             print(
                                 f"Visa for zone: {self.visa_needed[sherpa_name]}, needed for {sherpa_name}"
                             )
@@ -592,8 +591,9 @@ class FleetSimulator:
         ):
             num_units = ongoing_trip.trip.trip_metadata.get("num_units")
             peripheral_response.conveyor = ConveyorReq(
-                direction=DirectionEnum.receive, num_units=0
+                direction=DirectionEnum.receive, num_units=num_units
             )
+            send_peripheral_resp = True
         elif self.peripheral_response_is_needed(
             ts.WAITING_STATION_CONV_SEND_START, ts.WAITING_STATION_CONV_SEND_END, states
         ):

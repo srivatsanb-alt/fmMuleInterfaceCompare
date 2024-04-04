@@ -910,7 +910,6 @@ class Handlers:
                 pending_trip: tm.PendingTrip = self.dbsession.get_pending_trip_with_trip_id(
                     trip.id
                 )
-
                 # add fleet_names to req_ctxt - this is for optimal_dispatch
                 fleet_name = trip.fleet_name
                 if fleet_name not in req_ctxt.fleet_names:
@@ -929,6 +928,10 @@ class Handlers:
             )
 
         for trip, pending_trip in zip(all_to_be_cancelled_trips, all_pending_trips):
+
+            if pending_trip is None:
+                raise ValueError(f"No pending trip for trip_id: {trip.id}")
+
             self.dbsession.delete_pending_trip(pending_trip)
             trip.cancel()
             logging.getLogger().info(
@@ -1268,6 +1271,8 @@ class Handlers:
 
     def handle_reached(self, req: rqm.ReachedReq):
 
+        response = {}
+
         # query db
         sherpa: fm.Sherpa = self.dbsession.get_sherpa(req.source)
         ongoing_trip: tm.OngoingTrip = self.dbsession.get_ongoing_trip(sherpa.name)
@@ -1298,6 +1303,8 @@ class Handlers:
         sherpa.pose = req.destination_pose
         sherpa.parking_id = curr_station.name
         self.end_leg(ongoing_trip, sherpa, curr_station, trip_analytics)
+
+        return response
 
     def handle_induct_sherpa(self, req: rqm.SherpaInductReq):
         response = {}
@@ -1337,6 +1344,8 @@ class Handlers:
 
     def handle_peripherals(self, req: rqm.SherpaPeripheralsReq):
 
+        response = {}
+
         # query db
         sherpa: fm.Sherpa = self.dbsession.get_sherpa(req.source)
         ongoing_trip: tm.OngoingTrip = self.dbsession.get_ongoing_trip(sherpa.name)
@@ -1355,11 +1364,11 @@ class Handlers:
             logging.getLogger(sherpa.name).info(
                 f"ignoring peripherals request from {sherpa.name} without ongoing trip"
             )
-            return
+            return response
 
         if req.error_device:
             self.handle_peripheral_error(ongoing_trip, sherpa, curr_station, req)
-            return
+            return response
 
         if req.dispatch_button:
             self.handle_dispatch_button(
@@ -1375,6 +1384,8 @@ class Handlers:
                 self.handle_conveyor_ack(ongoing_trip, sherpa, curr_station, req.conveyor)
                 return
             self.handle_conveyor(ongoing_trip, sherpa, curr_station, req.conveyor)
+
+        return response
 
     def handle_peripheral_error(
         self,

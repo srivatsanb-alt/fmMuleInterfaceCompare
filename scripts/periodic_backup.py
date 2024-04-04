@@ -14,7 +14,7 @@ import json
 # ati code imports
 from core.db import get_engine
 from models.mongo_client import FMMongo
-from utils.util import report_error
+from utils.util import report_error, proc_retry
 
 
 def prune_unused_images(backup_config):
@@ -75,6 +75,21 @@ def backup_data():
             logging.info(f"Will periodically backup {database_name} db")
             valid_dbs.append(database_name)
 
+    periodic_data_backup(
+        fm_backup_path,
+        run_backup_path,
+        logs_save_path,
+        current_data,
+        valid_dbs,
+        backup_config,
+    )
+
+
+@report_error
+@proc_retry()
+def periodic_data_backup(
+    fm_backup_path, run_backup_path, logs_save_path, current_data, valid_dbs, backup_config
+):
     freq = 60
     last_prune_time = time.time()
     while True:
@@ -138,19 +153,21 @@ def backup_data():
 
 def get_directory_size(directory):
     total_size = 0
-    for path, dirs, files in os.walk(directory):
-        for file in files:
-            file_path = os.path.join(path, file)
-
-            # returns size in bytes
-            total_size += os.path.getsize(file_path)
+    if os.path.isdir(directory):
+        for path, dirs, files in os.walk(directory):
+            for file in files:
+                file_path = os.path.join(path, file)
+                # returns size in bytes
+                total_size += os.path.getsize(file_path)
+    else:
+        total_size = os.path.getsize(directory)
 
     total_size_mb = total_size / (1024 * 1024)
     return total_size_mb
 
 
 def sort_dir_list(directory, list_dir):
-    list_dir.sort(key=lambda cdate: os.path.getctime(os.path.join(directory, cdate)))
+    list_dir.sort(key=lambda x: os.path.getctime(os.path.join(directory, x)))
 
 
 def sort_and_remove_directories(directory, target_size, current_data):
@@ -165,7 +182,10 @@ def sort_and_remove_directories(directory, target_size, current_data):
     deleted_size = 0
     for dir_path in directories:
         dir_size = get_directory_size(dir_path)
-        shutil.rmtree(dir_path)
+        if os.path.isdir(dir_path):
+            shutil.rmtree(dir_path)
+        else:
+            os.remove(dir_path)
         deleted_size += dir_size
         logging.getLogger("misc").warning(f"Deleted {dir_path}")
         if deleted_size >= target_size:

@@ -14,6 +14,7 @@ import logging
 from rq import Worker
 import sys
 import functools
+import aiofiles
 
 TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
 IES_TIME_FORMAT = "%Y-%m-%dT%H:%M:%S.%f"
@@ -45,11 +46,16 @@ def str_to_dt_UTC(dt_str):
 
 def are_poses_close(pose1, pose2):
     mule_config = get_mule_config()
-    threshold = mule_config.get("control").get("common").get("station_dist_thresh", 0.8)
+    dist_threshold = (
+        mule_config.get("control").get("common").get("station_dist_thresh", 0.8)
+    )
+    theta_thresh = mule_config.get("control").get("common").get("station_theta_thresh", 0.2)
+
     pose1 = np.array(pose1)
     pose2 = np.array(pose2)
-    xy_close = np.linalg.norm(pose1[:2] - pose2[:2]) <= threshold
-    return xy_close
+    xy_close = np.linalg.norm(pose1[:2] - pose2[:2]) <= dist_threshold
+    theta_close = abs(pose1[2] - pose2[2]) <= theta_thresh
+    return xy_close and theta_close
 
 
 def get_table_as_dict(model, model_obj):
@@ -357,3 +363,11 @@ def format_fm_incident(fm_incident):
     temp.update({"module": fm_incident.module})
     temp.update({"other_info": fm_incident.other_info})
     return temp
+
+
+async def write_to_file_async(filename, in_file):
+    async with aiofiles.open(filename, mode="wb") as file:
+        buffer = 1
+        while buffer:
+            buffer = await in_file.read(1024)
+            await file.write(buffer)

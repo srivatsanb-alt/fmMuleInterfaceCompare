@@ -574,7 +574,6 @@ async def export_analytics_data(
 ):
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
-
     response = {}
     with DBSession() as dbsession:
         if trip_analytics_req.from_dt and trip_analytics_req.to_dt:
@@ -590,34 +589,19 @@ async def export_analytics_data(
             )
         else:
             return response
-
+        
+        data = []
+        for all_trip_analytic in all_trip_analytics:
+            data.append(utils_util.get_table_as_dict(tm.TripAnalytics, all_trip_analytic)) 
         # Convert to DataFrame
-        df = pd.DataFrame(all_trip_analytics)
-
-    # Convert DataFrame to Excel
-    output = io.BytesIO()
-    with pd.ExcelWriter(output, engine="openpyxl") as writer:
-        df.to_excel(writer, index=False, sheet_name="Analytics")
-
-        # Get the workbook and the sheet for formatting
-        workbook = writer.book
-        worksheet = writer.sheets["Analytics"]
-
-        # Set up the worksheet for A4 printing
-        worksheet.page_setup.paperSize = worksheet.PAPERSIZE_A4
-        worksheet.page_margins = PageMargins(
-            left=0.7, right=0.7, top=0.75, bottom=0.75, header=0.3, footer=0.3
-        )
-
-        # Optional: Auto-adjust columns' width
-        for column_cells in worksheet.columns:
-            length = max(len(str(cell.value)) for cell in column_cells)
-            worksheet.column_dimensions[column_cells[0].column_letter].width = length
-
+        df = pd.DataFrame(data)
+    # Convert DataFrame to CSV
+    output = io.StringIO()
+    df.to_csv(output, index=False)
     # Prepare the response
     output.seek(0)
     return StreamingResponse(
-        output,
-        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": "attachment; filename=detail_analytics.xlsx"},
+        io.BytesIO(output.getvalue().encode()),  # Convert string buffer to bytes
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=detail_analytics.csv"},
     )

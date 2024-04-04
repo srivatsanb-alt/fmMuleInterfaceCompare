@@ -31,12 +31,16 @@ class AllRouterModules:
         self.fleet_names = fleet_names
         self.router_modules = {}
         for fleet_name in self.fleet_names:
-            map_path = os.path.join(os.environ["FM_STATIC_DIR"], f"{fleet_name}/map/")
-            self.router_modules.update({fleet_name: RouterModule(map_path)})
+            self.add_router_module(fleet_name)
 
     def get_router_module(self, fleet_name: str):
         return self.router_modules[fleet_name]
 
     def add_router_module(self, fleet_name):
-        map_path = os.path.join(os.environ["FM_STATIC_DIR"], f"{fleet_name}/map/")
-        self.router_modules.update({fleet_name: RouterModule(map_path)})
+        try:
+            map_path = os.path.join(os.environ["FM_STATIC_DIR"], f"{fleet_name}/map/")
+            self.router_modules.update({fleet_name: RouterModule(map_path)})
+        except Exception as e:
+            raise Exception(
+                f"Unable to create router module for fleet {fleet_name}, exception: {e}"
+            )

@@ -7,8 +7,6 @@ from fastapi import HTTPException
 from fastapi import Header
 from fastapi.param_functions import Query
 from rq.job import Job
-from rq import Retry
-import aioredis
 import redis
 import os
 import json
@@ -16,14 +14,15 @@ import json
 # ati code imports
 import core.handler_configuration as hc
 from utils.rq_utils import enqueue, enqueue_at, Queues
-from models.request_models import SherpaReq
 from models.db_session import DBSession
 
 
 # upon assignment of a task, it gets added into the job queue
 def add_job_to_queued_jobs(job_id, source, redis_conn=None):
+    close = False
     if redis_conn is None:
         redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
+        close = True
     queued_jobs = redis_conn.get("queued_jobs")
     if queued_jobs is None:
         queued_jobs = b"{}"
@@ -38,13 +37,17 @@ def add_job_to_queued_jobs(job_id, source, redis_conn=None):
 
     queued_jobs.update({source: jobs_source})
     redis_conn.set("queued_jobs", json.dumps(queued_jobs))
-    redis_conn.close()
+    if close:
+        redis_conn.close()
 
 
 # removes job from the job queue
 def remove_job_from_queued_jobs(job_id, source, redis_conn=None):
+    close = False
     if redis_conn is None:
         redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
+        close = True
+
     queued_jobs = redis_conn.get("queued_jobs")
     if queued_jobs is None:
         return
@@ -60,7 +63,9 @@ def remove_job_from_queued_jobs(job_id, source, redis_conn=None):
 
     queued_jobs.update({source: jobs_source})
     redis_conn.set("queued_jobs", json.dumps(queued_jobs))
-    redis_conn.close()
+
+    if close:
+        redis_conn.close()
 
 
 def raise_error(detail, code=400):
@@ -160,10 +165,6 @@ def process_req(queue, req, user, redis_conn=None, dt=None):
 
     kwargs.update({"job_timeout": timeout})
 
-    # add retry only for SherpaReq(req comes from Sherpa)
-    if isinstance(req, SherpaReq):
-        kwargs.update({"retry": Retry(max=2, interval=[0.5, 2])})
-
     if dt:
         job = enqueue_at(queue, dt, handle, *args, **kwargs)
         return job
@@ -176,20 +177,15 @@ def process_req(queue, req, user, redis_conn=None, dt=None):
 async def process_req_with_response(queue, req, user: str):
     redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
     job = process_req(queue, req, user, redis_conn)
-
     add_job_to_queued_jobs(job.id, req.source, redis_conn)
 
-    # Unique key for each job to signal completion
-    job_completion_key = f"job_{job.id}_completion"
-
-    # Wait for the job to complete using aioredis with BRPOP
-    async with aioredis.from_url(os.getenv("FM_REDIS_URI")) as async_redis_conn:
-        await async_redis_conn.brpop(job_completion_key)
-
-    # Re-fetch or refresh the job to get the updated status
-    job = Job.fetch(job.id, connection=redis_conn)
-    job.refresh()
-    status = job.get_status()
+    status = ""
+    while status not in ["finished", "failed"]:
+        job = Job.fetch(job.id, connection=redis_conn)
+        job.refresh()
+        status = job.get_status()
+        logging.debug(f"Job id: {Job.id}, Job status: {status}")
+        await asyncio.sleep(0.01)
 
     remove_job_from_queued_jobs(job.id, req.source, redis_conn)
 
