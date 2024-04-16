@@ -22,6 +22,8 @@ class ExclusionZone(Base, TimestampMixin):
     sherpas = relationship(
         "Sherpa", secondary="visa_assignments", back_populates="exclusion_zones"
     )
+    foreign_bots = relationship(
+        "ForeignBot", secondary="foreign_visa_assignments", back_populates="exclusion_zones")
     prev_linked_gates = relationship(
         "ExclusionZone",
         secondary="linked_gates",
@@ -44,3 +46,16 @@ class VisaRejects(Base, TimestampMixin):
     zone_id = Column(String, ForeignKey("exclusion_zones.zone_id"), primary_key=True)
     sherpa_name = Column(String, ForeignKey("sherpas.name"), primary_key=True)
     reason = Column(String)
+
+
+class ForeignVisaRejects(Base, TimestampMixin):
+    __tablename__ = "foreign_visa_rejects"
+    zone_id = Column(String, ForeignKey("exclusion_zones.zone_id"), primary_key=True)
+    bot_name = Column(String, ForeignKey("foreign_bots.name"), primary_key=True)
+    reason = Column(String)
+
+
+class ForeignVisaAssignment(Base, TimestampMixin):
+    __tablename__ = "foreign_visa_assignments"
+    zone_id = Column(String, ForeignKey("exclusion_zones.zone_id"), primary_key=True)
+    bot_name = Column(String, ForeignKey("foreign_bots.name"), primary_key=True)

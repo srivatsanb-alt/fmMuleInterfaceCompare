@@ -13,7 +13,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 
 from models.base_models import Base, StationProperties, TimestampMixin
-from models.visa_models import VisaAssignment
+from models.visa_models import VisaAssignment, ForeignVisaAssignment
 
 
 class Map(TimestampMixin, Base):
@@ -110,6 +110,19 @@ class SherpaMetaData(Base):
     __tablename__ = "sherpa_metadata"
     sherpa_name = Column(String, primary_key=True, index=True)
     info = Column(JSONB)
+
+
+class ForeignBot(Base):
+    __tablename__ = "foreign_bots"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, unique=True, index=True)
+    hwid = Column(String, unique=True)
+    hashed_api_key = Column(String, unique=True, index=True)
+
+    exclusion_zones = relationship(
+        "ExclusionZone", secondary=ForeignVisaAssignment.__table__, back_populates="foreign_bots"
+    )
 
 
 class Station(Base):
