@@ -38,9 +38,23 @@ def assign_sherpa(dbsession: DBSession, trip: tm.Trip, sherpa: fm.Sherpa):
     return ongoing_trip
 
 
+def fail_trip(
+    dbsession: DBSession,
+    ongoing_trip: tm.OngoingTrip,
+    sherpa: fm.Sherpa,
+    trip_failed_log: str,
+):
+    dbsession.add_notification(
+        [sherpa.name, sherpa.fleet.name, sherpa.fleet.customer],
+        trip_failed_log,
+        mm.NotificationLevels.alert,
+        mm.NotificationModules.errors,
+    )
+    logging.getLogger(sherpa.name).warning(trip_failed_log)
+    end_trip(dbsession, ongoing_trip, sherpa, False)
+
+
 # starts a trip
-
-
 def start_trip(
     dbsession: DBSession,
     ongoing_trip: tm.OngoingTrip,
@@ -56,25 +70,25 @@ def start_trip(
         route_lengths = []
         start_station_name = None
         for station in all_stations:
+            if station.status.disabled is True:
+                reason = f"{station.name} is disabled"
+                trip_failed_log = f"{ongoing_trip.sherpa_name} failed to do trip with trip_id: {ongoing_trip.trip.id} , reason: {reason}"
+                fail_trip(dbsession, ongoing_trip, sherpa, trip_failed_log)
+                return
+
             end_pose = station.pose
             end_station_name = station.name
             route_length = utils_util.get_route_length(
                 start_pose, end_pose, fleet_name, redis_conn
             )
+
             if route_length == np.inf:
                 start_station_info = (
                     start_station_name if start_station_name is not None else start_pose
                 )
                 reason = f"no route from {start_station_info} to {end_station_name}"
-                trip_failed_log = f"{ongoing_trip.sherpa_name} failed to do trip with trip_id: {ongoing_trip.trip.id}) , reason: {reason}"
-                logging.getLogger(ongoing_trip.sherpa_name).warning(trip_failed_log)
-                dbsession.add_notification(
-                    [sherpa.name, sherpa.fleet.name, sherpa.fleet.customer],
-                    trip_failed_log,
-                    mm.NotificationLevels.alert,
-                    mm.NotificationModules.errors,
-                )
-                end_trip(dbsession, ongoing_trip, sherpa, False)
+                trip_failed_log = f"{ongoing_trip.sherpa_name} failed to do trip with trip_id: {ongoing_trip.trip.id}, reason: {reason}"
+                fail_trip(dbsession, ongoing_trip, sherpa, trip_failed_log)
                 return
 
             eta = (
