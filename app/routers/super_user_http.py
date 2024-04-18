@@ -18,10 +18,10 @@ router = APIRouter(
     response_model=rqm.ResourceResp,
 )
 async def super_user_resource_access(
-    supper_user_resource_req: rqm.SuperUserResourceReq,
+    super_user_resource_req: rqm.SuperUserResourceReq,
 ):
     queue = Queues.queues_dict["resource_handler"]
-    _response = await dpd.process_req_with_response(queue, supper_user_resource_req, "fbot")
+    _response = await dpd.process_req_with_response(queue, super_user_resource_req, "fbot")
 
     try:
         response = rqm.ResourceResp.from_json(_response)
