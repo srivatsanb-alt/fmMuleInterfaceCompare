@@ -23,6 +23,12 @@ router = APIRouter(
     responses={404: {"description": "Not found"}},
 )
 
+"""
+user details are stored in unstructured database mongodb
+Any new details such as email_id, contact number, access_restriction etc can be added
+as and when required
+"""
+
 
 # performs user authentication
 # This route is rate-limited
