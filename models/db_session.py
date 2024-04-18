@@ -11,6 +11,7 @@ import models.misc_models as mm
 import models.fleet_models as fm
 import models.trip_models as tm
 import models.visa_models as vm
+import models.user_models as um
 from utils.util import check_if_timestamp_has_passed, str_to_dt
 
 
@@ -147,12 +148,12 @@ class DBSession:
     def get_all_visa_rejects(self):
         return self.session.query(vm.VisaRejects).all()
 
-    def get_visa_rejects(self, reqd_ezones, sherpa_name):
+    def get_visa_rejects(self, reqd_ezones, name):
         visa_rejects = []
         for ezone in set(reqd_ezones):
             visa_rejects.append(
                 self.session.query(vm.VisaRejects)
-                .filter(vm.VisaRejects.sherpa_name == sherpa_name)
+                .filter(or_(vm.VisaRejects.sherpa_name == name, vm.VisaRejects.user_name == name))
                 .filter(vm.VisaRejects.zone_id == ezone.zone_id)
                 .one_or_none()
             )
@@ -902,6 +903,17 @@ class DBSession:
                 vm.VisaAssignment.created_at.label("granted_time"),
             )
             .filter(vm.VisaAssignment.zone_id == zone_id)
+            .filter(vm.VisaAssignment.sherpa_name != None)
+            .all()
+        )
+
+        users = (
+            self.session.query(
+                vm.VisaAssignment.user_name.label("sherpa_name"),
+                vm.VisaAssignment.created_at.label("granted_time"),
+            )
+            .filter(vm.VisaAssignment.zone_id == zone_id)
+            .filter(vm.VisaAssignment.user_name != None)
             .all()
         )
         waiting_sherpas = (
@@ -911,10 +923,22 @@ class DBSession:
                 vm.VisaRejects.reason,
             )
             .filter(vm.VisaRejects.zone_id == zone_id)
+            .filter(vm.VisaAssignment.sherpa_name != None)
             .all()
         )
+        waiting_users = (
+            self.session.query(
+                vm.VisaAssignment.user_name.label("sherpa_name"),
+                vm.VisaRejects.created_at.label("denied_time"),
+                vm.VisaRejects.reason,
+            )
+            .filter(vm.VisaRejects.zone_id == zone_id)
+            .filter(vm.VisaAssignment.user_name != None)
+            .all()
+        )
+        sherpas.extend(users)
+        waiting_sherpas.extend(waiting_users)
         resident_sherpas = jsonable_encoder(sherpas)
-
         waiting_sherpas = jsonable_encoder(waiting_sherpas)
 
         response = {
@@ -922,3 +946,6 @@ class DBSession:
             "waiting_sherpas": waiting_sherpas,
         }
         return response
+    
+    def get_super_user(self, name: str) -> um.SuperUser:
+        return self.session.query(um.SuperUser).filter(um.SuperUser.name == name).one_or_none()
