@@ -153,7 +153,11 @@ class DBSession:
         for ezone in set(reqd_ezones):
             visa_rejects.append(
                 self.session.query(vm.VisaRejects)
-                .filter(or_(vm.VisaRejects.sherpa_name == name, vm.VisaRejects.user_name == name))
+                .filter(
+                    or_(
+                        vm.VisaRejects.sherpa_name == name, vm.VisaRejects.user_name == name
+                    )
+                )
                 .filter(vm.VisaRejects.zone_id == ezone.zone_id)
                 .one_or_none()
             )
@@ -946,6 +950,18 @@ class DBSession:
             "waiting_sherpas": waiting_sherpas,
         }
         return response
-    
+
     def get_super_user(self, name: str) -> um.SuperUser:
-        return self.session.query(um.SuperUser).filter(um.SuperUser.name == name).one_or_none()
+        return (
+            self.session.query(um.SuperUser).filter(um.SuperUser.name == name).one_or_none()
+        )
+
+    def get_all_super_users(self) -> List[um.SuperUser]:
+        return self.session.query(um.SuperUser).all()
+
+    def get_super_user_with_hashed_api_key(self, hashed_api_key: str) -> um.SuperUser:
+        return (
+            self.session.query(um.SuperUser)
+            .filter(um.SuperUser.hashed_api_key == hashed_api_key)
+            .one_or_none()
+        )

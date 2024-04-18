@@ -109,3 +109,10 @@ class FMMongo:
         display_filter = {"_id": 0}
         all_user_details = [r for r in col.find({}, display_filter)]
         return all_user_details
+
+    def get_all_frontend_users_with_role(self, role):
+        fu_db = self.mongo_client.get_database("frontend_users")
+        col = self.get_collection("user_details", fu_db)
+        display_filter = {"_id": 0}
+        user_details = [r for r in col.find({"role": role}, display_filter)]
+        return user_details

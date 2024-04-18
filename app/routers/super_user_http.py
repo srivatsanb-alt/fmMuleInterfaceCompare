@@ -19,9 +19,15 @@ router = APIRouter(
 )
 async def super_user_resource_access(
     super_user_resource_req: rqm.SuperUserResourceReq,
+    username= Depends(dpd.get_super_user),
 ):
+    if username is None:
+        dpd.raise_error("Unknown requeter", 401)
+
     queue = Queues.queues_dict["resource_handler"]
-    _response = await dpd.process_req_with_response(queue, super_user_resource_req, "fbot")
+    _response = await dpd.process_req_with_response(
+        queue, super_user_resource_req, username
+    )
 
     try:
         response = rqm.ResourceResp.from_json(_response)
