@@ -311,6 +311,7 @@ async def get_fm_incidents_for_fm_health(
     fm_incidents_req: rqm.FMIncidentsReqPg,
     user_name=Depends(dpd.get_user_from_header)
 ):
+    response = {}
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
@@ -328,33 +329,33 @@ async def get_fm_incidents_for_fm_health(
             fm_incidents_req.limit,
         )
 
-    result = []             
+        result = []             
 
-    for fm_incident in fm_incidents:
-        result.append(
-            {
-                fm_incident.id: {
-                    "type": fm_incident.type,
-                    "code": fm_incident.code,
-                    "incident_id": fm_incident.incident_id,
-                    "data_uploaded": fm_incident.data_uploaded,
-                    "data_path": fm_incident.data_path,
-                    "module": fm_incident.module,
-                    "message": fm_incident.message,
-                    "updated_at": fm_incident.updated_at,
-                    "created_at": fm_incident.created_at,
+        for fm_incident in fm_incidents:
+            result.append(
+                {
+                    fm_incident.id: {
+                        "type": fm_incident.type,
+                        "code": fm_incident.code,
+                        "incident_id": fm_incident.incident_id,
+                        "data_uploaded": fm_incident.data_uploaded,
+                        "data_path": fm_incident.data_path,
+                        "module": fm_incident.module,
+                        "message": fm_incident.message,
+                        "updated_at": fm_incident.updated_at,
+                        "created_at": fm_incident.created_at,
+                    }
                 }
-            }
-        )
+            )
         
-    response = {
-        "fm_incidents": result,
-        "count": count,
-        "limit": limit,
-        "total_pages": pages,
-        "sort_field": sort_field,
-        "sort_order": sort_order,
-    }
+        response = {
+            "fm_incidents": result,
+            "count": count,
+            "limit": limit,
+            "total_pages": pages,
+            "sort_field": sort_field,
+            "sort_order": sort_order,
+        }
     return response
 
 @router.post("/get_fm_incidents")

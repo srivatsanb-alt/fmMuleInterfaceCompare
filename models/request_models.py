@@ -411,12 +411,11 @@ class GetFMIncidents(ClientReq):
 class FMIncidentsReqPg(ClientReq):
     from_dt: str
     to_dt: str
-    error_type: Optional[str] = "fm_error",
-    sort_field: Optional[str]="created_at",
-    sort_order: Optional[str]="desc",
-    page=0,
-    limit=50,
-
+    error_type: Optional[str] = "fm_error"
+    sort_field: Optional[str]="created_at"
+    sort_order: Optional[str]="desc"
+    page: int
+    limit: int
 
 class SaveRouteReq(ClientReq):
     tag: str
