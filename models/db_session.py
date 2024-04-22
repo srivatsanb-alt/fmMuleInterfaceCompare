@@ -805,6 +805,40 @@ class DBSession:
             .limit(n)
             .all()
         )
+    
+    def get_fm_incident_pg(
+        self,
+        from_dt,
+        to_dt,
+        error_type="fm_error",
+        sort_field="created_at",
+        sort_order="desc",
+        page=0,
+        limit=50,
+            
+        ):
+        skip = page * limit
+        
+        query = self.session.query(mm.FMIncidents)
+        query = query.filter(mm.FMIncidents.type == error_type)
+        query = query.filter(mm.FMIncidents.created_at > from_dt)
+        query = query.filter(mm.FMIncidents.created_at < to_dt)
+        query = query.filter(mm.FMIncidents.updated_at > from_dt)
+        query = query.filter(mm.FMIncidents.updated_at < to_dt)
+
+        count = query.count()
+
+        query = (
+            query.order_by(text(f"{sort_field} {sort_order}"))
+            .offset(skip)
+            .limit(limit)
+            )
+        
+        fm_incidents = query.all()
+
+        pages = int(count / limit) if (count % limit == 0) else int(count / limit + 1)
+        return fm_incidents, count, limit, pages, sort_field, sort_order
+            
 
     def get_last_sherpa_mode_change(self, sherpa_name):
         return (

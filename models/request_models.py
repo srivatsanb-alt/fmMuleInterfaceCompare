@@ -408,6 +408,15 @@ class GetFMIncidents(ClientReq):
     num_of_incidents: int = 1
     historic: Optional[bool] = False
 
+class FMIncidentsReqPg(ClientReq):
+    from_dt: str
+    to_dt: str
+    error_type: Optional[str] = "fm_error",
+    sort_field: Optional[str]="created_at",
+    sort_order: Optional[str]="desc",
+    page=0,
+    limit=50,
+
 
 class SaveRouteReq(ClientReq):
     tag: str
