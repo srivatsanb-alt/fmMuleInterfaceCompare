@@ -35,6 +35,10 @@ class FrontendUsersValidator:
                     "enum": ["viewer", "operator", "supervisor", "support"],
                     "description": "Role based access would be provided in the frontend app",
                 },
+                "expiry_interval": {
+                    "bsonType": "int",
+                    "description": "Login session expiry in seconds",
+                },
             },
         }
     }
@@ -405,6 +409,10 @@ class ConfigValidator:
                     "bsonType": "int",
                     "description": "Token expiry time in seconds",
                 },
+                "secret_token": {
+                    "bsonType": "string",
+                    "description": "Secret token for authentication",
+                }
             },
         }
     }

@@ -54,9 +54,12 @@ async def login(user_login: rqm.UserLogin, request: Request):
                     mm.NotificationLevels.alert,
                     mm.NotificationModules.generic,
                 )
+        expiry_interval = None
+        if user_details.get("expiry_interval") and user_details["role"] == "viewer":
+            expiry_interval = user_details["expiry_interval"]
 
         response = {
-            "access_token": dpd.generate_jwt_token(user_login.name),
+            "access_token": dpd.generate_jwt_token(user_login.name, expiry_interval=expiry_interval),
             "user_details": {"user_name": user_login.name, "role": user_details["role"]},
             "static_files_auth": {
                 "username": os.getenv("ATI_STATIC_AUTH_USERNAME"),
