@@ -366,7 +366,9 @@ def update_trip_analytics(
         trip_ids.append(trip_analytics[0].trip_id)
 
     for i in range(0, len(trips_analytics), batch_size):
-        last_trip_end_time = trips_end_time[min(i + batch_size - 1, len(trip_analytics) - 1)]
+        last_trip_end_time = trips_end_time[
+            min(i + batch_size - 1, len(trip_analytics) - 1)
+        ]
         trips_analytics_chunk = trips_analytics[i : i + batch_size]
         req_json = {"trips_analytics": trips_analytics_chunk}
         endpoint = "update_trip_analytics"
@@ -491,18 +493,19 @@ def update_sherpa_oee(
     sherpa_oees = (
         dbsession.session.query(mm.SherpaOEE)
         .filter(
-            func.date(mm.SherpaOEE.dt)
-            >= func.date(event_updater.mfm_upload_dt_info.last_sherpa_oee_update_dt)
+            mm.SherpaOEE.dt >= event_updater.mfm_upload_dt_info.last_sherpa_oee_update_dt
         )
+        .filter(func.date(mm.SherpaOEE.dt) >= func.date(event_updater.recent_dt))
+        .order_by(mm.SherpaOEE.dt)
         .all()
     )
-    update_to_dt = datetime.datetime.now()
 
     all_sherpa_oees = []
     for sherpa_oee in sherpa_oees:
         sherpa_oee_dict = utils_util.get_table_as_dict(mm.SherpaOEE, sherpa_oee)
         del sherpa_oee_dict["id"]
         all_sherpa_oees.append(sherpa_oee_dict)
+        update_to_dt = sherpa_oee.dt
 
     if len(all_sherpa_oees) == 0:
         logging.getLogger("mfm_updates").info("no new sherpa oee to be updated")
