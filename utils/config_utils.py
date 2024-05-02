@@ -203,6 +203,7 @@ class ConfigValidator:
                 "ws_update_freq",
                 "update_freq",
                 "api_key",
+                "recent_hours",
             ],
             "properties": {
                 "mfm_ip": {
@@ -251,7 +252,11 @@ class ConfigValidator:
                     "bsonType": "string",
                     "description": "Api_key required to connect to master_fm/sanjaya server",
                 },
-            },
+                "recent_hours": {
+                    "bsonType": "int",
+                    "description": "Number of hours of recent data to be sent to master_fm/sanjaya server",
+                },
+            }
         }
     }
 

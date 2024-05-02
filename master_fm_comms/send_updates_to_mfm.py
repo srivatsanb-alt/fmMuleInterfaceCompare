@@ -33,10 +33,11 @@ class SendEventUpdates2MFM:
         self.mfm_context: mu.MFMContext = mu.get_mfm_context()
         self.mfm_upload_dt_info = None
         self.any_updates_sent = False
-        self.recent_hours = 24
+        self.recent_hours = self.mfm_context.recent_hours
         self.recent_dt = None
         self.last_conf_sent_unix_dt = self.get_send_conf_to_mfm_unix_dt(time.time())
         self.sherpa_oee_send_freq = 30 * 60  #  every 30 minutes
+        self.last_oee_check = datetime.datetime.now()+datetime.timedelta(seconds=-self.sherpa_oee_send_freq)
         self.batch_size = 50
 
     def get_send_conf_to_mfm_unix_dt(self, default=None):
@@ -436,9 +437,10 @@ def update_fm_incidents(
         )
         .all()
     )
-    update_to_dt = datetime.datetime.now()
 
+    batch_size = event_updater.batch_size
     all_fm_incidents = []
+    fm_incident_ids = []
     for fm_incident in fm_incidents:
         fm_incident_dict = utils_util.get_table_as_dict(mm.FMIncidents, fm_incident)
         del fm_incident_dict["id"]
@@ -452,44 +454,51 @@ def update_fm_incidents(
             fm_incident_dict["other_info"] = {"json_dumped_other_info": other_info_jdump}
 
         all_fm_incidents.append(fm_incident_dict)
+        fm_incident_ids.append(fm_incident.id)
 
     if len(all_fm_incidents) == 0:
         logging.getLogger("mfm_updates").info("no new fm incidents to be updated")
         return
+    
+    for i in range(0, len(all_fm_incidents), batch_size):
+        fm_incidents_chunk = all_fm_incidents[i : i + batch_size]
+        fm_incident_ids_chunk = fm_incident_ids[i : i + batch_size]
+        update_to_dt = datetime.datetime.now()
 
-    req_json = {"all_fm_incidents": all_fm_incidents}
+        req_json = {"all_fm_incidents": fm_incidents_chunk}
 
-    endpoint = "update_fm_incidents"
-    req_type = "post"
+        endpoint = "update_fm_incidents"
+        req_type = "post"
 
-    response_status_code, response_json = mu.send_http_req_to_mfm(
-        event_updater.mfm_context, endpoint, req_type, req_json
-    )
-
-    if response_status_code == 200:
-        logging.getLogger("mfm_updates").info(
-            f"sent fm_incidents to mfm successfully, details: {req_json}"
+        response_status_code, response_json = mu.send_http_req_to_mfm(
+            event_updater.mfm_context, endpoint, req_type, req_json
         )
-        event_updater.mfm_upload_dt_info.last_fm_incidents_update_dt = update_to_dt
-        event_updater.update_db(dbsession)
-    else:
-        logging.getLogger("mfm_updates").info(
-            f"unable to send fm_incidents to mfm,  status_code {response_status_code}"
-        )
+
+        if response_status_code == 200:
+            logging.getLogger("mfm_updates").info(
+                f"sent fm_incidents to mfm successfully, details: {req_json}"
+            )
+            event_updater.mfm_upload_dt_info.last_fm_incidents_update_dt = update_to_dt
+            event_updater.update_db(dbsession)
+        else:
+            logging.getLogger("mfm_updates").info(
+                f"unable to send fm_incidents to mfm,  status_code {response_status_code}"
+            )
 
 
 def update_sherpa_oee(
     event_updater: SendEventUpdates2MFM,
     dbsession: DBSession,
 ):
-
+    now_time = datetime.datetime.now()
     ts_diff = (
-        datetime.datetime.now() - event_updater.mfm_upload_dt_info.last_sherpa_oee_update_dt
+       now_time - event_updater.last_oee_check
     )
 
     if ts_diff.seconds < event_updater.sherpa_oee_send_freq:
         return
 
+    event_updater.last_oee_check = now_time
     sherpa_oees = (
         dbsession.session.query(mm.SherpaOEE)
         .filter(
@@ -510,7 +519,7 @@ def update_sherpa_oee(
     if len(all_sherpa_oees) == 0:
         logging.getLogger("mfm_updates").info("no new sherpa oee to be updated")
         return
-
+    
     req_json = {"all_sherpa_oee": all_sherpa_oees}
 
     endpoint = "update_sherpa_oee"
