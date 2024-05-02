@@ -254,6 +254,8 @@ class ConfigValidator:
                 },
                 "recent_hours": {
                     "bsonType": "int",
+                    "minimum": 24,
+                    "maximum": 168,
                     "description": "Number of hours of recent data to be sent to master_fm/sanjaya server",
                 },
             }
@@ -464,6 +466,7 @@ class ConfigDefaults:
         "ws_update_freq": 60,
         "update_freq": 120,
         "api_key": "",
+        "recent_hours": 72,
     }
     conditional_trips = {
         "trip_types": ["battery_swap", "auto_park"],
