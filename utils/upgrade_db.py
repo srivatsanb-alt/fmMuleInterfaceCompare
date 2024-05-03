@@ -16,8 +16,9 @@ AVAILABLE_UPGRADES = [
     "4.01",
     "4.02",
     "4.1",
+    "4.15"
 ]
-NO_SCHEMA_CHANGES = ["3.0", "3.01", "3.1"]
+NO_SCHEMA_CHANGES = ["3.0", "3.01", "3.1", "4.15"]
 
 
 class DBUpgrade:
@@ -174,6 +175,17 @@ def maybe_delete_fm_incidents_v3_3():
             conn.execute('DROP TABLE "fm_incidents"')
             print("dropped table fm_incidents")
 
+def maybe_delete_visa_related_tables_v4_15():
+    with get_engine(os.getenv("FM_DATABASE_URI")).connect() as conn:
+        try:
+            conn.execute("commit")
+            conn.execute("drop table visa_assignments")
+            conn.execute("drop table visa_rejects")
+            print("dropped visa_assignments and visa_rejects")
+        except Exception as e:
+            print(f"Unable to drop visa_assignments and visa_rejects, exception: {e}")
+
+
 
 def maybe_drop_tables():
     with get_session(os.getenv("FM_DATABASE_URI")) as session:
@@ -182,8 +194,11 @@ def maybe_drop_tables():
             if fm_version:
                 if float(fm_version.version) <= 3.3:
                     maybe_delete_fm_incidents_v3_3()
+                if float(fm_version.version) < 4.15:
+                    maybe_delete_visa_related_tables_v4_15()
 
         except Exception as e:
             print(
                 f"Unable tom fetch fm version from DB, cannot drop tables based on fm_version, exception: {e}"
             )
+        

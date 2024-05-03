@@ -83,7 +83,8 @@ class FrontendUserRoles:
     viewer = 0
     operator = 1
     supervisor = 2
-    support = 3
+    superuser = 3
+    support = 4
 
 #################################################
 # Messages from sherpa
@@ -438,6 +439,25 @@ class ActivateParkingMode(ClientReq):
     activate: bool
     sherpa_name: str
     type: str = MessageType.ACTIVATE_PARKING_MODE
+
+
+#################################################
+# Messages from super_users
+class SuperUserReq(BaseModel):
+    source: Union[str, None] = None
+    type: str
+    timestamp: float
+    ttl: Optional[int] = None
+
+
+class SuperUserResourceReq(SuperUserReq):
+    visa: VisaReq = None
+    # TODO: define types for these
+    parking_slot: str = None
+    charging_bay: str = None
+    access_type: AccessType = None
+    ttl = 5
+    type = MessageType.RESOURCE_ACCESS
 
 
 #################################################
