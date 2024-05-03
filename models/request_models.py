@@ -149,10 +149,10 @@ class ResourceReq(SherpaReq):
     type = MessageType.RESOURCE_ACCESS
 
 
-class ManualReleaseReq(SherpaReq):   
+class ManualVisaReleaseReq(SherpaReq):   
     sherpa_name: str
     zone_id: str
-    type = MessageType.MANUAL_RELEASE
+    type = MessageType.MANUAL_VISA_RELEASE
 
 
 # messages from sherpa not going to queue

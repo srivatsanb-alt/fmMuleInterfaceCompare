@@ -26,7 +26,7 @@ class MessageType:
     SAVE_ROUTE = "save_route"
     TRIGGER_OPTIMAL_DISPATCH = "trigger_optimal_dispatch"
     ACTIVATE_PARKING_MODE = "activate_parking_mode"
-    MANUAL_RELEASE = "manual_release"
+    MANUAL_VISA_RELEASE = "manual_visa_release"
 
 
 OptimalDispatchInfluencers = [

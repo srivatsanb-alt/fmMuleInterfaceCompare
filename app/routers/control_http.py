@@ -406,7 +406,7 @@ async def manual_park(
 
 @router.post("/manual_visa_release")
 async def resource_release(
-    resource_release_req: rqm.ManualReleaseReq, user_name=Depends(dpd.get_user_from_header)
+    resource_release_req: rqm.ManualVisaReleaseReq, user_name=Depends(dpd.get_user_from_header)
 ):
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
