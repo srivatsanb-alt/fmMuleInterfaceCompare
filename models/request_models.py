@@ -80,10 +80,10 @@ class VisaReq:
 
 
 class FrontendUserRoles:
-    operator = 0
-    supervisor = 1
-    support = 2
-
+    viewer = 0
+    operator = 1
+    supervisor = 2
+    support = 3
 
 #################################################
 # Messages from sherpa
@@ -145,6 +145,7 @@ class ResourceReq(SherpaReq):
     parking_slot: str = None
     charging_bay: str = None
     access_type: AccessType = None
+    ttl = 5
     type = MessageType.RESOURCE_ACCESS
 
 
@@ -413,6 +414,14 @@ class GetFMIncidents(ClientReq):
     num_of_incidents: int = 1
     historic: Optional[bool] = False
 
+class FMIncidentsReqPg(ClientReq):
+    from_dt: str
+    to_dt: str
+    error_type: Optional[str] = "fm_error"
+    sort_field: Optional[str]="created_at"
+    sort_order: Optional[str]="desc"
+    page: int
+    limit: int
 
 class SaveRouteReq(ClientReq):
     tag: str

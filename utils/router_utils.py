@@ -1,6 +1,9 @@
 import sys
 import os
 
+# ati code imports
+import utils.util as utils_util
+
 sys.path.append(os.environ["MULE_ROOT"])
 from mule.ati.control.bridge.router_planner_interface import RoutePlannerInterface
 import mule.ati.control.dynamic_router.grid_route_library as grl
@@ -31,12 +34,18 @@ class AllRouterModules:
         self.fleet_names = fleet_names
         self.router_modules = {}
         for fleet_name in self.fleet_names:
-            map_path = os.path.join(os.environ["FM_STATIC_DIR"], f"{fleet_name}/map/")
-            self.router_modules.update({fleet_name: RouterModule(map_path)})
+            self.add_router_module(fleet_name)
 
+    @utils_util.report_error
     def get_router_module(self, fleet_name: str):
         return self.router_modules[fleet_name]
 
+    @utils_util.report_error
     def add_router_module(self, fleet_name):
-        map_path = os.path.join(os.environ["FM_STATIC_DIR"], f"{fleet_name}/map/")
-        self.router_modules.update({fleet_name: RouterModule(map_path)})
+        try:
+            map_path = os.path.join(os.environ["FM_STATIC_DIR"], f"{fleet_name}/map/")
+            self.router_modules.update({fleet_name: RouterModule(map_path)})
+        except Exception as e:
+            raise Exception(
+                f"Unable to create router module for fleet {fleet_name}, exception: {e}"
+            )

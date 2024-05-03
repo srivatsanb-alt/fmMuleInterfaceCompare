@@ -1,11 +1,13 @@
 from datetime import datetime
-import redis
+import aioredis
 import json
 import os
 import logging
 import pytz
+import asyncio
 from fastapi import Depends, APIRouter, File, UploadFile
 from sqlalchemy.orm.attributes import flag_modified
+from fastapi_limiter.depends import RateLimiter
 
 # ati code imports
 from models.db_session import DBSession
@@ -14,8 +16,10 @@ import models.misc_models as mm
 import models.request_models as rqm
 from utils.rq_utils import Queues
 import utils.util as utils_util
+import utils.fleet_utils as fu
 import app.routers.dependencies as dpd
 import core.constants as cc
+import core.common as ccm
 
 
 # manages all the http requests for Sherpa
@@ -40,7 +44,7 @@ async def basic_info(sherpa_name: str = Depends(dpd.get_sherpa)):
     if not sherpa_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession() as dbsession:
+    with DBSession(engine=ccm.engine) as dbsession:
         sherpa: fm.Sherpa = dbsession.get_sherpa(sherpa_name)
         response = {
             "fleet_name": sherpa.fleet.name,
@@ -65,7 +69,7 @@ async def is_sherpa_version_compatible(
     if not sherpa_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession() as dbsession:
+    with DBSession(engine=ccm.engine) as dbsession:
         sherpa: fm.Sherpa = dbsession.get_sherpa(sherpa_name)
         software_compatability = dbsession.get_compatability_info()
         sherpa_versions = software_compatability.info.get("sherpa_versions", [])
@@ -90,32 +94,48 @@ async def is_sherpa_version_compatible(
 # initiates sherpa
 @router.post("/init")
 async def init_sherpa(init_msg: rqm.InitMsg, sherpa: str = Depends(dpd.get_sherpa)):
-    dpd.process_req(None, init_msg, sherpa)
+    response = await dpd.process_req_with_response(None, init_msg, sherpa)
+    return response
 
 
 # checks if sherpa has reached to its destination and completed its trip
 @router.post("/trip/reached")
 async def reached(reached_msg: rqm.ReachedReq, sherpa: str = Depends(dpd.get_sherpa)):
-    dpd.process_req(None, reached_msg, sherpa)
+    response = await dpd.process_req_with_response(None, reached_msg, sherpa)
+    return response
 
 
 @router.post("/peripherals")
 async def peripherals(
     peripherals_req: rqm.SherpaPeripheralsReq, sherpa: str = Depends(dpd.get_sherpa)
 ):
-    dpd.process_req(None, peripherals_req, sherpa)
+    response = await dpd.process_req_with_response(None, peripherals_req, sherpa)
+    return response
 
 
-@router.post("/access/resource", response_model=rqm.ResourceResp)
+@router.post(
+    "/access/resource",
+    response_model=rqm.ResourceResp,
+    dependencies=[Depends(RateLimiter(times=15, seconds=60))],
+)
 async def resource_access(
     resource_req: rqm.ResourceReq, sherpa: str = Depends(dpd.get_sherpa)
 ):
     queue = Queues.queues_dict["resource_handler"]
-    response = await dpd.process_req_with_response(queue, resource_req, sherpa)
-    return rqm.ResourceResp.from_json(response)
+    _response = await dpd.process_req_with_response(queue, resource_req, sherpa)
+
+    try:
+        response = rqm.ResourceResp.from_json(_response)
+    except:
+        dpd.raise_error("Unable to obtain resource access response from RQ")
+
+    return response
 
 
-@router.get("/verify_fleet_files", response_model=rqm.VerifyFleetFilesResp)
+@router.get(
+    "/verify_fleet_files",
+    response_model=rqm.VerifyFleetFilesResp,
+)
 async def verify_fleet_files(sherpa: str = Depends(dpd.get_sherpa)):
     import utils.fleet_utils as fu
 
@@ -126,7 +146,7 @@ async def verify_fleet_files(sherpa: str = Depends(dpd.get_sherpa)):
 
     logging.getLogger().info(f"Got a verify fleet files request from {sherpa}")
 
-    with DBSession() as dbsession:
+    with DBSession(engine=ccm.engine) as dbsession:
         sherpa: fm.Sherpa = dbsession.get_sherpa(sherpa)
         fleet_name = sherpa.fleet.name
         map_files = dbsession.get_map_files(fleet_name)
@@ -155,17 +175,17 @@ async def verify_fleet_files(sherpa: str = Depends(dpd.get_sherpa)):
 
 @router.post("/req_ack/{req_id}")
 async def ws_ack(req: rqm.WSResp, req_id: str):
-    redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
-    if req.success:
-        if req.response is None:
-            req.response = {}
-        redis_conn.set(f"response_{req_id}", json.dumps(req.response))
+    async with aioredis.Redis.from_url(os.getenv("FM_REDIS_URI")) as aredis_conn:
+        if req.success:
+            if req.response is None:
+                req.response = {}
+            await aredis_conn.set(f"response_{req_id}", json.dumps(req.response))
 
-    redis_conn.setex(
-        f"success_{req_id}",
-        int(redis_conn.get("default_job_timeout_ms").decode()),
-        json.dumps(req.success),
-    )
+        await aredis_conn.setex(
+            f"success_{req_id}",
+            int((await aredis_conn.get("default_job_timeout_ms")).decode()),
+            json.dumps(req.success),
+        )
 
     return {}
 
@@ -187,7 +207,7 @@ async def get_static_files_auth_credentials(sherpa: str = Depends(dpd.get_sherpa
 async def sherpa_alerts(
     alert_msg: rqm.SherpaAlertMsg, sherpa: str = Depends(dpd.get_sherpa)
 ):
-    with DBSession() as dbsession:
+    with DBSession(engine=ccm.engine) as dbsession:
         sherpa_obj = dbsession.get_sherpa(sherpa)
         alert = f"Got an alert from {sherpa}, "
 
@@ -215,7 +235,35 @@ async def sherpa_alerts(
         )
 
 
-@router.post("/upload_file")
+@router.get("/get_config_file_info")
+async def get_config_file_info(
+    sherpa_name: str = Depends(dpd.get_sherpa),
+):
+    response = {}
+    if not sherpa_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    with DBSession(engine=ccm.engine) as dbsession:
+        sherpa = dbsession.get_sherpa(sherpa_name)
+        fleet_name = sherpa.fleet.name
+
+    config_dir = os.path.join(
+        os.getenv("FM_STATIC_DIR"), "sherpa_uploads", fleet_name, "sherpa_config"
+    )
+    file_names = [f"config_{sherpa_name}.toml", f"consolidated_{sherpa_name}.toml"]
+    for file_name in file_names:
+        file_to_check = os.path.join(config_dir, file_name)
+        if os.path.exists(file_to_check):
+            file_hash = fu.compute_sha1_hash(file_to_check)
+            response.update({file_name: file_hash})
+
+    return response
+
+
+@router.post(
+    "/upload_file",
+    dependencies=[Depends(RateLimiter(times=4, seconds=60))],
+)
 async def upload_file(
     file_upload_req: rqm.FileUploadReq = Depends(),
     uploaded_file: UploadFile = File(...),
@@ -227,7 +275,7 @@ async def upload_file(
     if not sherpa_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession() as dbsession:
+    with DBSession(engine=ccm.engine) as dbsession:
         sherpa = dbsession.get_sherpa(sherpa_name)
         fleet_name = sherpa.fleet.name
 
@@ -241,9 +289,7 @@ async def upload_file(
         new_file_name = file_upload_req.filename
         file_path = os.path.join(dir_to_save, new_file_name)
         try:
-            with open(file_path, "wb") as f:
-                f.write(await uploaded_file.read())
-
+            await utils_util.write_to_file_async(file_path, uploaded_file)
             logging.getLogger("uvicorn").info(f"Uploaded file:{file_path} successfully")
 
             file_upload = dbsession.get_file_upload(new_file_name)
@@ -290,7 +336,7 @@ async def add_fm_incident(
     if not sherpa:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession() as dbsession:
+    with DBSession(engine=ccm.engine) as dbsession:
         if add_fm_incident_req.type not in mm.FMIncidentTypes:
             dpd.raise_error(
                 f"Will only accept incidents of type {mm.FMIncidentTypes} requester"
@@ -325,7 +371,7 @@ async def update_fm_incident_data_details(
     if not sherpa:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession() as dbsession:
+    with DBSession(engine=ccm.engine) as dbsession:
         fm_incident = dbsession.get_fm_incident(
             update_incident_data_details_req.incident_id
         )

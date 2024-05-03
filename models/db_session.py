@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from fastapi.encoders import jsonable_encoder
 
 # ati code imports
-from core.db import get_session
+from core.db import get_session, get_session_with_engine
 import models.misc_models as mm
 import models.fleet_models as fm
 import models.trip_models as tm
@@ -15,8 +15,13 @@ from utils.util import check_if_timestamp_has_passed, str_to_dt
 
 
 class DBSession:
-    def __init__(self):
-        self.session: Session = get_session(os.getenv("FM_DATABASE_URI"))
+    def __init__(self, engine=None):
+        if engine:
+            self.session: Session = get_session_with_engine(engine)
+        else:
+            self.session: Session = get_session(
+                os.path.join(os.getenv("FM_DATABASE_URI"), os.getenv("PGDATABASE"))
+            )
 
     def __enter__(self):
         return self
@@ -763,7 +768,7 @@ class DBSession:
         return self.session.query(mm.SoftwareCompatability).one_or_none()
 
     def get_master_data_upload_info(self):
-        return self.session.query(mm.MasterFMDataUpload).one_or_none()
+        return self.session.query(mm.MasterFMDataUploadts).one_or_none()
 
     def get_fm_incidents(
         self, from_datetime, to_datetime=datetime.datetime.now(), entity_name=None
@@ -800,6 +805,40 @@ class DBSession:
             .limit(n)
             .all()
         )
+    
+    def get_fm_incident_pg(
+        self,
+        from_dt,
+        to_dt,
+        error_type="fm_error",
+        sort_field="created_at",
+        sort_order="desc",
+        page=0,
+        limit=50,
+            
+        ):
+        skip = page * limit
+        
+        query = self.session.query(mm.FMIncidents)
+        query = query.filter(mm.FMIncidents.type == error_type)
+        query = query.filter(mm.FMIncidents.created_at > from_dt)
+        query = query.filter(mm.FMIncidents.created_at < to_dt)
+        query = query.filter(mm.FMIncidents.updated_at > from_dt)
+        query = query.filter(mm.FMIncidents.updated_at < to_dt)
+
+        count = query.count()
+
+        query = (
+            query.order_by(text(f"{sort_field} {sort_order}"))
+            .offset(skip)
+            .limit(limit)
+            )
+        
+        fm_incidents = query.all()
+
+        pages = int(count / limit) if (count % limit == 0) else int(count / limit + 1)
+        return fm_incidents, count, limit, pages, sort_field, sort_order
+            
 
     def get_last_sherpa_mode_change(self, sherpa_name):
         return (

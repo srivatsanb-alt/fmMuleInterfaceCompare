@@ -14,6 +14,7 @@ import json
 # ati code imports
 from core.db import get_engine
 from models.mongo_client import FMMongo
+from utils.util import report_error, proc_retry
 
 
 def prune_unused_images(backup_config):
@@ -25,6 +26,7 @@ def prune_unused_images(backup_config):
             logging.getLogger("misc").warning(f"Unable to prune old({temp}h) docker images")
 
 
+@report_error
 def backup_data():
     with FMMongo() as fm_mongo:
         backup_config = fm_mongo.get_document_from_fm_config("data_backup")
@@ -33,26 +35,27 @@ def backup_data():
     fm_backup_path = os.path.join(os.getenv("FM_STATIC_DIR"), "data_backup")
     start_time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
     current_data = f"{start_time}_data"
-    redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
-    redis_conn.set("current_data_folder", current_data)
-    run_backup_path = os.path.join(fm_backup_path, current_data)
-    if not os.path.exists(fm_backup_path):
-        os.mkdir(fm_backup_path)
-    os.mkdir(run_backup_path)
-    logs_save_path = os.path.join(run_backup_path, "logs")
-    with open(os.path.join(run_backup_path, "info.txt"), "w") as info_file:
-        info_file.write(os.getenv("FM_IMAGE_INFO"))
+    # redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
+    with redis.from_url(os.getenv("FM_REDIS_URI")) as redis_conn:
+        redis_conn.set("current_data_folder", current_data)
+        run_backup_path = os.path.join(fm_backup_path, current_data)
+        if not os.path.exists(fm_backup_path):
+            os.mkdir(fm_backup_path)
+        os.mkdir(run_backup_path)
+        logs_save_path = os.path.join(run_backup_path, "logs")
+        with open(os.path.join(run_backup_path, "info.txt"), "w") as info_file:
+            info_file.write(os.getenv("FM_IMAGE_INFO"))
 
-    # wait for plugin init
-    logging.getLogger().info(f"Will check for plugin init")
-    plugin_init = False
-    while not plugin_init:
-        plugin_init = redis_conn.get("plugin_init")
-        if plugin_init is not None:
-            plugin_init = json.loads(plugin_init)
-        logging.getLogger().info(f"Waiting for plugin init")
-        time.sleep(10)
-    logging.getLogger().info(f"plugin init done!")
+        # wait for plugin init
+        logging.getLogger().info("Will check for plugin init")
+        plugin_init = False
+        while not plugin_init:
+            plugin_init = redis_conn.get("plugin_init")
+            if plugin_init is not None:
+                plugin_init = json.loads(plugin_init)
+            logging.getLogger().info("Waiting for plugin init")
+            time.sleep(10)
+        logging.getLogger().info("plugin init done!")
 
     # get all databases
     all_databases = [
@@ -72,6 +75,21 @@ def backup_data():
             logging.info(f"Will periodically backup {database_name} db")
             valid_dbs.append(database_name)
 
+    periodic_data_backup(
+        fm_backup_path,
+        run_backup_path,
+        logs_save_path,
+        current_data,
+        valid_dbs,
+        backup_config,
+    )
+
+
+@report_error
+@proc_retry()
+def periodic_data_backup(
+    fm_backup_path, run_backup_path, logs_save_path, current_data, valid_dbs, backup_config
+):
     freq = 60
     last_prune_time = time.time()
     while True:
@@ -99,6 +117,7 @@ def backup_data():
                     pass
 
             session.close()
+            db_engine.dispose()
 
         try:
             shutil.rmtree(logs_save_path)
@@ -125,33 +144,30 @@ def backup_data():
 
         logging.getLogger("misc").info(f"Backed up data")
 
-        try:
-            # default keep size is 1000MB
-            keep_size_mb = backup_config["keep_size_mb"]
-            cleanup_data(current_data, keep_size_mb)
+        # default keep size is 1000MB
+        keep_size_mb = backup_config["keep_size_mb"]
+        cleanup_data(current_data, keep_size_mb)
 
-        except Exception as e:
-            logging.getLogger("misc").error(
-                f"couldn't cleanup old backed up data, exception: {e}"
-            )
         time.sleep(freq)
 
 
 def get_directory_size(directory):
     total_size = 0
-    for path, dirs, files in os.walk(directory):
-        for file in files:
-            file_path = os.path.join(path, file)
-
-            # returns size in bytes
-            total_size += os.path.getsize(file_path)
+    if os.path.isdir(directory):
+        for path, dirs, files in os.walk(directory):
+            for file in files:
+                file_path = os.path.join(path, file)
+                # returns size in bytes
+                total_size += os.path.getsize(file_path)
+    else:
+        total_size = os.path.getsize(directory)
 
     total_size_mb = total_size / (1024 * 1024)
     return total_size_mb
 
 
 def sort_dir_list(directory, list_dir):
-    list_dir.sort(key=lambda cdate: os.path.getctime(os.path.join(directory, cdate)))
+    list_dir.sort(key=lambda x: os.path.getctime(os.path.join(directory, x)))
 
 
 def sort_and_remove_directories(directory, target_size, current_data):
@@ -166,7 +182,10 @@ def sort_and_remove_directories(directory, target_size, current_data):
     deleted_size = 0
     for dir_path in directories:
         dir_size = get_directory_size(dir_path)
-        shutil.rmtree(dir_path)
+        if os.path.isdir(dir_path):
+            shutil.rmtree(dir_path)
+        else:
+            os.remove(dir_path)
         deleted_size += dir_size
         logging.getLogger("misc").warning(f"Deleted {dir_path}")
         if deleted_size >= target_size:
@@ -174,6 +193,7 @@ def sort_and_remove_directories(directory, target_size, current_data):
             break
 
 
+@report_error
 def cleanup_data(current_data, keep_size_mb=1000):
     fm_backup_path = os.path.join(os.getenv("FM_STATIC_DIR"), "data_backup")
     data_backup_size = get_directory_size(fm_backup_path)

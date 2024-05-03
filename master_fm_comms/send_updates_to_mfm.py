@@ -5,7 +5,6 @@ import datetime
 import redis
 import json
 from sqlalchemy import or_, func
-from sqlalchemy.orm.attributes import flag_modified
 
 # ati code imports
 import models.trip_models as tm
@@ -13,335 +12,435 @@ import models.misc_models as mm
 import master_fm_comms.mfm_utils as mu
 import utils.trip_utils as tu
 import utils.util as utils_util
+import utils.fleet_utils as fu
 from models.db_session import DBSession
 
 
-def send_reset_map_dir_req(mfm_context, fleet_name: str):
+def str_to_dt(dt_str, tdelta_h=None):
+    result = datetime.datetime.now()
+    if dt_str is None:
+        if tdelta_h:
+            result = result + datetime.timedelta(hours=tdelta_h)
+    else:
+        result = utils_util.str_to_dt(dt_str)
+
+    return result
+
+
+class SendEventUpdates2MFM:
+    def __init__(self, redis_conn):
+        self.redis_conn = redis_conn
+        self.mfm_context: mu.MFMContext = mu.get_mfm_context()
+        self.mfm_upload_dt_info = None
+        self.any_updates_sent = False
+        self.recent_hours = self.mfm_context.recent_hours
+        self.recent_dt = None
+        self.last_conf_sent_unix_dt = self.get_send_conf_to_mfm_unix_dt(time.time())
+        self.sherpa_oee_send_freq = 30 * 60  #  every 30 minutes
+        self.last_oee_check = datetime.datetime.now()+datetime.timedelta(seconds=-self.sherpa_oee_send_freq)
+        self.batch_size = 50
+
+    def get_send_conf_to_mfm_unix_dt(self, default=None):
+        temp = self.redis_conn.get("send_conf_to_mfm_unix_dt")
+        if temp is None:
+            temp = default
+        else:
+            temp = float(temp.decode())
+        return temp
+
+    def maybe_send_conf_to_mfm(self):
+        temp = self.get_send_conf_to_mfm_unix_dt()
+        if temp is None:
+            return
+        elif self.last_conf_sent_unix_dt <= temp:
+            logging.getLogger("mfm_updates").info(
+                "Will send all fleet configuration to master fm again"
+            )
+            send_conf_to_mfm(self.mfm_context)
+            self.last_conf_sent_unix_dt = time.time()
+
+    def update_db(self, dbsession: DBSession):
+        dbsession.session.commit()
+
+    def initialize_master_data_upload_info(self, dbsession: DBSession):
+        mfm_upload_dt_info = mm.MasterFMDataUploadts()
+        dbsession.add_to_session(mfm_upload_dt_info)
+        self.update_db(dbsession)
+
+    def get_master_data_upload_info(self, dbsession: DBSession):
+        self.mfm_upload_dt_info = dbsession.get_master_data_upload_info()
+
+        if self.mfm_upload_dt_info is None:
+            self.initialize_master_data_upload_info(dbsession)
+            self.mfm_upload_dt_info = dbsession.get_master_data_upload_info()
+
+        self.recent_dt = datetime.datetime.now() + datetime.timedelta(
+            hours=-self.recent_hours
+        )
+
+    def update_file_upload_dt(self, file_upload: mm.FileUploads):
+        last_file_upload_dt = file_upload.created_at
+        if file_upload.updated_at:
+            last_file_upload_dt = file_upload.updated_at
+        self.mfm_upload_dt_info.last_file_upload_dt = last_file_upload_dt
+
+
+def send_conf_to_mfm(mfm_context):
+    update_fm_version_info(mfm_context)
+    update_fleet_info(mfm_context)
+    upload_map_files(mfm_context)
+    update_sherpa_info(mfm_context)
+
+
+def delete_map_file(mfm_context, fleet_name: str, file_name: str):
+    del_req = {"fleet_name": fleet_name, "filename": file_name}
     response_status_code, response_json = mu.send_http_req_to_mfm(
-        mfm_context,
-        "reset_map_dir",
-        "get",
-        query=fleet_name,
+        mfm_context, "delete_map_file", "post", req_json=del_req
     )
     if response_status_code != 200:
         logging.getLogger("mfm_updates").warning(
-            f"Unable to reset map dir for fleet_name: {fleet_name}"
+            f"Unable to delete map file {file_name} for fleet_name: {fleet_name}"
         )
         return False
 
     logging.getLogger("mfm_updates").info(
-        f"Reset map dir of the fleet: {fleet_name} successfully"
+        f"Deleted map file {file_name} of the fleet: {fleet_name} successfully"
     )
 
     return True
 
 
+def get_info_map_file(mfm_context: mu.MFMContext, fleet_name):
+    endpoint = "get_map_file_info"
+    response_status_code, response_json = mu.send_http_req_to_mfm(
+        mfm_context, endpoint, "get", query=fleet_name
+    )
+    if response_status_code != 200:
+        logging.getLogger("mfm_updates").warning(
+            f"Unable to get map_file info of {fleet_name}"
+        )
+        return False, response_json
+    logging.getLogger("mfm_updates").info(f"Got map_file info of {fleet_name} successfully")
+
+    return True, response_json
+
+
+def get_files_to_upload_delete(mfm_context: mu.MFMContext, fleet_name: str):
+    status = False
+    while not status:
+        status, map_files_info = get_info_map_file(mfm_context, fleet_name)
+        time.sleep(10)
+    map_path = os.path.join(os.environ["FM_STATIC_DIR"], f"{fleet_name}/map/")
+    all_map_files = [
+        f for f in os.listdir(map_path) if os.path.isfile(os.path.join(map_path, f))
+    ]
+    files_to_upload = []
+
+    files_to_del = [
+        filename for filename in map_files_info.keys() if filename not in all_map_files
+    ]
+
+    for filename in all_map_files:
+        filename_fq = os.path.join(map_path, filename)
+        if map_files_info.get(filename) != fu.compute_sha1_hash(filename_fq):
+            files_to_upload.append(filename_fq)
+        else:
+            logging.getLogger("mfm_updates").info(
+                f"Already uploaded map_file {filename} of {fleet_name} to master fm"
+            )
+
+    return files_to_upload, files_to_del
+
+
+def upload_map_files_fleet(mfm_context: mu.MFMContext, fleet_name: str):
+    files_to_upload, files_to_del = get_files_to_upload_delete(mfm_context, fleet_name)
+    upload_done = []
+    ignored_large_files = []
+
+    for filename in files_to_del:
+        delete_success = False
+        while not delete_success:
+            delete_success = delete_map_file(mfm_context, fleet_name, filename)
+
+    for filename_fq in files_to_upload:
+        files = []
+        files.append(("uploaded_files", open(filename_fq, "rb")))
+        endpoint = "upload_map_file"
+        response_status_code, response_json = mu.send_http_req_to_mfm(
+            mfm_context,
+            endpoint,
+            "post",
+            req_json=None,
+            files=files,
+            params=None,
+            query=fleet_name,
+        )
+        if response_status_code == 200:
+            logging.getLogger("mfm_updates").info(
+                f"uploaded map file {filename_fq} of {fleet_name} to master fm successfully"
+            )
+            upload_done.append(filename_fq)
+
+        elif response_status_code == 413:
+            logging.getLogger("mfm_updates").warning(
+                f"Ignoring to upload map file {filename_fq} of {fleet_name}, file size too large"
+            )
+            ignored_large_files.append(filename_fq)
+
+        else:
+            logging.getLogger("mfm_updates").info(
+                f"unable to upload map_file {filename_fq} of {fleet_name} to master fm, status_code {response_status_code}"
+            )
+            time.sleep(5)
+
+    return len(upload_done) + len(ignored_large_files) == len(files_to_upload)
+
+
 def upload_map_files(mfm_context: mu.MFMContext):
-    map_files_uploaded = [False]
-    while not all(map_files_uploaded):
-        with DBSession() as dbsession:
-            all_fleets = dbsession.get_all_fleets()
-            map_files_uploaded = [False] * len(all_fleets)
-            i = 0
-            for fleet in all_fleets:
-                map_path = os.path.join(os.environ["FM_STATIC_DIR"], f"{fleet.name}/map/")
-                all_map_files = [
-                    f
-                    for f in os.listdir(map_path)
-                    if os.path.isfile(os.path.join(map_path, f))
-                ]
-                upload_done = []
-                while not send_reset_map_dir_req(mfm_context, fleet.name):
-                    time.sleep(30)
-                for file_name in all_map_files:
-                    files = []
-                    files.append(
-                        ("uploaded_files", open(os.path.join(map_path, file_name), "rb"))
-                    )
-                    endpoint = "upload_map_file"
-                    response_status_code, response_json = mu.send_http_req_to_mfm(
-                        mfm_context,
-                        endpoint,
-                        "post",
-                        req_json=None,
-                        files=files,
-                        params=None,
-                        query=fleet.name,
-                    )
-                    if response_status_code == 200:
-                        logging.getLogger("mfm_updates").info(
-                            f"uploaded map file {file_name} of {fleet.name} to master fm successfully"
-                        )
-                        upload_done.append(file_name)
-                        if len(upload_done) == len(all_map_files):
-                            map_files_uploaded[i] = True
-                    elif response_status_code == 413:
-                        logging.getLogger("mfm_updates").warning(
-                            f"Ignoring to upload map file {file_name} of {fleet.name}, file size too large"
-                        )
-                        upload_done.append(file_name)
-                        if len(upload_done) == len(all_map_files):
-                            map_files_uploaded[i] = True
-                    else:
-                        logging.getLogger("mfm_updates").info(
-                            f"unable to upload map_file {file_name} of {fleet.name} to master fm, status_code {response_status_code}"
-                        )
-                        time.sleep(10)
-                i += 1
+    all_fleet_names = []
+    with DBSession() as dbsession:
+        all_fleet_names = dbsession.get_all_fleet_names()
+
+    for fleet_name in all_fleet_names:
+        if not upload_map_files_fleet(mfm_context, fleet_name):
+            raise Exception(f"Unable to upload map files of fleet: {fleet_name}")
 
 
 def update_fleet_info(mfm_context: mu.MFMContext):
-    fleet_info_sent = False
-    while not fleet_info_sent:
-        with DBSession() as dbsession:
-            fleet_names = []
-            master_fleet_info = []
-            all_fleets = dbsession.get_all_fleets()
-            for fleet in all_fleets:
-                fleet_names.append(fleet.name)
-                fleet_info = {
-                    "name": fleet.name,
-                    "customer": fleet.customer,
-                    "site": fleet.site,
-                    "location": fleet.location,
-                }
-                master_fleet_info.append(fleet_info)
-
-            req_json = {
-                "fleet_names": fleet_names,
-                "master_fleet_info": master_fleet_info,
+    with DBSession() as dbsession:
+        fleet_names = []
+        master_fleet_info = []
+        all_fleets = dbsession.get_all_fleets()
+        for fleet in all_fleets:
+            fleet_names.append(fleet.name)
+            fleet_info = {
+                "name": fleet.name,
+                "customer": fleet.customer,
+                "site": fleet.site,
+                "location": fleet.location,
             }
+            master_fleet_info.append(fleet_info)
 
-            endpoint = "update_fleet_info"
-            req_type = "post"
+        req_json = {
+            "fleet_names": fleet_names,
+            "master_fleet_info": master_fleet_info,
+        }
 
-            response_status_code, response_json = mu.send_http_req_to_mfm(
-                mfm_context, endpoint, req_type, req_json
+        endpoint = "update_fleet_info"
+        req_type = "post"
+
+        response_status_code, response_json = mu.send_http_req_to_mfm(
+            mfm_context, endpoint, req_type, req_json
+        )
+
+        if response_status_code == 200:
+            logging.getLogger("mfm_updates").info(
+                f"sent fleet_info to mfm successfully, details: {req_json}"
             )
-
-            if response_status_code == 200:
-                logging.getLogger("mfm_updates").info(
-                    f"sent fleet_info to mfm successfully, details: {req_json}"
-                )
-                fleet_info_sent = True
-            else:
-                logging.getLogger("mfm_updates").info(
-                    f"unable to send fleet_info to mfm,  status_code {response_status_code}"
-                )
-                time.sleep(10)
+        else:
+            logging.getLogger("mfm_updates").info(
+                f"unable to send fleet_info to mfm,  status_code {response_status_code}"
+            )
+            raise Exception("Unable to send fleet_info info")
 
 
 def update_sherpa_info(mfm_context: mu.MFMContext):
-    sherpa_info_sent = False
-    while not sherpa_info_sent:
-        with DBSession() as dbsession:
-            sherpa_names = []
-            master_sherpa_info = []
-            all_sherpas = dbsession.get_all_sherpas()
-            for sherpa in all_sherpas:
-                sherpa_names.append(sherpa.name)
-                sherpa_info = {
-                    "name": sherpa.name,
-                    "hwid": sherpa.hwid,
-                    "fleet_name": sherpa.fleet.name,
-                }
-                master_sherpa_info.append(sherpa_info)
-
-            req_json = {
-                "sherpa_names": sherpa_names,
-                "master_sherpa_info": master_sherpa_info,
+    with DBSession() as dbsession:
+        sherpa_names = []
+        master_sherpa_info = []
+        all_sherpas = dbsession.get_all_sherpas()
+        for sherpa in all_sherpas:
+            sherpa_names.append(sherpa.name)
+            sherpa_info = {
+                "name": sherpa.name,
+                "hwid": sherpa.hwid,
+                "fleet_name": sherpa.fleet.name,
             }
+            master_sherpa_info.append(sherpa_info)
 
-            endpoint = "update_sherpa_info"
-            req_type = "post"
+        req_json = {
+            "sherpa_names": sherpa_names,
+            "master_sherpa_info": master_sherpa_info,
+        }
 
-            response_status_code, response_json = mu.send_http_req_to_mfm(
-                mfm_context, endpoint, req_type, req_json
+        endpoint = "update_sherpa_info"
+        req_type = "post"
+
+        response_status_code, response_json = mu.send_http_req_to_mfm(
+            mfm_context, endpoint, req_type, req_json
+        )
+
+        if response_status_code == 200:
+            logging.getLogger("mfm_updates").info(
+                f"sent sherpa_info to mfm successfully, details: {req_json}"
             )
-
-            if response_status_code == 200:
-                logging.getLogger("mfm_updates").info(
-                    f"sent sherpa_info to mfm successfully, details: {req_json}"
-                )
-                sherpa_info_sent = True
-            else:
-                logging.getLogger("mfm_updates").info(
-                    f"unable to send sherpa_info to mfm,  status_code {response_status_code}"
-                )
-                time.sleep(10)
+        else:
+            logging.getLogger("mfm_updates").info(
+                f"unable to send sherpa_info to mfm,  status_code {response_status_code}"
+            )
+            raise Exception("Unable to send sherpa info")
 
 
 def update_trip_info(
-    mfm_context: mu.MFMContext,
+    event_updater: SendEventUpdates2MFM,
     dbsession: DBSession,
-    last_trip_update_dt: str,
 ):
-    success = False
-    if last_trip_update_dt is None:
-        last_trip_update_dt = datetime.datetime.now()
-    else:
-        last_trip_update_dt = utils_util.str_to_dt(last_trip_update_dt)
-
-    recent_dt = datetime.datetime.now() + datetime.timedelta(hours=-24)
 
     new_trips = (
         dbsession.session.query(tm.Trip)
-        .filter(tm.Trip.end_time > last_trip_update_dt)
-        .filter(tm.Trip.end_time > recent_dt)
+        .filter(tm.Trip.end_time > event_updater.mfm_upload_dt_info.last_trip_update_dt)
+        .filter(tm.Trip.end_time > event_updater.recent_dt)
         .filter(tm.Trip.status.in_(tm.COMPLETED_TRIP_STATUS))
+        .order_by(tm.Trip.end_time)
         .all()
     )
 
     if len(new_trips) == 0:
-        logging.getLogger("mfm_updates").info(f"no new trip updates to be sent")
-        return success
+        logging.getLogger("mfm_updates").info("no new trip updates to be sent")
+        return
 
+    batch_size = event_updater.batch_size
     trips_info = []
+    trip_ids = []
     for trip in new_trips:
         trip_info = tu.get_trip_status(trip)
+        trip_ids.append(trip.id)
         del trip_info["trip_details"]["updated_at"]
         trips_info.append(trip_info)
 
-    logging.getLogger("mfm_updates").info(f"new trips: {trips_info}")
+    for i in range(0, len(trips_info), batch_size):
+        trips_info_chunk = trips_info[i : i + batch_size]
+        trip_ids_chunk = trip_ids[i : i + batch_size]
+        last_trip_end_time = new_trips[min(i + batch_size - 1, len(new_trips) - 1)].end_time
+        req_json = {"trips_info": trips_info_chunk}
+        endpoint = "update_trip_info"
+        req_type = "post"
 
-    req_json = {"trips_info": trips_info}
-
-    endpoint = "update_trip_info"
-    req_type = "post"
-
-    response_status_code, response_json = mu.send_http_req_to_mfm(
-        mfm_context, endpoint, req_type, req_json
-    )
-
-    if response_status_code == 200:
-        logging.getLogger("mfm_updates").info(
-            f"sent trip_info to mfm successfully, details: {req_json}"
+        response_status_code, response_json = mu.send_http_req_to_mfm(
+            event_updater.mfm_context, endpoint, req_type, req_json
         )
-        success = True
 
-    else:
-        logging.getLogger("mfm_updates").info(
-            f"unable to send trip_info to mfm,  status_code {response_status_code}"
-        )
-    return success
+        if response_status_code == 200:
+            logging.getLogger("mfm_updates").info(
+                f"sent trip_info of trip_ids_chunk: {trip_ids_chunk} to mfm successfully"
+            )
+            event_updater.mfm_upload_dt_info.last_trip_update_dt = last_trip_end_time
+            event_updater.update_db(dbsession)
+        else:
+            logging.getLogger("mfm_updates").info(
+                f"unable to send trip_info to mfm,  status_code {response_status_code}"
+            )
 
 
 def update_trip_analytics(
-    mfm_context: mu.MFMContext,
+    event_updater: SendEventUpdates2MFM,
     dbsession: DBSession,
-    last_trip_analytics_update_dt: str,
 ):
 
-    success = False
-    if last_trip_analytics_update_dt is None:
-        last_trip_analytics_update_dt = datetime.datetime.now()
-    else:
-        last_trip_analytics_update_dt = utils_util.str_to_dt(last_trip_analytics_update_dt)
-
-    recent_dt = datetime.datetime.now() + datetime.timedelta(hours=-24)
-
     new_trip_analytics = (
-        dbsession.session.query(tm.TripAnalytics)
+        dbsession.session.query(tm.TripAnalytics, tm.Trip.end_time)
         .join(tm.Trip, tm.Trip.id == tm.TripAnalytics.trip_id)
-        .filter(tm.Trip.end_time > last_trip_analytics_update_dt)
-        .filter(tm.Trip.end_time > recent_dt)
+        .filter(
+            tm.Trip.end_time
+            > event_updater.mfm_upload_dt_info.last_trip_analytics_update_dt
+        )
+        .filter(tm.Trip.end_time > event_updater.recent_dt)
         .filter(tm.Trip.status.in_(tm.COMPLETED_TRIP_STATUS))
+        .order_by(tm.Trip.end_time)
         .all()
     )
 
+    if len(new_trip_analytics) == 0:
+        logging.getLogger("mfm_updates").info("no new trip analytics to be updated")
+        return
+
+    batch_size = event_updater.batch_size
     trips_analytics = []
+    trips_end_time = []
+    trip_ids = []
     for trip_analytics in new_trip_analytics:
-        ta = tu.get_trip_analytics(trip_analytics)
+        ta = tu.get_trip_analytics(trip_analytics[0])
         del ta["updated_at"]
         del ta["created_at"]
         trips_analytics.append(ta)
+        trips_end_time.append(trip_analytics[1])
+        trip_ids.append(trip_analytics[0].trip_id)
 
-    if len(trips_analytics) == 0:
-        logging.getLogger("mfm_updates").info("no new trip analytics to be updated")
-        return success
-
-    logging.getLogger("mfm_updates").info(f"new trip analytics: {trips_analytics}")
-
-    req_json = {"trips_analytics": trips_analytics}
-
-    endpoint = "update_trip_analytics"
-    req_type = "post"
-
-    response_status_code, response_json = mu.send_http_req_to_mfm(
-        mfm_context, endpoint, req_type, req_json
-    )
-
-    if response_status_code == 200:
-        logging.getLogger("mfm_updates").info(
-            f"sent trip_analytics to mfm successfully, details: {req_json}"
-        )
-        success = True
-    else:
-        logging.getLogger("mfm_updates").info(
-            f"unable to send trip_analytics to mfm,  status_code {response_status_code}"
+    for i in range(0, len(trips_analytics), batch_size):
+        last_trip_end_time = trips_end_time[
+            min(i + batch_size - 1, len(trip_analytics) - 1)
+        ]
+        trips_analytics_chunk = trips_analytics[i : i + batch_size]
+        req_json = {"trips_analytics": trips_analytics_chunk}
+        endpoint = "update_trip_analytics"
+        req_type = "post"
+        response_status_code, response_json = mu.send_http_req_to_mfm(
+            event_updater.mfm_context, endpoint, req_type, req_json
         )
 
-    return success
+        if response_status_code == 200:
+            logging.getLogger("mfm_updates").info(
+                f"sent trip_analytics to mfm successfully, details: {req_json}"
+            )
+            event_updater.mfm_upload_dt_info.last_trip_analytics_update_dt = (
+                last_trip_end_time
+            )
+            event_updater.update_db(dbsession)
+        else:
+            logging.getLogger("mfm_updates").info(
+                f"unable to send trip_analytics to mfm,  status_code {response_status_code}"
+            )
 
 
 def update_fm_version_info(mfm_context: mu.MFMContext):
-    fm_version_info_sent = False
-    while not fm_version_info_sent:
-        with DBSession() as dbsession:
-            software_compatability = dbsession.get_compatability_info()
-            compatible_sherpa_versions = software_compatability.info.get(
-                "sherpa_versions", []
+    with DBSession() as dbsession:
+        software_compatability = dbsession.get_compatability_info()
+        compatible_sherpa_versions = software_compatability.info.get("sherpa_versions", [])
+
+        req_json = {
+            "fm_tag": os.getenv("FM_TAG"),
+            "compatible_sherpa_tags": compatible_sherpa_versions,
+        }
+
+        endpoint = "update_fm_version_info"
+        req_type = "post"
+
+        response_status_code, response_json = mu.send_http_req_to_mfm(
+            mfm_context, endpoint, req_type, req_json
+        )
+
+        if response_status_code == 200:
+            logging.getLogger("mfm_updates").info(
+                f"sent fm_version_info to mfm successfully, details: {req_json}"
             )
-
-            req_json = {
-                "fm_tag": os.getenv("FM_TAG"),
-                "compatible_sherpa_tags": compatible_sherpa_versions,
-            }
-
-            endpoint = "update_fm_version_info"
-            req_type = "post"
-
-            response_status_code, response_json = mu.send_http_req_to_mfm(
-                mfm_context, endpoint, req_type, req_json
+        else:
+            logging.getLogger("mfm_updates").info(
+                f"unable to send fm_version_info_sent to mfm,  status_code {response_status_code}"
             )
-
-            if response_status_code == 200:
-                logging.getLogger("mfm_updates").info(
-                    f"sent fm_version_info to mfm successfully, details: {req_json}"
-                )
-                fm_version_info_sent = True
-            else:
-                logging.getLogger("mfm_updates").info(
-                    f"unable to send fm_version_info_sent to mfm,  status_code {response_status_code}"
-                )
-                time.sleep(10)
+            raise Exception("Unable to send FM version info")
 
 
 def update_fm_incidents(
-    mfm_context: mu.MFMContext,
+    event_updater: SendEventUpdates2MFM,
     dbsession: DBSession,
-    last_fm_incidents_update_dt,
 ):
-    success = False
-    if last_fm_incidents_update_dt is None:
-        last_fm_incidents_update_dt = datetime.datetime.now() + datetime.timedelta(
-            hours=-24
-        )
-    else:
-        last_fm_incidents_update_dt = utils_util.str_to_dt(last_fm_incidents_update_dt)
 
     fm_incidents = (
         dbsession.session.query(mm.FMIncidents)
         .filter(
             or_(
-                mm.FMIncidents.created_at > last_fm_incidents_update_dt,
-                mm.FMIncidents.updated_at > last_fm_incidents_update_dt,
+                mm.FMIncidents.created_at
+                > event_updater.mfm_upload_dt_info.last_fm_incidents_update_dt,
+                mm.FMIncidents.updated_at
+                > event_updater.mfm_upload_dt_info.last_fm_incidents_update_dt,
             )
         )
         .all()
     )
 
+    batch_size = event_updater.batch_size
     all_fm_incidents = []
+    fm_incident_ids = []
     for fm_incident in fm_incidents:
         fm_incident_dict = utils_util.get_table_as_dict(mm.FMIncidents, fm_incident)
         del fm_incident_dict["id"]
@@ -355,50 +454,58 @@ def update_fm_incidents(
             fm_incident_dict["other_info"] = {"json_dumped_other_info": other_info_jdump}
 
         all_fm_incidents.append(fm_incident_dict)
+        fm_incident_ids.append(fm_incident.id)
 
     if len(all_fm_incidents) == 0:
         logging.getLogger("mfm_updates").info("no new fm incidents to be updated")
-        return success
+        return
+    
+    for i in range(0, len(all_fm_incidents), batch_size):
+        fm_incidents_chunk = all_fm_incidents[i : i + batch_size]
+        fm_incident_ids_chunk = fm_incident_ids[i : i + batch_size]
+        update_to_dt = datetime.datetime.now()
 
-    req_json = {"all_fm_incidents": all_fm_incidents}
+        req_json = {"all_fm_incidents": fm_incidents_chunk}
 
-    endpoint = "update_fm_incidents"
-    req_type = "post"
+        endpoint = "update_fm_incidents"
+        req_type = "post"
 
-    response_status_code, response_json = mu.send_http_req_to_mfm(
-        mfm_context, endpoint, req_type, req_json
-    )
-
-    if response_status_code == 200:
-        logging.getLogger("mfm_updates").info(
-            f"sent fm_incidents to mfm successfully, details: {req_json}"
+        response_status_code, response_json = mu.send_http_req_to_mfm(
+            event_updater.mfm_context, endpoint, req_type, req_json
         )
-        success = True
-    else:
-        logging.getLogger("mfm_updates").info(
-            f"unable to send fm_incidents to mfm,  status_code {response_status_code}"
-        )
-    return success
+
+        if response_status_code == 200:
+            logging.getLogger("mfm_updates").info(
+                f"sent fm_incidents to mfm successfully, details: {req_json}"
+            )
+            event_updater.mfm_upload_dt_info.last_fm_incidents_update_dt = update_to_dt
+            event_updater.update_db(dbsession)
+        else:
+            logging.getLogger("mfm_updates").info(
+                f"unable to send fm_incidents to mfm,  status_code {response_status_code}"
+            )
 
 
 def update_sherpa_oee(
-    mfm_context: mu.MFMContext,
+    event_updater: SendEventUpdates2MFM,
     dbsession: DBSession,
-    last_sherpa_oee_update_dt,
 ):
+    now_time = datetime.datetime.now()
+    ts_diff = (
+       now_time - event_updater.last_oee_check
+    )
 
-    recent_hours = -24
-    success = False
-    if last_sherpa_oee_update_dt is None:
-        last_sherpa_oee_update_dt = datetime.datetime.now() + datetime.timedelta(
-            hours=recent_hours
-        )
-    else:
-        last_sherpa_oee_update_dt = utils_util.str_to_dt(last_sherpa_oee_update_dt)
+    if ts_diff.seconds < event_updater.sherpa_oee_send_freq:
+        return
 
+    event_updater.last_oee_check = now_time
     sherpa_oees = (
         dbsession.session.query(mm.SherpaOEE)
-        .filter(func.date(mm.SherpaOEE.dt) >= func.date(last_sherpa_oee_update_dt))
+        .filter(
+            mm.SherpaOEE.dt >= event_updater.mfm_upload_dt_info.last_sherpa_oee_update_dt
+        )
+        .filter(func.date(mm.SherpaOEE.dt) >= func.date(event_updater.recent_dt))
+        .order_by(mm.SherpaOEE.dt)
         .all()
     )
 
@@ -407,73 +514,61 @@ def update_sherpa_oee(
         sherpa_oee_dict = utils_util.get_table_as_dict(mm.SherpaOEE, sherpa_oee)
         del sherpa_oee_dict["id"]
         all_sherpa_oees.append(sherpa_oee_dict)
+        update_to_dt = sherpa_oee.dt
 
     if len(all_sherpa_oees) == 0:
         logging.getLogger("mfm_updates").info("no new sherpa oee to be updated")
-        return success
-
+        return
+    
     req_json = {"all_sherpa_oee": all_sherpa_oees}
 
     endpoint = "update_sherpa_oee"
     req_type = "post"
 
     response_status_code, response_json = mu.send_http_req_to_mfm(
-        mfm_context, endpoint, req_type, req_json
+        event_updater.mfm_context, endpoint, req_type, req_json
     )
 
     if response_status_code == 200:
-        logging.getLogger("mfm_updates").info(
-            f"sent sherpa oee to mfm successfully, details: {req_json}"
-        )
-        success = True
+        logging.getLogger("mfm_updates").info("sent sherpa oee to mfm successfully")
+        event_updater.mfm_upload_dt_info.last_sherpa_oee_update_dt = update_to_dt
+        event_updater.update_db(dbsession)
     else:
         logging.getLogger("mfm_updates").info(
             f"unable to send sherpa oee to mfm,  status_code: {response_status_code}"
         )
-    return success
 
 
 def upload_important_files(
-    mfm_context: mu.MFMContext, dbsession: DBSession, last_file_upload_dt
+    event_updater: SendEventUpdates2MFM,
+    dbsession: DBSession,
 ):
 
-    recent_hours = -24
-    success = False
-
-    if last_file_upload_dt:
-        temp_last_file_update_dt = utils_util.str_to_dt(last_file_upload_dt)
-        temp_last_file_update_dt = max(
-            temp_last_file_update_dt,
-            (datetime.datetime.now() + datetime.timedelta(hours=recent_hours)),
-        )
-    else:
-        temp_last_file_update_dt = datetime.datetime.now()
-
-    recent_dt = temp_last_file_update_dt + datetime.timedelta(hours=recent_hours)
-
-    # upload files that are recent
+    # upload files that are recent, sorted old->new
     file_uploads = (
         dbsession.session.query(mm.FileUploads)
         .filter(
             or_(
                 func.date_trunc("seconds", mm.FileUploads.updated_at)
-                > temp_last_file_update_dt,
+                > event_updater.mfm_upload_dt_info.last_file_upload_dt,
                 func.date_trunc("seconds", mm.FileUploads.created_at)
-                > temp_last_file_update_dt,
+                > event_updater.mfm_upload_dt_info.last_file_upload_dt,
             ),
         )
         .filter(
             or_(
-                mm.FileUploads.created_at > recent_dt, mm.FileUploads.updated_at > recent_dt
+                mm.FileUploads.created_at > event_updater.recent_dt,
+                mm.FileUploads.updated_at > event_updater.recent_dt,
             )
         )
-        .order_by(func.least(mm.FileUploads.updated_at, mm.FileUploads.created_at))
+        .order_by(func.greatest(mm.FileUploads.updated_at, mm.FileUploads.created_at))
         .all()
     )
 
     endpoint = "upload_file"
     req_type = "post"
 
+    # send one file at a time, update last_file_upload_dt
     for file_upload in file_uploads:
         params = {
             "filename": file_upload.filename,
@@ -484,159 +579,54 @@ def upload_important_files(
 
         file_to_upload = ("uploaded_file", open(file_upload.path, "rb"))
         response_status_code, response_json = mu.send_http_req_to_mfm(
-            mfm_context, endpoint, req_type, files=[file_to_upload], params=params
+            event_updater.mfm_context,
+            endpoint,
+            req_type,
+            files=[file_to_upload],
+            params=params,
         )
         if response_status_code == 200:
             logging.getLogger("mfm_updates").info(
                 f"Successfully uploaded files with params: {params}"
             )
-            success = True
-            temp_last_file_update_dt = file_upload.created_at
-            if file_upload.updated_at:
-                temp_last_file_update_dt = file_upload.updated_at
         elif response_status_code == 413:
             logging.getLogger("mfm_updates").info(
                 f"Ignoring upload files with params: {params}, file size too large"
             )
-            success = True
-            temp_last_file_update_dt = file_upload.created_at
-            if file_upload.updated_at:
-                temp_last_file_update_dt = file_upload.updated_at
-
         else:
             logging.getLogger("mfm_updates").info(
                 f"unable to upload files with params {params}, status_code: {response_status_code}"
             )
             break
 
-    return success, temp_last_file_update_dt
-
-
-def send_conf_to_mfm(mfm_context):
-    update_fm_version_info(mfm_context)
-    update_fleet_info(mfm_context)
-    upload_map_files(mfm_context)
-    update_sherpa_info(mfm_context)
-
-
-def maybe_send_conf_to_mfm(last_conf_sent_unix_dt, redis_conn, mfm_context):
-    temp = redis_conn.get("send_conf_to_mfm_unix_dt")
-    if temp is None:
-        return
-
-    temp = float(temp.decode())
-    if temp > last_conf_sent_unix_dt:
-        logging.getLogger("mfm_updates").info(
-            "Will send all fleet configuration to master fm again"
-        )
-        send_conf_to_mfm(mfm_context)
-        return True
-
-    return False
+        event_updater.update_file_upload_dt(file_upload)
+        event_updater.update_db(dbsession)
 
 
 def send_mfm_updates():
     logging.getLogger().info("starting send_updates_to_mfm script")
-    redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
     mfm_context: mu.MFMContext = mu.get_mfm_context()
+
     if mfm_context.send_updates is False:
         return
+
+    send_mfm_updates_with_decorators(mfm_context)
+
+
+@utils_util.proc_retry(sleep_time=30)
+@utils_util.report_error
+def send_mfm_updates_with_decorators(mfm_context):
     send_conf_to_mfm(mfm_context)
-    last_conf_sent_unix_dt = time.time()
-    while True:
-        try:
-            if maybe_send_conf_to_mfm(last_conf_sent_unix_dt, redis_conn, mfm_context):
-                last_conf_sent_unix_dt = time.time()
-            else:
-                logging.getLogger("mfm_updates").info(
-                    "need not send all fleet configuration to master fm again"
-                )
-
+    with redis.from_url(os.getenv("FM_REDIS_URI")) as redis_conn:
+        event_updater = SendEventUpdates2MFM(redis_conn)
+        while True:
             with DBSession() as dbsession:
-                master_fm_data_upload_info = dbsession.get_master_data_upload_info()
-                any_updates_sent = False
-
-                # send trip update
-                last_trip_update_dt: str = master_fm_data_upload_info.info.get(
-                    "last_trip_update_dt", None
-                )
-                last_trip_update_sent = update_trip_info(
-                    mfm_context, dbsession, last_trip_update_dt
-                )
-                if last_trip_update_sent:
-                    last_trip_update_dt = utils_util.dt_to_str(datetime.datetime.now())
-                    any_updates_sent = True
-
-                # send trip analytics update
-                last_trip_analytics_update_dt: str = master_fm_data_upload_info.info.get(
-                    "last_trip_analytics_update_dt", None
-                )
-                last_trip_analytics_sent = update_trip_analytics(
-                    mfm_context, dbsession, last_trip_analytics_update_dt
-                )
-                if last_trip_analytics_sent:
-                    last_trip_analytics_update_dt = utils_util.dt_to_str(
-                        datetime.datetime.now()
-                    )
-                    any_updates_sent = True
-
-                # send sherpa oees
-                last_sherpa_oee_update_dt: str = master_fm_data_upload_info.info.get(
-                    "last_sherpa_oee_update_dt", None
-                )
-                last_sherpa_oee_sent = update_sherpa_oee(
-                    mfm_context, dbsession, last_sherpa_oee_update_dt
-                )
-                if last_sherpa_oee_sent:
-                    last_sherpa_oee_update_dt = utils_util.dt_to_str(
-                        datetime.datetime.now()
-                    )
-                    any_updates_sent = True
-
-                # send fm incidents
-                last_fm_incidents_update_dt: str = master_fm_data_upload_info.info.get(
-                    "last_fm_incidents_update_dt", None
-                )
-                last_fm_incidents_sent = update_fm_incidents(
-                    mfm_context, dbsession, last_fm_incidents_update_dt
-                )
-                if last_fm_incidents_sent:
-                    last_fm_incidents_update_dt = utils_util.dt_to_str(
-                        datetime.datetime.now()
-                    )
-                    any_updates_sent = True
-
-                # upload important files
-                last_file_upload_dt: str = master_fm_data_upload_info.info.get(
-                    "last_file_upload_dt", None
-                )
-
-                (
-                    last_file_uplaod_success,
-                    temp_last_file_update_dt,
-                ) = upload_important_files(mfm_context, dbsession, last_file_upload_dt)
-
-                # need not set last_file_upload_dt
-                if last_file_uplaod_success:
-                    any_updates_sent = True
-                    last_file_upload_dt = utils_util.dt_to_str(temp_last_file_update_dt)
-
-                # commit last update time to db
-                if any_updates_sent:
-                    master_fm_data_upload_info.info.update(
-                        {
-                            "last_trip_analytics_update_dt": last_trip_analytics_update_dt,
-                            "last_trip_update_dt": last_trip_update_dt,
-                            "last_sherpa_oee_update_dt": last_sherpa_oee_update_dt,
-                            "last_fm_incidents_update_dt": last_fm_incidents_update_dt,
-                            "last_file_upload_dt": last_file_upload_dt,
-                        }
-                    )
-                    flag_modified(master_fm_data_upload_info, "info")
+                event_updater.maybe_send_conf_to_mfm()
+                event_updater.get_master_data_upload_info(dbsession)
+                update_trip_info(event_updater, dbsession)
+                update_trip_analytics(event_updater, dbsession)
+                update_sherpa_oee(event_updater, dbsession)
+                update_fm_incidents(event_updater, dbsession)
+                upload_important_files(event_updater, dbsession)
 
             time.sleep(mfm_context.update_freq)
-
-        except Exception as e:
-            logging.getLogger("mfm_updates").info(
-                f"exception in send_updates_to_mfm script {e}"
-            )

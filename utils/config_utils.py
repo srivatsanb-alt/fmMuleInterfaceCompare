@@ -2,6 +2,23 @@ class CreateColKwargs:
     capped_default = {"capped": True, "max": 1, "size": 1024}
 
 
+class PSQLDBConfigValidator:
+    connection_settings = {
+        "$jsonSchema": {
+            "bsonType": "object",
+            "required": ["max_connections"],
+            "properties": {
+                "max_connections": {
+                    "bsonType": "int",
+                    "description": "Max number of psql DB connections that can be opened simultaneously",
+                    "minimum": 100,
+                    "maximum": 500,
+                },
+            },
+        }
+    }
+
+
 class FrontendUsersValidator:
     user_details = {
         "$jsonSchema": {
@@ -15,8 +32,12 @@ class FrontendUsersValidator:
                 },
                 "role": {
                     "bsonType": "string",
-                    "enum": ["operator", "supervisor", "support"],
+                    "enum": ["viewer", "operator", "supervisor", "support"],
                     "description": "Role based access would be provided in the frontend app",
+                },
+                "expiry_interval": {
+                    "bsonType": "int",
+                    "description": "Login session expiry in seconds",
                 },
             },
         }
@@ -182,6 +203,7 @@ class ConfigValidator:
                 "ws_update_freq",
                 "update_freq",
                 "api_key",
+                "recent_hours",
             ],
             "properties": {
                 "mfm_ip": {
@@ -230,7 +252,13 @@ class ConfigValidator:
                     "bsonType": "string",
                     "description": "Api_key required to connect to master_fm/sanjaya server",
                 },
-            },
+                "recent_hours": {
+                    "bsonType": "int",
+                    "minimum": 24,
+                    "maximum": 168,
+                    "description": "Number of hours of recent data to be sent to master_fm/sanjaya server",
+                },
+            }
         }
     }
 
@@ -388,6 +416,10 @@ class ConfigValidator:
                     "bsonType": "int",
                     "description": "Token expiry time in seconds",
                 },
+                "secret_token": {
+                    "bsonType": "string",
+                    "description": "Secret token for authentication",
+                }
             },
         }
     }
@@ -434,6 +466,7 @@ class ConfigDefaults:
         "ws_update_freq": 60,
         "update_freq": 120,
         "api_key": "",
+        "recent_hours": 72,
     }
     conditional_trips = {
         "trip_types": ["battery_swap", "auto_park"],
@@ -487,3 +520,7 @@ class PluginConfigDefaults:
         "plugin_port": "8002",
         "hashed_api_key": "a6a333480615e7339fbac0fa699559ce950a90df85d93a1f114a0c79dfc0750b",
     }
+
+
+class PSQLDBConfigDefaults:
+    connection_settings = {"max_connections": 300}

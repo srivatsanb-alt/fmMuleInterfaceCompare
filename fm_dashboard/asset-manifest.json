@@ -1,8 +1,8 @@
 {
   "files": {
-    "main.css": "/static/css/main.79a7fa76.css",
-    "main.js": "/static/js/main.2c4094f0.js",
-    "static/js/787.7298e13e.chunk.js": "/static/js/787.7298e13e.chunk.js",
+    "main.css": "/static/css/main.7f733931.css",
+    "main.js": "/static/js/main.bec8b6e9.js",
+    "static/js/27.25cb0711.chunk.js": "/static/js/27.25cb0711.chunk.js",
     "static/media/Login Image.png": "/static/media/Login Image.885a80af3ca6e7d909a4.png",
     "static/media/OpenSans-Regular-400.ttf": "/static/media/OpenSans-Regular-400.57cd57a648021fa1c396.ttf",
     "static/media/Montserrat-Medium.ttf": "/static/media/Montserrat-Medium.a281f04d4c8926e7dea1.ttf",
@@ -24,22 +24,21 @@
     "static/media/Cancel.svg": "/static/media/Cancel.d66022733f1e840f23199b779f6e19e4.svg",
     "static/media/fleet-data.svg": "/static/media/fleet-data.fe9f441d33db105cb8797dc547031d9e.svg",
     "static/media/diagnostics.svg": "/static/media/diagnostics.983fa603aa5d4fcd1f35a13d5c0712cd.svg",
-    "static/media/asset-status.svg": "/static/media/asset-status.e40e5014d129990a6cd7a23ffc2059a7.svg",
+    "static/media/asset-status.svg": "/static/media/asset-status.79818e7b25bcaee829d0cefa50b2abd2.svg",
     "static/media/update-map.svg": "/static/media/update-map.3e2311afa32893e0cffb241e0e085a95.svg",
     "static/media/Book Again.svg": "/static/media/Book Again.ebfc370a625f79b41bf5dbed6c226515.svg",
     "static/media/search.svg": "/static/media/search.3185712f2d2a6009c693a95a87b4fec6.svg",
     "static/media/refresh.svg": "/static/media/refresh.9eb64de880537c6c7837a0e2dd970feb.svg",
     "index.html": "/index.html",
     "static/media/Tags.svg": "/static/media/Tags.4c5c473c683dfb3feedcf0f741a2971b.svg",
-    "static/media/edit.svg": "/static/media/edit.8dc48206a359229d815523c3805a0e29.svg",
     "static/media/analytics.svg": "/static/media/analytics.9627364cc7bf6593484fdbd480e57628.svg",
     "static/media/delete.svg": "/static/media/delete.d5ed251e860147d1334b285bcd37f070.svg",
     "static/media/new-trip.svg": "/static/media/new-trip.5c24ead3ecaec583413ebbb4d4f0bafb.svg",
     "static/media/download.svg": "/static/media/download.b5e4a460d871c74369eaae5153f59f76.svg",
     "static/media/bookmark.svg": "/static/media/bookmark.a40be2027dd64b9ea523175458d1a8e7.svg",
-    "static/media/asset-events.svg": "/static/media/asset-events.c155a29d6afd545c5c0dbbbc11d4126c.svg",
     "static/media/close.svg": "/static/media/close.168cbe73eceeadfd1d5420bf2d449ded.svg",
     "static/media/filters.svg": "/static/media/filters.fd1435cf892dd26c6fe1a8dd647d91c2.svg",
+    "static/media/asset-events.svg": "/static/media/asset-events.016ce2f7925684130db167a04a790c37.svg",
     "static/media/next-page.svg": "/static/media/next-page.4df5e0a7e6e61c777d7ed847aed57502.svg",
     "static/media/previous-page.svg": "/static/media/previous-page.dee6bf5235dcf92d78ddded78df84c7a.svg",
     "static/media/down-arrow.svg": "/static/media/down-arrow.36dcb1951e5f0d6421f124eea056c28d.svg",
@@ -47,13 +46,10 @@
     "static/media/close-circle.svg": "/static/media/close-circle.1a634255da07a3c9063ffe165f626f43.svg",
     "static/media/stop-ops.svg": "/static/media/stop-ops.6c7b29fbe8941d0af4a88cc140a38fbf.svg",
     "static/media/resume-ops.svg": "/static/media/resume-ops.7eaed0ce19cc32d0d9d68e2c29c4ed05.svg",
-    "static/media/parking.svg": "/static/media/parking.37d3fcac97912ba986dd45e852e4a3ac.svg",
-    "main.79a7fa76.css.map": "/static/css/main.79a7fa76.css.map",
-    "main.2c4094f0.js.map": "/static/js/main.2c4094f0.js.map",
-    "787.7298e13e.chunk.js.map": "/static/js/787.7298e13e.chunk.js.map"
+    "static/media/parking.svg": "/static/media/parking.37d3fcac97912ba986dd45e852e4a3ac.svg"
   },
   "entrypoints": [
-    "static/css/main.79a7fa76.css",
-    "static/js/main.2c4094f0.js"
+    "static/css/main.7f733931.css",
+    "static/js/main.bec8b6e9.js"
   ]
 }

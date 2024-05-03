@@ -6,6 +6,8 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm.attributes import flag_modified
 import asyncio
 import pandas as pd
+from datetime import datetime
+import io
 
 # ati code imports
 import app.routers.dependencies as dpd
@@ -17,6 +19,9 @@ from utils.util import str_to_dt
 import utils.trip_utils as tu
 import core.constants as cc
 import utils.util as utils_util
+import core.common as ccm
+from openpyxl import Workbook
+from openpyxl.worksheet.page import PageMargins
 
 
 router = APIRouter(
@@ -44,7 +49,7 @@ async def force_delete_ongoing_trip(
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession() as dbsession:
+    with DBSession(engine=ccm.engine) as dbsession:
         sherpa = dbsession.get_sherpa(sherpa_name)
 
         if sherpa.status.disabled_reason not in [
@@ -72,7 +77,7 @@ async def delete_ongoing_trip(
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession() as dbsession:
+    with DBSession(engine=ccm.engine) as dbsession:
         trips = dbsession.get_trip_with_booking_id(booking_id)
         if not trips:
             dpd.raise_error("no trip with the given booking_id")
@@ -108,7 +113,7 @@ async def delete_pending_trip(
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession() as dbsession:
+    with DBSession(engine=ccm.engine) as dbsession:
         trips = dbsession.get_trip_with_booking_id(booking_id)
 
         if not trips:
@@ -187,7 +192,7 @@ async def trip_status_with_type(
     else:
         dpd.raise_error("Query sent for an invalid trip type")
 
-    with DBSession() as dbsession:
+    with DBSession(engine=ccm.engine) as dbsession:
         if trip_status_req.from_dt and trip_status_req.to_dt:
             trip_status_req.from_dt = str_to_dt(trip_status_req.from_dt)
             trip_status_req.to_dt = str_to_dt(trip_status_req.to_dt)
@@ -245,7 +250,7 @@ async def trip_status_pg_with_type(
         f"trip_status_req: {jsonable_encoder(trip_status_req)}"
     )
 
-    with DBSession() as dbsession:
+    with DBSession(engine=ccm.engine) as dbsession:
         if trip_status_req.from_dt and trip_status_req.to_dt:
             trip_status_req.from_dt = str_to_dt(trip_status_req.from_dt)
             trip_status_req.to_dt = str_to_dt(trip_status_req.to_dt)
@@ -276,7 +281,7 @@ async def trip_status(
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession() as dbsession:
+    with DBSession(engine=ccm.engine) as dbsession:
         all_trips = None
         if trip_status_req.from_dt and trip_status_req.to_dt:
             trip_status_req.from_dt = str_to_dt(trip_status_req.from_dt)
@@ -311,7 +316,7 @@ async def ongoing_trip_status(user_name=Depends(dpd.get_user_from_header)):
         dpd.raise_error("Unknown requester", 401)
 
     response = {}
-    with DBSession() as dbsession:
+    with DBSession(engine=ccm.engine) as dbsession:
         all_ongoing_trips = dbsession.get_all_ongoing_trips()
         for ongoing_trip in all_ongoing_trips:
             response.update({ongoing_trip.trip_id: tu.get_trip_status(ongoing_trip.trip)})
@@ -331,7 +336,7 @@ async def trip_analytics_pg(
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession() as dbsession:
+    with DBSession(engine=ccm.engine) as dbsession:
         if trip_analytics_req.from_dt and trip_analytics_req.to_dt:
             trip_analytics_req.from_dt = str_to_dt(trip_analytics_req.from_dt)
             trip_analytics_req.to_dt = str_to_dt(trip_analytics_req.to_dt)
@@ -359,7 +364,7 @@ async def trip_analytics(
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession() as dbsession:
+    with DBSession(engine=ccm.engine) as dbsession:
         if trip_analytics_req.from_dt and trip_analytics_req.to_dt:
             trip_analytics_req.from_dt = str_to_dt(trip_analytics_req.from_dt)
             trip_analytics_req.to_dt = str_to_dt(trip_analytics_req.to_dt)
@@ -400,7 +405,7 @@ async def add_trip_metadata(
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession() as dbsession:
+    with DBSession(engine=ccm.engine) as dbsession:
         trip: tm.Trip = dbsession.get_trip(trip_id)
         if trip.trip_metadata is None:
             trip.trip_metadata = {}
@@ -419,7 +424,7 @@ async def add_trip_description(
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession() as dbsession:
+    with DBSession(engine=ccm.engine) as dbsession:
         trip: tm.Trip = dbsession.get_trip(trip_id)
         if trip.trip_metadata is None:
             trip.trip_metadata = {}
@@ -440,7 +445,7 @@ async def populate_route(
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession() as dbsession:
+    with DBSession(engine=ccm.engine) as dbsession:
         populate_routes = dbsession.get_popular_routes(fleet_name)
 
     for route in populate_routes[:num_routes]:
@@ -469,7 +474,7 @@ async def get_saved_routes(
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession() as dbsession:
+    with DBSession(engine=ccm.engine) as dbsession:
         saved_routes = dbsession.get_saved_routes_fleet(fleet_name)
 
         for saved_route in saved_routes:
@@ -505,7 +510,7 @@ async def get_saved_route(route_tag: str, user_name=Depends(dpd.get_user_from_he
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession() as dbsession:
+    with DBSession(engine=ccm.engine) as dbsession:
         saved_route = dbsession.get_saved_route(route_tag)
 
         if saved_route is None:
@@ -522,7 +527,7 @@ async def delete_saved_route(tag: str, user_name=Depends(dpd.get_user_from_heade
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession() as dbsession:
+    with DBSession(engine=ccm.engine) as dbsession:
         saved_route = dbsession.get_saved_route(tag)
 
         if saved_route is None:
@@ -547,7 +552,7 @@ async def update_saved_route_metadata(
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession() as dbsession:
+    with DBSession(engine=ccm.engine) as dbsession:
         saved_route = dbsession.get_saved_route(update_saved_route_req.tag)
 
         if saved_route is None:
@@ -567,55 +572,36 @@ async def update_saved_route_metadata(
 async def export_analytics_data(
     trip_analytics_req: rqm.TripStatusReq, user_name=Depends(dpd.get_user_from_header)
 ):
-    response = {}
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
-
+    response = {}
     with DBSession() as dbsession:
         if trip_analytics_req.from_dt and trip_analytics_req.to_dt:
+            # Convert string dates to datetime objects
             trip_analytics_req.from_dt = str_to_dt(trip_analytics_req.from_dt)
             trip_analytics_req.to_dt = str_to_dt(trip_analytics_req.to_dt)
-
             all_trip_analytics = dbsession.get_trip_analytics_with_timestamp(
                 trip_analytics_req.from_dt, trip_analytics_req.to_dt
             )
-
+        elif trip_analytics_req.trip_ids:
+            all_trip_analytics = dbsession.get_trip_analytics_with_trip_ids(
+                trip_analytics_req.trip_ids
+            )
         else:
-            if not trip_analytics_req.trip_ids:
-                return response
-                all_trip_analytics = dbsession.get_trip_analytics_with_trip_ids(
-                    trip_analytics_req.trip_ids
-                )
-
-        logging.getLogger("uvicorn").info(
-            f"normalised json: {jsonable_encoder(all_trip_analytics)}"
-        )
-
-        df = pd.DataFrame(
-            jsonable_encoder(all_trip_analytics),
-            columns=[
-                "sherpa_name",
-                "trip_id",
-                "trip_leg_id",
-                "start_time",
-                "end_time",
-                "from_station",
-                "to_station",
-                "cte",
-                "te",
-                "expected_trip_time",
-                "actual_trip_time",
-                "time_elapsed_obstacle_stoppages",
-                "time_elapsed_visa_stoppages",
-                "time_elapsed_other_stoppages",
-                "num_trip_msg",
-                "created_at",
-                "updated_at",
-            ],
-        )
-
+            return response
+        
+        data = []
+        for all_trip_analytic in all_trip_analytics:
+            data.append(utils_util.get_table_as_dict(tm.TripAnalytics, all_trip_analytic)) 
+        # Convert to DataFrame
+        df = pd.DataFrame(data)
+    # Convert DataFrame to CSV
+    output = io.StringIO()
+    df.to_csv(output, index=False)
+    # Prepare the response
+    output.seek(0)
     return StreamingResponse(
-        iter([df.to_csv(index=False)]),
+        io.BytesIO(output.getvalue().encode()),  # Convert string buffer to bytes
         media_type="text/csv",
-        headers={"Content-Disposition": f"attachment; filename=detail_analytics.csv"},
+        headers={"Content-Disposition": "attachment; filename=detail_analytics.csv"},
     )

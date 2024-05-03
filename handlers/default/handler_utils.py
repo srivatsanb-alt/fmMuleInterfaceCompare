@@ -38,9 +38,23 @@ def assign_sherpa(dbsession: DBSession, trip: tm.Trip, sherpa: fm.Sherpa):
     return ongoing_trip
 
 
+def fail_trip(
+    dbsession: DBSession,
+    ongoing_trip: tm.OngoingTrip,
+    sherpa: fm.Sherpa,
+    trip_failed_log: str,
+):
+    dbsession.add_notification(
+        [sherpa.name, sherpa.fleet.name, sherpa.fleet.customer],
+        trip_failed_log,
+        mm.NotificationLevels.alert,
+        mm.NotificationModules.errors,
+    )
+    logging.getLogger(sherpa.name).warning(trip_failed_log)
+    end_trip(dbsession, ongoing_trip, sherpa, False)
+
+
 # starts a trip
-
-
 def start_trip(
     dbsession: DBSession,
     ongoing_trip: tm.OngoingTrip,
@@ -51,44 +65,44 @@ def start_trip(
     start_pose = sherpa_status.pose
     fleet_name = ongoing_trip.trip.fleet_name
 
-    redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
-    etas_at_start = []
-    route_lengths = []
-    start_station_name = None
-    for station in all_stations:
-        end_pose = station.pose
-        end_station_name = station.name
-        route_length = utils_util.get_route_length(
-            start_pose, end_pose, fleet_name, redis_conn
-        )
-        if route_length == np.inf:
-            start_station_info = (
-                start_station_name if start_station_name is not None else start_pose
-            )
-            reason = f"no route from {start_station_info} to {end_station_name}"
-            trip_failed_log = f"{ongoing_trip.sherpa_name} failed to do trip with trip_id: {ongoing_trip.trip.id}) , reason: {reason}"
-            logging.getLogger(ongoing_trip.sherpa_name).warning(trip_failed_log)
-            dbsession.add_notification(
-                [sherpa.name, sherpa.fleet.name, sherpa.fleet.customer],
-                trip_failed_log,
-                mm.NotificationLevels.alert,
-                mm.NotificationModules.errors,
-            )
-            end_trip(dbsession, ongoing_trip, sherpa, False)
-            return
+    with redis.from_url(os.getenv("FM_REDIS_URI")) as redis_conn:
+        etas_at_start = []
+        route_lengths = []
+        start_station_name = None
+        for station in all_stations:
+            if station.status.disabled is True:
+                reason = f"{station.name} is disabled"
+                trip_failed_log = f"{ongoing_trip.sherpa_name} failed to do trip with trip_id: {ongoing_trip.trip.id} , reason: {reason}"
+                fail_trip(dbsession, ongoing_trip, sherpa, trip_failed_log)
+                return
 
-        eta = (
-            0
-            if route_length == 0
-            else dbsession.get_expected_trip_time(start_station_name, end_station_name)
-        )
-        if eta is None:
-            eta = route_length
+            end_pose = station.pose
+            end_station_name = station.name
+            route_length = utils_util.get_route_length(
+                start_pose, end_pose, fleet_name, redis_conn
+            )
 
-        route_lengths.append(route_length)
-        etas_at_start.append(eta)
-        start_pose = station.pose
-        start_station_name = station.name
+            if route_length == np.inf:
+                start_station_info = (
+                    start_station_name if start_station_name is not None else start_pose
+                )
+                reason = f"no route from {start_station_info} to {end_station_name}"
+                trip_failed_log = f"{ongoing_trip.sherpa_name} failed to do trip with trip_id: {ongoing_trip.trip.id}, reason: {reason}"
+                fail_trip(dbsession, ongoing_trip, sherpa, trip_failed_log)
+                return
+
+            eta = (
+                0
+                if route_length == 0
+                else dbsession.get_expected_trip_time(start_station_name, end_station_name)
+            )
+            if eta is None:
+                eta = route_length
+
+            route_lengths.append(route_length)
+            etas_at_start.append(eta)
+            start_pose = station.pose
+            start_station_name = station.name
 
     ongoing_trip.trip.route_lengths = route_lengths
     ongoing_trip.trip.etas_at_start = etas_at_start
@@ -171,9 +185,6 @@ def update_leg_next_station(next_station: fm.Station, sherpa_name: str):
 
 # checks the status of sherpa(initialized, inducted) and checks if the sherpa is available for a trip
 def is_sherpa_available_for_new_trip(dbsession: DBSession, sherpa_status: fm.SherpaStatus):
-    with FMMongo() as fm_mongo:
-        low_battery_config = fm_mongo.get_document_from_fm_config("low_battery")
-        battery_thresh = low_battery_config["battery_thresh"]
 
     AVAILABLE = "available"
     reason = None
@@ -183,19 +194,26 @@ def is_sherpa_available_for_new_trip(dbsession: DBSession, sherpa_status: fm.She
         reason = "not idle"
     if not reason and not sherpa_status.initialized:
         reason = "not initialized"
-    if not reason and sherpa_status.battery_status < battery_thresh:
-        reason = "battery low"
-        utils_util.maybe_add_notification(
-            dbsession,
-            [
-                sherpa_status.sherpa_name,
-                sherpa_status.sherpa.fleet.name,
-                sherpa_status.sherpa.fleet.customer,
-            ],
-            f"{sherpa_status.sherpa_name} battery level less than {battery_thresh}, cannot do new trip",
-            mm.NotificationLevels.alert,
-            mm.NotificationModules.generic,
-        )
+    if not reason:
+        # need not open fm_mongo unnecessarily
+        with FMMongo() as fm_mongo:
+            low_battery_config = fm_mongo.get_document_from_fm_config("low_battery")
+            battery_thresh = low_battery_config["battery_thresh"]
+
+        if sherpa_status.battery_status < battery_thresh:
+            reason = "battery low"
+            utils_util.maybe_add_notification(
+                dbsession,
+                [
+                    sherpa_status.sherpa_name,
+                    sherpa_status.sherpa.fleet.name,
+                    sherpa_status.sherpa.fleet.customer,
+                ],
+                f"{sherpa_status.sherpa_name} battery level less than {battery_thresh}, cannot do new trip",
+                mm.NotificationLevels.alert,
+                mm.NotificationModules.generic,
+            )
+
     if not reason:
         reason = AVAILABLE
     else:

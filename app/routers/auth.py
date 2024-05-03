@@ -14,12 +14,20 @@ from models.db_session import DBSession
 import models.misc_models as mm
 import utils.util as utils_util
 import utils.config_utils as cu
+import core.common as ccm
+
 
 router = APIRouter(
     prefix="/api/v1/user",
     tags=["auth"],
     responses={404: {"description": "Not found"}},
 )
+
+"""
+user details are stored in unstructured database mongodb
+Any new details such as email_id, contact number, access_restriction etc can be added
+as and when required
+"""
 
 
 # performs user authentication
@@ -37,7 +45,7 @@ async def login(user_login: rqm.UserLogin, request: Request):
             dpd.raise_error("Unknown requester", 401)
 
         if hashed_password == cu.DefaultFrontendUser.admin["hashed_password"]:
-            with DBSession() as dbsession:
+            with DBSession(engine=ccm.engine) as dbsession:
                 default_password_log = f"Please change password for user: {user_login.name}, reason: weak password"
                 utils_util.maybe_add_notification(
                     dbsession,
@@ -46,9 +54,12 @@ async def login(user_login: rqm.UserLogin, request: Request):
                     mm.NotificationLevels.alert,
                     mm.NotificationModules.generic,
                 )
+        expiry_interval = None
+        if user_details.get("expiry_interval") and user_details["role"] == "viewer":
+            expiry_interval = user_details["expiry_interval"]
 
         response = {
-            "access_token": dpd.generate_jwt_token(user_login.name),
+            "access_token": dpd.generate_jwt_token(user_login.name, expiry_interval=expiry_interval),
             "user_details": {"user_name": user_login.name, "role": user_details["role"]},
             "static_files_auth": {
                 "username": os.getenv("ATI_STATIC_AUTH_USERNAME"),
@@ -71,8 +82,8 @@ async def share_secrets_to_plugin(
         if hashed_api_key_db != hashed_api_key:
             dpd.raise_error("Unknown requester", 401)
 
-        redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
-        response["FM_SECRET_TOKEN"] = redis_conn.get("FM_SECRET_TOKEN")
+        with redis.from_url(os.getenv("FM_REDIS_URI")) as redis_conn:
+            response["FM_SECRET_TOKEN"] = redis_conn.get("FM_SECRET_TOKEN")
 
     return response
 
@@ -181,6 +192,7 @@ async def delete_frontend_user(
 
     return response
 
+
 @router.get("/get_all_frontend_users_info")
 async def get_all_frontend_users(
     user_name=Depends(dpd.get_user_from_header),
@@ -195,7 +207,6 @@ async def get_all_frontend_users(
 
     # Modify each user detail to replace hashed_password with "Confidential"
     for user_detail in all_user_details:
-        user_detail['hashed_password'] = "Confidential"
+        user_detail["hashed_password"] = "Confidential"
 
     return all_user_details
-

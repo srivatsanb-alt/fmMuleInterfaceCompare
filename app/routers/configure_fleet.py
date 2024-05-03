@@ -3,6 +3,7 @@ import time
 import logging
 import glob
 from fastapi import APIRouter, Depends
+from fastapi.encoders import jsonable_encoder
 import shutil
 import json
 import aioredis
@@ -16,6 +17,8 @@ import models.request_models as rqm
 import app.routers.dependencies as dpd
 from utils.comms import close_websocket_for_sherpa
 import utils.log_utils as lu
+import core.common as ccm
+
 
 # manages the overall configuration of fleet by- deleting sherpa, fleet, map, station; update map.
 # get log config
@@ -31,24 +34,17 @@ router = APIRouter(
 
 @router.get("/all_sherpa_info")
 async def get_all_sherpa_info(user_name=Depends(dpd.get_user_from_header)):
-
+    response = {}
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    response = {}
-    with DBSession() as dbsession:
+    with DBSession(engine=ccm.engine) as dbsession:
         all_sherpas = dbsession.get_all_sherpas()
-        if all_sherpas:
-            for sherpa in all_sherpas:
-                response.update(
-                    {
-                        sherpa.name: {
-                            "hwid": sherpa.hwid,
-                            "api_key": sherpa.hashed_api_key,
-                            "fleet_name": sherpa.fleet.name,
-                        }
-                    }
-                )
+        [response.update({sherpa.name: jsonable_encoder(sherpa)}) for sherpa in all_sherpas]
+        [
+            response[sherpa.name].update({"fleet_name": sherpa.fleet.name})
+            for sherpa in all_sherpas
+        ]
 
     return response
 
@@ -60,10 +56,11 @@ async def add_edit_sherpa(
     user_name=Depends(dpd.get_user_from_header),
 ):
 
+    response = {}
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession() as dbsession:
+    with DBSession(engine=ccm.engine) as dbsession:
         all_sherpa_names = dbsession.get_all_sherpa_names()
 
         fleet = dbsession.get_fleet(add_edit_sherpa.fleet_name)
@@ -78,10 +75,7 @@ async def add_edit_sherpa(
                 fleet_id=fleet.id,
             )
         except Exception as e:
-            if isinstance(e, ValueError):
-                dpd.raise_error(str(e))
-            else:
-                raise e
+            dpd.relay_error_details(e)
 
         if sherpa_name not in all_sherpa_names:
             import utils.rq_utils as rqu
@@ -90,9 +84,8 @@ async def add_edit_sherpa(
             all_sherpa_names.append(sherpa_name)
             lu.set_log_config_dict(all_sherpa_names)
 
-            redis_conn = aioredis.Redis.from_url(os.getenv("FM_REDIS_URI"))
-            await redis_conn.set("all_sherpas", json.dumps(all_sherpa_names))
-            await redis_conn.set("send_conf_to_mfm_unix_dt", time.time())
+            async with aioredis.Redis.from_url(os.getenv("FM_REDIS_URI")) as aredis_conn:
+                await fu.update_fleet_conf_in_redis(dbsession, aredis_conn)
 
             new_qs = [f"{sherpa_name}_update_handler", f"{sherpa_name}_trip_update_handler"]
             for new_q in new_qs:
@@ -100,7 +93,7 @@ async def add_edit_sherpa(
                 process = Process(target=rqu.start_worker, args=(new_q,))
                 process.start()
 
-    return {}
+    return response
 
 
 @router.get("/delete_sherpa/{sherpa_name}")
@@ -108,10 +101,12 @@ async def delete_sherpa(
     sherpa_name: str,
     user_name=Depends(dpd.get_user_from_header),
 ):
+    response = {}
+
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession() as dbsession:
+    with DBSession(engine=ccm.engine) as dbsession:
         sherpa_status: fm.SherpaStatus = dbsession.get_sherpa_status(sherpa_name)
         if not sherpa_status:
             dpd.raise_error(f"Sherpa {sherpa_name} not found")
@@ -128,22 +123,22 @@ async def delete_sherpa(
             )
 
         close_websocket_for_sherpa(sherpa_name)
-        fu.SherpaUtils.delete_sherpa(dbsession, sherpa_name)
+        try:
+            fu.SherpaUtils.delete_sherpa(dbsession, sherpa_name)
+        except Exception as e:
+            dpd.relay_error_details(e)
 
-    all_sherpa_names = dbsession.get_all_sherpa_names()
+    async with aioredis.Redis.from_url(os.getenv("FM_REDIS_URI")) as aredis_conn:
+        await fu.update_fleet_conf_in_redis(dbsession, aredis_conn)
 
-    redis_conn = aioredis.Redis.from_url(os.getenv("FM_REDIS_URI"))
-    await redis_conn.set("all_sherpas", json.dumps(all_sherpa_names))
-    await redis_conn.set("send_conf_to_mfm_unix_dt", time.time())
+        queues_to_delete = [
+            f"{sherpa_name}_update_handler",
+            f"{sherpa_name}_trip_update_handler",
+        ]
+        for q_name in queues_to_delete:
+            send_shutdown_command(aredis_conn, q_name)
 
-    queues_to_delete = [
-        f"{sherpa_name}_update_handler",
-        f"{sherpa_name}_trip_update_handler",
-    ]
-    for q_name in queues_to_delete:
-        send_shutdown_command(redis_conn, q_name)
-
-    return {}
+    return response
 
 
 @router.get("/all_fleet_info")
@@ -153,21 +148,9 @@ async def get_all_fleet_info(user_name=Depends(dpd.get_user_from_header)):
         dpd.raise_error("Unknown requester", 401)
 
     response = {}
-    with DBSession() as dbsession:
+    with DBSession(engine=ccm.engine) as dbsession:
         all_fleets = dbsession.get_all_fleets()
-        for fleet in all_fleets:
-            response.update(
-                {
-                    fleet.name: {
-                        "name": fleet.name,
-                        "map_name": fleet.name,
-                        "customer": fleet.customer,
-                        "site": fleet.site,
-                        "location": fleet.location,
-                    }
-                }
-            )
-
+        [response.update({fleet.name: jsonable_encoder(fleet)}) for fleet in all_fleets]
     return response
 
 
@@ -179,7 +162,7 @@ async def get_all_available_maps(
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession() as dbsession:
+    with DBSession(engine=ccm.engine) as dbsession:
         all_fleets = dbsession.get_all_fleet_names()
         new_fleet = False if fleet_name in all_fleets else True
         if new_fleet:
@@ -208,7 +191,7 @@ async def add_fleet(
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession() as dbsession:
+    with DBSession(engine=ccm.engine) as dbsession:
         all_fleets = dbsession.get_all_fleet_names()
         new_fleet = False if fleet_name in all_fleets else True
         try:
@@ -227,17 +210,12 @@ async def add_fleet(
             fu.ExclusionZoneUtils.add_linked_gates(dbsession, fleet.name)
 
         except Exception as e:
-            if isinstance(e, ValueError):
-                dpd.raise_error(str(e))
-            else:
-                raise e
+            dpd.relay_error_details(e)
 
         if new_fleet:
-            redis_conn = aioredis.Redis.from_url(os.getenv("FM_REDIS_URI"))
-            all_fleet_names = dbsession.get_all_fleet_names()
-            await redis_conn.set("all_fleet_names", json.dumps(all_fleet_names))
-            await redis_conn.set("add_router_for", fleet_name)
-            await redis_conn.set("send_conf_to_mfm_unix_dt", time.time())
+            async with aioredis.Redis.from_url(os.getenv("FM_REDIS_URI")) as aredis_conn:
+                await fu.update_fleet_conf_in_redis(dbsession, aredis_conn)
+                await aredis_conn.set("add_router_for", fleet_name)
 
     return response
 
@@ -251,44 +229,43 @@ async def delete_fleet(
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession() as dbsession:
-        fleet: fm.Fleet = dbsession.get_fleet(fleet_name)
-        if not fleet:
-            dpd.raise_error("Bad detail invalid fleet name")
+    try:
+        with DBSession(engine=ccm.engine) as dbsession:
+            fleet: fm.Fleet = dbsession.get_fleet(fleet_name)
+            if not fleet:
+                dpd.raise_error("Bad detail invalid fleet name")
 
-        all_ongoing_trips_fleet = dbsession.get_all_ongoing_trips_fleet(fleet_name)
-        if len(all_ongoing_trips_fleet):
-            dpd.raise_error("Cancel all the ongoing trips before deleting the fleet")
+            all_ongoing_trips_fleet = dbsession.get_all_ongoing_trips_fleet(fleet_name)
+            if len(all_ongoing_trips_fleet):
+                dpd.raise_error("Cancel all the ongoing trips before deleting the fleet")
 
-        all_fleet_sherpas = dbsession.get_all_sherpas_in_fleet(fleet_name)
+            all_fleet_sherpas = dbsession.get_all_sherpas_in_fleet(fleet_name)
 
-        # close ws connection to make sure new map files are downloaded by sherpa on reconnect
-        for sherpa in all_fleet_sherpas:
-            close_websocket_for_sherpa(sherpa.name)
-            if sherpa.status.trip_id is not None:
-                trip = dbsession.get_trip(sherpa.status.trip_id)
-                dpd.raise_error(
-                    f"delete the ongoing trip with booking_id: {trip.booking_id} and disable {sherpa.name} for trips to delete the sherpa and fleet"
-                )
+            # close ws connection to make sure new map files are downloaded by sherpa on reconnect
+            for sherpa in all_fleet_sherpas:
+                close_websocket_for_sherpa(sherpa.name)
+                if sherpa.status.trip_id is not None:
+                    trip = dbsession.get_trip(sherpa.status.trip_id)
+                    dpd.raise_error(
+                        f"delete the ongoing trip with booking_id: {trip.booking_id} and disable {sherpa.name} for trips to delete the sherpa and fleet"
+                    )
 
-            if sherpa.status.inducted:
-                dpd.raise_error(
-                    f"disable {sherpa.name} for trips to delete the sherpa and fleet"
-                )
+                if sherpa.status.inducted:
+                    dpd.raise_error(
+                        f"disable {sherpa.name} for trips to delete the sherpa and fleet"
+                    )
 
-            fu.SherpaUtils.delete_sherpa(dbsession, sherpa.name)
+                fu.SherpaUtils.delete_sherpa(dbsession, sherpa.name)
 
-        fu.FleetUtils.delete_fleet(dbsession, fleet_name)
+            fu.FleetUtils.delete_fleet(dbsession, fleet_name)
 
-        redis_conn = aioredis.Redis.from_url(os.getenv("FM_REDIS_URI"))
-        all_fleet_names = dbsession.get_all_fleet_names()
-        await redis_conn.set("all_fleet_names", json.dumps(all_fleet_names))
-        await redis_conn.set("send_conf_to_mfm_unix_dt", time.time())
+            async with aioredis.Redis.from_url(os.getenv("FM_REDIS_URI")) as aredis_conn:
+                await fu.update_fleet_conf_in_redis(dbsession, aredis_conn)
+
+    except Exception as e:
+        dpd.relay_error_details(e)
 
     return response
-
-
-# deletes fleet from FM.
 
 
 @router.post("/update_map")
@@ -301,7 +278,7 @@ async def update_map(
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession() as dbsession:
+    with DBSession(engine=ccm.engine) as dbsession:
         fleet_name = update_map_req.fleet_name
 
         if update_map_req.map_path != "use current map":
@@ -344,13 +321,10 @@ async def update_map(
                 close_websocket_for_sherpa(sherpa.name)
 
         except Exception as e:
-            if isinstance(e, ValueError):
-                dpd.raise_error(str(e))
-            else:
-                raise e
+            dpd.relay_error_details(e)
 
-        redis_conn = aioredis.Redis.from_url(os.getenv("FM_REDIS_URI"))
-        await redis_conn.set("update_router_for", fleet_name)
-        await redis_conn.set("send_conf_to_mfm_unix_dt", time.time())
+        async with aioredis.Redis.from_url(os.getenv("FM_REDIS_URI")) as aredis_conn:
+            await fu.update_fleet_conf_in_redis(dbsession, aredis_conn)
+            await aredis_conn.set("update_router_for", fleet_name)
 
     return response

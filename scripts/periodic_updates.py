@@ -3,7 +3,7 @@ import time
 
 # ati code imports
 from utils.comms import send_status_update, send_notification
-from utils.util import get_table_as_dict
+from utils.util import get_table_as_dict, report_error, proc_retry
 import utils.trip_utils as tu
 from models.db_session import DBSession
 from models.fleet_models import SherpaStatus, Sherpa, Fleet, Station, StationStatus
@@ -148,34 +148,27 @@ def send_fleet_level_notifications(dbsession, fleet_name):
     send_notification(all_infos)
     send_notification(action_requests)
 
-
+@proc_retry()
+@report_error
 def send_periodic_updates():
-    while True:
-        try:
-            logging.getLogger().info("starting periodic updates script")
-            with DBSession() as dbsession:
-                while True:
-                    all_fleets = dbsession.get_all_fleets()
+    logging.getLogger().info("starting periodic updates script")
+    with DBSession() as dbsession:
+        while True:
+            all_fleets = dbsession.get_all_fleets()
+            for fleet in all_fleets:
+                fleet_status_msg = get_fleet_status_msg(dbsession, fleet)
+                send_status_update(fleet_status_msg)
 
-                    for fleet in all_fleets:
-                        fleet_status_msg = get_fleet_status_msg(dbsession, fleet)
-                        send_status_update(fleet_status_msg)
+                ongoing_trip_msg = get_ongoing_trips_status(dbsession, fleet)
+                send_status_update(ongoing_trip_msg)
 
-                        ongoing_trip_msg = get_ongoing_trips_status(dbsession, fleet)
-                        send_status_update(ongoing_trip_msg)
+                send_fleet_level_notifications(dbsession, fleet.name)
 
-                        send_fleet_level_notifications(dbsession, fleet.name)
+            visa_msg = get_visas_held_msg(dbsession)
+            send_status_update(visa_msg)
 
-                    visa_msg = get_visas_held_msg(dbsession)
-                    send_status_update(visa_msg)
+            all_alerts = get_all_alert_notifications(dbsession)
+            send_notification(all_alerts)
 
-                    all_alerts = get_all_alert_notifications(dbsession)
-                    send_notification(all_alerts)
-
-                    # force refresh of all objects
-                    dbsession.session.expire_all()
-                    time.sleep(2)
-
-        except Exception as e:
-            logging.getLogger().info(f"exception in periodic updates script {e}")
+            dbsession.session.expire_all()
             time.sleep(2)

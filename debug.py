@@ -24,13 +24,14 @@ if __name__ == "__main__":
     if sys.argv[1] == "simulate" and simulator_config["simulate"]:
         fs = FleetSimulator()
         fleet_manager_up = False
-        redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
-        while not fleet_manager_up:
-            fleet_manager_up = redis_conn.get("is_fleet_manager_up")
-            print("waiting for fleet-manager to start")
-            if fleet_manager_up is not None:
-                fleet_manager_up = json.loads(fleet_manager_up)
-            time.sleep(5)
+        # redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
+        with redis.from_url(os.getenv("FM_REDIS_URI")) as redis_conn:
+            while not fleet_manager_up:
+                fleet_manager_up = redis_conn.get("is_fleet_manager_up")
+                print("waiting for fleet-manager to start")
+                if fleet_manager_up is not None:
+                    fleet_manager_up = json.loads(fleet_manager_up)
+                time.sleep(5)
 
         fs.initialize_sherpas()
         time.sleep(2)

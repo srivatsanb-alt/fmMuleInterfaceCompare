@@ -276,87 +276,88 @@ class OptimalDispatch:
         w1 = self.config["eta_power_factor"]
         w2 = self.config["priority_power_factor"]
         max_trips_to_consider = self.config["max_trips_to_consider"]
-        redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
+        with redis.from_url(os.getenv("FM_REDIS_URI")) as redis_conn:
+            cost_matrix = np.ones((len(self.pickup_q), len(self.sherpa_q))) * np.inf
+            priority_normalised_cost_matrix = (
+                np.ones((len(self.pickup_q), len(self.sherpa_q))) * np.inf
+            )
+            priority_matrix = np.zeros((len(self.pickup_q), len(self.sherpa_q)))
+            i = 0
+            for pickup_q, pickup_q_val in self.pickup_q.items():
+                j = 0
+                for sherpa_q, sherpa_q_val in self.sherpa_q.items():
+                    pose_1 = sherpa_q_val["pose"]
+                    pose_2 = pickup_q_val["pose"]
+                    pickup_priority = pickup_q_val["priority"]
+                    route = pickup_q_val["route"]
+                    sherpa_name = pickup_q_val["sherpa_name"]
+                    temp_stations = [
+                        station
+                        for station in pickup_q_val["route"]
+                        if station in sherpa_q_val["exclude_stations"]
+                    ]
 
-        cost_matrix = np.ones((len(self.pickup_q), len(self.sherpa_q))) * np.inf
-        priority_normalised_cost_matrix = (
-            np.ones((len(self.pickup_q), len(self.sherpa_q))) * np.inf
-        )
-        priority_matrix = np.zeros((len(self.pickup_q), len(self.sherpa_q)))
-        i = 0
-        for pickup_q, pickup_q_val in self.pickup_q.items():
-            j = 0
-            for sherpa_q, sherpa_q_val in self.sherpa_q.items():
-                pose_1 = sherpa_q_val["pose"]
-                pose_2 = pickup_q_val["pose"]
-                pickup_priority = pickup_q_val["priority"]
-                route = pickup_q_val["route"]
-                sherpa_name = pickup_q_val["sherpa_name"]
-                temp_stations = [
-                    station
-                    for station in pickup_q_val["route"]
-                    if station in sherpa_q_val["exclude_stations"]
-                ]
+                    if len(temp_stations) > 0:
+                        self.logger.info(
+                            f"cannot use {sherpa_q} for trip_id: {pickup_q}, reason: sherpa restricted from going to {temp_stations}"
+                        )
+                        total_eta = np.inf
+                    elif sherpa_q_val["fleet_status"] == FleetStatus.MAINTENANCE:
+                        self.logger.info(
+                            f"cannot send {sherpa_q} to {route}, fleet in maintenance mode"
+                        )
+                        total_eta = np.inf
+                    elif (
+                        sherpa_q_val["fleet_status"] == FleetStatus.STOPPED
+                        and pickup_q_val["booked_by"].find(f"park_{sherpa_q}") == -1
+                    ):
+                        self.logger.info(
+                            f"cannot send {sherpa_q} to {route}, fleet stopped"
+                        )
+                        total_eta = np.inf
+                    elif (
+                        sherpa_q_val["parking_mode"] is True
+                        and pickup_q_val["booked_by"].find(f"park_{sherpa_q}") == -1
+                    ):
+                        self.logger.info(
+                            f"cannot send {sherpa_q} to {route}, sherpa in parking mode"
+                        )
+                        total_eta = np.inf
+                    elif i + 1 > max_trips_to_consider:
+                        self.logger.info(
+                            f"cannot send {sherpa_q} to {route}, num trips greater than max_trips_to_consider, num_trips: {i+1}"
+                        )
+                        total_eta = np.inf
+                    elif sherpa_name and sherpa_name != sherpa_q:
+                        self.logger.info(
+                            f"cannot assign {sherpa_q} for trip_id: {pickup_q}, can be assigned only to {sherpa_name} "
+                        )
+                        total_eta = np.inf
+                    else:
+                        route_length = utils_util.get_route_length(
+                            pose_1, pose_2, fleet_name, redis_conn
+                        )
+                        total_eta = route_length + sherpa_q_val["remaining_eta"]
 
-                if len(temp_stations) > 0:
-                    self.logger.info(
-                        f"cannot use {sherpa_q} for trip_id: {pickup_q}, reason: sherpa restricted from going to {temp_stations}"
+                    # to handle w1 == 0  and eta == np.inf case
+                    weighted_total_eta = (
+                        (total_eta**w1) if (total_eta != np.inf) else total_eta
                     )
-                    total_eta = np.inf
-                elif sherpa_q_val["fleet_status"] == FleetStatus.MAINTENANCE:
-                    self.logger.info(
-                        f"cannot send {sherpa_q} to {route}, fleet in maintenance mode"
+                    weighted_pickup_priority = (
+                        (pickup_priority**w2)
+                        if (pickup_priority != np.inf)
+                        else pickup_priority
                     )
-                    total_eta = np.inf
-                elif (
-                    sherpa_q_val["fleet_status"] == FleetStatus.STOPPED
-                    and pickup_q_val["booked_by"].find(f"park_{sherpa_q}") == -1
-                ):
-                    self.logger.info(f"cannot send {sherpa_q} to {route}, fleet stopped")
-                    total_eta = np.inf
-                elif (
-                    sherpa_q_val["parking_mode"] is True
-                    and pickup_q_val["booked_by"].find(f"park_{sherpa_q}") == -1
-                ):
-                    self.logger.info(
-                        f"cannot send {sherpa_q} to {route}, sherpa in parking mode"
-                    )
-                    total_eta = np.inf
-                elif i + 1 > max_trips_to_consider:
-                    self.logger.info(
-                        f"cannot send {sherpa_q} to {route}, num trips greater than max_trips_to_consider, num_trips: {i+1}"
-                    )
-                    total_eta = np.inf
-                elif sherpa_name and sherpa_name != sherpa_q:
-                    self.logger.info(
-                        f"cannot assign {sherpa_q} for trip_id: {pickup_q}, can be assigned only to {sherpa_name} "
-                    )
-                    total_eta = np.inf
-                else:
-                    route_length = utils_util.get_route_length(
-                        pose_1, pose_2, fleet_name, redis_conn
-                    )
-                    total_eta = route_length + sherpa_q_val["remaining_eta"]
 
-                # to handle w1 == 0  and eta == np.inf case
-                weighted_total_eta = (
-                    (total_eta**w1) if (total_eta != np.inf) else total_eta
-                )
-                weighted_pickup_priority = (
-                    (pickup_priority**w2)
-                    if (pickup_priority != np.inf)
-                    else pickup_priority
-                )
+                    cost_matrix[i, j] = total_eta
+                    priority_matrix[i, j] = pickup_priority
 
-                cost_matrix[i, j] = total_eta
-                priority_matrix[i, j] = pickup_priority
+                    priority_normalised_cost_matrix[i, j] = (
+                        weighted_total_eta / weighted_pickup_priority
+                    )
 
-                priority_normalised_cost_matrix[i, j] = (
-                    weighted_total_eta / weighted_pickup_priority
-                )
-
-                j += 1
-            i += 1
+                    j += 1
+                i += 1
 
         """
         Reasons for adding epsilon:

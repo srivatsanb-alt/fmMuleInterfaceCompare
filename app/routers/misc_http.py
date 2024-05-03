@@ -18,6 +18,7 @@ import models.misc_models as mm
 from models.db_session import DBSession
 import app.routers.dependencies as dpd
 import utils.util as utils_util
+import core.common as ccm
 
 
 router = APIRouter(
@@ -30,7 +31,7 @@ async def site_info(user_name=Depends(dpd.get_user_from_header)):
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession() as dbsession:
+    with DBSession(engine=ccm.engine) as dbsession:
         fleet_names = dbsession.get_all_fleet_names()
         software_compatability = dbsession.get_compatability_info()
         compatible_sherpa_versions = software_compatability.info.get("sherpa_versions", [])
@@ -74,7 +75,7 @@ async def master_data(
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession() as dbsession:
+    with DBSession(engine=ccm.engine) as dbsession:
         fleet_names = dbsession.get_all_fleet_names()
 
         if master_data_info.fleet_name not in fleet_names:
@@ -133,7 +134,7 @@ async def sherpa_summary(
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession() as dbsession:
+    with DBSession(engine=ccm.engine) as dbsession:
         recent_events = dbsession.get_sherpa_events(sherpa_name)
         result = []
         for recent_event in recent_events:
@@ -162,7 +163,7 @@ async def update_sherpa_metadata(
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession() as dbsession:
+    with DBSession(engine=ccm.engine) as dbsession:
         sherpa_name = update_sherpa_metadata_req.sherpa_name
         sherpa_metadata = dbsession.get_sherpa_metadata(sherpa_name)
 
@@ -183,7 +184,7 @@ async def get_sherpa_metadata(
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession() as dbsession:
+    with DBSession(engine=ccm.engine) as dbsession:
         sherpa_metadata = dbsession.get_sherpa_metadata(sherpa_name)
         if not sherpa_metadata:
             dpd.raise_error(f"sherpa metadata for {sherpa_name} not found")
@@ -210,7 +211,7 @@ async def get_route_wps(
 
     response = {}
 
-    with DBSession() as dbsession:
+    with DBSession(engine=ccm.engine) as dbsession:
         stations_poses = []
         fleet_name = dbsession.get_fleet_name_from_route(route_preview_req.route)
         for station_name in route_preview_req.route:
@@ -248,7 +249,7 @@ async def get_sherpa_live_route(
 
     response = {}
 
-    with DBSession() as dbsession:
+    with DBSession(engine=ccm.engine) as dbsession:
         ongoing_trip = dbsession.get_enroute_trip(live_route_req.sherpa_name)
 
         if not ongoing_trip:
@@ -267,7 +268,7 @@ async def sherpa_build_info(sherpa_name: str, user_name=Depends(dpd.get_user_fro
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession() as dbsession:
+    with DBSession(engine=ccm.engine) as dbsession:
         sherpa_status = dbsession.get_sherpa_status(sherpa_name)
 
         if not sherpa_status:
@@ -296,7 +297,7 @@ async def create_generic_alerts(
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession() as dbsession:
+    with DBSession(engine=ccm.engine) as dbsession:
         utils_util.maybe_add_notification(
             dbsession,
             dbsession.get_customer_names(),
@@ -305,6 +306,57 @@ async def create_generic_alerts(
             mm.NotificationModules.generic,
         )
 
+@router.post("/get_fm_incidents_pg")
+async def get_fm_incidents_for_fm_health(
+    fm_incidents_req: rqm.FMIncidentsReqPg,
+    user_name=Depends(dpd.get_user_from_header)
+):
+    response = {}
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    from_dt = utils_util.str_to_dt(fm_incidents_req.from_dt)
+    to_dt = utils_util.str_to_dt(fm_incidents_req.to_dt)
+
+    with DBSession(engine=ccm.engine) as dbsession:
+        fm_incidents, count, limit, pages, sort_field, sort_order = dbsession.get_fm_incident_pg(
+            from_dt,
+            to_dt,
+            fm_incidents_req.error_type,
+            fm_incidents_req.sort_field,
+            fm_incidents_req.sort_order,
+            fm_incidents_req.page,
+            fm_incidents_req.limit,
+        )
+
+        result = []             
+
+        for fm_incident in fm_incidents:
+            result.append(
+                {
+                    fm_incident.id: {
+                        "type": fm_incident.type,
+                        "code": fm_incident.code,
+                        "incident_id": fm_incident.incident_id,
+                        "data_uploaded": fm_incident.data_uploaded,
+                        "data_path": fm_incident.data_path,
+                        "module": fm_incident.module,
+                        "message": fm_incident.message,
+                        "updated_at": fm_incident.updated_at,
+                        "created_at": fm_incident.created_at,
+                    }
+                }
+            )
+        
+        response = {
+            "fm_incidents": result,
+            "count": count,
+            "limit": limit,
+            "total_pages": pages,
+            "sort_field": sort_field,
+            "sort_order": sort_order,
+        }
+    return response
 
 @router.post("/get_fm_incidents")
 async def get_fm_incidents(
@@ -314,7 +366,7 @@ async def get_fm_incidents(
         dpd.raise_error("Unknown requester", 401)
 
     response = {}
-    with DBSession() as dbsession:
+    with DBSession(engine=ccm.engine) as dbsession:
         fm_incidents = dbsession.get_recent_fm_incident(
             get_fm_incident.sherpa_name, n=get_fm_incident.num_of_incidents
         )
@@ -349,7 +401,7 @@ async def get_visa_assignments(user_name=Depends(dpd.get_user_from_header)):
     response = []
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
-    with DBSession() as dbsession:
+    with DBSession(engine=ccm.engine) as dbsession:
         zone_ids = dbsession.session.query(vm.ExclusionZone.zone_id).all()
         response = jsonable_encoder(zone_ids)
         for item in response:
@@ -376,7 +428,7 @@ async def get_sherpa_oee(
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with DBSession() as dbsession:
+    with DBSession(engine=ccm.engine) as dbsession:
         from_dt = utils_util.str_to_dt(generic_time_req.from_dt)
         to_dt = utils_util.str_to_dt(generic_time_req.to_dt)
 
@@ -497,9 +549,10 @@ async def fm_health_stats(
         response["disk_usage"] = total_disk_usage
 
     # get current folder
-    redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
-    fm_backup_path = os.path.join(os.getenv("FM_STATIC_DIR"), "data_backup")
-    current_data = redis_conn.get("current_data_folder").decode()
+    # redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
+    with redis.from_url(os.getenv("FM_REDIS_URI")) as redis_conn:
+        fm_backup_path = os.path.join(os.getenv("FM_STATIC_DIR"), "data_backup")
+        current_data = redis_conn.get("current_data_folder").decode()
     response["current_data_folder"] = os.path.join(fm_backup_path, current_data)
 
     return response
@@ -592,7 +645,6 @@ async def upload_map_file(
         os.makedirs(dir_to_save)
 
     file_path = os.path.join(dir_to_save, uploaded_file.filename)
-    with open(file_path, "wb") as f:
-        f.write(await uploaded_file.read())
+    await utils_util.write_to_file_async(file_path, uploaded_file)
 
     return response

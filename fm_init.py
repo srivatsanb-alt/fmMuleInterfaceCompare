@@ -41,31 +41,32 @@ def regenerate_mule_config():
 
 
 def populate_redis_with_basic_info(dbsession: DBSession):
-    redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
-    all_sherpas = dbsession.get_all_sherpas()
-    sherpa_names = []
-    for sherpa in all_sherpas:
-        sherpa_names.append(sherpa.name)
-    redis_conn.set("all_sherpas", json.dumps(sherpa_names))
+    # redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
+    with redis.from_url(os.getenv("FM_REDIS_URI")) as redis_conn:
+        all_sherpas = dbsession.get_all_sherpas()
+        sherpa_names = []
+        for sherpa in all_sherpas:
+            sherpa_names.append(sherpa.name)
+        redis_conn.set("all_sherpas", json.dumps(sherpa_names))
 
-    all_fleet_names = dbsession.get_all_fleet_names()
-    redis_conn.set("all_fleet_names", json.dumps(all_fleet_names))
+        all_fleet_names = dbsession.get_all_fleet_names()
+        redis_conn.set("all_fleet_names", json.dumps(all_fleet_names))
 
-    # set seperate loggers for all sherpas
-    lu.set_log_config_dict(sherpa_names)
+        # set seperate loggers for all sherpas
+        lu.set_log_config_dict(sherpa_names)
 
-    # redis_expire_timeout
-    with FMMongo() as fm_mongo:
-        rq_params = fm_mongo.get_document_from_fm_config("rq")
-        app_security_params = fm_mongo.get_document_from_fm_config("app_security")
+        # redis_expire_timeout
+        with FMMongo() as fm_mongo:
+            rq_params = fm_mongo.get_document_from_fm_config("rq")
+            app_security_params = fm_mongo.get_document_from_fm_config("app_security")
 
-    # store default job timeout
-    default_job_timeout = rq_params["default_job_timeout"]
-    generic_handler_job_timeout = rq_params["generic_handler_job_timeout"]
+        # store default job timeout
+        default_job_timeout = rq_params["default_job_timeout"]
+        generic_handler_job_timeout = rq_params["generic_handler_job_timeout"]
 
-    redis_conn.set("default_job_timeout_ms", default_job_timeout * 1000)
-    redis_conn.set("generic_handler_job_timeout_ms", generic_handler_job_timeout * 1000)
-    redis_conn.set("token_expiry_time_sec", app_security_params["token_expiry_time"])
+        redis_conn.set("default_job_timeout_ms", default_job_timeout * 1000)
+        redis_conn.set("generic_handler_job_timeout_ms", generic_handler_job_timeout * 1000)
+        redis_conn.set("token_expiry_time_sec", app_security_params["token_expiry_time"])
 
 
 def check_if_run_host_service_is_setup(dbsession):
@@ -107,7 +108,6 @@ def main():
 
     with DBSession() as dbsession:
         fu.add_software_compatability(dbsession)
-        fu.add_master_fm_data_upload(dbsession)
         fu.add_sherpa_metadata(dbsession)
 
         # populate redis with basic info

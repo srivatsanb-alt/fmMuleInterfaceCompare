@@ -7,8 +7,6 @@ from fastapi import HTTPException
 from fastapi import Header
 from fastapi.param_functions import Query
 from rq.job import Job
-from rq import Retry
-import aioredis
 import redis
 import os
 import json
@@ -16,14 +14,15 @@ import json
 # ati code imports
 import core.handler_configuration as hc
 from utils.rq_utils import enqueue, enqueue_at, Queues
-from models.request_models import SherpaReq
 from models.db_session import DBSession
 
 
 # upon assignment of a task, it gets added into the job queue
 def add_job_to_queued_jobs(job_id, source, redis_conn=None):
+    close = False
     if redis_conn is None:
         redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
+        close = True
     queued_jobs = redis_conn.get("queued_jobs")
     if queued_jobs is None:
         queued_jobs = b"{}"
@@ -38,13 +37,17 @@ def add_job_to_queued_jobs(job_id, source, redis_conn=None):
 
     queued_jobs.update({source: jobs_source})
     redis_conn.set("queued_jobs", json.dumps(queued_jobs))
-    redis_conn.close()
+    if close:
+        redis_conn.close()
 
 
 # removes job from the job queue
 def remove_job_from_queued_jobs(job_id, source, redis_conn=None):
+    close = False
     if redis_conn is None:
         redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
+        close = True
+
     queued_jobs = redis_conn.get("queued_jobs")
     if queued_jobs is None:
         return
@@ -60,7 +63,9 @@ def remove_job_from_queued_jobs(job_id, source, redis_conn=None):
 
     queued_jobs.update({source: jobs_source})
     redis_conn.set("queued_jobs", json.dumps(queued_jobs))
-    redis_conn.close()
+
+    if close:
+        redis_conn.close()
 
 
 def raise_error(detail, code=400):
@@ -115,13 +120,15 @@ def decode_token(token: str):
         return None
 
 
-def generate_jwt_token(username: str, role=None):
+def generate_jwt_token(username: str, role=None, expiry_interval=None):
     redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
+    if expiry_interval is None:
+        expiry_interval = int(redis_conn.get("token_expiry_time_sec").decode())
     access_token = jwt.encode(
         {
             "sub": username,
             "role": role,
-            "exp": time.time() + int(redis_conn.get("token_expiry_time_sec").decode()),
+            "exp": time.time() + expiry_interval,
         },
         redis_conn.get("FM_SECRET_TOKEN"),
         algorithm="HS256",
@@ -160,10 +167,6 @@ def process_req(queue, req, user, redis_conn=None, dt=None):
 
     kwargs.update({"job_timeout": timeout})
 
-    # add retry only for SherpaReq(req comes from Sherpa)
-    if isinstance(req, SherpaReq):
-        kwargs.update({"retry": Retry(max=2, interval=[0.5, 2])})
-
     if dt:
         job = enqueue_at(queue, dt, handle, *args, **kwargs)
         return job
@@ -173,34 +176,42 @@ def process_req(queue, req, user, redis_conn=None, dt=None):
     return job
 
 
+def relay_error_details(e: Exception):
+    error_detail = "Unable to process request"
+    status_code = 500
+    if isinstance(e, ValueError):
+        # request conflicts with the current state of the server.
+        status_code = 409
+        error_detail = str(e)
+
+    elif isinstance(e, Exception):
+        status_code = 400
+        error_detail = str(e)
+
+    raise_error(error_detail, status_code)
+
+
 async def process_req_with_response(queue, req, user: str):
     redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
     job = process_req(queue, req, user, redis_conn)
+    add_job_to_queued_jobs(job.id, req.source, redis_conn)
 
-    # Unique key for each job to signal completion
-    job_completion_key = f"job_{job.id}_completion"
+    status = ""
+    while status not in ["finished", "failed"]:
+        job = Job.fetch(job.id, connection=redis_conn)
+        job.refresh()
+        status = job.get_status()
+        logging.debug(f"Job id: {Job.id}, Job status: {status}")
+        await asyncio.sleep(0.01)
 
-    # Wait for the job to complete using aioredis with BRPOP
-    async with aioredis.from_url(os.getenv("FM_REDIS_URI")) as async_redis_conn:
-        await async_redis_conn.brpop(job_completion_key)
-
-    # Re-fetch or refresh the job to get the updated status
-    job = Job.fetch(job.id, connection=redis_conn)
-    job.refresh()
-    status = job.get_status()
+    remove_job_from_queued_jobs(job.id, req.source, redis_conn)
 
     if status == "failed":
-        status_code = 500
         await asyncio.sleep(0.1)
         job_meta = job.get_meta(refresh=True)
         error_value = job_meta.get("error_value")
-
-        if isinstance(error_value, ValueError):
-            error_detail = str(error_value)
-            status_code = 409  # request conflicts with the current state of the server.
-
         job.cancel()
-        raise HTTPException(status_code=status_code, detail=error_detail)
+        relay_error_details(error_value)
 
     # Fetching the job result
     response = job.result

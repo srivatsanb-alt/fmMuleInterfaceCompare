@@ -6,6 +6,9 @@ from rq import Queue
 import json
 from rq import Connection, Worker
 
+# ati code imports
+import utils.util as utils_util
+
 
 def start_worker(queue):
     with Connection():
@@ -86,12 +89,20 @@ def report_failure(job, connection, fail_type, value, traceback):
         f"RQ job failed: error: {fail_type}, value {value}, func: {job.func_name}, timeout: {job.timeout}, ttl: {job.ttl}, args: {job.args}, kwargs: {job.kwargs}",
         exc_info=(fail_type, value, traceback),
     )
-    signal_job_completion(job.id, connection)
+    error_dict = {
+        "error_type": str(fail_type),
+        "error_msg": value,
+        "Job arguments": job.args,
+        "module": job.func_name,
+        "code": "rq",
+    }
+    utils_util.write_fm_error_to_json_file("rq_failure", error_dict)
+    # signal_job_completion(job.id, connection)
 
 
 def report_success(job, connection, result, *args, **kwargs):
-    signal_job_completion(job.id, connection)
-    # pass
+    pass
+    # signal_job_completion(job.id, connection)
 
 
 def enqueue(queue: Queue, func, *args, **kwargs):

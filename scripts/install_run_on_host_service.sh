@@ -5,6 +5,9 @@ FM_STATIC_DIR=$(pwd)
 
 echo Working Directory: $FM_STATIC_DIR
 
+rm run_on_host_fifo || true
+rm run_on_host_updater_fifo || true
+
 mkfifo run_on_host_fifo || true
 mkfifo run_on_host_updater_fifo || true
 

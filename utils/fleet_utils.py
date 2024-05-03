@@ -5,6 +5,7 @@ import secrets
 import logging
 import logging.config
 import json
+import time
 import datetime
 from typing import List, Dict
 from core.constants import FleetStatus
@@ -18,7 +19,6 @@ import models.fleet_models as fm
 import models.visa_models as vm
 import models.misc_models as mm
 import models.trip_models as tm
-import utils.util as utils_util
 from models.base_models import StationProperties
 import utils.log_utils as lu
 
@@ -83,7 +83,7 @@ def load_ez_json(fleet_name):
         try:
             ez_gates = json.load(f)
         except Exception as e:
-            raise ValueError(f"Unable to parse ez.json, Exception: {e}")
+            raise Exception(f"Unable to parse ez.json, Exception: {e}")
 
     return ez_gates
 
@@ -118,7 +118,7 @@ def maybe_create_gmaj_file(fleet_name: str) -> None:
     wpsj_path = get_map_file_path(fleet_name, "waypoints.json")
 
     if not os.path.exists(wpsj_path):
-        raise ValueError(f"Unable to fetch {wpsj_path}")
+        raise Exception(f"Unable to fetch {wpsj_path}")
 
     rpi.maybe_update_gmaj(gmaj_path, wpsj_path, True)
     return
@@ -157,26 +157,6 @@ def add_software_compatability(dbsession: DBSession):
         dbsession.add_to_session(sc)
 
 
-def add_master_fm_data_upload(dbsession: DBSession):
-    master_fm_data_upload_info = dbsession.get_master_data_upload_info()
-
-    if master_fm_data_upload_info is None:
-        mfm_du = mm.MasterFMDataUpload(
-            info={
-                "last_trip_update_dt": utils_util.dt_to_str(datetime.datetime.now()),
-                "last_trip_analytics_update_dt": utils_util.dt_to_str(
-                    datetime.datetime.now()
-                ),
-                "last_sherpa_oee_update_dt": utils_util.dt_to_str(datetime.datetime.now()),
-                "last_fm_incidents_update_dt": utils_util.dt_to_str(
-                    datetime.datetime.now()
-                ),
-                "last_file_upload_dt": utils_util.dt_to_str(datetime.datetime.now()),
-            }
-        )
-        dbsession.add_to_session(mfm_du)
-
-
 def add_sherpa_metadata(dbsession: DBSession):
     all_sherpas = dbsession.get_all_sherpas()
     for sherpa in all_sherpas:
@@ -206,7 +186,7 @@ class FleetUtils:
                 dbsession.session.query(fm.Map).filter(fm.Map.name == name).one_or_none()
             )
             if map is None:
-                raise ValueError("Add map before adding fleet")
+                raise Exception("Add map before adding fleet")
             fleet = fm.Fleet(
                 name=name,
                 site=site,
@@ -448,15 +428,16 @@ class SherpaUtils:
             sherpa.ip_address = None
             if api_key is not None:
                 sherpa.hashed_api_key = hashed_api_key
-                logger.info(f"updated sherpa {sherpa_name}, with api_key: {api_key}")
+                logger.info(f"updated sherpa {sherpa_name} ")
             if sherpa.fleet_id != fleet_id:
                 raise ValueError(
                     f"Cannot duplicate sherpas across fleet, {sherpa.name} is already present in {sherpa.fleet.name}"
                 )
             logger.info(f"updated sherpa {sherpa_name}, with hwid: {hwid}")
         else:
+            # new sherpa requires an API key and Hardware ID
             if api_key is None or hwid is None:
-                raise ValueError(f"API Key/Hardware id cannot be None")
+                raise ValueError("API Key/Hardware id cannot be None")
 
             temp = dbsession.get_sherpa_with_hwid(hwid)
             if temp:
@@ -683,42 +664,23 @@ class ExclusionZoneUtils:
         zone_types = ["_lane", "_station"]
         for zone_type in zone_types:
             prev_zone_id = prev_zone + zone_type
-            next_zone_st = next_zone + "_station"
-            next_zone_lane = next_zone + "_lane"
-            lane_link = (
+            next_zone_id = next_zone + zone_type
+            link = (
                 dbsession.session.query(vm.LinkedGates)
                 .filter(vm.LinkedGates.prev_zone_id == prev_zone_id)
-                .filter(vm.LinkedGates.next_zone_id == next_zone_lane)
+                .filter(vm.LinkedGates.next_zone_id == next_zone_id)
                 .one_or_none()
             )
-            st_link = (
-                dbsession.session.query(vm.LinkedGates)
-                .filter(vm.LinkedGates.prev_zone_id == prev_zone_id)
-                .filter(vm.LinkedGates.next_zone_id == next_zone_st)
-                .one_or_none()
-            )
-
-            if lane_link:
+            if link:
                 logger.info(
-                    f"Link between {prev_zone_id} and {next_zone_lane} already exsists"
+                    f"Link between {prev_zone_id} and {next_zone_id} already exsists"
                 )
             else:
-                lane_link = vm.LinkedGates(
-                    prev_zone_id=prev_zone_id, next_zone_id=next_zone_lane
+                new_link = vm.LinkedGates(
+                    prev_zone_id=prev_zone_id, next_zone_id=next_zone_id
                 )
-                dbsession.add_to_session(lane_link)
-                logger.info(f"Created a link between {prev_zone_id} and {next_zone_lane}")
-
-            if st_link:
-                logger.info(
-                    f"Link between {prev_zone_id} and {next_zone_st} already exsists"
-                )
-            else:
-                st_link = vm.LinkedGates(
-                    prev_zone_id=prev_zone_id, next_zone_id=next_zone_st
-                )
-                dbsession.add_to_session(st_link)
-                logger.info(f"Created a link between {prev_zone_id} and {next_zone_st}")
+                dbsession.add_to_session(new_link)
+                logger.info(f"Created a link between {prev_zone_id} and {next_zone_id}")
 
     @classmethod
     def delete_exclusion_zones(
@@ -765,3 +727,11 @@ class ExclusionZoneUtils:
         for link in all_links:
             logger.info(f"deleted link between {link.prev_zone_id} and {link.next_zone_id}")
             dbsession.session.delete(link)
+
+
+async def update_fleet_conf_in_redis(dbsession: DBSession, aredis_conn):
+    all_sherpa_names = dbsession.get_all_sherpa_names()
+    all_fleet_names = dbsession.get_all_fleet_names()
+    await aredis_conn.set("all_sherpas", json.dumps(all_sherpa_names))
+    await aredis_conn.set("all_fleet_names", json.dumps(all_fleet_names))
+    await aredis_conn.set("send_conf_to_mfm_unix_dt", time.time())
