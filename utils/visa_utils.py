@@ -47,54 +47,50 @@ def get_linked_gates(ezone: vm.ExclusionZone):
 
 def split_zone_id(zone_id: str):
     return zone_id.rsplit("_", 1)
-
-
-def lock_exclusion_zone(ezone: vm.ExclusionZone, sherpa: fm.Sherpa, exclusive: bool = True):
-    if len(ezone.sherpas) == 0:
-        ezone.sherpas = []
-
-    ezone.sherpas.append(sherpa)
-
+   
 
 def can_lock_exclusion_zone(
     dbsession: DBSession,
     ezone: vm.ExclusionZone,
-    sherpa: fm.Sherpa,
+    requester,
     exclusive: bool = True,
 ):
     zone_id = ezone.zone_id
     reason = None
 
     logging.getLogger("visa").info(
-        f"{ezone.zone_id} access held by {[s.name for s in ezone.sherpas]}"
+        f"{ezone.zone_id} access held by {ezone.access_held_by()}"
     )
 
-    if len(ezone.sherpas) == 0:
-        reason = f"{sherpa.name} can be granted lock for {zone_id} exclusive={exclusive}"
+    granted = False
+    if requester in ezone.sherpas or requester in ezone.super_users:
+        reason = f"{requester.name} already has {zone_id} exclusive={exclusive}"
+        granted = True
         logging.getLogger("visa").info(reason)
-        return True, reason
 
-    if sherpa in ezone.sherpas and len(ezone.sherpas) == 1:
-        reason = f"{sherpa.name} already has {zone_id} exclusive={exclusive}"
+    elif len(ezone.sherpas) == 0 and len(ezone.super_users) == 0:
+        reason = f"{requester.name} can be granted lock for {zone_id} exclusive={exclusive}"
         logging.getLogger("visa").info(reason)
-        return True, reason
+        granted = True
 
-    if ezone.exclusivity:
-        reason = f"{sherpa.name} cannot be granted {zone_id} exclusive access held by {[s.name for s in ezone.sherpas]}"
+    elif ezone.exclusivity:
+        reason = f"{requester.name} cannot be granted {zone_id} exclusive access held by {ezone.access_held_by()}"
         logging.getLogger("visa").info(reason)
-        return False, reason
-
+        
+        
     elif not exclusive:
-        reason = f"{sherpa.name} can be granted {zone_id} without exclusivity, ezone held by sherpas {[s.name for s in ezone.sherpas]}"
+        reason = f"{requester.name} can be granted {zone_id} without exclusivity, ezone held by {ezone.access_held_by()}"
         logging.getLogger("visa").info(reason)
-        return True, reason
-    else:
-        reason = f"exlusive access to {zone_id} can't be granted already held by sherpas {[s.name for s in ezone.sherpas]}"
+        granted = True
+
+    else:   
+        reason = f"exlusive access to {zone_id} can't be granted already held by {ezone.access_held_by()}"
         logging.getLogger("visa").info(reason)
-        return False, reason
+
+    return granted, reason
 
 
-def unlock_exclusion_zone(dbsession: DBSession, ezone: vm.ExclusionZone, sherpa: fm.Sherpa):
+def unlock_exclusion_zone(dbsession: DBSession, ezone: vm.ExclusionZone, requester):
 
     reason = None
     if ezone is None:
@@ -102,20 +98,20 @@ def unlock_exclusion_zone(dbsession: DBSession, ezone: vm.ExclusionZone, sherpa:
         logging.getLogger("visa").error(reason)
         return False, reason
 
-    if sherpa not in ezone.sherpas:
-        reason = f"{sherpa.name} doesn't hold {ezone.zone_id} but will still accept release request"
+    if requester not in ezone.sherpas and requester not in ezone.super_users:
+        reason = f"{requester.name} doesn't hold {ezone.zone_id} but will still accept release request"
         logging.getLogger("visa").warning(reason)
-        return False, reason
+        return True, reason
 
-    ezone.sherpas.remove(sherpa)
+    ezone.revoke_access(requester)
 
-    reason = f"{sherpa.name} doesn't hold {ezone.zone_id} anymore, visa release done"
+    reason = f"{requester.name} doesn't hold {ezone.zone_id} anymore, visa release done"
     logging.getLogger("visa").info(reason)
     return True, reason
 
 
 def can_grant_visa(
-    dbsession: DBSession, sherpa: fm.Sherpa, req: rqm.VisaReq, exclusive: bool = True
+    dbsession: DBSession, requester, req: rqm.VisaReq, exclusive: bool = True
 ):
     visa_type = req.visa_type
     zone_name = req.zone_name
@@ -135,7 +131,7 @@ def can_grant_visa(
     for ezone in unavailable_ezs:
         exclusive = ezone.exclusivity
         zone_name = ezone.zone_id
-        granted, reason = can_lock_exclusion_zone(dbsession, ezone, sherpa, exclusive)
+        granted, reason = can_lock_exclusion_zone(dbsession, ezone, requester, exclusive)
         if not granted:
             return granted, reason, reqd_ezones
 
@@ -165,7 +161,7 @@ def can_grant_visa(
         granted, reason = can_lock_exclusion_zone(
             dbsession,
             ezone,
-            sherpa,
+            requester,
             exclusive,
         )
         if not granted:
@@ -175,7 +171,7 @@ def can_grant_visa(
     return True, reason, reqd_ezones
 
 
-def get_visas_to_release(dbsession: DBSession, sherpa: fm.Sherpa, req: rqm):
+def get_visas_to_release(dbsession: DBSession, requester, req: rqm):
     visa_type = req.visa_type
     zone_name = req.zone_name
 

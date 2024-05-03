@@ -85,6 +85,19 @@ def get_sherpa(x_api_key: str = Header(None)):
     return sherpa_name
 
 
+def get_super_user(x_api_key: str = Header(None)):
+    if x_api_key is None:
+        return None
+
+    hashed_api_key = hashlib.sha256(x_api_key.encode("utf-8")).hexdigest()
+
+    with DBSession() as dbsession:
+        super_user = dbsession.get_super_user_with_hashed_api_key(hashed_api_key)
+        user_name = super_user.name if super_user else None
+
+    return user_name
+
+
 def get_user_from_header(x_user_token: str = Header(None)):
     if x_user_token is None:
         return None
