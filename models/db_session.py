@@ -810,7 +810,7 @@ class DBSession:
             .limit(n)
             .all()
         )
-    
+
     def get_fm_incident_pg(
         self,
         from_dt,
@@ -820,10 +820,9 @@ class DBSession:
         sort_order="desc",
         page=0,
         limit=50,
-            
-        ):
+    ):
         skip = page * limit
-        
+
         query = self.session.query(mm.FMIncidents)
         query = query.filter(mm.FMIncidents.type == error_type)
         query = query.filter(mm.FMIncidents.created_at > from_dt)
@@ -833,17 +832,12 @@ class DBSession:
 
         count = query.count()
 
-        query = (
-            query.order_by(text(f"{sort_field} {sort_order}"))
-            .offset(skip)
-            .limit(limit)
-            )
-        
+        query = query.order_by(text(f"{sort_field} {sort_order}")).offset(skip).limit(limit)
+
         fm_incidents = query.all()
 
         pages = int(count / limit) if (count % limit == 0) else int(count / limit + 1)
         return fm_incidents, count, limit, pages, sort_field, sort_order
-            
 
     def get_last_sherpa_mode_change(self, sherpa_name):
         return (
@@ -867,7 +861,7 @@ class DBSession:
                 mm.SherpaModeChange.mode,
                 func.sum(
                     extract(
-                        "seconds",
+                        "epoch",
                         func.age(
                             mm.SherpaModeChange.ended_at, mm.SherpaModeChange.started_at
                         ),
