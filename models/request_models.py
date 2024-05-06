@@ -151,6 +151,12 @@ class ResourceReq(SherpaReq):
     type = MessageType.RESOURCE_ACCESS
 
 
+class ManualVisaReleaseReq(SherpaReq):   
+    sherpa_name: str
+    zone_id: str
+    type = MessageType.MANUAL_VISA_RELEASE
+
+
 # messages from sherpa not going to queue
 class FileUploadReq(BaseModel):
     filename: str
