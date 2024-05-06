@@ -49,6 +49,7 @@ class PasstoSherpaEndpoints:
     PAUSE_RESUME = "pause_resume"
     SWITCH_MODE = "switch_mode"
     IMG_UPDATE = "img_update"
+    REVOKE_VISA = "revoke_visa"
 
 
 class ConveyorReq(BaseModel):
@@ -535,6 +536,12 @@ class QuickDiagnosticsReq(FMReq):
     sherpa_name: str
     type = MessageType.PASS_TO_SHERPA
 
+
+class RevokeVisaReq:
+    endpoint: str = PasstoSherpaEndpoints.REVOKE_VISA
+    visa_type: str
+    zone_name: str
+    type = MessageType.PASS_TO_SHERPA
 
 class SherpaImgUpdate(FMReq):
     endpoint: str = PasstoSherpaEndpoints.IMG_UPDATE

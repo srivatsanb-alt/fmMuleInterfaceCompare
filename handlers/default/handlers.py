@@ -1549,6 +1549,7 @@ class Handlers:
     def handle_visa_access(
         self, req: rqm.VisaReq, access_type: rqm.AccessType, requester, is_sherpa
     ):
+        # requester is either a super_user or a sherpa
         # do not assign next destination after processing a visa request.
         if access_type == rqm.AccessType.REQUEST:
             return self.handle_visa_request(req, requester, is_sherpa)
