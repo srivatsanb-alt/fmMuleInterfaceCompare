@@ -129,9 +129,6 @@ class DBUpgrade:
                 print(f"Unable to drop master_fm_data_upload, exception: {e}")
     
     def upgrade_to_4_15(self):
-        pass
-
-    def upgrade_to_4_15(self):
         with get_engine(os.getenv("FM_DATABASE_URI")).connect() as conn:
             try:
                 csv_file_path = '/app/static/visa_assign.csv'
@@ -214,7 +211,6 @@ def maybe_delete_visa_related_tables_v4_15():
     with get_engine(os.getenv("FM_DATABASE_URI")).connect() as conn:
         try:
             conn.execute("commit")
-            conn.execute("\copy visa_assignments to '/app/static/visa_assignments_temp.csv' WITH (FORMAT CSV, HEADER)")
             conn.execute("drop table visa_assignments")
             conn.execute("drop table visa_rejects")
             print("dropped visa_assignments and visa_rejects")
