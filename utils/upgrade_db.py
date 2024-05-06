@@ -1,8 +1,14 @@
 import os
+import pandas as pd
+import csv
 
 # ati code imports
 from core.db import get_session, get_engine
 from models.misc_models import FMVersion
+from models.db_session import DBSession
+import utils.util as utils_util
+import models.visa_models as vm
+
 
 
 AVAILABLE_UPGRADES = [
@@ -16,9 +22,9 @@ AVAILABLE_UPGRADES = [
     "4.01",
     "4.02",
     "4.1",
-    "4.15"
+    "4.15",
 ]
-NO_SCHEMA_CHANGES = ["3.0", "3.01", "3.1", "4.15"]
+NO_SCHEMA_CHANGES = ["3.0", "3.01", "3.1"]
 
 
 class DBUpgrade:
@@ -125,6 +131,23 @@ class DBUpgrade:
     def upgrade_to_4_15(self):
         pass
 
+    def upgrade_to_4_15(self):
+        with get_engine(os.getenv("FM_DATABASE_URI")).connect() as conn:
+            try:
+                csv_file_path = '/app/static/visa_assign.csv'
+                conn.execute("commit")
+                with open(csv_file_path, 'r') as file:
+                    reader = csv.reader(file)
+                    next(reader)  # Skip the header row
+                    for row in reader:
+                        conn.execute("""
+                            INSERT INTO visa_assignments (zone_id, sherpa_name, created_at)
+                            VALUES (%s, %s, %s)
+                        """, row)
+                print(f"copied visa_assignments")
+            except Exception as e:
+                print(f"Unable to copy visa_assignments, exception: {e}")
+
 
 def upgrade_db_schema():
     # fm version records available only after v2.1
@@ -179,6 +202,15 @@ def maybe_delete_fm_incidents_v3_3():
             print("dropped table fm_incidents")
 
 def maybe_delete_visa_related_tables_v4_15():
+    with DBSession() as dbsession:
+        all_visa_assignments = dbsession.get_all_visa_assignments()
+        data = []
+        for all_visa_assignment in all_visa_assignments:
+            data.append(utils_util.get_table_as_dict(vm.VisaAssignment, all_visa_assignment))
+        data=pd.DataFrame(data)
+        csv_file_path = '/app/static/visa_assign.csv'
+        data.to_csv(csv_file_path, index=False)
+        print(f"Dataframe has been saved to {csv_file_path}")
     with get_engine(os.getenv("FM_DATABASE_URI")).connect() as conn:
         try:
             conn.execute("commit")
