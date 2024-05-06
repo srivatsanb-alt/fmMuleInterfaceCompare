@@ -151,12 +151,6 @@ class ResourceReq(SherpaReq):
     type = MessageType.RESOURCE_ACCESS
 
 
-class ManualVisaReleaseReq(SherpaReq):   
-    sherpa_name: str
-    zone_id: str
-    type = MessageType.MANUAL_VISA_RELEASE
-
-
 # messages from sherpa not going to queue
 class FileUploadReq(BaseModel):
     filename: str
@@ -543,8 +537,9 @@ class QuickDiagnosticsReq(FMReq):
     type = MessageType.PASS_TO_SHERPA
 
 
-class RevokeVisaReq:
+class RevokeVisaReq(FMReq):
     endpoint: str = PasstoSherpaEndpoints.REVOKE_VISA
+    sherpa_name: str
     visa_type: str
     zone_name: str
     type = MessageType.PASS_TO_SHERPA
@@ -554,6 +549,11 @@ class SherpaImgUpdate(FMReq):
     image_tag: str
     fm_server_username: str
     time_zone: str
+
+class ManualVisaReleaseReq(ClientReq, FMReq):   
+    requester: str
+    zone_id: str
+    type = MessageType.MANUAL_VISA_RELEASE
 
 
 @dataclass
