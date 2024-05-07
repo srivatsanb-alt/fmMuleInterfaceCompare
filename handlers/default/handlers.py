@@ -1648,8 +1648,11 @@ class Handlers:
 
         # query db
         requester, is_sherpa = self.get_resource_requester(req)
-        visas_to_release, revoke_visa_req = utils_visa.get_visas_to_release_on_manual_trigger(
-            req.revoke_visa_for, req.zone_id
+        (
+            visas_to_release,
+            revoke_visa_req,
+        ) = utils_visa.get_visas_to_release_on_manual_trigger(
+            self.dbsession, req.revoke_visa_for, req.zone_id
         )
 
         # end transaction
@@ -1658,7 +1661,9 @@ class Handlers:
         # update_db
         self.release_visas(visas_to_release, requester)
         if is_sherpa:
-            response = utils_comms.send_req_to_sherpa(self.dbsession, requester, revoke_visa_req)
+            response = utils_comms.send_req_to_sherpa(
+                self.dbsession, requester, revoke_visa_req
+            )
 
         return response
 
