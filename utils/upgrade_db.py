@@ -202,17 +202,17 @@ def maybe_delete_fm_incidents_v3_3():
 
 
 def maybe_delete_visa_related_tables_v4_15():
-    with DBSession() as dbsession:
-        all_visa_assignments = dbsession.get_all_visa_assignments()
-        data = []
-        for all_visa_assignment in all_visa_assignments:
-            data.append(
-                utils_util.get_table_as_dict(vm.VisaAssignment, all_visa_assignment)
-            )
-        data = pd.DataFrame(data)
-        csv_file_path = "/app/static/visa_assign.csv"
-        data.to_csv(csv_file_path, index=False)
-        print(f"Dataframe has been saved to {csv_file_path}")
+    # with DBSession() as dbsession:
+    #     all_visa_assignments = dbsession.get_all_visa_assignments()
+    #     data = []
+    #     for all_visa_assignment in all_visa_assignments:
+    #         data.append(
+    #             utils_util.get_table_as_dict(vm.VisaAssignment, all_visa_assignment)
+    #         )
+    #     data = pd.DataFrame(data)
+    #     csv_file_path = "/app/static/visa_assign.csv"
+    #     data.to_csv(csv_file_path, index=False)
+    #     print(f"Dataframe has been saved to {csv_file_path}")
     with get_engine(os.getenv("FM_DATABASE_URI")).connect() as conn:
         try:
             conn.execute("commit")
