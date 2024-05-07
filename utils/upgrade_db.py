@@ -10,7 +10,6 @@ import utils.util as utils_util
 import models.visa_models as vm
 
 
-
 AVAILABLE_UPGRADES = [
     "2.2",
     "3.0",
@@ -131,17 +130,20 @@ class DBUpgrade:
     def upgrade_to_4_15(self):
         with get_engine(os.getenv("FM_DATABASE_URI")).connect() as conn:
             try:
-                csv_file_path = '/app/static/visa_assign.csv'
+                csv_file_path = "/app/static/visa_assign.csv"
                 conn.execute("commit")
-                with open(csv_file_path, 'r') as file:
+                with open(csv_file_path, "r") as file:
                     reader = csv.reader(file)
                     next(reader)  # Skip the header row
                     for row in reader:
-                        conn.execute("""
-                            INSERT INTO visa_assignments (zone_id, sherpa_name, created_at)
-                            VALUES (%s, %s, %s)
-                        """, row)
-                print(f"copied visa_assignments")
+                        conn.execute(
+                            """
+                            INSERT INTO visa_assignments (zone_id, sherpa_name)
+                            VALUES (%s, %s)
+                        """,
+                            row,
+                        )
+                print(f"Inserted visa_assignments")
             except Exception as e:
                 print(f"Unable to copy visa_assignments, exception: {e}")
 
@@ -198,14 +200,17 @@ def maybe_delete_fm_incidents_v3_3():
             conn.execute('DROP TABLE "fm_incidents"')
             print("dropped table fm_incidents")
 
+
 def maybe_delete_visa_related_tables_v4_15():
     with DBSession() as dbsession:
         all_visa_assignments = dbsession.get_all_visa_assignments()
         data = []
         for all_visa_assignment in all_visa_assignments:
-            data.append(utils_util.get_table_as_dict(vm.VisaAssignment, all_visa_assignment))
-        data=pd.DataFrame(data)
-        csv_file_path = '/app/static/visa_assign.csv'
+            data.append(
+                utils_util.get_table_as_dict(vm.VisaAssignment, all_visa_assignment)
+            )
+        data = pd.DataFrame(data)
+        csv_file_path = "/app/static/visa_assign.csv"
         data.to_csv(csv_file_path, index=False)
         print(f"Dataframe has been saved to {csv_file_path}")
     with get_engine(os.getenv("FM_DATABASE_URI")).connect() as conn:
@@ -216,7 +221,6 @@ def maybe_delete_visa_related_tables_v4_15():
             print("dropped visa_assignments and visa_rejects")
         except Exception as e:
             print(f"Unable to drop visa_assignments and visa_rejects, exception: {e}")
-
 
 
 def maybe_drop_tables():
@@ -233,4 +237,3 @@ def maybe_drop_tables():
             print(
                 f"Unable tom fetch fm version from DB, cannot drop tables based on fm_version, exception: {e}"
             )
-        
