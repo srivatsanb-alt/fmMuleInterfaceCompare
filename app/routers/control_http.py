@@ -406,14 +406,14 @@ async def manual_park(
 
 @router.post("/manual_visa_release")
 async def manual_visa_release(
-    resource_release_req: rqm.ManualVisaReleaseReq, user_name=Depends(dpd.get_user_from_header)
+    manual_visa_release_req: rqm.ManualVisaReleaseReq,
+    user_name=Depends(dpd.get_user_from_header),
 ):
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
     queues = Queues.queues_dict["resource_handler"]
-    response = await dpd.process_req_with_response(queues, resource_release_req, resource_release_req.requester)
-    
-    req = rqm.RevokeVisaReq(sherpa_name=rqm.ManualVisaReleaseReq.sherpa_name)
-
+    response = await dpd.process_req_with_response(
+        queues, manual_visa_release_req, manual_visa_release_req.revoke_visa_for
+    )
     return response

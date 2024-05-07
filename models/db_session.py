@@ -142,6 +142,24 @@ class DBSession:
             .all()
         )
 
+    def get_visa_assignment_by_requester(self, requester_name: str, zone_name: str):
+        return (
+            self.session.query(vm.VisaAssignment)
+            .filter(
+                or_(
+                    vm.VisaAssignment.sherpa_name == requester_name,
+                    vm.VisaAssignment.user_name == requester_name,
+                )
+            )
+            .filter(
+                or_(
+                    vm.VisaAssignment.zone_id == f"{zone_name}_lane",
+                    vm.VisaAssignment.zone_id == f"{zone_name}_station",
+                )
+            )
+            .all()
+        )
+
     def get_all_visa_assignments(self):
         return self.session.query(vm.VisaAssignment).all()
 

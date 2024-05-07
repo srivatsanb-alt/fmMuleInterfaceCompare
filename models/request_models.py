@@ -87,6 +87,7 @@ class FrontendUserRoles:
     superuser = 3
     support = 4
 
+
 #################################################
 # Messages from sherpa
 class SherpaReq(BaseModel):
@@ -410,14 +411,16 @@ class GetFMIncidents(ClientReq):
     num_of_incidents: int = 1
     historic: Optional[bool] = False
 
+
 class FMIncidentsReqPg(ClientReq):
     from_dt: str
     to_dt: str
     error_type: Optional[str] = "fm_error"
-    sort_field: Optional[str]="created_at"
-    sort_order: Optional[str]="desc"
+    sort_field: Optional[str] = "created_at"
+    sort_order: Optional[str] = "desc"
     page: int
     limit: int
+
 
 class SaveRouteReq(ClientReq):
     tag: str
@@ -539,10 +542,10 @@ class QuickDiagnosticsReq(FMReq):
 
 class RevokeVisaReq(FMReq):
     endpoint: str = PasstoSherpaEndpoints.REVOKE_VISA
-    sherpa_name: str
     visa_type: str
     zone_name: str
     type = MessageType.PASS_TO_SHERPA
+
 
 class SherpaImgUpdate(FMReq):
     endpoint: str = PasstoSherpaEndpoints.IMG_UPDATE
@@ -550,8 +553,9 @@ class SherpaImgUpdate(FMReq):
     fm_server_username: str
     time_zone: str
 
-class ManualVisaReleaseReq(ClientReq, FMReq):   
-    requester: str
+
+class ManualVisaReleaseReq(ClientReq):
+    revoke_visa_for: str
     zone_id: str
     type = MessageType.MANUAL_VISA_RELEASE
 

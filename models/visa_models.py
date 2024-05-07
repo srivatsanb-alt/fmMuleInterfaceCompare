@@ -62,7 +62,7 @@ class ExclusionZone(Base, TimestampMixin):
 class VisaAssignment(Base, TimestampMixin):
     __tablename__ = "visa_assignments"
     id = Column(Integer, primary_key=True)
-    zone_id = Column(String, ForeignKey("exclusion_zones.zone_id"))
+    zone_id = Column(String, ForeignKey("exclusion_zones.zone_id")) # zone_id = {zone_name}_{zone_type}
     sherpa_name = Column(String, ForeignKey("sherpas.name"), nullable=True)
     user_name = Column(String, ForeignKey("super_users.name"), nullable=True)
 

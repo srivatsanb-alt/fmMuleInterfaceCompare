@@ -13,7 +13,7 @@ import utils.log_utils as lu
 logging.config.dictConfig(lu.get_log_config_dict())
 
 
-def get_reqd_zone_types(visa_type):
+def convert_visa_type_mule_to_fm(visa_type):
     reqd_zone_types = []
 
     if visa_type == rqm.VisaType.TRANSIT:
@@ -32,6 +32,16 @@ def get_reqd_zone_types(visa_type):
     return reqd_zone_types
 
 
+def convert_visa_type_fm_to_mule(visa_types_held):
+    if vm.ZoneType.LANE in visa_types_held and vm.ZoneType.STATION in visa_types_held:
+        visa_type = rqm.VisaType.UNPARKING
+    elif vm.ZoneType.LANE in visa_types_held:
+        visa_type = rqm.VisaType.TRANSIT
+    else:
+        visa_type = rqm.VisaType.PARKING
+    return visa_type
+
+
 def get_reqd_zone_ids(zone_name, reqd_zone_types):
     reqd_zone_ids = []
 
@@ -47,7 +57,6 @@ def get_linked_gates(ezone: vm.ExclusionZone):
 
 def split_zone_id(zone_id: str):
     return zone_id.rsplit("_", 1)
-   
 
 def can_lock_exclusion_zone(
     dbsession: DBSession,
@@ -76,14 +85,13 @@ def can_lock_exclusion_zone(
     elif ezone.exclusivity:
         reason = f"{requester.name} cannot be granted {zone_id} exclusive access held by {ezone.access_held_by()}"
         logging.getLogger("visa").info(reason)
-        
-        
+
     elif not exclusive:
         reason = f"{requester.name} can be granted {zone_id} without exclusivity, ezone held by {ezone.access_held_by()}"
         logging.getLogger("visa").info(reason)
         granted = True
 
-    else:   
+    else:
         reason = f"exlusive access to {zone_id} can't be granted already held by {ezone.access_held_by()}"
         logging.getLogger("visa").info(reason)
 
@@ -115,7 +123,7 @@ def can_grant_visa(
 ):
     visa_type = req.visa_type
     zone_name = req.zone_name
-    reqd_zone_types = get_reqd_zone_types(visa_type)
+    reqd_zone_types = convert_visa_type_mule_to_fm(visa_type)
     reqd_zone_ids = get_reqd_zone_ids(zone_name, reqd_zone_types)
     unavailable_ezs = dbsession.get_unavailable_reqd_ezones(reqd_zone_ids)
     reqd_ezones = dbsession.get_reqd_ezones(reqd_zone_ids)
@@ -175,8 +183,30 @@ def get_visas_to_release(dbsession: DBSession, requester, req: rqm):
     visa_type = req.visa_type
     zone_name = req.zone_name
 
-    reqd_zone_types = get_reqd_zone_types(visa_type)
+    reqd_zone_types = convert_visa_type_mule_to_fm(visa_type)
     reqd_zone_ids = get_reqd_zone_ids(zone_name, reqd_zone_types)
     visas_to_release = dbsession.get_reqd_ezones(reqd_zone_ids)
 
     return visas_to_release
+
+
+def get_visas_to_release_on_manual_trigger(
+    dbsession: DBSession, requester_name: str, zone_id: str
+):
+    zone_name, zone_type = split_zone_id(zone_id)
+    visa_to_release = dbsession.get_visa_assignment_by_requester(requester_name, zone_name)
+    ezs_held = []
+    visa_types_held = []
+
+    for visa in visa_to_release:
+        zone_name, zone_type = split_zone_id(zone_id)
+        ezs_held.append(visa.zone_id)
+        visa_types_held.append(zone_type)
+
+    _visa_type = convert_visa_type_fm_to_mule(visa_types_held)
+
+    revoke_visa_req = rqm.RevokeVisaReq(
+        visa_type=_visa_type,
+        zone_name=zone_name,
+    )
+    return visa_to_release, revoke_visa_req
