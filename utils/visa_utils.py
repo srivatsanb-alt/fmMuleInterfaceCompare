@@ -58,6 +58,7 @@ def get_linked_gates(ezone: vm.ExclusionZone):
 def split_zone_id(zone_id: str):
     return zone_id.rsplit("_", 1)
 
+
 def can_lock_exclusion_zone(
     dbsession: DBSession,
     ezone: vm.ExclusionZone,
@@ -191,22 +192,23 @@ def get_visas_to_release(dbsession: DBSession, requester, req: rqm):
 
 
 def get_visas_to_release_on_manual_trigger(
-    dbsession: DBSession, requester_name: str, zone_id: str
+    dbsession: DBSession, ezs_held: List[vm.ExclusionZone], zone_id: str
 ):
-    zone_name, zone_type = split_zone_id(zone_id)
-    visa_to_release = dbsession.get_visa_assignment_by_requester(requester_name, zone_name)
+
+    zone_name_to_release, zone_type = split_zone_id(zone_id)
+    ezs_to_release = []
     ezs_held = []
     visa_types_held = []
-
-    for visa in visa_to_release:
-        zone_name, zone_type = split_zone_id(zone_id)
-        ezs_held.append(visa.zone_id)
-        visa_types_held.append(zone_type)
+    for ez in ezs_held:
+        zone_name, zone_type = split_zone_id(ez)
+        if zone_name == zone_name_to_release:
+            ezs_to_release.append(ez)
+            visa_types_held.append(zone_type)
 
     _visa_type = convert_visa_type_fm_to_mule(visa_types_held)
-
     revoke_visa_req = rqm.RevokeVisaReq(
         visa_type=_visa_type,
         zone_name=zone_name,
     )
-    return visa_to_release, revoke_visa_req
+
+    return ezs_to_release, revoke_visa_req

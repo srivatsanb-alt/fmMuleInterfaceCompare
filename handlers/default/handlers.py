@@ -1652,7 +1652,7 @@ class Handlers:
             visas_to_release,
             revoke_visa_req,
         ) = utils_visa.get_visas_to_release_on_manual_trigger(
-            self.dbsession, req.revoke_visa_for, req.zone_id
+            self.dbsession, requester.exclusion_zones, req.zone_id
         )
 
         # end transaction
