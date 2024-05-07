@@ -542,6 +542,7 @@ class QuickDiagnosticsReq(FMReq):
 
 class RevokeVisaReq(FMReq):
     endpoint: str = PasstoSherpaEndpoints.REVOKE_VISA
+    sherpa_name: Optional[str]
     visa_type: str
     zone_name: str
     type = MessageType.PASS_TO_SHERPA

@@ -1,5 +1,6 @@
 import logging
 import logging.config
+from typing import List
 
 # ati code imports
 import models.fleet_models as fm
@@ -37,8 +38,10 @@ def convert_visa_type_fm_to_mule(visa_types_held):
         visa_type = rqm.VisaType.UNPARKING
     elif vm.ZoneType.LANE in visa_types_held:
         visa_type = rqm.VisaType.TRANSIT
-    else:
+    elif vm.ZoneType.STATION in visa_types_held:        
         visa_type = rqm.VisaType.PARKING
+    else:
+        raise ValueError("Unable to identify visa type")
     return visa_type
 
 
@@ -197,10 +200,9 @@ def get_visas_to_release_on_manual_trigger(
 
     zone_name_to_release, zone_type = split_zone_id(zone_id)
     ezs_to_release = []
-    ezs_held = []
     visa_types_held = []
     for ez in ezs_held:
-        zone_name, zone_type = split_zone_id(ez)
+        zone_name, zone_type = split_zone_id(ez.zone_id)
         if zone_name == zone_name_to_release:
             ezs_to_release.append(ez)
             visa_types_held.append(zone_type)
@@ -208,7 +210,7 @@ def get_visas_to_release_on_manual_trigger(
     _visa_type = convert_visa_type_fm_to_mule(visa_types_held)
     revoke_visa_req = rqm.RevokeVisaReq(
         visa_type=_visa_type,
-        zone_name=zone_name,
+        zone_name=zone_name_to_release,
     )
 
     return ezs_to_release, revoke_visa_req
