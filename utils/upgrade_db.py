@@ -1,6 +1,9 @@
 import os
 import pandas as pd
 import csv
+import time
+from sqlalchemy import Boolean, Column, ForeignKey, String, ARRAY, Integer
+
 
 # ati code imports
 from core.db import get_session, get_engine
@@ -202,17 +205,22 @@ def maybe_delete_fm_incidents_v3_3():
 
 
 def maybe_delete_visa_related_tables_v4_15():
-    # with DBSession() as dbsession:
-    #     all_visa_assignments = dbsession.get_all_visa_assignments()
-    #     data = []
-    #     for all_visa_assignment in all_visa_assignments:
-    #         data.append(
-    #             utils_util.get_table_as_dict(vm.VisaAssignment, all_visa_assignment)
-    #         )
-    #     data = pd.DataFrame(data)
-    #     csv_file_path = "/app/static/visa_assign.csv"
-    #     data.to_csv(csv_file_path, index=False)
-    #     print(f"Dataframe has been saved to {csv_file_path}")
+    with get_engine(os.getenv("FM_DATABASE_URI")).connect() as conn:
+        conn.execute("commit")
+        result = conn.execute("SELECT zone_id, sherpa_name FROM visa_assignments")
+        data = []
+        for visa_assignment in result:
+            data.append(
+                {
+                    "zone_id": visa_assignment[0],
+                    "sherpa_name": visa_assignment[1],
+                }
+            )
+        data = pd.DataFrame(data)
+        csv_file_path = "/app/static/visa_assign.csv"
+        data.to_csv(csv_file_path, index=False)
+        print(f"Dataframe has been saved to {csv_file_path}")
+
     with get_engine(os.getenv("FM_DATABASE_URI")).connect() as conn:
         try:
             conn.execute("commit")
