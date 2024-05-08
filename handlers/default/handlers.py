@@ -347,7 +347,7 @@ class Handlers:
         )
 
         self.dbsession.add_notification(
-            [sherpa.name, fleet.name, fleet.customer],
+            sherpa.get_notification_entity_names(),
             started_leg_log,
             mm.NotificationLevels.info,
             mm.NotificationModules.trip,
@@ -377,7 +377,7 @@ class Handlers:
 
         self.do_post_actions(ongoing_trip, sherpa, curr_station)
         self.dbsession.add_notification(
-            [sherpa.name, sherpa.fleet.name, sherpa.fleet.customer],
+            sherpa.get_notification_entity_names(),
             end_leg_log,
             mm.NotificationLevels.info,
             mm.NotificationModules.trip,
@@ -600,7 +600,7 @@ class Handlers:
                 log_level = mm.NotificationLevels.action_request
 
             self.dbsession.add_notification(
-                [sherpa.name, sherpa.fleet.name, sherpa.fleet.customer],
+                sherpa.get_notification_entity_names(),
                 f"Need a dispatch button press on {sherpa.name} which is parked at {curr_station.name}",
                 log_level,
                 mm.NotificationModules.dispatch_button,
@@ -633,7 +633,7 @@ class Handlers:
                 logging.getLogger().warning(peripheral_msg)
                 self.add_dispatch_start_to_ongoing_trip(ongoing_trip, sherpa)
                 self.dbsession.add_notification(
-                    [sherpa.name, sherpa.fleet.name, sherpa.fleet.customer],
+                    sherpa.get_notification_entity_names(),
                     peripheral_msg,
                     mm.NotificationLevels.action_request,
                     mm.NotificationModules.trolley,
@@ -677,7 +677,7 @@ class Handlers:
 
             logging.getLogger().info(peripheral_msg)
             self.dbsession.add_notification(
-                [sherpa.name, sherpa.fleet.name, sherpa.fleet.customer],
+                sherpa.get_notification_entity_names(),
                 peripheral_msg,
                 mm.NotificationLevels.action_request,
                 mm.NotificationModules.conveyor,
@@ -1065,7 +1065,7 @@ class Handlers:
             sherpa_error_alert = f"{req.sherpa_name} in error mode"
             utils_util.maybe_add_notification(
                 self.dbsession,
-                [sherpa.name, sherpa.fleet.name, sherpa.fleet.customer],
+                sherpa.get_notification_entity_names(),
                 sherpa_error_alert,
                 mm.NotificationLevels.alert,
                 mm.NotificationModules.errors,
@@ -1130,7 +1130,7 @@ class Handlers:
                 )
                 utils_util.maybe_add_notification(
                     self.dbsession,
-                    [sherpa.name, sherpa.fleet.name, sherpa.fleet.customer],
+                    sherpa.get_notification_entity_names(),
                     dispatch_button_stoppage,
                     mm.NotificationLevels.action_request,
                     mm.NotificationModules.dispatch_button,
@@ -1211,7 +1211,7 @@ class Handlers:
                     logging.getLogger().warning(trip_error_msg_e)
                     utils_util.maybe_add_notification(
                         self.dbsession,
-                        [sherpa.name, sherpa.fleet.name, sherpa.fleet.customer],
+                        sherpa.get_notification_entity_names(),
                         trip_error_msg,
                         mm.NotificationLevels.alert,
                         mm.NotificationModules.errors,
@@ -1525,7 +1525,7 @@ class Handlers:
             )
 
             self.dbsession.add_notification(
-                [sherpa.name, curr_station.name, sherpa.fleet.name, sherpa.fleet.customer],
+                sherpa.get_notification_entity_names(),
                 transfer_tote_msg,
                 mm.NotificationLevels.info,
                 mm.NotificationModules.conveyor,
@@ -1539,11 +1539,11 @@ class Handlers:
         else:
             requester: um.SuperUser = self.dbsession.get_super_user(req.source)
             is_sherpa = False
-        
+
         if not req.visa:
             logging.getLogger().warning("requested access type not supported")
             return None
-        
+
         return self.handle_visa_access(req.visa, req.access_type, requester, is_sherpa)
 
     def handle_visa_access(
@@ -1566,7 +1566,7 @@ class Handlers:
         self.dbsession.session.commit()
 
         # update db
-        
+
         if is_sherpa and not requester.status.inducted:
             granted = False
             reason = "sherpa disabled for trips"
@@ -1575,7 +1575,7 @@ class Handlers:
             for ezone in set(reqd_ezones):
                 ezone.provide_access(requester)
         elif is_sherpa and not requester.status.inducted:
-                pass
+            pass
         else:
             for ezone, visa_reject in zip(set(reqd_ezones), visa_rejects):
                 if visa_reject is None:
