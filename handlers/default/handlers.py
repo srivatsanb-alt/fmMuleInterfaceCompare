@@ -1645,7 +1645,7 @@ class Handlers:
         return response.to_json()
 
     def handle_manual_visa_release(self, req: rqm.ManualVisaReleaseReq):
-
+        response = {}
         # query db
         requester, is_sherpa = self.get_resource_requester(req)
         (

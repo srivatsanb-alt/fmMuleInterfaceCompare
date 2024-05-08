@@ -406,14 +406,14 @@ async def get_visa_assignments(user_name=Depends(dpd.get_user_from_header)):
         response = jsonable_encoder(zone_ids)
         for item in response:
             visa_assignments = dbsession.get_all_visa_assignments_as_dict(item["zone_id"])
-            item["resident_sherpas"] = (
-                visa_assignments["resident_sherpas"]
-                if (visa_assignments["resident_sherpas"])
+            item["resident_entities"] = (
+                visa_assignments["resident_entities"]
+                if (visa_assignments["resident_entities"])
                 else []
             )
-            item["waiting_sherpas"] = (
-                visa_assignments["waiting_sherpas"]
-                if (visa_assignments["waiting_sherpas"])
+            item["waiting_entities"] = (
+                visa_assignments["waiting_entities"]
+                if (visa_assignments["waiting_entities"])
                 else []
             )
     return response
