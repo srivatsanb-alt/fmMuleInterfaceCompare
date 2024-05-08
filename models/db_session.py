@@ -955,18 +955,18 @@ class DBSession:
                 vm.VisaRejects.reason,
             )
             .filter(vm.VisaRejects.zone_id == zone_id)
-            .filter(vm.VisaAssignment.sherpa_name != None)
+            .filter(vm.VisaRejects.sherpa_name != None)
             .all()
         )
 
         waiting_users = (
             self.session.query(
-                vm.VisaAssignment.user_name.label("entity_name"),
+                vm.VisaRejects.user_name.label("entity_name"),
                 vm.VisaRejects.created_at.label("denied_time"),
                 vm.VisaRejects.reason,
             )
             .filter(vm.VisaRejects.zone_id == zone_id)
-            .filter(vm.VisaAssignment.user_name != None)
+            .filter(vm.VisaRejects.user_name != None)
             .all()
         )
         resident_entities.extend(users)
