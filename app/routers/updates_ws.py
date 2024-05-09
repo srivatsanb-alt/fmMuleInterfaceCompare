@@ -58,6 +58,9 @@ async def update_ws(
         [t.cancel() for t in rw]
     finally:
         [t.cancel() for t in rw]
+    logger.info(
+        f"websocket connection(generic updates) closed with client {x_real_ip}"
+    )
 
 
 async def reader(websocket, x_real_ip):
