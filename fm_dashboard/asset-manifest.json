@@ -1,7 +1,7 @@
 {
   "files": {
-    "main.css": "/static/css/main.273b01ba.css",
-    "main.js": "/static/js/main.ab3ab3e1.js",
+    "main.css": "/static/css/main.6407bbe2.css",
+    "main.js": "/static/js/main.21f6c81d.js",
     "static/js/206.3e519ea9.chunk.js": "/static/js/206.3e519ea9.chunk.js",
     "static/media/Login Image.png": "/static/media/Login Image.885a80af3ca6e7d909a4.png",
     "static/media/OpenSans-Regular-400.ttf": "/static/media/OpenSans-Regular-400.57cd57a648021fa1c396.ttf",
@@ -25,6 +25,7 @@
     "static/media/fleet-data.svg": "/static/media/fleet-data.fe9f441d33db105cb8797dc547031d9e.svg",
     "static/media/diagnostics.svg": "/static/media/diagnostics.983fa603aa5d4fcd1f35a13d5c0712cd.svg",
     "static/media/asset-status.svg": "/static/media/asset-status.79818e7b25bcaee829d0cefa50b2abd2.svg",
+    "static/media/Subtract-tug.svg": "/static/media/Subtract-tug.199a39fef95ee2e0207108c53773ddf6.svg",
     "static/media/update-map.svg": "/static/media/update-map.3e2311afa32893e0cffb241e0e085a95.svg",
     "static/media/Book Again.svg": "/static/media/Book Again.ebfc370a625f79b41bf5dbed6c226515.svg",
     "static/media/search.svg": "/static/media/search.3185712f2d2a6009c693a95a87b4fec6.svg",
@@ -46,10 +47,18 @@
     "static/media/close-circle.svg": "/static/media/close-circle.1a634255da07a3c9063ffe165f626f43.svg",
     "static/media/stop-ops.svg": "/static/media/stop-ops.6c7b29fbe8941d0af4a88cc140a38fbf.svg",
     "static/media/resume-ops.svg": "/static/media/resume-ops.7eaed0ce19cc32d0d9d68e2c29c4ed05.svg",
-    "static/media/parking.svg": "/static/media/parking.37d3fcac97912ba986dd45e852e4a3ac.svg"
+    "static/media/battery-full.svg": "/static/media/battery-full.45b82a6518fb7040e4054addbf044299.svg",
+    "static/media/battery-1-bar.svg": "/static/media/battery-1-bar.8ccfce6e85b99a826e2fa441201d5c4f.svg",
+    "static/media/battery-2-bar.svg": "/static/media/battery-2-bar.99aec8f365b710a90006b52d6b2a9b56.svg",
+    "static/media/battery-3-bar.svg": "/static/media/battery-3-bar.03f2deb0cf499cc22a1eb287ddf1419c.svg",
+    "static/media/starting-station.svg": "/static/media/starting-station.f589ed4f1313e998f8d671580685a20a.svg",
+    "static/media/destination-station.svg": "/static/media/destination-station.46b741d2321dbccc37e207b5c9054efc.svg",
+    "static/media/parking.svg": "/static/media/parking.37d3fcac97912ba986dd45e852e4a3ac.svg",
+    "static/media/vector-dotted.svg": "/static/media/vector-dotted.b70cb01ec08a1aebb881de41d287cc70.svg",
+    "static/media/vector-straight2.svg": "/static/media/vector-straight2.a4c9a1f3e3ce81f384c4240012840a08.svg"
   },
   "entrypoints": [
-    "static/css/main.273b01ba.css",
-    "static/js/main.ab3ab3e1.js"
+    "static/css/main.6407bbe2.css",
+    "static/js/main.21f6c81d.js"
   ]
 }
