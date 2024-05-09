@@ -45,7 +45,7 @@ def fail_trip(
     trip_failed_log: str,
 ):
     dbsession.add_notification(
-        [sherpa.name, sherpa.fleet.name, sherpa.fleet.customer],
+        sherpa.get_notification_entity_names(),
         trip_failed_log,
         mm.NotificationLevels.alert,
         mm.NotificationModules.errors,

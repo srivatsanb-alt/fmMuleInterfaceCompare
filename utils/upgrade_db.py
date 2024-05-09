@@ -1,6 +1,9 @@
 import os
 import pandas as pd
 import csv
+import time
+from sqlalchemy import Boolean, Column, ForeignKey, String, ARRAY, Integer
+
 
 # ati code imports
 from core.db import get_session, get_engine
@@ -8,7 +11,6 @@ from models.misc_models import FMVersion
 from models.db_session import DBSession
 import utils.util as utils_util
 import models.visa_models as vm
-
 
 
 AVAILABLE_UPGRADES = [
@@ -131,17 +133,20 @@ class DBUpgrade:
     def upgrade_to_4_15(self):
         with get_engine(os.getenv("FM_DATABASE_URI")).connect() as conn:
             try:
-                csv_file_path = '/app/static/visa_assign.csv'
+                csv_file_path = "/app/static/visa_assign.csv"
                 conn.execute("commit")
-                with open(csv_file_path, 'r') as file:
+                with open(csv_file_path, "r") as file:
                     reader = csv.reader(file)
                     next(reader)  # Skip the header row
                     for row in reader:
-                        conn.execute("""
-                            INSERT INTO visa_assignments (zone_id, sherpa_name, created_at)
-                            VALUES (%s, %s, %s)
-                        """, row)
-                print(f"copied visa_assignments")
+                        conn.execute(
+                            """
+                            INSERT INTO visa_assignments (zone_id, sherpa_name)
+                            VALUES (%s, %s)
+                        """,
+                            row,
+                        )
+                print(f"Inserted visa_assignments")
             except Exception as e:
                 print(f"Unable to copy visa_assignments, exception: {e}")
 
@@ -198,16 +203,24 @@ def maybe_delete_fm_incidents_v3_3():
             conn.execute('DROP TABLE "fm_incidents"')
             print("dropped table fm_incidents")
 
+
 def maybe_delete_visa_related_tables_v4_15():
-    with DBSession() as dbsession:
-        all_visa_assignments = dbsession.get_all_visa_assignments()
+    with get_engine(os.getenv("FM_DATABASE_URI")).connect() as conn:
+        conn.execute("commit")
+        result = conn.execute("SELECT zone_id, sherpa_name FROM visa_assignments")
         data = []
-        for all_visa_assignment in all_visa_assignments:
-            data.append(utils_util.get_table_as_dict(vm.VisaAssignment, all_visa_assignment))
-        data=pd.DataFrame(data)
-        csv_file_path = '/app/static/visa_assign.csv'
+        for visa_assignment in result:
+            data.append(
+                {
+                    "zone_id": visa_assignment[0],
+                    "sherpa_name": visa_assignment[1],
+                }
+            )
+        data = pd.DataFrame(data)
+        csv_file_path = "/app/static/visa_assign.csv"
         data.to_csv(csv_file_path, index=False)
         print(f"Dataframe has been saved to {csv_file_path}")
+
     with get_engine(os.getenv("FM_DATABASE_URI")).connect() as conn:
         try:
             conn.execute("commit")
@@ -216,7 +229,6 @@ def maybe_delete_visa_related_tables_v4_15():
             print("dropped visa_assignments and visa_rejects")
         except Exception as e:
             print(f"Unable to drop visa_assignments and visa_rejects, exception: {e}")
-
 
 
 def maybe_drop_tables():
@@ -233,4 +245,3 @@ def maybe_drop_tables():
             print(
                 f"Unable tom fetch fm version from DB, cannot drop tables based on fm_version, exception: {e}"
             )
-        
