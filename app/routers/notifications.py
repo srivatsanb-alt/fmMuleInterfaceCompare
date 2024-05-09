@@ -27,7 +27,7 @@ router = APIRouter(tags=["notifications"], responses={404: {"description": "Not 
 
 
 @router.get("/api/v1/notification/basic_info")
-async def get_all_notification_modules(user_name=Depends(dpd.get_user_from_query)):
+async def get_all_notification_modules(user_name=Depends(dpd.get_user_from_header)):
     response = {}
     if not user_name:
         dpd.raise_error("Unknown requeter", 401)
@@ -133,6 +133,9 @@ async def notifications(
         asyncio.create_task(reader(websocket, token, x_real_ip)),
         asyncio.create_task(
             writer(websocket, token, x_real_ip),
+        ),
+        asyncio.create_task(
+            dpd.check_token_expiry(token, x_real_ip),
         ),
     ]
 

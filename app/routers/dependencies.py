@@ -149,6 +149,14 @@ def generate_jwt_token(username: str, role=None, expiry_interval=None):
     return access_token
 
 
+async def check_token_expiry(token, client_ip, check_freq=30):
+    while True:
+        valid_user = decode_token(token)
+        if valid_user is None:
+            raise Exception(f"User token expired for {client_ip}")
+        await asyncio.sleep(check_freq)
+
+
 # processes the requests in the job queue.
 def process_req(queue, req, user, redis_conn=None, dt=None):
     if not user:
