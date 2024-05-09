@@ -929,54 +929,54 @@ class DBSession:
 
     def get_all_visa_assignments_as_dict(self, zone_id):
         response = []
-        sherpas = (
+        resident_entities = (
             self.session.query(
-                vm.VisaAssignment.sherpa_name,
+                vm.VisaAssignment.sherpa_name.label("entity_name"),
                 vm.VisaAssignment.created_at.label("granted_time"),
             )
             .filter(vm.VisaAssignment.zone_id == zone_id)
             .filter(vm.VisaAssignment.sherpa_name != None)
             .all()
         )
-
         users = (
             self.session.query(
-                vm.VisaAssignment.user_name.label("sherpa_name"),
+                vm.VisaAssignment.user_name.label("entity_name"),
                 vm.VisaAssignment.created_at.label("granted_time"),
             )
             .filter(vm.VisaAssignment.zone_id == zone_id)
             .filter(vm.VisaAssignment.user_name != None)
             .all()
         )
-        waiting_sherpas = (
+
+        waiting_entities = (
             self.session.query(
-                vm.VisaRejects.sherpa_name,
+                vm.VisaRejects.sherpa_name.label("entity_name"),
                 vm.VisaRejects.created_at.label("denied_time"),
                 vm.VisaRejects.reason,
             )
             .filter(vm.VisaRejects.zone_id == zone_id)
-            .filter(vm.VisaAssignment.sherpa_name != None)
+            .filter(vm.VisaRejects.sherpa_name != None)
             .all()
         )
+
         waiting_users = (
             self.session.query(
-                vm.VisaAssignment.user_name.label("sherpa_name"),
+                vm.VisaRejects.user_name.label("entity_name"),
                 vm.VisaRejects.created_at.label("denied_time"),
                 vm.VisaRejects.reason,
             )
             .filter(vm.VisaRejects.zone_id == zone_id)
-            .filter(vm.VisaAssignment.user_name != None)
+            .filter(vm.VisaRejects.user_name != None)
             .all()
         )
-        sherpas.extend(users)
-        waiting_sherpas.extend(waiting_users)
-        resident_sherpas = jsonable_encoder(sherpas)
-        waiting_sherpas = jsonable_encoder(waiting_sherpas)
+        resident_entities.extend(users)
+        waiting_entities.extend(waiting_users)
 
         response = {
-            "resident_sherpas": resident_sherpas,
-            "waiting_sherpas": waiting_sherpas,
+            "resident_entities": jsonable_encoder(resident_entities),
+            "waiting_entities": jsonable_encoder(waiting_entities),
         }
+
         return response
 
     def get_super_user(self, name: str) -> um.SuperUser:

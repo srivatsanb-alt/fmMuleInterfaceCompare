@@ -816,6 +816,25 @@ class Handlers:
                     mm.NotificationModules.visa,
                 )
 
+    def get_resource_requester(self, req):
+        is_sherpa = True
+        if isinstance(req, rqm.ResourceReq):
+            requester: fm.Sherpa = self.dbsession.get_sherpa(req.source)
+        elif isinstance(req, rqm.SuperUserResourceReq):
+            requester: um.SuperUser = self.dbsession.get_super_user(req.source)
+            is_sherpa = False
+        elif isinstance(req, rqm.ManualVisaReleaseReq):
+            try:
+                requester: fm.Sherpa = self.dbsession.get_sherpa(req.revoke_visa_for)
+            except:
+                requester: um.SuperUser = self.dbsession.get_super_user(req.revoke_visa_for)
+                is_sherpa = False
+                if requester is None:
+                    raise ValueError(f"No such superuser {req.revoke_visa_for}")
+        else:
+            raise ValueError("Invalid Request")
+        return requester, is_sherpa
+
     def handle_fleet_start_stop(self, req: rqm.StartStopCtrlReq):
         # query DB
         fleet: fm.Fleet = self.dbsession.get_fleet(req.fleet_name)
@@ -1532,14 +1551,7 @@ class Handlers:
             )
 
     def handle_resource_access(self, req):
-        ##
-        is_sherpa = True
-        if isinstance(req, rqm.ResourceReq):
-            requester: fm.Sherpa = self.dbsession.get_sherpa(req.source)
-        else:
-            requester: um.SuperUser = self.dbsession.get_super_user(req.source)
-            is_sherpa = False
-
+        requester, is_sherpa = self.get_resource_requester(req)
         if not req.visa:
             logging.getLogger().warning("requested access type not supported")
             return None
@@ -1549,6 +1561,7 @@ class Handlers:
     def handle_visa_access(
         self, req: rqm.VisaReq, access_type: rqm.AccessType, requester, is_sherpa
     ):
+        # requester is either a super_user or a sherpa
         # do not assign next destination after processing a visa request.
         if access_type == rqm.AccessType.REQUEST:
             return self.handle_visa_request(req, requester, is_sherpa)
@@ -1630,6 +1643,29 @@ class Handlers:
         )
 
         return response.to_json()
+
+    def handle_manual_visa_release(self, req: rqm.ManualVisaReleaseReq):
+        response = {}
+        # query db
+        requester, is_sherpa = self.get_resource_requester(req)
+        (
+            visas_to_release,
+            revoke_visa_req,
+        ) = utils_visa.get_visas_to_release_on_manual_trigger(
+            self.dbsession, requester.exclusion_zones, req.zone_id
+        )
+
+        # end transaction
+        self.dbsession.session.commit()
+
+        # update_db
+        self.release_visas(visas_to_release, requester)
+        if is_sherpa:
+            response = utils_comms.send_req_to_sherpa(
+                self.dbsession, requester, revoke_visa_req
+            )
+
+        return response
 
     def handle_sherpa_img_update(self, req: rqm.SherpaImgUpdateCtrlReq):
         response = {}

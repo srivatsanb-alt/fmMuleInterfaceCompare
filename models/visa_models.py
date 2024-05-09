@@ -1,5 +1,7 @@
 from sqlalchemy import Boolean, Column, ForeignKey, String, ARRAY, Integer
 from sqlalchemy.orm import relationship
+from sqlalchemy import UniqueConstraint
+
 
 from models.base_models import Base, TimestampMixin
 
@@ -62,9 +64,14 @@ class ExclusionZone(Base, TimestampMixin):
 class VisaAssignment(Base, TimestampMixin):
     __tablename__ = "visa_assignments"
     id = Column(Integer, primary_key=True)
-    zone_id = Column(String, ForeignKey("exclusion_zones.zone_id"))
+    zone_id = Column(String, ForeignKey("exclusion_zones.zone_id")) # zone_id = {zone_name}_{zone_type}
     sherpa_name = Column(String, ForeignKey("sherpas.name"), nullable=True)
     user_name = Column(String, ForeignKey("super_users.name"), nullable=True)
+
+    __table_args__ = (
+        UniqueConstraint('zone_id', 'sherpa_name', name='unique_visa_assignment_sherpa'),
+        UniqueConstraint('zone_id', 'user_name', name='unique_visa_assignment_user'),
+        )
 
 class VisaRejects(Base, TimestampMixin):
     __tablename__ = "visa_rejects"
@@ -73,3 +80,8 @@ class VisaRejects(Base, TimestampMixin):
     sherpa_name = Column(String, ForeignKey("sherpas.name"), nullable=True)
     user_name = Column(String, ForeignKey("super_users.name"), nullable=True)
     reason = Column(String)
+
+    __table_args__ = (
+        UniqueConstraint('zone_id', 'sherpa_name', name='unique_visa_reject_sherpa'),
+        UniqueConstraint('zone_id', 'user_name', name='unique_visa_reject_user'),
+        )

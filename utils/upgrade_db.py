@@ -129,7 +129,7 @@ class DBUpgrade:
                 conn.execute("drop table master_fm_data_upload")
             except Exception as e:
                 print(f"Unable to drop master_fm_data_upload, exception: {e}")
-
+    
     def upgrade_to_4_15(self):
         with get_engine(os.getenv("FM_DATABASE_URI")).connect() as conn:
             try:
