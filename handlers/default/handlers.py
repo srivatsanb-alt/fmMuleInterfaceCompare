@@ -1297,6 +1297,9 @@ class Handlers:
         sherpa: fm.Sherpa = self.dbsession.get_sherpa(req.source)
         ongoing_trip: tm.OngoingTrip = self.dbsession.get_ongoing_trip(sherpa.name)
 
+        if ongoing_trip is None:
+            raise ValueError(f"No ongoing trip for sherpa: {sherpa.name}")
+
         if (
             ongoing_trip.trip_leg_id != req.trip_leg_id
             or ongoing_trip.trip_id != req.trip_id
