@@ -63,7 +63,7 @@ def send_req_to_sherpa(dbsession, sherpa: Sherpa, msg: FMReq) -> Dict:
         body["req_id"] = req_id
 
         if sherpa.status.disabled_reason == cc.DisabledReason.STALE_HEARTBEAT:
-            raise ValueError("Sherpa disconnected, cannot send req to sherpa")
+            raise Exception("Sherpa disconnected, cannot send req to sherpa")
 
         logging.getLogger().info(f"Sending req: {body} to {sherpa.name}")
 
@@ -110,7 +110,7 @@ async def send_async_req_to_sherpa(dbsession, sherpa: Sherpa, msg: FMReq) -> Dic
         body["req_id"] = req_id
 
         if sherpa.status.disabled_reason == cc.DisabledReason.STALE_HEARTBEAT:
-            raise ValueError("Sherpa disconnected, cannot send req to sherpa")
+            raise Exception("Sherpa disconnected, cannot send req to sherpa")
 
         logging.getLogger().info(f"Sending req: {body} to {sherpa.name}")
 

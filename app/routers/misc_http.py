@@ -306,6 +306,57 @@ async def create_generic_alerts(
             mm.NotificationModules.generic,
         )
 
+@router.post("/get_fm_incidents_pg")
+async def get_fm_incidents_for_fm_health(
+    fm_incidents_req: rqm.FMIncidentsReqPg,
+    user_name=Depends(dpd.get_user_from_header)
+):
+    response = {}
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    from_dt = utils_util.str_to_dt(fm_incidents_req.from_dt)
+    to_dt = utils_util.str_to_dt(fm_incidents_req.to_dt)
+
+    with DBSession(engine=ccm.engine) as dbsession:
+        fm_incidents, count, limit, pages, sort_field, sort_order = dbsession.get_fm_incident_pg(
+            from_dt,
+            to_dt,
+            fm_incidents_req.error_type,
+            fm_incidents_req.sort_field,
+            fm_incidents_req.sort_order,
+            fm_incidents_req.page,
+            fm_incidents_req.limit,
+        )
+
+        result = []             
+
+        for fm_incident in fm_incidents:
+            result.append(
+                {
+                    fm_incident.id: {
+                        "type": fm_incident.type,
+                        "code": fm_incident.code,
+                        "incident_id": fm_incident.incident_id,
+                        "data_uploaded": fm_incident.data_uploaded,
+                        "data_path": fm_incident.data_path,
+                        "module": fm_incident.module,
+                        "message": fm_incident.message,
+                        "updated_at": fm_incident.updated_at,
+                        "created_at": fm_incident.created_at,
+                    }
+                }
+            )
+        
+        response = {
+            "fm_incidents": result,
+            "count": count,
+            "limit": limit,
+            "total_pages": pages,
+            "sort_field": sort_field,
+            "sort_order": sort_order,
+        }
+    return response
 
 @router.post("/get_fm_incidents")
 async def get_fm_incidents(
@@ -355,14 +406,14 @@ async def get_visa_assignments(user_name=Depends(dpd.get_user_from_header)):
         response = jsonable_encoder(zone_ids)
         for item in response:
             visa_assignments = dbsession.get_all_visa_assignments_as_dict(item["zone_id"])
-            item["resident_sherpas"] = (
-                visa_assignments["resident_sherpas"]
-                if (visa_assignments["resident_sherpas"])
+            item["resident_entities"] = (
+                visa_assignments["resident_entities"]
+                if (visa_assignments["resident_entities"])
                 else []
             )
-            item["waiting_sherpas"] = (
-                visa_assignments["waiting_sherpas"]
-                if (visa_assignments["waiting_sherpas"])
+            item["waiting_entities"] = (
+                visa_assignments["waiting_entities"]
+                if (visa_assignments["waiting_entities"])
                 else []
             )
     return response

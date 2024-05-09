@@ -74,6 +74,10 @@ class Sherpa(Base):
         uselist=False,
     )
 
+    def get_notification_entity_names(self):
+        entity_names = [self.name, self.fleet.name, self.fleet.customer]
+        return entity_names
+
 
 class SherpaEvent(TimestampMixin, Base):
     __tablename__ = "sherpa_events"

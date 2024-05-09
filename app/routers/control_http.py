@@ -12,7 +12,9 @@ import models.fleet_models as fm
 import app.routers.dependencies as dpd
 from utils.comms import send_async_req_to_sherpa
 import models.misc_models as mm
+from utils.rq_utils import Queues
 import core.common as ccm
+
 
 router = APIRouter(
     prefix="/api/v1/control",
@@ -399,4 +401,19 @@ async def manual_park(
         None, activate_parking_mode_req, user_name
     )
 
+    return response
+
+
+@router.post("/manual_visa_release")
+async def manual_visa_release(
+    manual_visa_release_req: rqm.ManualVisaReleaseReq,
+    user_name=Depends(dpd.get_user_from_header),
+):
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    queues = Queues.queues_dict["resource_handler"]
+    response = await dpd.process_req_with_response(
+        queues, manual_visa_release_req, manual_visa_release_req.revoke_visa_for
+    )
     return response

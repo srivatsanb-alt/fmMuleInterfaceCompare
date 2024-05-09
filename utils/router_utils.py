@@ -1,6 +1,9 @@
 import sys
 import os
 
+# ati code imports
+import utils.util as utils_util
+
 sys.path.append(os.environ["MULE_ROOT"])
 from mule.ati.control.bridge.router_planner_interface import RoutePlannerInterface
 import mule.ati.control.dynamic_router.grid_route_library as grl
@@ -33,9 +36,11 @@ class AllRouterModules:
         for fleet_name in self.fleet_names:
             self.add_router_module(fleet_name)
 
+    @utils_util.report_error
     def get_router_module(self, fleet_name: str):
         return self.router_modules[fleet_name]
 
+    @utils_util.report_error
     def add_router_module(self, fleet_name):
         try:
             map_path = os.path.join(os.environ["FM_STATIC_DIR"], f"{fleet_name}/map/")

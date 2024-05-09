@@ -11,6 +11,7 @@ import models.misc_models as mm
 import models.fleet_models as fm
 import models.trip_models as tm
 import models.visa_models as vm
+import models.user_models as um
 from utils.util import check_if_timestamp_has_passed, str_to_dt
 
 
@@ -147,12 +148,16 @@ class DBSession:
     def get_all_visa_rejects(self):
         return self.session.query(vm.VisaRejects).all()
 
-    def get_visa_rejects(self, reqd_ezones, sherpa_name):
+    def get_visa_rejects(self, reqd_ezones, name):
         visa_rejects = []
         for ezone in set(reqd_ezones):
             visa_rejects.append(
                 self.session.query(vm.VisaRejects)
-                .filter(vm.VisaRejects.sherpa_name == sherpa_name)
+                .filter(
+                    or_(
+                        vm.VisaRejects.sherpa_name == name, vm.VisaRejects.user_name == name
+                    )
+                )
                 .filter(vm.VisaRejects.zone_id == ezone.zone_id)
                 .one_or_none()
             )
@@ -806,6 +811,34 @@ class DBSession:
             .all()
         )
 
+    def get_fm_incident_pg(
+        self,
+        from_dt,
+        to_dt,
+        error_type="fm_error",
+        sort_field="created_at",
+        sort_order="desc",
+        page=0,
+        limit=50,
+    ):
+        skip = page * limit
+
+        query = self.session.query(mm.FMIncidents)
+        query = query.filter(mm.FMIncidents.type == error_type)
+        query = query.filter(mm.FMIncidents.created_at > from_dt)
+        query = query.filter(mm.FMIncidents.created_at < to_dt)
+        query = query.filter(mm.FMIncidents.updated_at > from_dt)
+        query = query.filter(mm.FMIncidents.updated_at < to_dt)
+
+        count = query.count()
+
+        query = query.order_by(text(f"{sort_field} {sort_order}")).offset(skip).limit(limit)
+
+        fm_incidents = query.all()
+
+        pages = int(count / limit) if (count % limit == 0) else int(count / limit + 1)
+        return fm_incidents, count, limit, pages, sort_field, sort_order
+
     def get_last_sherpa_mode_change(self, sherpa_name):
         return (
             self.session.query(mm.SherpaModeChange)
@@ -828,7 +861,7 @@ class DBSession:
                 mm.SherpaModeChange.mode,
                 func.sum(
                     extract(
-                        "seconds",
+                        "epoch",
                         func.age(
                             mm.SherpaModeChange.ended_at, mm.SherpaModeChange.started_at
                         ),
@@ -896,29 +929,67 @@ class DBSession:
 
     def get_all_visa_assignments_as_dict(self, zone_id):
         response = []
-        sherpas = (
+        resident_entities = (
             self.session.query(
-                vm.VisaAssignment.sherpa_name,
+                vm.VisaAssignment.sherpa_name.label("entity_name"),
                 vm.VisaAssignment.created_at.label("granted_time"),
             )
             .filter(vm.VisaAssignment.zone_id == zone_id)
+            .filter(vm.VisaAssignment.sherpa_name != None)
             .all()
         )
-        waiting_sherpas = (
+        users = (
             self.session.query(
-                vm.VisaRejects.sherpa_name,
+                vm.VisaAssignment.user_name.label("entity_name"),
+                vm.VisaAssignment.created_at.label("granted_time"),
+            )
+            .filter(vm.VisaAssignment.zone_id == zone_id)
+            .filter(vm.VisaAssignment.user_name != None)
+            .all()
+        )
+
+        waiting_entities = (
+            self.session.query(
+                vm.VisaRejects.sherpa_name.label("entity_name"),
                 vm.VisaRejects.created_at.label("denied_time"),
                 vm.VisaRejects.reason,
             )
             .filter(vm.VisaRejects.zone_id == zone_id)
+            .filter(vm.VisaRejects.sherpa_name != None)
             .all()
         )
-        resident_sherpas = jsonable_encoder(sherpas)
 
-        waiting_sherpas = jsonable_encoder(waiting_sherpas)
+        waiting_users = (
+            self.session.query(
+                vm.VisaRejects.user_name.label("entity_name"),
+                vm.VisaRejects.created_at.label("denied_time"),
+                vm.VisaRejects.reason,
+            )
+            .filter(vm.VisaRejects.zone_id == zone_id)
+            .filter(vm.VisaRejects.user_name != None)
+            .all()
+        )
+        resident_entities.extend(users)
+        waiting_entities.extend(waiting_users)
 
         response = {
-            "resident_sherpas": resident_sherpas,
-            "waiting_sherpas": waiting_sherpas,
+            "resident_entities": jsonable_encoder(resident_entities),
+            "waiting_entities": jsonable_encoder(waiting_entities),
         }
+
         return response
+
+    def get_super_user(self, name: str) -> um.SuperUser:
+        return (
+            self.session.query(um.SuperUser).filter(um.SuperUser.name == name).one_or_none()
+        )
+
+    def get_all_super_users(self) -> List[um.SuperUser]:
+        return self.session.query(um.SuperUser).all()
+
+    def get_super_user_with_hashed_api_key(self, hashed_api_key: str) -> um.SuperUser:
+        return (
+            self.session.query(um.SuperUser)
+            .filter(um.SuperUser.hashed_api_key == hashed_api_key)
+            .one_or_none()
+        )

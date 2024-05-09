@@ -49,6 +49,7 @@ class PasstoSherpaEndpoints:
     PAUSE_RESUME = "pause_resume"
     SWITCH_MODE = "switch_mode"
     IMG_UPDATE = "img_update"
+    REVOKE_VISA = "revoke_visa"
 
 
 class ConveyorReq(BaseModel):
@@ -83,7 +84,9 @@ class FrontendUserRoles:
     viewer = 0
     operator = 1
     supervisor = 2
-    support = 3
+    superuser = 3
+    support = 4
+
 
 #################################################
 # Messages from sherpa
@@ -409,6 +412,16 @@ class GetFMIncidents(ClientReq):
     historic: Optional[bool] = False
 
 
+class FMIncidentsReqPg(ClientReq):
+    from_dt: str
+    to_dt: str
+    error_type: Optional[str] = "fm_error"
+    sort_field: Optional[str] = "created_at"
+    sort_order: Optional[str] = "desc"
+    page: int
+    limit: int
+
+
 class SaveRouteReq(ClientReq):
     tag: str
     route: List[str]
@@ -430,6 +443,25 @@ class ActivateParkingMode(ClientReq):
     activate: bool
     sherpa_name: str
     type: str = MessageType.ACTIVATE_PARKING_MODE
+
+
+#################################################
+# Messages from super_users
+class SuperUserReq(BaseModel):
+    source: Union[str, None] = None
+    type: str
+    timestamp: float
+    ttl: Optional[int] = None
+
+
+class SuperUserResourceReq(SuperUserReq):
+    visa: VisaReq = None
+    # TODO: define types for these
+    parking_slot: str = None
+    charging_bay: str = None
+    access_type: AccessType = None
+    ttl = 5
+    type = MessageType.RESOURCE_ACCESS
 
 
 #################################################
@@ -508,11 +540,25 @@ class QuickDiagnosticsReq(FMReq):
     type = MessageType.PASS_TO_SHERPA
 
 
+class RevokeVisaReq(FMReq):
+    endpoint: str = PasstoSherpaEndpoints.REVOKE_VISA
+    sherpa_name: Optional[str]
+    visa_type: str
+    zone_name: str
+    type = MessageType.PASS_TO_SHERPA
+
+
 class SherpaImgUpdate(FMReq):
     endpoint: str = PasstoSherpaEndpoints.IMG_UPDATE
     image_tag: str
     fm_server_username: str
     time_zone: str
+
+
+class ManualVisaReleaseReq(ClientReq):
+    revoke_visa_for: str
+    zone_id: str
+    type = MessageType.MANUAL_VISA_RELEASE
 
 
 @dataclass

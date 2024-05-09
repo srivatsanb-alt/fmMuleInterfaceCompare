@@ -62,16 +62,15 @@ async def disable_station(
         dpd.raise_error("Bad detail")
 
     with DBSession(engine=ccm.engine) as dbsession:
-        if disable:
-            all_ongoing_trips: List[tm.OngoingTrip] = dbsession.get_all_ongoing_trips()
-            for ongoing_trip in all_ongoing_trips:
-                trip: tm.Trip = ongoing_trip.trip
-                stations = trip.route
-                if entity_name in stations:
-                    dpd.raise_error(
-                        f"Cannot disable station :{entity_name}, there is an ongoing trip : {trip.id} with station : {entity_name} in trip route : {trip.route}"
-                    )
-
+        # if disable:
+        #     all_ongoing_trips: List[tm.OngoingTrip] = dbsession.get_all_ongoing_trips()
+        #     for ongoing_trip in all_ongoing_trips:
+        #         trip: tm.Trip = ongoing_trip.trip
+        #         stations = trip.route
+        #         if entity_name in stations:
+        #             dpd.raise_error(
+        #                 f"Cannot disable station :{entity_name}, there is an ongoing trip : {trip.id} with station : {entity_name} in trip route : {trip.route}"
+        #             )
         station_status: fm.StationStatus = dbsession.get_station_status(entity_name)
         if not station_status:
             dpd.raise_error("Invalid station name")
