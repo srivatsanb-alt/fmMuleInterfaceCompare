@@ -476,7 +476,7 @@ def update_fm_incidents(
 
         if response_status_code == 200:
             logging.getLogger("mfm_updates").info(
-                f"sent fm_incidents to mfm successfully, details: {req_json}"
+                f"sent fm_incidents to mfm successfully, fm_incident_ids_chunk: {fm_incident_ids_chunk}"
             )
             event_updater.mfm_upload_dt_info.last_fm_incidents_update_dt = update_to_dt
             event_updater.update_db(dbsession)
