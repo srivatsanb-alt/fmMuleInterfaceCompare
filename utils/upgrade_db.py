@@ -148,7 +148,7 @@ class DBUpgrade:
                         )
                 print(f"Inserted visa_assignments")
             except Exception as e:
-                print(f"Unable to copy visa_assignments, exception: {e}")
+                print(f"Unable to insert visa_assignments, exception: {e}")
 
 
 def upgrade_db_schema():
@@ -226,9 +226,9 @@ def maybe_delete_visa_related_tables_v4_15():
             conn.execute("commit")
             conn.execute("drop table visa_assignments")
             conn.execute("drop table visa_rejects")
-            print("dropped visa_assignments and visa_rejects")
+            print("dropped visa_assignments and visa_rejects and copied data to visa_assign.csv")
         except Exception as e:
-            print(f"Unable to drop visa_assignments and visa_rejects, exception: {e}")
+            print(f"Unable to drop visa_assignments and visa_rejects or copied data to visa_assign.csv, exception: {e}")
 
 
 def maybe_drop_tables():
