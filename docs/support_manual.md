@@ -28,6 +28,7 @@
 25. [Switch between multiple maps corresponding to the same fleet](#switch-between-multiple-maps-corresponding-to-the-same-fleet)
 26. [Simulate summon_button/conveyor with postman](#simulate-summon_buttonconveyor-with-postman)
 27. [Setup run on host service](#setup-run-on-host-service)
+28. [Configure expiry interval time for access token](#configure-expiry-interval-time-for-access-tokens)
 
 ## Setup sherpas ##
 
@@ -564,3 +565,15 @@ sudo chmod ugo+rwx install_run_on_host_service.sh
 ```
 
 4. Ensure that the output shows that the run_on_host is successfully installed
+
+## Configure expiry interval time for access tokens ##
+
+1. Use config editor, select the database frontend_users, select the collection user_details, click on the document to edit it
+
+2. Add `expiry_interval: x`(where x is in seconds) save it
+ 
+3. Set secret token select the database fm_config, select the collection app_security, click on the document to edit it add `secret_token: 'string'` save it
+
+4. [Restart FM](#restart-fm).
+
+Note: This feature is only for viewer role
