@@ -428,6 +428,17 @@ class Handlers:
                     self.run_optimal_dispatch(req_ctxt.fleet_names)
         except Exception as e:
             logging.getLogger().error(f"couldn't run optimal dispatch, {e}")
+            optimal_dispatch_fail = (
+                    f"Unable to run optimal dispatch for fleet {req_ctxt.fleet_names}"
+                )
+            with DBSession(engine=ccm.engine) as dbsession:
+                utils_util.maybe_add_notification(
+                        dbsession,
+                        req_ctxt.fleet_names,
+                        optimal_dispatch_fail,
+                        mm.NotificationLevels.alert,
+                        mm.NotificationModules.optimal_dispatch,
+                    )
 
     def run_optimal_dispatch(self, fleet_names):
         with FMMongo() as fm_mongo:

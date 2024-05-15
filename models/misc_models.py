@@ -17,6 +17,7 @@ class NotificationModules:
     trolley = "trolley"
     stoppages = "stoppages"
     dispatch_button = "dispatch_button"
+    optimal_dispatch = "optimal_dispatch"
 
 
 class NotificationLevels:
