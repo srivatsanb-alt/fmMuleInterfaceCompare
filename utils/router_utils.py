@@ -38,7 +38,10 @@ class AllRouterModules:
 
     @utils_util.report_error
     def get_router_module(self, fleet_name: str):
-        return self.router_modules[fleet_name]
+        rm = self.router_modules.get(fleet_name, None)
+        if rm is None:
+            raise Exception(f"Unable to get router module for {fleet_name}")
+        return rm
 
     @utils_util.report_error
     def add_router_module(self, fleet_name):
@@ -46,6 +49,6 @@ class AllRouterModules:
             map_path = os.path.join(os.environ["FM_STATIC_DIR"], f"{fleet_name}/map/")
             self.router_modules.update({fleet_name: RouterModule(map_path)})
         except Exception as e:
-            raise Exception(
+            logging.error(
                 f"Unable to create router module for fleet {fleet_name}, exception: {e}"
             )
