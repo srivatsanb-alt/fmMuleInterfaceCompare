@@ -429,16 +429,16 @@ class Handlers:
         except Exception as e:
             logging.getLogger().error(f"couldn't run optimal dispatch, {e}")
             optimal_dispatch_fail = (
-                    f"Unable to run optimal dispatch for fleet {req_ctxt.fleet_names}"
-                )
+                f"Unable to run optimal dispatch for fleet {req_ctxt.fleet_names}"
+            )
             with DBSession(engine=ccm.engine) as dbsession:
                 utils_util.maybe_add_notification(
-                        dbsession,
-                        req_ctxt.fleet_names,
-                        optimal_dispatch_fail,
-                        mm.NotificationLevels.alert,
-                        mm.NotificationModules.optimal_dispatch,
-                    )
+                    dbsession,
+                    req_ctxt.fleet_names,
+                    optimal_dispatch_fail,
+                    mm.NotificationLevels.alert,
+                    mm.NotificationModules.optimal_dispatch,
+                )
 
     def run_optimal_dispatch(self, fleet_names):
         with FMMongo() as fm_mongo:
@@ -736,6 +736,11 @@ class Handlers:
                 f"Deleted ongoing trip successfully trip_id: {ongoing_trip.trip.id} booking_id: {ongoing_trip.trip.booking_id}"
             )
         return {}
+
+    def force_delete_sherpa_current_trip(self, sherpa: fm.Sherpa):
+        if sherpa.status.trip_id is not None:
+            req = rqm.ForceDeleteOngoingTripReq(sherpa_name=sherpa_name)
+            self.handle_force_delete_ongoing_trip(req)
 
     def should_assign_next_task(
         self, sherpa: fm.Sherpa, ongoing_trip: tm.OngoingTrip, pending_trip: tm.PendingTrip
@@ -1673,7 +1678,23 @@ class Handlers:
         self.dbsession.session.commit()
 
         # update_db
+        if is_sherpa:
+            if requester.status.disabled_reason == cc.DisabledReason.STALE_HEARTBEAT:
+                uninduct_req = rqm.SherpaInductReq(induct=False, sherpa_name=requester.name)
+                if sherpa.status.inducted:
+                    self.handle_induct_sherpa(uninduct_req)
+                    self.force_delete_sherpa_current_trip(requester)
+                    disable_sherpa_alert = f"Disabling {requester.name} for trips. Will delete ongoing trips for {requester.name} if any"
+                    self.dbsession.add_notification(
+                        sherpa.get_notification_entity_names(),
+                        disable_sherpa_alert,
+                        mm.NotificationLevels.alert,
+                        mm.NotificationModules.visa,
+                    )
+                    return
+
         self.release_visas(visas_to_release, requester)
+
         if is_sherpa:
             response = utils_comms.send_req_to_sherpa(
                 self.dbsession, requester, revoke_visa_req
@@ -1735,13 +1756,13 @@ class Handlers:
             if sherpa.parking_id == saved_route.route[-1]:
                 raise ValueError(f"Sherpa already parked at {saved_route.route[-1]}")
 
-            if sherpa.status.trip_id is not None:
-                req = rqm.ForceDeleteOngoingTripReq(sherpa_name=req.sherpa_name)
-                self.handle_force_delete_ongoing_trip(req)
+            self.force_delete_sherpa_current_trip(sherpa)
+
             trip_metadata = {
                 "booked_by": f"manual_park_{req.sherpa_name}",
                 "sherpa_name": req.sherpa_name,
             }
+
             booking_req = rqm.BookingReq(
                 trips=[rqm.TripMsg(route=saved_route.route, metadata=trip_metadata)]
             )
