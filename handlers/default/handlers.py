@@ -1679,7 +1679,7 @@ class Handlers:
 
         # update_db
         if is_sherpa:
-            if requester.status.disabled_reason == cc.DisabledReason.STALE_HEARTBEAT:
+            if requester.status.mode == "disconnected":
                 uninduct_req = rqm.SherpaInductReq(induct=False, sherpa_name=requester.name)
                 if requester.status.inducted:
                     self.handle_induct_sherpa(uninduct_req)
