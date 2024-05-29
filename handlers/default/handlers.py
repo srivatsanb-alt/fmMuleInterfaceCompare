@@ -739,7 +739,7 @@ class Handlers:
 
     def force_delete_sherpa_current_trip(self, sherpa: fm.Sherpa):
         if sherpa.status.trip_id is not None:
-            req = rqm.ForceDeleteOngoingTripReq(sherpa_name=sherpa_name)
+            req = rqm.ForceDeleteOngoingTripReq(sherpa_name=sherpa.name)
             self.handle_force_delete_ongoing_trip(req)
 
     def should_assign_next_task(
@@ -1681,12 +1681,12 @@ class Handlers:
         if is_sherpa:
             if requester.status.disabled_reason == cc.DisabledReason.STALE_HEARTBEAT:
                 uninduct_req = rqm.SherpaInductReq(induct=False, sherpa_name=requester.name)
-                if sherpa.status.inducted:
+                if requester.status.inducted:
                     self.handle_induct_sherpa(uninduct_req)
                     self.force_delete_sherpa_current_trip(requester)
                     disable_sherpa_alert = f"Disabling {requester.name} for trips. Will delete ongoing trips for {requester.name} if any"
                     self.dbsession.add_notification(
-                        sherpa.get_notification_entity_names(),
+                        requester.get_notification_entity_names(),
                         disable_sherpa_alert,
                         mm.NotificationLevels.alert,
                         mm.NotificationModules.visa,
