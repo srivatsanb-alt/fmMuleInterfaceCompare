@@ -41,7 +41,6 @@ def regenerate_mule_config():
 
 
 def populate_redis_with_basic_info(dbsession: DBSession):
-    # redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
     with redis.from_url(os.getenv("FM_REDIS_URI")) as redis_conn:
         all_sherpas = dbsession.get_all_sherpas()
         sherpa_names = []

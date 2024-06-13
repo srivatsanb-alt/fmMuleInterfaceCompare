@@ -11,7 +11,7 @@ set_timezone_dc()
 
 download_pull_fm_update()
 {
-  redis-cli -p $REDIS_PORT set update_done false
+  redis-cli -h $REDIS_HOST -p $REDIS_PORT set update_done false
 
    MASTER_FM_IP=$1
    MASTER_FM_PORT=$2
@@ -46,12 +46,12 @@ download_pull_fm_update()
    if [ "$all_reqd_images_available" != "yes" ]; then
    {
       echo "$all_reqd_images_available....exiting"
-      redis-cli -p $REDIS_PORT set update_done false
+      redis-cli -h $REDIS_HOST -p $REDIS_PORT set update_done false
       echo -e "Unable to complete the update to $FM_VERSION"
       exit 1
    }
    fi
 
-   redis-cli -p $REDIS_PORT set update_done true
+   redis-cli -h $REDIS_HOST -p $REDIS_PORT set update_done true
    echo "Update Done!"
 }

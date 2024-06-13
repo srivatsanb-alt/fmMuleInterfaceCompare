@@ -1,6 +1,7 @@
 import aioredis
 import os
 import json
+import logging
 from typing import Union
 
 # ati code imports
@@ -417,3 +418,22 @@ async def manual_visa_release(
         queues, manual_visa_release_req, manual_visa_release_req.revoke_visa_for
     )
     return response
+
+@router.get("/start_ttyd/{enable}")
+async def start_ttyd(
+    enable: bool,
+    user_name=Depends(dpd.get_user_from_header)
+    ):
+
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    if enable:
+        logging.getLogger().info("Will start ttyd software")
+        os.system("docker start fm_ttyd")
+    else:
+        logging.getLogger().info("Will stop ttyd software")
+        os.system("docker stop fm_ttyd")
+
+    return {}
+

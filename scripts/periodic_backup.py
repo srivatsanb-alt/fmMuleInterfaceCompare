@@ -35,7 +35,6 @@ def backup_data():
     fm_backup_path = os.path.join(os.getenv("FM_STATIC_DIR"), "data_backup")
     start_time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
     current_data = f"{start_time}_data"
-    # redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
     with redis.from_url(os.getenv("FM_REDIS_URI")) as redis_conn:
         redis_conn.set("current_data_folder", current_data)
         run_backup_path = os.path.join(fm_backup_path, current_data)
