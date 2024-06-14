@@ -410,6 +410,7 @@ class SherpaUtils:
         ip_address=None,
         api_key=None,
         fleet_id=None,
+        sherpa_type=None,
     ):
         sherpa: fm.Sherpa = (
             dbsession.session.query(fm.Sherpa)
@@ -426,6 +427,7 @@ class SherpaUtils:
         if sherpa:
             sherpa.hwid = hwid
             sherpa.ip_address = None
+            sherpa.sherpa_type = sherpa_type
             if api_key is not None:
                 sherpa.hashed_api_key = hashed_api_key
                 logger.info(f"updated sherpa {sherpa_name} ")
@@ -457,6 +459,7 @@ class SherpaUtils:
                 ip_address=None,
                 hashed_api_key=hashed_api_key,
                 fleet_id=fleet_id,
+                sherpa_type=sherpa_type,
             )
             dbsession.add_to_session(sherpa)
             logger.info(

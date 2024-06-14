@@ -296,6 +296,7 @@ class AddEditSherpaReq(ClientReq):
     hwid: str
     fleet_name: str
     api_key: Optional[str]
+    sherpa_type: str
 
 
 class AddFleetReq(ClientReq):
