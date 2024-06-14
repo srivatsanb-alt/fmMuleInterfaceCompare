@@ -54,6 +54,7 @@ class Sherpa(Base):
     __tablename__ = "sherpas"
 
     id = Column(Integer, primary_key=True, index=True)
+    sherpa_type = Column(String, index=True)
     name = Column(String, unique=True, index=True)
     hwid = Column(String, unique=True)
     ip_address = Column(String)
