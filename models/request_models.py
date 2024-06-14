@@ -569,7 +569,7 @@ class ManualVisaReleaseReq(ClientReq):
     type = MessageType.MANUAL_VISA_RELEASE
 
 class SoundSettingCtrlReq(ClientReq):
-    volume: float
+    volume: Optional[float] = 0.01
     sound_type: str
 
 
