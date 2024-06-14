@@ -50,6 +50,7 @@ class PasstoSherpaEndpoints:
     SWITCH_MODE = "switch_mode"
     IMG_UPDATE = "img_update"
     REVOKE_VISA = "revoke_visa"
+    SOUND = "sound"
 
 
 class ConveyorReq(BaseModel):
@@ -547,6 +548,13 @@ class RevokeVisaReq(FMReq):
     zone_name: str
     type = MessageType.PASS_TO_SHERPA
 
+class SoundSettingReq(FMReq):
+    endpoint: str = PasstoSherpaEndpoints.SOUND
+    sherpa_name: str
+    volume: float
+    sound_type: str
+    type = MessageType.PASS_TO_SHERPA
+
 
 class SherpaImgUpdate(FMReq):
     endpoint: str = PasstoSherpaEndpoints.IMG_UPDATE
@@ -559,6 +567,10 @@ class ManualVisaReleaseReq(ClientReq):
     revoke_visa_for: str
     zone_id: str
     type = MessageType.MANUAL_VISA_RELEASE
+
+class SoundSettingCtrlReq(ClientReq):
+    volume: float
+    sound_type: str
 
 
 @dataclass
