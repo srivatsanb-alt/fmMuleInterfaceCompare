@@ -341,6 +341,35 @@ async def reset_pose(
 
     return response
 
+@router.post("/sherpa/{entity_name}/reset_pose_vpr")
+async def reset_pose_vpr(
+    entity_name=Union[str, None],
+    user_name=Depends(dpd.get_user_from_header),
+):
+
+    response = {}
+
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    if not entity_name:
+        dpd.raise_error("No entity name")
+
+    with DBSession(engine=ccm.engine) as dbsession:
+        sherpa_status = dbsession.get_sherpa_status(entity_name)
+        if not sherpa_status:
+            dpd.raise_error("Bad sherpa name")
+
+
+    reset_pose_vpr_req = rqm.ResetPoseVPRReq(
+        sherpa_name=entity_name,
+    )
+
+    _ = await dpd.process_req_with_response(None, reset_pose_vpr_req, user_name)
+
+    return response
+
+
 
 # inducts sherpa into the fleet
 # trips not assigned otherwise

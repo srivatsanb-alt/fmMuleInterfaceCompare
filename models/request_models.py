@@ -50,6 +50,7 @@ class PasstoSherpaEndpoints:
     SWITCH_MODE = "switch_mode"
     IMG_UPDATE = "img_update"
     REVOKE_VISA = "revoke_visa"
+    RESET_POSE_VPR = 'reset_pose_vpr'
 
 
 class SherpaType(str, Enum):
@@ -533,6 +534,11 @@ class ResetPoseReq(FMReq):
     pose: List[float]
     sherpa_name: str
     station_name: Optional[str]
+    type = MessageType.PASS_TO_SHERPA
+
+class ResetPoseVPRReq(FMReq):
+    endpoint: str = PasstoSherpaEndpoints.RESET_POSE_VPR
+    sherpa_name: str
     type = MessageType.PASS_TO_SHERPA
 
 
