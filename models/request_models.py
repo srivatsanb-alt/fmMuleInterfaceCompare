@@ -51,6 +51,7 @@ class PasstoSherpaEndpoints:
     IMG_UPDATE = "img_update"
     REVOKE_VISA = "revoke_visa"
     SOUND = "sound"
+    CURRENT_SOUND_STATUS = "current_sound_status"
 
 
 class ConveyorReq(BaseModel):
@@ -553,6 +554,11 @@ class SoundSettingReq(FMReq):
     sherpa_name: str
     volume: float
     sound_type: str
+    type = MessageType.PASS_TO_SHERPA
+
+class CurrentSoundSettingReq(FMReq):
+    endpoint: str = PasstoSherpaEndpoints.CURRENT_SOUND_STATUS
+    sherpa_name: str
     type = MessageType.PASS_TO_SHERPA
 
 
