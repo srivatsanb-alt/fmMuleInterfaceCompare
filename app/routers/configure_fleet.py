@@ -73,6 +73,7 @@ async def add_edit_sherpa(
                 hwid=add_edit_sherpa.hwid,
                 api_key=add_edit_sherpa.api_key,
                 fleet_id=fleet.id,
+                sherpa_type=add_edit_sherpa.sherpa_type
             )
         except Exception as e:
             dpd.relay_error_details(e)

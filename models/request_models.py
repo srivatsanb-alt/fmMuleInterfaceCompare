@@ -52,6 +52,13 @@ class PasstoSherpaEndpoints:
     REVOKE_VISA = "revoke_visa"
 
 
+class SherpaType(str, Enum):
+    tug = "tug"
+    lite = "lite"
+    lifter = "lifter"
+    pallet_mover = "pallet_mover"
+
+
 class ConveyorReq(BaseModel):
     direction: DirectionEnum
     num_units: int
@@ -296,6 +303,7 @@ class AddEditSherpaReq(ClientReq):
     hwid: str
     fleet_name: str
     api_key: Optional[str]
+    sherpa_type: SherpaType
 
 
 class AddFleetReq(ClientReq):
