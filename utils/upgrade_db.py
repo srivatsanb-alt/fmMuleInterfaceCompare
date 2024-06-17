@@ -163,6 +163,9 @@ class DBUpgrade:
                 print("column sherpa_type added to sherpas table")
             else:
                 print("column sherpa_type already present in sherpa table")
+            # Update sherpa_type to 'tug' in each row
+            conn.execute("UPDATE sherpas SET sherpa_type = 'tug'")
+            print("Updated sherpa_type to 'tug' in all rows of the sherpas table.")
 
 
 def upgrade_db_schema():
