@@ -52,6 +52,14 @@ class PasstoSherpaEndpoints:
     REVOKE_VISA = "revoke_visa"
     SOUND = "sound"
     CURRENT_SOUND_STATUS = "current_sound_status"
+    RESET_POSE_VPR = 'reset_pose_vpr'
+
+
+class SherpaType(str, Enum):
+    tug = "tug"
+    lite = "lite"
+    lifter = "lifter"
+    pallet_mover = "pallet_mover"
 
 
 class ConveyorReq(BaseModel):
@@ -298,6 +306,7 @@ class AddEditSherpaReq(ClientReq):
     hwid: str
     fleet_name: str
     api_key: Optional[str]
+    sherpa_type: SherpaType
 
 
 class AddFleetReq(ClientReq):
@@ -527,6 +536,11 @@ class ResetPoseReq(FMReq):
     pose: List[float]
     sherpa_name: str
     station_name: Optional[str]
+    type = MessageType.PASS_TO_SHERPA
+
+class ResetPoseVPRReq(FMReq):
+    endpoint: str = PasstoSherpaEndpoints.RESET_POSE_VPR
+    sherpa_name: str
     type = MessageType.PASS_TO_SHERPA
 
 

@@ -25,6 +25,7 @@ AVAILABLE_UPGRADES = [
     "4.02",
     "4.1",
     "4.15",
+    "4.2",
 ]
 NO_SCHEMA_CHANGES = ["3.0", "3.01", "3.1"]
 
@@ -149,6 +150,22 @@ class DBUpgrade:
                 print(f"Inserted visa_assignments")
             except Exception as e:
                 print(f"Unable to insert visa_assignments, exception: {e}")
+
+    def upgrade_to_4_2(self):
+        with get_engine(os.getenv("FM_DATABASE_URI")).connect() as conn:
+            conn.execute("commit")
+            result = conn.execute(
+                "SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='sherpas'"
+            )
+            column_names = [row[0] for row in result]
+            if "sherpa_type" not in column_names:
+                conn.execute('ALTER TABLE "sherpas" ADD COLUMN "sherpa_type" VARCHAR')
+                print("column sherpa_type added to sherpas table")
+            else:
+                print("column sherpa_type already present in sherpa table")
+            # Update sherpa_type to 'tug' in each row
+            conn.execute("UPDATE sherpas SET sherpa_type = 'tug'")
+            print("Updated sherpa_type to 'tug' in all rows of the sherpas table.")
 
 
 def upgrade_db_schema():
