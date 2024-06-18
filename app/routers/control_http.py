@@ -448,6 +448,57 @@ async def manual_visa_release(
     )
     return response
 
+@router.get("/current_sound_setting/{entity_name}")
+async def current_sound_setting(
+    entity_name=Union[str, None],
+    user_name=Depends(dpd.get_user_from_header),
+):
+    response = {}
+
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    if not entity_name:
+        dpd.raise_error("No entity name")
+
+    with DBSession(engine=ccm.engine) as dbsession:
+        sherpa_status = dbsession.get_sherpa_status(entity_name)
+        if not sherpa_status:
+            dpd.raise_error("Bad sherpa name")
+
+        req = rqm.CurrentSoundSettingReq(sherpa_name=entity_name)
+        response = await send_async_req_to_sherpa(dbsession, sherpa_status.sherpa, req)
+
+    return response
+
+@router.post("/sound_setting/{entity_name}")
+async def sound_setting(
+    sound_setting_req: rqm.SoundSettingCtrlReq,
+    entity_name=Union[str, None],
+    user_name=Depends(dpd.get_user_from_header),
+):
+    response = {}
+
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    if not entity_name:
+        dpd.raise_error("No entity name")
+    
+    with DBSession(engine=ccm.engine) as dbsession:
+        sherpa_status = dbsession.get_sherpa_status(entity_name)
+
+        if not sherpa_status:
+            dpd.raise_error("Bad sherpa name")
+
+        sound_change_req = rqm.SoundSettingReq(
+            sherpa_name=entity_name, volume=sound_setting_req.volume, sound_type=sound_setting_req.sound_type
+        )
+
+    _ = await dpd.process_req_with_response(None, sound_change_req, user_name)
+
+    return response
+
 @router.get("/start_ttyd/{enable}")
 async def start_ttyd(
     enable: bool,
