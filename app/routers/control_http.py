@@ -3,6 +3,7 @@ import os
 import json
 import logging
 from typing import Union
+import random
 
 # ati code imports
 from core.constants import FleetStatus, DisabledReason
@@ -499,16 +500,22 @@ async def sound_setting(
 
     return response
 
-@router.get("/start_ttyd/{enable}")
-async def start_ttyd(
-    enable: bool,
+@router.post("/start_remote_terminal")
+async def start_remote_terminal(
+    remote_terminal_req: rqm.RemoteTerminalCtrlReq,
     user_name=Depends(dpd.get_user_from_header)
     ):
 
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
+    async with aioredis.Redis.from_url(os.getenv("FM_REDIS_URI")) as aredis_conn:
+        code_for_remote_terminal = await aredis_conn.get("code_for_remote_terminal")
+    if code_for_remote_terminal:
+        code_for_remote_terminal = json.loads(code_for_remote_terminal)
+    if code_for_remote_terminal != remote_terminal_req.code or code_for_remote_terminal is None:
+        dpd.raise_error("code is not correct", 401)
 
-    if enable:
+    if remote_terminal_req.enable_remote_terminal:
         logging.getLogger().info("Will start ttyd software")
         os.system("docker start fm_ttyd")
     else:
@@ -516,4 +523,26 @@ async def start_ttyd(
         os.system("docker stop fm_ttyd")
 
     return {}
+
+@router.get("/generate_code_for_remote_terminal")
+async def generate_code_for_remote_terminal(
+    user_name=Depends(dpd.get_user_from_header)
+    ):
+
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+    
+    async with aioredis.Redis.from_url(os.getenv("FM_REDIS_URI")) as aredis_conn:
+        code_for_remote_terminal = await aredis_conn.get("code_for_remote_terminal")
+        if code_for_remote_terminal:
+            code_for_remote_terminal = json.loads(code_for_remote_terminal)
+        if code_for_remote_terminal is None:            
+            code_for_remote_terminal = str(random.randint(100000, 999999))
+            await aredis_conn.setex(
+            "code_for_remote_terminal",
+            5*60,
+            json.dumps(code_for_remote_terminal),
+            )          
+
+    return {"code": code_for_remote_terminal}
 

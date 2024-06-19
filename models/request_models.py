@@ -592,6 +592,10 @@ class SoundSettingCtrlReq(ClientReq):
     volume: Optional[float] = 0.01
     sound_type: str
 
+class RemoteTerminalCtrlReq(ClientReq):
+    enable_remote_terminal: bool
+    code: str
+
 
 @dataclass
 class MapFileInfo(JsonMixin):
