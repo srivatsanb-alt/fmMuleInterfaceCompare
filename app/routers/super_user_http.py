@@ -22,7 +22,7 @@ async def super_user_resource_access(
     username= Depends(dpd.get_super_user),
 ):
     if username is None:
-        dpd.raise_error("Unknown requeter", 401)
+        dpd.raise_error("Unknown requester", 401)
 
     queue = Queues.queues_dict["resource_handler"]
     _response = await dpd.process_req_with_response(

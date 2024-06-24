@@ -39,13 +39,17 @@ async def diagnostics(
     if not entity_name:
         dpd.raise_error("No entity name")
 
-    with DBSession(engine=ccm.engine) as dbsession:
-        sherpa_status = dbsession.get_sherpa_status(entity_name)
-        if not sherpa_status:
-            dpd.raise_error("Bad sherpa name")
+    try:
+        with DBSession(engine=ccm.engine) as dbsession:
+            sherpa_status = dbsession.get_sherpa_status(entity_name)
+            if not sherpa_status:
+                dpd.raise_error("Bad sherpa name")
 
-        req = rqm.DiagnosticsReq(sherpa_name=entity_name)
-        response = await send_async_req_to_sherpa(dbsession, sherpa_status.sherpa, req)
+            req = rqm.DiagnosticsReq(sherpa_name=entity_name)
+            response = await send_async_req_to_sherpa(dbsession, sherpa_status.sherpa, req)
+            
+    except Exception as e:
+        dpd.relay_error_details(e)
 
     return response
 
@@ -64,14 +68,18 @@ async def quick_diagnostics(
 
     if not entity_name:
         dpd.raise_error("No entity name")
+    
+    try:
+        with DBSession(engine=ccm.engine) as dbsession:
+            sherpa_status = dbsession.get_sherpa_status(entity_name)
+            if not sherpa_status:
+                dpd.raise_error("Bad sherpa name")
 
-    with DBSession(engine=ccm.engine) as dbsession:
-        sherpa_status = dbsession.get_sherpa_status(entity_name)
-        if not sherpa_status:
-            dpd.raise_error("Bad sherpa name")
+            req = rqm.QuickDiagnosticsReq(sherpa_name=entity_name)
+            response = await send_async_req_to_sherpa(dbsession, sherpa_status.sherpa, req)
 
-        req = rqm.QuickDiagnosticsReq(sherpa_name=entity_name)
-        response = await send_async_req_to_sherpa(dbsession, sherpa_status.sherpa, req)
+    except Exception as e:
+        dpd.relay_error_details(e)
 
     return response
 
@@ -91,11 +99,14 @@ async def restart_mule_docker(
     if not entity_name:
         dpd.raise_error("No entity name")
 
-    with DBSession(engine=ccm.engine) as dbsession:
-        sherpa_status = dbsession.get_sherpa_status(entity_name)
-        req = {"endpoint": "restart_mule_docker", "source": user_name}
-        response = await send_async_req_to_sherpa(dbsession, sherpa_status.sherpa, req)
+    try:
+        with DBSession(engine=ccm.engine) as dbsession:
+            sherpa_status = dbsession.get_sherpa_status(entity_name)
+            req = {"endpoint": "restart_mule_docker", "source": user_name}
+            response = await send_async_req_to_sherpa(dbsession, sherpa_status.sherpa, req)
 
+    except Exception as e:
+        dpd.relay_error_details(e)
     return response
 
 
@@ -114,10 +125,14 @@ async def powercycle(
     if not entity_name:
         dpd.raise_error("No entity name")
 
-    with DBSession(engine=ccm.engine) as dbsession:
-        sherpa_status = dbsession.get_sherpa_status(entity_name)
-        req = {"endpoint": "powercycle", "source": user_name}
-        response = await send_async_req_to_sherpa(dbsession, sherpa_status.sherpa, req)
+    try:
+        with DBSession(engine=ccm.engine) as dbsession:
+            sherpa_status = dbsession.get_sherpa_status(entity_name)
+            req = {"endpoint": "powercycle", "source": user_name}
+            response = await send_async_req_to_sherpa(dbsession, sherpa_status.sherpa, req)
+
+    except Exception as e:
+        dpd.relay_error_details(e)
 
     return response
 
@@ -461,14 +476,18 @@ async def current_sound_setting(
 
     if not entity_name:
         dpd.raise_error("No entity name")
+    
+    try:
+        with DBSession(engine=ccm.engine) as dbsession:
+            sherpa_status = dbsession.get_sherpa_status(entity_name)
+            if not sherpa_status:
+                dpd.raise_error("Bad sherpa name")
 
-    with DBSession(engine=ccm.engine) as dbsession:
-        sherpa_status = dbsession.get_sherpa_status(entity_name)
-        if not sherpa_status:
-            dpd.raise_error("Bad sherpa name")
+            req = rqm.CurrentSoundSettingReq(sherpa_name=entity_name)
+            response = await send_async_req_to_sherpa(dbsession, sherpa_status.sherpa, req)
 
-        req = rqm.CurrentSoundSettingReq(sherpa_name=entity_name)
-        response = await send_async_req_to_sherpa(dbsession, sherpa_status.sherpa, req)
+    except Exception as e:
+        dpd.relay_error_details(e)
 
     return response
 

@@ -93,6 +93,7 @@ def send_req_to_sherpa(dbsession, sherpa: Sherpa, msg: FMReq) -> Dict:
             raise Exception(f"req id {req_id} failed, req sent: {body}")
 
 
+
 async def send_async_req_to_sherpa(dbsession, sherpa: Sherpa, msg: FMReq) -> Dict:
     with redis.from_url(os.getenv("FM_REDIS_URI")) as redis_conn:
         body = convert_to_dict(msg)

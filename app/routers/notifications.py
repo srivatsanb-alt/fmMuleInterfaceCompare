@@ -30,7 +30,7 @@ router = APIRouter(tags=["notifications"], responses={404: {"description": "Not 
 async def get_all_notification_modules(user_name=Depends(dpd.get_user_from_header)):
     response = {}
     if not user_name:
-        dpd.raise_error("Unknown requeter", 401)
+        dpd.raise_error("Unknown requester", 401)
 
     all_notif_mods = [
         i for i in list(mm.NotificationModules.__dict__.keys()) if not i.startswith("__")
@@ -52,7 +52,7 @@ async def clear_notification(
 
     response = {}
     if not user_name:
-        dpd.raise_error("Unknown requeter", 401)
+        dpd.raise_error("Unknown requester", 401)
 
     with DBSession(engine=ccm.engine) as dbsession:
         notification = dbsession.get_notifications_with_id(id)
@@ -72,7 +72,7 @@ async def clear_notification(
 async def clear_notifications(token: str, user_name=Depends(dpd.get_user_from_query)):
     response = {}
     if not user_name:
-        dpd.raise_error("Unknown requeter", 401)
+        dpd.raise_error("Unknown requester", 401)
 
     with DBSession(engine=ccm.engine) as dbsession:
         all_notifications = dbsession.get_notifications()
@@ -93,7 +93,7 @@ async def clear_notifications_log_level(
 ):
     response = {}
     if not user_name:
-        dpd.raise_error("Unknown requeter", 401)
+        dpd.raise_error("Unknown requester", 401)
 
     with DBSession(engine=ccm.engine) as dbsession:
         all_notifications = dbsession.get_notifications_filter_with_log_level(log_level)
