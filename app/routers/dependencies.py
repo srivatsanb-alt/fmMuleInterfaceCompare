@@ -207,7 +207,6 @@ def relay_error_details(e: Exception):
 
     elif isinstance(e, Exception):
         status_code = 400
-        error_detail = str(e)
     raise_error(error_detail, status_code)
 
 
