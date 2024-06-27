@@ -404,7 +404,7 @@ class TripStatusReq(GenericFromToTimeReq):
 class TripStatusReq_pg(GenericFromToTimeReq):
     page_no: int
     rec_limit: int
-    filter_fleets: Optional[List[str]]
+    filter_fleets: List[str]
     filter_sherpa_names: Optional[List[str]]
     filter_status: Optional[List[str]]
     sort_field: Optional[str]
