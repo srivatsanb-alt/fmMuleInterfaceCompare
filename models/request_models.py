@@ -57,6 +57,7 @@ class PasstoSherpaEndpoints:
 
 class SherpaType(str, Enum):
     tug = "tug"
+    tug_lite = "tug_lite"
     lite = "lite"
     lifter = "lifter"
     pallet_mover = "pallet_mover"

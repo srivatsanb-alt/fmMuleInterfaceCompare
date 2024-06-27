@@ -19,6 +19,7 @@ from models.db_session import DBSession
 import app.routers.dependencies as dpd
 import utils.util as utils_util
 import core.common as ccm
+import core.constants as cc
 
 
 router = APIRouter(
@@ -48,6 +49,7 @@ async def site_info(user_name=Depends(dpd.get_user_from_header)):
         "software_version": fm_tag,
         "compatible_sherpa_versions": compatible_sherpa_versions,
         "simulator": simulator_config["simulate"],
+        "sherpa_types": cc.ListofSherpaTypes
     }
 
     return response
