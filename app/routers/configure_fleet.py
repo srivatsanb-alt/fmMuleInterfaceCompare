@@ -108,7 +108,7 @@ async def delete_sherpa(
         dpd.raise_error("Unknown requester", 401)
 
     with DBSession(engine=ccm.engine) as dbsession:
-        sherpa_status: fm.SherpaStatus = dbsession.get_sherpa_status(sherpa_name)
+        sherpa_status: fm.SherpaStatus = dbsession.get_sherpa_status_with_none(sherpa_name)
         if not sherpa_status:
             dpd.raise_error(f"Sherpa {sherpa_name} not found")
 
@@ -234,11 +234,11 @@ async def delete_fleet(
         with DBSession(engine=ccm.engine) as dbsession:
             fleet: fm.Fleet = dbsession.get_fleet(fleet_name)
             if not fleet:
-                dpd.raise_error("Bad detail invalid fleet name")
+                raise Exception("Bad detail invalid fleet name")
 
             all_ongoing_trips_fleet = dbsession.get_all_ongoing_trips_fleet(fleet_name)
             if len(all_ongoing_trips_fleet):
-                dpd.raise_error("Cancel all the ongoing trips before deleting the fleet")
+                raise Exception("Cancel all the ongoing trips before deleting the fleet")
 
             all_fleet_sherpas = dbsession.get_all_sherpas_in_fleet(fleet_name)
 
@@ -247,12 +247,12 @@ async def delete_fleet(
                 close_websocket_for_sherpa(sherpa.name)
                 if sherpa.status.trip_id is not None:
                     trip = dbsession.get_trip(sherpa.status.trip_id)
-                    dpd.raise_error(
+                    raise Exception(
                         f"delete the ongoing trip with booking_id: {trip.booking_id} and disable {sherpa.name} for trips to delete the sherpa and fleet"
                     )
 
                 if sherpa.status.inducted:
-                    dpd.raise_error(
+                    raise Exception(
                         f"disable {sherpa.name} for trips to delete the sherpa and fleet"
                     )
 

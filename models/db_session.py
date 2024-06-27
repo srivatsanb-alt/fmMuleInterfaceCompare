@@ -257,6 +257,13 @@ class DBSession:
             .filter(fm.SherpaStatus.sherpa_name == name)
             .one()
         )
+    
+    def get_sherpa_status_with_none(self, name: str) -> fm.SherpaStatus:
+        return (
+            self.session.query(fm.SherpaStatus)
+            .filter(fm.SherpaStatus.sherpa_name == name)
+            .one_or_none()
+        )
 
     def get_sherpa_events(self, sherpa_name: str, num_events=10) -> List[fm.SherpaEvent]:
         return (

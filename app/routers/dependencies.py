@@ -207,7 +207,8 @@ def relay_error_details(e: Exception):
 
     elif isinstance(e, Exception):
         status_code = 400
-    raise_error(error_detail, status_code)
+        error_detail = str(e)
+    raise_error(detail=error_detail, code=status_code)
 
 
 async def process_req_with_response(queue, req, user: str):

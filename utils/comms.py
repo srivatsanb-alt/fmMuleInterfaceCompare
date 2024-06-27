@@ -128,7 +128,8 @@ async def send_async_req_to_sherpa(dbsession, sherpa: Sherpa, msg: FMReq) -> Dic
             )
             return response
         else:
-            raise Exception(f"req id {req_id} failed, req sent: {body}")
+            logging.getLogger().error(f"req id {req_id} failed, req sent: {body}")
+            raise Exception(f"Unable to send request to {sherpa.name}")
 
 
 def send_move_msg(
