@@ -580,11 +580,11 @@ async def export_all_analytics_data(
             # Convert string dates to datetime objects
             trip_analytics_req.from_dt = str_to_dt(trip_analytics_req.from_dt)
             trip_analytics_req.to_dt = str_to_dt(trip_analytics_req.to_dt)
-            all_trip_analytics = dbsession.get_trip_analytics_with_timestamp(
+            all_trip_analytics = dbsession.get_trip_analytics_booking_time_with_timestamp(
                 trip_analytics_req.from_dt, trip_analytics_req.to_dt
             )
         elif trip_analytics_req.trip_ids:
-            all_trip_analytics = dbsession.get_trip_analytics_with_trip_ids(
+            all_trip_analytics = dbsession.get_trip_analytics_and_booking_time_with_trip_ids(
                 trip_analytics_req.trip_ids
             )
         else:
@@ -592,9 +592,14 @@ async def export_all_analytics_data(
         
         data = []
         for all_trip_analytic in all_trip_analytics:
-            data.append(utils_util.get_table_as_dict(tm.TripAnalytics, all_trip_analytic)) 
+            encoded_trip_analytic_data = jsonable_encoder(all_trip_analytic)
+            encoded_data_dict = encoded_trip_analytic_data.get("TripAnalytics")
+            encoded_data_dict["booking_time"] = encoded_trip_analytic_data.get("booking_time")
+            data.append(encoded_data_dict)
+             
         # Convert to DataFrame
         df = pd.DataFrame(data)
+    logging.getLogger("misc").info(f"data_frame: {df}")
     # Convert DataFrame to CSV
     output = io.StringIO()
     df.to_csv(output, index=False)
@@ -620,11 +625,11 @@ async def export_analytics_data(
             # Convert string dates to datetime objects
             trip_analytics_req.from_dt = str_to_dt(trip_analytics_req.from_dt)
             trip_analytics_req.to_dt = str_to_dt(trip_analytics_req.to_dt)
-            all_trip_analytics = dbsession.get_trip_analytics_with_timestamp(
+            all_trip_analytics = dbsession.get_trip_analytics_booking_time_with_timestamp(
                 trip_analytics_req.from_dt, trip_analytics_req.to_dt, fleet_name
             )
         elif trip_analytics_req.trip_ids:
-            all_trip_analytics = dbsession.get_trip_analytics_with_trip_ids(
+            all_trip_analytics = dbsession.get_trip_analytics_and_booking_time_with_trip_ids(
                 trip_analytics_req.trip_ids, fleet_name
             )
         else:
@@ -632,7 +637,10 @@ async def export_analytics_data(
         
         data = []
         for all_trip_analytic in all_trip_analytics:
-            data.append(utils_util.get_table_as_dict(tm.TripAnalytics, all_trip_analytic)) 
+            encoded_trip_analytic_data = jsonable_encoder(all_trip_analytic)
+            encoded_data_dict = encoded_trip_analytic_data.get("TripAnalytics")
+            encoded_data_dict["booking_time"] = encoded_trip_analytic_data.get("booking_time")
+            data.append(encoded_data_dict) 
         # Convert to DataFrame
         df = pd.DataFrame(data)
     # Convert DataFrame to CSV
