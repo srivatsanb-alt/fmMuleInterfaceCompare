@@ -181,6 +181,7 @@ class AddFMIncidentReq(BaseModel):
     sub_module: Optional[str] = None
     display_message: Optional[str] = None
     recovery_message: Optional[str] = None
+    error_code: Optional[str] = None
     other_info: Optional[dict] = None
 
 
