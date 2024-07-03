@@ -115,6 +115,7 @@ def main():
         check_if_run_host_service_is_setup(dbsession)
 
     FM_TAG = os.getenv("FM_TAG")
+    os.system("docker stop fm_ttyd")
     print(f"fm software tag: {FM_TAG}")
 
 

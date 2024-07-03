@@ -166,6 +166,15 @@ class DBUpgrade:
             # Update sherpa_type to 'tug' in each row
             conn.execute("UPDATE sherpas SET sherpa_type = 'tug'")
             print("Updated sherpa_type to 'tug' in all rows of the sherpas table.")
+            result = conn.execute(
+                "SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='fm_incidents'"
+            )
+            column_names = [row[0] for row in result]
+            if "error_code" not in column_names:
+                conn.execute('ALTER TABLE "fm_incidents" ADD COLUMN "error_code" VARCHAR')
+                print("column error_code added to fm_incidents table")
+            else:
+                print("column error_code already present in fm_incidents table")
 
 
 def upgrade_db_schema():

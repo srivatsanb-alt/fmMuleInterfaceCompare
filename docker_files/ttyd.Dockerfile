@@ -12,4 +12,4 @@ RUN apt-get clean
 RUN curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
 RUN chmod +x /usr/local/bin/docker-compose
 
-CMD exec ttyd -p 7681 -c ati_support:ati112 -W -o -b /ttyd bash
+CMD exec ttyd -p 7681 -c ati_support:ati112 -W -o -b /remote_terminal bash

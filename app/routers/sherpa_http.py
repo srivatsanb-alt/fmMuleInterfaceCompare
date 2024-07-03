@@ -341,6 +341,9 @@ async def add_fm_incident(
             dpd.raise_error(
                 f"Will only accept incidents of type {mm.FMIncidentTypes} requester"
             )
+        error_code = None
+        if add_fm_incident_req.error_code:
+            error_code = add_fm_incident_req.error_code
 
         fm_incident = mm.FMIncidents(
             type=add_fm_incident_req.type,
@@ -354,6 +357,7 @@ async def add_fm_incident(
             recovery_message=add_fm_incident_req.recovery_message,
             data_uploaded=add_fm_incident_req.data_uploaded,
             data_path=add_fm_incident_req.data_path,
+            error_code=error_code,
             other_info=add_fm_incident_req.other_info,
         )
         dbsession.add_to_session(fm_incident)
