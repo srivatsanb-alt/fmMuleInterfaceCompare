@@ -596,7 +596,7 @@ class SoundSettingCtrlReq(ClientReq):
 
 class RemoteTerminalCtrlReq(ClientReq):
     enable_remote_terminal: bool
-    code: str
+    code: Optional[str]
 
 
 @dataclass
