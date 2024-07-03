@@ -532,7 +532,7 @@ async def start_remote_terminal(
     if code_for_remote_terminal:
         code_for_remote_terminal = json.loads(code_for_remote_terminal)
     if code_for_remote_terminal != remote_terminal_req.code or code_for_remote_terminal is None:
-        dpd.raise_error("code is not correct", 401)
+        dpd.raise_error("code is not correct", 403)
 
     if remote_terminal_req.enable_remote_terminal:
         logging.getLogger().info("Will start ttyd software")
