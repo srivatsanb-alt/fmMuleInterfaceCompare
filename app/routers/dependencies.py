@@ -137,7 +137,11 @@ def get_number_of_request(times=1, seconds=60,fleet_name=None):
                     json.dumps(number_of_request)
                 )
             else:
-                raise_error("Too many requests", 429)
+                redis_conn.setex(
+                    f"{fleet_name}_number_of_request",
+                    seconds,
+                    json.dumps(1)
+                )
         else:
             raise_error("Too many requests", 429)
 
