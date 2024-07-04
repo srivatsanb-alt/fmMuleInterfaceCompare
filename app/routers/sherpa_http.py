@@ -174,7 +174,13 @@ async def verify_fleet_files(sherpa: str = Depends(dpd.get_sherpa)):
 
 
 @router.post("/req_ack/{req_id}")
-async def ws_ack(req: rqm.WSResp, req_id: str):
+async def ws_ack(
+    req: rqm.WSResp,
+    req_id: str,
+    sherpa: str = Depends(dpd.get_sherpa)
+    ):
+    if sherpa is None:
+        dpd.raise_error("Unknown requester", 401)
     async with aioredis.Redis.from_url(os.getenv("FM_REDIS_URI")) as aredis_conn:
         if req.success:
             if req.response is None:
