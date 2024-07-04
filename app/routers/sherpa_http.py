@@ -185,7 +185,11 @@ async def ws_ack(
         if req.success:
             if req.response is None:
                 req.response = {}
-            await aredis_conn.set(f"response_{req_id}", json.dumps(req.response))
+            await aredis_conn.setex(
+                f"response_{req_id}",
+                int((await aredis_conn.get("default_job_timeout_ms")).decode()), 
+                json.dumps(req.response)
+            )
 
         await aredis_conn.setex(
             f"success_{req_id}",
