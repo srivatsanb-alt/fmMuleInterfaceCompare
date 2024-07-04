@@ -117,6 +117,30 @@ def get_real_ip_from_header(x_real_ip: str = Header(None)):
 def get_forwarded_for_from_header(x_forwarded_for: str = Header(None)):
     return x_forwarded_for
 
+def get_number_of_request(times=1, seconds=60,fleet_name=None):
+    redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
+    number_of_request = redis_conn.get(f"{fleet_name}_number_of_request")
+    if number_of_request is None:
+        redis_conn.setex(
+            f"{fleet_name}_number_of_request",
+            seconds,
+            json.dumps(1)
+        )
+    else:
+        if int(number_of_request) > times:
+            number_of_request = int(number_of_request) + 1
+            remaing_time = redis_conn.ttl(f"{fleet_name}_number_of_request")
+            if remaing_time > 0:
+                redis_conn.setex(
+                    f"{fleet_name}_number_of_request",
+                    remaing_time,
+                    json.dumps(number_of_request)
+                )
+            else:
+                raise_error("Too many requests", 429)
+        else:
+            raise_error("Too many requests", 429)
+
 
 def decode_token(token: str):
     redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))

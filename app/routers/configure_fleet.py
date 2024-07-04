@@ -8,7 +8,6 @@ import shutil
 import json
 import aioredis
 from rq.command import send_shutdown_command
-from fastapi_limiter.depends import RateLimiter
 
 # ati code imports
 from utils import fleet_utils as fu
@@ -270,7 +269,7 @@ async def delete_fleet(
     return response
 
 
-@router.post("/update_map" , dependencies=[Depends(RateLimiter(times=1, seconds=120))])
+@router.post("/update_map")
 async def update_map(
     update_map_req: rqm.UpdateMapReq,
     user_name=Depends(dpd.get_user_from_header),
@@ -282,6 +281,8 @@ async def update_map(
 
     with DBSession(engine=ccm.engine) as dbsession:
         fleet_name = update_map_req.fleet_name
+
+        dpd.get_number_of_request(times=1, seconds=120, fleet_name=fleet_name)
 
         if update_map_req.map_path != "use current map":
             new_map = os.path.join(

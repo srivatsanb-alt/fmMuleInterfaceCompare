@@ -1,5 +1,4 @@
 from fastapi import Depends, APIRouter
-from fastapi_limiter.depends import RateLimiter
 
 from utils.rq_utils import Queues
 import models.request_models as rqm
