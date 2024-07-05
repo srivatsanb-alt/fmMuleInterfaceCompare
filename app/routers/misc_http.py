@@ -686,6 +686,7 @@ async def start_remote_terminal(
                 dpd.raise_error("Code is not correct", 403)
             os.system("docker start fm_ttyd")
             await aredis_conn.set("start_time_of_remote_terminal", int(time.time()))
+            await aredis_conn.delete("code_for_remote_terminal")
         else:
             os.system("docker stop fm_ttyd")
             await aredis_conn.delete("start_time_of_remote_terminal")
