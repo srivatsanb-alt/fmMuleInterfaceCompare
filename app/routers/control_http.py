@@ -5,7 +5,7 @@ from typing import Union
 
 
 # ati code imports
-from core.constants import FleetStatus, DisabledReason
+from core.constants import FleetStatus, DisabledReason, SoundVolume
 from fastapi import APIRouter, Depends
 from models.db_session import DBSession
 import models.request_models as rqm
@@ -375,7 +375,6 @@ async def reset_pose_vpr(
         if not sherpa_status:
             dpd.raise_error("Bad sherpa name")
 
-
     reset_pose_vpr_req = rqm.ResetPoseVPRReq(
         sherpa_name=entity_name,
     )
@@ -503,6 +502,9 @@ async def sound_setting(
 
     if not entity_name:
         dpd.raise_error("No entity name")
+
+    if SoundVolume.LOW > sound_setting_req.volume or sound_setting_req.volume > SoundVolume.HIGH:
+        dpd.raise_error("Invalid volume setting, must be between 0 and 0.1")
     
     with DBSession(engine=ccm.engine) as dbsession:
         sherpa_status = dbsession.get_sherpa_status(entity_name)

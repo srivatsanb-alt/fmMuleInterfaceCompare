@@ -65,3 +65,7 @@ class SherpaTypes:
     PALLET_MOVER = "pallet_mover"
 
 ListofSherpaTypes = [SherpaTypes.TUG, SherpaTypes.TUG_LITE, SherpaTypes.LITE, SherpaTypes.LIFTER, SherpaTypes.PALLET_MOVER]
+
+class SoundVolume:
+    LOW = 0
+    HIGH = 0.1
