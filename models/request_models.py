@@ -50,6 +50,17 @@ class PasstoSherpaEndpoints:
     SWITCH_MODE = "switch_mode"
     IMG_UPDATE = "img_update"
     REVOKE_VISA = "revoke_visa"
+    SOUND = "sound"
+    CURRENT_SOUND_STATUS = "current_sound_status"
+    RESET_POSE_VPR = 'reset_pose_vpr'
+
+
+class SherpaType(str, Enum):
+    tug = "tug"
+    tug_lite = "tug_lite"
+    lite = "lite"
+    lifter = "lifter"
+    pallet_mover = "pallet_mover"
 
 
 class ConveyorReq(BaseModel):
@@ -170,6 +181,7 @@ class AddFMIncidentReq(BaseModel):
     sub_module: Optional[str] = None
     display_message: Optional[str] = None
     recovery_message: Optional[str] = None
+    error_code: Optional[str] = None
     other_info: Optional[dict] = None
 
 
@@ -296,6 +308,7 @@ class AddEditSherpaReq(ClientReq):
     hwid: str
     fleet_name: str
     api_key: Optional[str]
+    sherpa_type: SherpaType
 
 
 class AddFleetReq(ClientReq):
@@ -392,7 +405,7 @@ class TripStatusReq(GenericFromToTimeReq):
 class TripStatusReq_pg(GenericFromToTimeReq):
     page_no: int
     rec_limit: int
-    filter_fleets: Optional[List[str]]
+    filter_fleets: List[str]
     filter_sherpa_names: Optional[List[str]]
     filter_status: Optional[List[str]]
     sort_field: Optional[str]
@@ -527,6 +540,11 @@ class ResetPoseReq(FMReq):
     station_name: Optional[str]
     type = MessageType.PASS_TO_SHERPA
 
+class ResetPoseVPRReq(FMReq):
+    endpoint: str = PasstoSherpaEndpoints.RESET_POSE_VPR
+    sherpa_name: str
+    type = MessageType.PASS_TO_SHERPA
+
 
 class DiagnosticsReq(FMReq):
     endpoint: str = PasstoSherpaEndpoints.DIAGNOSTICS
@@ -547,6 +565,18 @@ class RevokeVisaReq(FMReq):
     zone_name: str
     type = MessageType.PASS_TO_SHERPA
 
+class SoundSettingReq(FMReq):
+    endpoint: str = PasstoSherpaEndpoints.SOUND
+    sherpa_name: str
+    volume: float
+    sound_type: str
+    type = MessageType.PASS_TO_SHERPA
+
+class CurrentSoundSettingReq(FMReq):
+    endpoint: str = PasstoSherpaEndpoints.CURRENT_SOUND_STATUS
+    sherpa_name: str
+    type = MessageType.PASS_TO_SHERPA
+
 
 class SherpaImgUpdate(FMReq):
     endpoint: str = PasstoSherpaEndpoints.IMG_UPDATE
@@ -559,6 +589,14 @@ class ManualVisaReleaseReq(ClientReq):
     revoke_visa_for: str
     zone_id: str
     type = MessageType.MANUAL_VISA_RELEASE
+
+class SoundSettingCtrlReq(ClientReq):
+    volume: Optional[float] = 0.01
+    sound_type: str
+
+class RemoteTerminalCtrlReq(ClientReq):
+    enable_remote_terminal: bool
+    code: Optional[str]
 
 
 @dataclass

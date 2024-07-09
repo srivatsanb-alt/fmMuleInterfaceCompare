@@ -41,7 +41,6 @@ def regenerate_mule_config():
 
 
 def populate_redis_with_basic_info(dbsession: DBSession):
-    # redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
     with redis.from_url(os.getenv("FM_REDIS_URI")) as redis_conn:
         all_sherpas = dbsession.get_all_sherpas()
         sherpa_names = []
@@ -116,6 +115,7 @@ def main():
         check_if_run_host_service_is_setup(dbsession)
 
     FM_TAG = os.getenv("FM_TAG")
+    os.system("docker stop fm_ttyd")
     print(f"fm software tag: {FM_TAG}")
 
 

@@ -257,6 +257,13 @@ class DBSession:
             .filter(fm.SherpaStatus.sherpa_name == name)
             .one()
         )
+    
+    def get_sherpa_status_with_none(self, name: str) -> fm.SherpaStatus:
+        return (
+            self.session.query(fm.SherpaStatus)
+            .filter(fm.SherpaStatus.sherpa_name == name)
+            .one_or_none()
+        )
 
     def get_sherpa_events(self, sherpa_name: str, num_events=10) -> List[fm.SherpaEvent]:
         return (
@@ -538,24 +545,55 @@ class DBSession:
             .all()
         )
 
-    def get_trip_analytics_with_timestamp(self, from_dt, to_dt):
-        return (
+    def get_trip_analytics_with_timestamp(self, from_dt, to_dt, fleet_name = None):
+        base_query = (
             self.session.query(tm.TripAnalytics)
             .join(tm.Trip, (tm.TripAnalytics.trip_id == tm.Trip.id))
             .filter(or_(tm.Trip.booking_time >= from_dt, tm.Trip.start_time >= from_dt))
             .filter(or_(tm.Trip.booking_time <= to_dt, tm.Trip.end_time <= to_dt))
-            .order_by(tm.TripAnalytics.trip_leg_id.desc())
-            .all()
         )
+        if fleet_name:
+            base_query = base_query.filter(tm.Trip.fleet_name == fleet_name)
+        base_query = base_query.order_by(tm.TripAnalytics.trip_leg_id.desc())
+        base_query = base_query.all()
+        return base_query
+    
+    def get_trip_analytics_booking_time_with_timestamp(self, from_dt, to_dt, fleet_name = None):
+        base_query = (
+            self.session.query(tm.TripAnalytics, tm.Trip.booking_time)
+            .join(tm.Trip, (tm.TripAnalytics.trip_id == tm.Trip.id))
+            .filter(or_(tm.Trip.booking_time >= from_dt, tm.Trip.start_time >= from_dt))
+            .filter(or_(tm.Trip.booking_time <= to_dt, tm.Trip.end_time <= to_dt))
+        )
+        if fleet_name:
+            base_query = base_query.filter(tm.Trip.fleet_name == fleet_name)
+        base_query = base_query.order_by(tm.TripAnalytics.trip_leg_id.desc())
+        base_query = base_query.all()
+        return base_query
 
-    def get_trip_analytics_with_trip_ids(self, trip_ids):
-        return (
+    def get_trip_analytics_with_trip_ids(self, trip_ids, fleet_name = None):
+        base_query = (
             self.session.query(tm.TripAnalytics)
             .join(tm.Trip, (tm.TripAnalytics.trip_id == tm.Trip.id))
             .filter(tm.Trip.id.in_(trip_ids))
-            .order_by(tm.TripAnalytics.trip_leg_id.desc())
-            .all()
+            
         )
+        if fleet_name:
+            base_query = base_query.filter(tm.Trip.fleet_name == fleet_name)
+        base_query = base_query.order_by(tm.TripAnalytics.trip_leg_id.desc())    
+        return base_query.all()
+    
+    def get_trip_analytics_and_booking_time_with_trip_ids(self, trip_ids, fleet_name = None):
+        base_query = (
+            self.session.query(tm.TripAnalytics, tm.Trip.booking_time)
+            .join(tm.Trip, (tm.TripAnalytics.trip_id == tm.Trip.id))
+            .filter(tm.Trip.id.in_(trip_ids))
+            
+        )
+        if fleet_name:
+            base_query = base_query.filter(tm.Trip.fleet_name == fleet_name)
+        base_query = base_query.order_by(tm.TripAnalytics.trip_leg_id.desc())    
+        return base_query.all()
 
     def get_trip_progress(self, trip_id):
         progress = (

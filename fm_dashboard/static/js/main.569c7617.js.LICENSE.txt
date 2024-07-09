@@ -141,9 +141,13 @@
 
 //! Copyright (c) JS Foundation and other contributors
 
+//! Please note: To test the sherpa status without update in backend or different usecase, In above line remove data.sherpa_status[key] 
+
 //! This has to added in master data response
 
 //! allow users to disable for trips
+
+//! and uncomment the below json and modify/add properties as required
 
 //! github.com/moment/moment-timezone
 

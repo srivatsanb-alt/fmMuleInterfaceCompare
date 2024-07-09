@@ -1,0 +1,23 @@
+<svg viewBox="0 0 35 15" xmlns="http://www.w3.org/2000/svg">
+<path d="M36 3L36 21L33 24L28 24L28 22L8 22L8 24L3 24L-9.17939e-07 21L-1.31134e-07 3L3 -1.44248e-06L8 -1.22392e-06L8 2L28 2L28 -3.49691e-07L33 -1.31134e-07L36 3Z"/>
+<path d="M5.25 21L4.60048 20.625L4.60048 19.875L5.25 19.5L5.89952 19.875L5.89952 20.625L5.25 21Z" fill="#222222"/>
+<path d="M30.75 21L30.1005 20.625L30.1005 19.875L30.75 19.5L31.3995 19.875L31.3995 20.625L30.75 21Z" fill="#222222"/>
+<path d="M5.25 4.5L4.60048 4.125L4.60048 3.375L5.25 3L5.89952 3.375L5.89952 4.125L5.25 4.5Z" fill="#222222"/>
+<path d="M30.75 4.5L30.1005 4.125L30.1005 3.375L30.75 3L31.3995 3.375L31.3995 4.125L30.75 4.5Z" fill="#222222"/>
+<rect x="10" y="11" width="2" height="2" transform="rotate(90 10 11)" fill="#222222"/>
+<rect x="28" y="11" width="2" height="2" transform="rotate(90 28 11)" fill="#222222"/>
+<rect x="21" y="11" width="2" height="2" transform="rotate(90 21 11)" fill="#222222"/>
+<rect x="17" y="11" width="2" height="2" transform="rotate(90 17 11)" fill="#222222"/>
+<path d="M4 6L4 18L-5.24537e-07 18L0 6L4 6Z" fill="#333333"/>
+<path opacity="0.16" d="M36 6L36 18L32 18L32 6L36 6Z" fill="black"/>
+<circle cx="16.5" cy="4.5" r="0.5" transform="rotate(90 16.5 4.5)" fill="#222222"/>
+<circle cx="16.5" cy="19.5" r="0.5" transform="rotate(90 16.5 19.5)" fill="#222222"/>
+<circle cx="19.5" cy="4.5" r="0.5" transform="rotate(90 19.5 4.5)" fill="#222222"/>
+<circle cx="19.5" cy="19.5" r="0.5" transform="rotate(90 19.5 19.5)" fill="#222222"/>
+<circle cx="27.5" cy="4.5" r="0.5" transform="rotate(90 27.5 4.5)" fill="#222222"/>
+<circle cx="27.5" cy="19.5" r="0.5" transform="rotate(90 27.5 19.5)" fill="#222222"/>
+<circle cx="8.5" cy="4.5" r="0.5" transform="rotate(90 8.5 4.5)" fill="#222222"/>
+<circle cx="8.5" cy="19.5" r="0.5" transform="rotate(90 8.5 19.5)" fill="#222222"/>
+<rect x="3" y="9" width="6" height="3" transform="rotate(90 3 9)" fill="#444444"/>
+<path d="M2.5 9.5L2.5 14.5L0.5 14.5L0.5 9.5L2.5 9.5Z" fill="#777777"/>
+</svg>

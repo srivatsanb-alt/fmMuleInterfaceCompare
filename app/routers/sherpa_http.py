@@ -174,12 +174,22 @@ async def verify_fleet_files(sherpa: str = Depends(dpd.get_sherpa)):
 
 
 @router.post("/req_ack/{req_id}")
-async def ws_ack(req: rqm.WSResp, req_id: str):
+async def ws_ack(
+    req: rqm.WSResp,
+    req_id: str,
+    sherpa: str = Depends(dpd.get_sherpa)
+    ):
+    if sherpa is None:
+        dpd.raise_error("Unknown requester", 401)
     async with aioredis.Redis.from_url(os.getenv("FM_REDIS_URI")) as aredis_conn:
         if req.success:
             if req.response is None:
                 req.response = {}
-            await aredis_conn.set(f"response_{req_id}", json.dumps(req.response))
+            await aredis_conn.setex(
+                f"response_{req_id}",
+                int((await aredis_conn.get("default_job_timeout_ms")).decode()), 
+                json.dumps(req.response)
+            )
 
         await aredis_conn.setex(
             f"success_{req_id}",
@@ -341,6 +351,9 @@ async def add_fm_incident(
             dpd.raise_error(
                 f"Will only accept incidents of type {mm.FMIncidentTypes} requester"
             )
+        error_code = None
+        if add_fm_incident_req.error_code:
+            error_code = add_fm_incident_req.error_code
 
         fm_incident = mm.FMIncidents(
             type=add_fm_incident_req.type,
@@ -354,6 +367,7 @@ async def add_fm_incident(
             recovery_message=add_fm_incident_req.recovery_message,
             data_uploaded=add_fm_incident_req.data_uploaded,
             data_path=add_fm_incident_req.data_path,
+            error_code=error_code,
             other_info=add_fm_incident_req.other_info,
         )
         dbsession.add_to_session(fm_incident)

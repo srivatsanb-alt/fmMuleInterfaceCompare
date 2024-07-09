@@ -48,7 +48,6 @@ def convert_to_dict(msg):
 
 # utility for communication between sherpa and fleet manager
 def send_req_to_sherpa(dbsession, sherpa: Sherpa, msg: FMReq) -> Dict:
-    # redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
     with redis.from_url(os.getenv("FM_REDIS_URI")) as redis_conn:
         body = convert_to_dict(msg)
 
@@ -91,11 +90,12 @@ def send_req_to_sherpa(dbsession, sherpa: Sherpa, msg: FMReq) -> Dict:
             logging.getLogger().info(f"Response from sherpa {response}")
             return response
         else:
-            raise Exception(f"req id {req_id} failed, req sent: {body}")
+            logging.getLogger().error(f"req id {req_id} failed, req sent: {body}")
+            raise Exception(f"Unable to send request to {sherpa.name}")
+
 
 
 async def send_async_req_to_sherpa(dbsession, sherpa: Sherpa, msg: FMReq) -> Dict:
-    # redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
     with redis.from_url(os.getenv("FM_REDIS_URI")) as redis_conn:
         body = convert_to_dict(msg)
 
@@ -129,7 +129,8 @@ async def send_async_req_to_sherpa(dbsession, sherpa: Sherpa, msg: FMReq) -> Dic
             )
             return response
         else:
-            raise Exception(f"req id {req_id} failed, req sent: {body}")
+            logging.getLogger().error(f"req id {req_id} failed, req sent: {body}")
+            raise Exception(f"Unable to send request to {sherpa.name}")
 
 
 def send_move_msg(
@@ -170,7 +171,6 @@ def close_websocket_for_sherpa(sherpa_name):
 
 # conveyor related comms
 def cancel_jobs_from_user(user, event):
-    # redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
     with redis.from_url(os.getenv("FM_REDIS_URI")) as redis_conn:
         while True:
             if event.is_set():

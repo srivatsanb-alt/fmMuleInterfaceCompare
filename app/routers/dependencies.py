@@ -117,6 +117,34 @@ def get_real_ip_from_header(x_real_ip: str = Header(None)):
 def get_forwarded_for_from_header(x_forwarded_for: str = Header(None)):
     return x_forwarded_for
 
+def get_number_of_request(times=1, seconds=60,fleet_name=None):
+    redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
+    number_of_request = redis_conn.get(f"{fleet_name}_number_of_request")
+    if number_of_request is None:
+        redis_conn.setex(
+            f"{fleet_name}_number_of_request",
+            seconds,
+            json.dumps(1)
+        )
+    else:
+        if int(number_of_request) > times:
+            number_of_request = int(number_of_request) + 1
+            remaing_time = redis_conn.ttl(f"{fleet_name}_number_of_request")
+            if remaing_time > 0:
+                redis_conn.setex(
+                    f"{fleet_name}_number_of_request",
+                    remaing_time,
+                    json.dumps(number_of_request)
+                )
+            else:
+                redis_conn.setex(
+                    f"{fleet_name}_number_of_request",
+                    seconds,
+                    json.dumps(1)
+                )
+        else:
+            raise_error("Too many requests", 429)
+
 
 def decode_token(token: str):
     redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
@@ -160,7 +188,7 @@ async def check_token_expiry(token, client_ip, check_freq=30):
 # processes the requests in the job queue.
 def process_req(queue, req, user, redis_conn=None, dt=None):
     if not user:
-        raise HTTPException(status_code=403, detail=f"Unknown requeter {user}")
+        raise HTTPException(status_code=403, detail=f"Unknown requester {user}")
 
     if redis_conn is None:
         redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
@@ -208,8 +236,7 @@ def relay_error_details(e: Exception):
     elif isinstance(e, Exception):
         status_code = 400
         error_detail = str(e)
-
-    raise_error(error_detail, status_code)
+    raise_error(detail=error_detail, code=status_code)
 
 
 async def process_req_with_response(queue, req, user: str):

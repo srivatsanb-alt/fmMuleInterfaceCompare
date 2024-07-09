@@ -82,6 +82,7 @@ class FMIncidents(TimestampMixin, Base):
     message = Column(String, nullable=False)
     display_message = Column(String)
     recovery_message = Column(String)
+    error_code = Column(String)
     other_info = Column(JSONB)
 
 

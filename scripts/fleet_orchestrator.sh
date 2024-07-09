@@ -76,7 +76,7 @@ update_run_on_host_service() {
 }
 
 set_max_connections
-redis-server --port $REDIS_PORT > $LOGS/redis.log 2>&1 &
+#redis-server --port $REDIS_PORT > $LOGS/redis.log 2>&1 &
 sleep 2
 fm_init
 start

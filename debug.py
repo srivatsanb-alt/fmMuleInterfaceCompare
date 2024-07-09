@@ -24,7 +24,6 @@ if __name__ == "__main__":
     if sys.argv[1] == "simulate" and simulator_config["simulate"]:
         fs = FleetSimulator()
         fleet_manager_up = False
-        # redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
         with redis.from_url(os.getenv("FM_REDIS_URI")) as redis_conn:
             while not fleet_manager_up:
                 fleet_manager_up = redis_conn.get("is_fleet_manager_up")
