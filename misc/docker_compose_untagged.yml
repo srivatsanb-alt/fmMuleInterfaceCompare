@@ -164,6 +164,7 @@ services:
       - fm_dn
     ports:
       - "6379:6379"
+    command: [sh, -c, "rm -f /data/dump.rdb && redis-server"]
 
   ttyd:
     image: fm_ttyd:fm_version
