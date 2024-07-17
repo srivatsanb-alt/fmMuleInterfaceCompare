@@ -592,9 +592,9 @@ async def export_all_analytics_data(
         
         data = []
         for all_trip_analytic in all_trip_analytics:
-            encoded_trip_analytic_data = jsonable_encoder(all_trip_analytic)
-            encoded_data_dict = encoded_trip_analytic_data.get("TripAnalytics")
-            encoded_data_dict["booking_time"] = encoded_trip_analytic_data.get("booking_time")
+            encoded_data_dict = utils_util.get_table_as_dict(tm.TripAnalytics, all_trip_analytic.TripAnalytics) 
+            encoded_data_dict["booking_time"] = all_trip_analytic.booking_time
+            data.append(encoded_data_dict)
             data.append(encoded_data_dict)
              
         # Convert to DataFrame
@@ -637,9 +637,8 @@ async def export_analytics_data(
         
         data = []
         for all_trip_analytic in all_trip_analytics:
-            encoded_trip_analytic_data = jsonable_encoder(all_trip_analytic)
-            encoded_data_dict = encoded_trip_analytic_data.get("TripAnalytics")
-            encoded_data_dict["booking_time"] = encoded_trip_analytic_data.get("booking_time")
+            encoded_data_dict = utils_util.get_table_as_dict(tm.TripAnalytics, all_trip_analytic.TripAnalytics) 
+            encoded_data_dict["booking_time"] = all_trip_analytic.booking_time
             data.append(encoded_data_dict) 
         # Convert to DataFrame
         df = pd.DataFrame(data)
