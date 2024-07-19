@@ -17,6 +17,7 @@ def main():
             restart = json.loads(restart)
             if restart:
                 logging.getLogger().info("Will restart fleet manager software")
+                os.system("docker restart fm_redis")
                 os.system("docker restart fm_plugins")
                 raise Exception("Will restart fleet manager software")
 

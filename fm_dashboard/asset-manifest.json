@@ -1,7 +1,7 @@
 {
   "files": {
     "main.css": "/static/css/main.bcc6fd1e.css",
-    "main.js": "/static/js/main.569c7617.js",
+    "main.js": "/static/js/main.f6ff2f20.js",
     "static/js/206.3e519ea9.chunk.js": "/static/js/206.3e519ea9.chunk.js",
     "static/media/Login Image.png": "/static/media/Login Image.885a80af3ca6e7d909a4.png",
     "static/media/OpenSans-Regular-400.ttf": "/static/media/OpenSans-Regular-400.57cd57a648021fa1c396.ttf",
@@ -14,8 +14,8 @@
     "static/media/sherpa-tug.svg": "/static/media/sherpa-tug.f6aef6a5839680f7a87dfb9dfc7f9197.svg",
     "static/media/sherpa-tug-lite.svg": "/static/media/sherpa-tug-lite.bf2dd2fc15548edbe9100bfa419564be.svg",
     "static/media/sherpa.svg": "/static/media/sherpa.d69d000168d6b36cf5e600f607d6df82.svg",
-    "static/media/sherpa-palette-mover.svg": "/static/media/sherpa-palette-mover.f455f728ec08ec24fda58a3d7db00043.svg",
     "static/media/configuration.svg": "/static/media/configuration.c148b080eb1da6ffec9a5b9091712f20.svg",
+    "static/media/palette-mover.svg": "/static/media/palette-mover.34a7dccc4091f9d589e0807dcbf828a4.svg",
     "static/media/alert-sherpa.svg": "/static/media/alert-sherpa.d08dd9e45f314377365a0b7c73f354aa.svg",
     "static/media/calendar.svg": "/static/media/calendar.b551911c436999b9c7adade0813e0e70.svg",
     "static/media/maintenance.svg": "/static/media/maintenance.d335734baadd1d115177d80042dc9ead.svg",
@@ -68,6 +68,6 @@
   },
   "entrypoints": [
     "static/css/main.bcc6fd1e.css",
-    "static/js/main.569c7617.js"
+    "static/js/main.f6ff2f20.js"
   ]
 }
