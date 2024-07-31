@@ -255,6 +255,7 @@ def update_sherpa_info(mfm_context: mu.MFMContext):
                 "name": sherpa.name,
                 "hwid": sherpa.hwid,
                 "fleet_name": sherpa.fleet.name,
+                "sherpa_type": sherpa.sherpa_type,
             }
             master_sherpa_info.append(sherpa_info)
 
