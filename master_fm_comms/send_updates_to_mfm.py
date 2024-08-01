@@ -306,7 +306,8 @@ def update_trip_info(
     for trip in new_trips:
         trip_info = tu.get_trip_status(trip)
         trip_ids.append(trip.id)
-        del trip_info["trip_details"]["updated_at"]
+        if "updated_at" in trip_info["trip_details"].keys():
+            del trip_info["trip_details"]["updated_at"]
         trips_info.append(trip_info)
 
     for i in range(0, len(trips_info), batch_size):
@@ -361,7 +362,8 @@ def update_trip_analytics(
     trip_ids = []
     for trip_analytics in new_trip_analytics:
         ta = tu.get_trip_analytics(trip_analytics[0])
-        del ta["updated_at"]
+        if "updated_at" in ta.keys():
+            del ta["updated_at"]
         del ta["created_at"]
         trips_analytics.append(ta)
         trips_end_time.append(trip_analytics[1])
