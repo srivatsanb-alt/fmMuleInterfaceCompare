@@ -371,7 +371,7 @@ def update_trip_analytics(
 
     for i in range(0, len(trips_analytics), batch_size):
         last_trip_end_time = trips_end_time[
-            min(i + batch_size - 1, len(trip_analytics) - 1)
+            min(i + batch_size - 1, len(trips_analytics) - 1)
         ]
         trips_analytics_chunk = trips_analytics[i : i + batch_size]
         req_json = {"trips_analytics": trips_analytics_chunk}
