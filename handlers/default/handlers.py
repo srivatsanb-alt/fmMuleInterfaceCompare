@@ -375,7 +375,7 @@ class Handlers:
             trip_analytics.actual_trip_time = time_delta.seconds
             trip_analytics.progress = 1.0
 
-        self.do_post_actions(ongoing_trip, sherpa, curr_station)
+        # self.do_post_actions(ongoing_trip, sherpa, curr_station)
         self.dbsession.add_notification(
             sherpa.get_notification_entity_names(),
             end_leg_log,
@@ -769,6 +769,10 @@ class Handlers:
                 if ongoing_trip.finished():
                     done = True
                     next_task = "end_ongoing_trip"
+                
+                elif ongoing_trip.should_assign_post_action():
+                    done=True
+                    next_task= "assign_peripheral_task"
 
                 elif (
                     self.check_continue_curr_leg(ongoing_trip)
@@ -797,14 +801,14 @@ class Handlers:
         if next_task == "no new task to assign":
             logging.getLogger("status_updates").info(f"{sherpa.name} not assigned new task")
 
-        if done and sherpa_status.disabled is True:
-            logging.getLogger("status_updates").info(
-                f"cannot assign new task to {sherpa.name}, sherpa is disabled, disabled_reason: {sherpa_status.disabled_reason}"
-            )
-            done = False
-            sherpa_status.assign_next_task = False
-        elif done:
+        if done:
             sherpa_status.assign_next_task = True
+            if sherpa_status.disabled is True:
+                logging.getLogger("status_updates").info(
+                    f"cannot assign new task to {sherpa.name}, sherpa is disabled, disabled_reason: {sherpa_status.disabled_reason}"
+                )
+                done = False
+                sherpa_status.assign_next_task = False
         else:
             sherpa_status.assign_next_task = False
 
@@ -1234,6 +1238,8 @@ class Handlers:
         # query db
         sherpa, ongoing_trip, pending_trip = self.get_sherpa_trips(req.sherpa_name)
 
+      
+
         all_stations: List[fm.Station] = []
         if pending_trip:
             for station_name in pending_trip.trip.augmented_route:
@@ -1270,7 +1276,7 @@ class Handlers:
         self.dbsession.session.commit()
 
         # update db
-        valid_tasks = ["assign_new_trip", "end_ongoing_trip", "continue_leg", "start_leg"]
+        valid_tasks = ["assign_new_trip", "end_ongoing_trip", "continue_leg", "start_leg", "assign_peripheral_task"]
         done, next_task = self.should_assign_next_task(sherpa, ongoing_trip, pending_trip)
         sherpa.status.assign_next_task = False
 
@@ -1296,6 +1302,10 @@ class Handlers:
                     req_ctxt.fleet_names.append(fleet_name)
 
                 self.run_optimal_dispatch(req_ctxt.fleet_names)
+            
+            if next_task == "assign_peripheral_task":
+                ongoing_trip.post_action_initiated = True
+                self.do_post_actions(ongoing_trip, sherpa, from_station)
 
             if next_task == "continue_leg":
                 logging.getLogger(sherpa.name).info(f"{sherpa.name} continuing leg")
@@ -1341,6 +1351,7 @@ class Handlers:
         # update db
         sherpa.pose = req.destination_pose
         sherpa.parking_id = curr_station.name
+        ongoing_trip.post_action_initiated = False
         self.end_leg(ongoing_trip, sherpa, curr_station, trip_analytics)
 
         return response
