@@ -27,9 +27,9 @@ def modify_cost_matrix_for_max_cost_assignment(cost_matrix):
     cost_matrix[cost_matrix < MIN_VALUE] = MIN_VALUE
     cost_matrix[cost_matrix > MAX_VALUE] = MAX_VALUE
 
-    max_cost_matrix = np.reciprocal(cost_matrix)
+    # max_cost_matrix = np.reciprocal(cost_matrix)
 
-    return max_cost_matrix
+    return cost_matrix
 
 
 def hungarian_assignment(cost_matrix, pickups, sherpas):
