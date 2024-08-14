@@ -50,7 +50,7 @@ def hungarian_assignment(cost_matrix, pickups, sherpas):
 
     for i in range(0, len(dlib_assignments)):
         try:
-            if cost_matrix[i, dlib_assignments[i]] == (1 / MAX_VALUE):
+            if cost_matrix[i, dlib_assignments[i]] == MAX_VALUE:
                 # logging.info("dummy assignment route_length is infinity")
                 continue
             assignment.update({pickups[i]: sherpas[dlib_assignments[i]]})

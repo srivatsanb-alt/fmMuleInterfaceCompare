@@ -339,7 +339,7 @@ class OptimalDispatch:
                             pose_1, pose_2, fleet_name, redis_conn
                         )
                         total_eta = route_length + sherpa_q_val["remaining_eta"] + MIN_ACCEPTABLE_ETA
-
+                
                     # to handle w1 == 0  and eta == np.inf case
                     weighted_total_eta = (
                         (total_eta**w1) if (total_eta != np.inf) else total_eta
@@ -349,13 +349,13 @@ class OptimalDispatch:
                         if (pickup_priority != np.inf)
                         else pickup_priority
                     )
-
                     cost_matrix[i, j] = total_eta
                     priority_matrix[i, j] = pickup_priority
 
-                    priority_normalised_cost_matrix[i, j] = (
-                        weighted_pickup_priority / weighted_total_eta 
-                    )
+                    if total_eta != np.inf:
+                        priority_normalised_cost_matrix[i, j] = (
+                            weighted_pickup_priority / weighted_total_eta 
+                        )
 
                     j += 1
                 i += 1
