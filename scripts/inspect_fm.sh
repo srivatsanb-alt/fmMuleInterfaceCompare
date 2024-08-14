@@ -2,7 +2,7 @@ if [ $1 ] ;  then {
   cdf_path=$FM_STATIC_DIR'/data_backup/'$1
 }
 else {
-   cdf=$(redis-cli GET current_data_folder)
+   cdf=$(redis-cli -h $REDIS_HOST -p $REDIS_PORT GET current_data_folder)
    cdf_path=$FM_STATIC_DIR'/data_backup/'$cdf
 }
 fi

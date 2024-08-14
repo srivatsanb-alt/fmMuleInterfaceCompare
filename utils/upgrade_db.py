@@ -1,8 +1,16 @@
 import os
+import pandas as pd
+import csv
+import time
+from sqlalchemy import Boolean, Column, ForeignKey, String, ARRAY, Integer
+
 
 # ati code imports
 from core.db import get_session, get_engine
 from models.misc_models import FMVersion
+from models.db_session import DBSession
+import utils.util as utils_util
+import models.visa_models as vm
 
 
 AVAILABLE_UPGRADES = [
@@ -16,6 +24,8 @@ AVAILABLE_UPGRADES = [
     "4.01",
     "4.02",
     "4.1",
+    "4.15",
+    "4.2",
 ]
 NO_SCHEMA_CHANGES = ["3.0", "3.01", "3.1"]
 
@@ -120,6 +130,51 @@ class DBUpgrade:
                 conn.execute("drop table master_fm_data_upload")
             except Exception as e:
                 print(f"Unable to drop master_fm_data_upload, exception: {e}")
+    
+    def upgrade_to_4_15(self):
+        with get_engine(os.getenv("FM_DATABASE_URI")).connect() as conn:
+            try:
+                csv_file_path = "/app/static/visa_assign.csv"
+                conn.execute("commit")
+                with open(csv_file_path, "r") as file:
+                    reader = csv.reader(file)
+                    next(reader)  # Skip the header row
+                    for row in reader:
+                        conn.execute(
+                            """
+                            INSERT INTO visa_assignments (zone_id, sherpa_name)
+                            VALUES (%s, %s)
+                        """,
+                            row,
+                        )
+                print(f"Inserted visa_assignments")
+            except Exception as e:
+                print(f"Unable to insert visa_assignments, exception: {e}")
+
+    def upgrade_to_4_2(self):
+        with get_engine(os.getenv("FM_DATABASE_URI")).connect() as conn:
+            conn.execute("commit")
+            result = conn.execute(
+                "SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='sherpas'"
+            )
+            column_names = [row[0] for row in result]
+            if "sherpa_type" not in column_names:
+                conn.execute('ALTER TABLE "sherpas" ADD COLUMN "sherpa_type" VARCHAR')
+                print("column sherpa_type added to sherpas table")
+            else:
+                print("column sherpa_type already present in sherpa table")
+            # Update sherpa_type to 'tug' in each row
+            conn.execute("UPDATE sherpas SET sherpa_type = 'tug'")
+            print("Updated sherpa_type to 'tug' in all rows of the sherpas table.")
+            result = conn.execute(
+                "SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='fm_incidents'"
+            )
+            column_names = [row[0] for row in result]
+            if "error_code" not in column_names:
+                conn.execute('ALTER TABLE "fm_incidents" ADD COLUMN "error_code" VARCHAR')
+                print("column error_code added to fm_incidents table")
+            else:
+                print("column error_code already present in fm_incidents table")
 
 
 def upgrade_db_schema():
@@ -175,6 +230,33 @@ def maybe_delete_fm_incidents_v3_3():
             print("dropped table fm_incidents")
 
 
+def maybe_delete_visa_related_tables_v4_15():
+    with get_engine(os.getenv("FM_DATABASE_URI")).connect() as conn:
+        conn.execute("commit")
+        result = conn.execute("SELECT zone_id, sherpa_name FROM visa_assignments")
+        data = []
+        for visa_assignment in result:
+            data.append(
+                {
+                    "zone_id": visa_assignment[0],
+                    "sherpa_name": visa_assignment[1],
+                }
+            )
+        data = pd.DataFrame(data)
+        csv_file_path = "/app/static/visa_assign.csv"
+        data.to_csv(csv_file_path, index=False)
+        print(f"Dataframe has been saved to {csv_file_path}")
+
+    with get_engine(os.getenv("FM_DATABASE_URI")).connect() as conn:
+        try:
+            conn.execute("commit")
+            conn.execute("drop table visa_assignments")
+            conn.execute("drop table visa_rejects")
+            print("dropped visa_assignments and visa_rejects and copied data to visa_assign.csv")
+        except Exception as e:
+            print(f"Unable to drop visa_assignments and visa_rejects or copied data to visa_assign.csv, exception: {e}")
+
+
 def maybe_drop_tables():
     with get_session(os.getenv("FM_DATABASE_URI")) as session:
         try:
@@ -182,6 +264,8 @@ def maybe_drop_tables():
             if fm_version:
                 if float(fm_version.version) <= 3.3:
                     maybe_delete_fm_incidents_v3_3()
+                if float(fm_version.version) < 4.15:
+                    maybe_delete_visa_related_tables_v4_15()
 
         except Exception as e:
             print(

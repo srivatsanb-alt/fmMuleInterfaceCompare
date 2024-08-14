@@ -3,8 +3,9 @@ import os
 import json
 from typing import Union
 
+
 # ati code imports
-from core.constants import FleetStatus, DisabledReason
+from core.constants import FleetStatus, DisabledReason, SoundVolume
 from fastapi import APIRouter, Depends
 from models.db_session import DBSession
 import models.request_models as rqm
@@ -12,7 +13,9 @@ import models.fleet_models as fm
 import app.routers.dependencies as dpd
 from utils.comms import send_async_req_to_sherpa
 import models.misc_models as mm
+from utils.rq_utils import Queues
 import core.common as ccm
+
 
 router = APIRouter(
     prefix="/api/v1/control",
@@ -35,13 +38,17 @@ async def diagnostics(
     if not entity_name:
         dpd.raise_error("No entity name")
 
-    with DBSession(engine=ccm.engine) as dbsession:
-        sherpa_status = dbsession.get_sherpa_status(entity_name)
-        if not sherpa_status:
-            dpd.raise_error("Bad sherpa name")
+    try:
+        with DBSession(engine=ccm.engine) as dbsession:
+            sherpa_status = dbsession.get_sherpa_status(entity_name)
+            if not sherpa_status:
+                dpd.raise_error("Bad sherpa name")
 
-        req = rqm.DiagnosticsReq(sherpa_name=entity_name)
-        response = await send_async_req_to_sherpa(dbsession, sherpa_status.sherpa, req)
+            req = rqm.DiagnosticsReq(sherpa_name=entity_name)
+            response = await send_async_req_to_sherpa(dbsession, sherpa_status.sherpa, req)
+            
+    except Exception as e:
+        dpd.relay_error_details(e)
 
     return response
 
@@ -60,14 +67,18 @@ async def quick_diagnostics(
 
     if not entity_name:
         dpd.raise_error("No entity name")
+    
+    try:
+        with DBSession(engine=ccm.engine) as dbsession:
+            sherpa_status = dbsession.get_sherpa_status(entity_name)
+            if not sherpa_status:
+                dpd.raise_error("Bad sherpa name")
 
-    with DBSession(engine=ccm.engine) as dbsession:
-        sherpa_status = dbsession.get_sherpa_status(entity_name)
-        if not sherpa_status:
-            dpd.raise_error("Bad sherpa name")
+            req = rqm.QuickDiagnosticsReq(sherpa_name=entity_name)
+            response = await send_async_req_to_sherpa(dbsession, sherpa_status.sherpa, req)
 
-        req = rqm.QuickDiagnosticsReq(sherpa_name=entity_name)
-        response = await send_async_req_to_sherpa(dbsession, sherpa_status.sherpa, req)
+    except Exception as e:
+        dpd.relay_error_details(e)
 
     return response
 
@@ -87,11 +98,14 @@ async def restart_mule_docker(
     if not entity_name:
         dpd.raise_error("No entity name")
 
-    with DBSession(engine=ccm.engine) as dbsession:
-        sherpa_status = dbsession.get_sherpa_status(entity_name)
-        req = {"endpoint": "restart_mule_docker", "source": user_name}
-        response = await send_async_req_to_sherpa(dbsession, sherpa_status.sherpa, req)
+    try:
+        with DBSession(engine=ccm.engine) as dbsession:
+            sherpa_status = dbsession.get_sherpa_status(entity_name)
+            req = {"endpoint": "restart_mule_docker", "source": user_name}
+            response = await send_async_req_to_sherpa(dbsession, sherpa_status.sherpa, req)
 
+    except Exception as e:
+        dpd.relay_error_details(e)
     return response
 
 
@@ -110,10 +124,14 @@ async def powercycle(
     if not entity_name:
         dpd.raise_error("No entity name")
 
-    with DBSession(engine=ccm.engine) as dbsession:
-        sherpa_status = dbsession.get_sherpa_status(entity_name)
-        req = {"endpoint": "powercycle", "source": user_name}
-        response = await send_async_req_to_sherpa(dbsession, sherpa_status.sherpa, req)
+    try:
+        with DBSession(engine=ccm.engine) as dbsession:
+            sherpa_status = dbsession.get_sherpa_status(entity_name)
+            req = {"endpoint": "powercycle", "source": user_name}
+            response = await send_async_req_to_sherpa(dbsession, sherpa_status.sherpa, req)
+
+    except Exception as e:
+        dpd.relay_error_details(e)
 
     return response
 
@@ -338,6 +356,34 @@ async def reset_pose(
 
     return response
 
+@router.post("/sherpa/{entity_name}/reset_pose_vpr")
+async def reset_pose_vpr(
+    entity_name=Union[str, None],
+    user_name=Depends(dpd.get_user_from_header),
+):
+
+    response = {}
+
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    if not entity_name:
+        dpd.raise_error("No entity name")
+
+    with DBSession(engine=ccm.engine) as dbsession:
+        sherpa_status = dbsession.get_sherpa_status(entity_name)
+        if not sherpa_status:
+            dpd.raise_error("Bad sherpa name")
+
+    reset_pose_vpr_req = rqm.ResetPoseVPRReq(
+        sherpa_name=entity_name,
+    )
+
+    _ = await dpd.process_req_with_response(None, reset_pose_vpr_req, user_name)
+
+    return response
+
+
 
 # inducts sherpa into the fleet
 # trips not assigned otherwise
@@ -400,3 +446,78 @@ async def manual_park(
     )
 
     return response
+
+
+@router.post("/manual_visa_release")
+async def manual_visa_release(
+    manual_visa_release_req: rqm.ManualVisaReleaseReq,
+    user_name=Depends(dpd.get_user_from_header),
+):
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    queues = Queues.queues_dict["resource_handler"]
+    response = await dpd.process_req_with_response(
+        queues, manual_visa_release_req, manual_visa_release_req.revoke_visa_for
+    )
+    return response
+
+@router.get("/current_sound_setting/{entity_name}")
+async def current_sound_setting(
+    entity_name=Union[str, None],
+    user_name=Depends(dpd.get_user_from_header),
+):
+    response = {}
+
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    if not entity_name:
+        dpd.raise_error("No entity name")
+    
+    try:
+        with DBSession(engine=ccm.engine) as dbsession:
+            sherpa_status = dbsession.get_sherpa_status(entity_name)
+            if not sherpa_status:
+                dpd.raise_error("Bad sherpa name")
+
+            req = rqm.CurrentSoundSettingReq(sherpa_name=entity_name)
+            response = await send_async_req_to_sherpa(dbsession, sherpa_status.sherpa, req)
+
+    except Exception as e:
+        dpd.relay_error_details(e)
+
+    return response
+
+@router.post("/sound_setting/{entity_name}")
+async def sound_setting(
+    sound_setting_req: rqm.SoundSettingCtrlReq,
+    entity_name=Union[str, None],
+    user_name=Depends(dpd.get_user_from_header),
+):
+    response = {}
+
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    if not entity_name:
+        dpd.raise_error("No entity name")
+
+    if SoundVolume.LOW > sound_setting_req.volume or sound_setting_req.volume > SoundVolume.HIGH:
+        dpd.raise_error("Invalid volume setting, must be between 0 and 0.1")
+    
+    with DBSession(engine=ccm.engine) as dbsession:
+        sherpa_status = dbsession.get_sherpa_status(entity_name)
+
+        if not sherpa_status:
+            dpd.raise_error("Bad sherpa name")
+
+        sound_change_req = rqm.SoundSettingReq(
+            sherpa_name=entity_name, volume=sound_setting_req.volume, sound_type=sound_setting_req.sound_type
+        )
+
+    _ = await dpd.process_req_with_response(None, sound_change_req, user_name)
+
+    return response
+
+

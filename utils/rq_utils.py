@@ -78,6 +78,12 @@ def signal_job_completion(job_id, redis_conn):
     job_completion_key = f"job_{job_id}_completion"
     redis_conn.rpush(job_completion_key, "completed")
 
+def find_type_in_args(args):
+    for arg in args:
+        if hasattr(arg, 'type'):
+            return arg.type
+    return None
+
 
 def report_failure(job, connection, fail_type, value, traceback):
     # set error value
@@ -85,14 +91,19 @@ def report_failure(job, connection, fail_type, value, traceback):
     job.meta["error_value"] = value
     job.save()
 
+    type_value = find_type_in_args(job.args)
+    if type_value is None:
+        type_value = job.args
+
     logging.getLogger().error(
-        f"RQ job failed: error: {fail_type}, value {value}, func: {job.func_name}, timeout: {job.timeout}, ttl: {job.ttl}, args: {job.args}, kwargs: {job.kwargs}",
-        exc_info=(fail_type, value, traceback),
+        f"RQ job failed: error: {fail_type}, value {value}, func: {job.func_name}, timeout: {job.timeout}, ttl: {job.ttl}, args: {job.args}, kwargs: {job.kwargs} message_type: {type_value}",
+        exc_info=(fail_type, value, traceback), 
     )
+    
     error_dict = {
         "error_type": str(fail_type),
         "error_msg": value,
-        "Job arguments": job.args,
+        "Job arguments": job.type_value,
         "module": job.func_name,
         "code": "rq",
     }

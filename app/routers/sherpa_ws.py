@@ -186,6 +186,10 @@ async def sherpa_status(
     finally:
         [t.cancel() for t in rw]
 
+    logger.info(
+        f"websocket connection closed for {sherpa_name}"
+    )
+
 
 async def reader(websocket, sherpa):
     handler_obj = hc.HandlerConfiguration.get_handler()

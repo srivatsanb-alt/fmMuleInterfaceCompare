@@ -1,6 +1,8 @@
 #! /bin/bash
 set -e
 
+redis-cli -h $REDIS_HOST -p $REDIS_PORT flushall
+
 LOGS=$FM_LOG_DIR
 TS=$(date +'%H%M%S')
 
@@ -76,7 +78,7 @@ update_run_on_host_service() {
 }
 
 set_max_connections
-redis-server --port $REDIS_PORT > $LOGS/redis.log 2>&1 &
+#redis-server --port $REDIS_PORT > $LOGS/redis.log 2>&1 &
 sleep 2
 fm_init
 start

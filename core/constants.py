@@ -26,6 +26,7 @@ class MessageType:
     SAVE_ROUTE = "save_route"
     TRIGGER_OPTIMAL_DISPATCH = "trigger_optimal_dispatch"
     ACTIVATE_PARKING_MODE = "activate_parking_mode"
+    MANUAL_VISA_RELEASE = "manual_visa_release"
 
 
 OptimalDispatchInfluencers = [
@@ -55,3 +56,16 @@ class DisabledReason:
     EMERGENCY_STOP = "emergency_stop"
     STALE_HEARTBEAT = "stale_heartbeat"
     SOFTWARE_NOT_COMPATIBLE = "software not compatible"
+
+class SherpaTypes:
+    TUG = "tug"
+    TUG_LITE = "tug_lite"
+    LITE = "lite"
+    LIFTER = "lifter"
+    PALLET_MOVER = "pallet_mover"
+
+ListofSherpaTypes = [SherpaTypes.TUG, SherpaTypes.TUG_LITE, SherpaTypes.LITE, SherpaTypes.LIFTER, SherpaTypes.PALLET_MOVER]
+
+class SoundVolume:
+    LOW = 0
+    HIGH = 0.1

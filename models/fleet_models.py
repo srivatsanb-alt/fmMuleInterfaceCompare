@@ -54,6 +54,7 @@ class Sherpa(Base):
     __tablename__ = "sherpas"
 
     id = Column(Integer, primary_key=True, index=True)
+    sherpa_type = Column(String, index=True)
     name = Column(String, unique=True, index=True)
     hwid = Column(String, unique=True)
     ip_address = Column(String)
@@ -73,6 +74,10 @@ class Sherpa(Base):
         back_populates="parked_sherpa",
         uselist=False,
     )
+
+    def get_notification_entity_names(self):
+        entity_names = [self.name, self.fleet.name, self.fleet.customer]
+        return entity_names
 
 
 class SherpaEvent(TimestampMixin, Base):

@@ -6,6 +6,9 @@ import aioredis
 import subprocess
 import redis
 import glob
+import time
+import math
+import random
 from fastapi import APIRouter, Depends, UploadFile, File
 from sqlalchemy.orm.attributes import flag_modified
 
@@ -19,6 +22,7 @@ from models.db_session import DBSession
 import app.routers.dependencies as dpd
 import utils.util as utils_util
 import core.common as ccm
+import core.constants as cc
 
 
 router = APIRouter(
@@ -48,6 +52,7 @@ async def site_info(user_name=Depends(dpd.get_user_from_header)):
         "software_version": fm_tag,
         "compatible_sherpa_versions": compatible_sherpa_versions,
         "simulator": simulator_config["simulate"],
+        "sherpa_types": cc.ListofSherpaTypes
     }
 
     return response
@@ -306,6 +311,57 @@ async def create_generic_alerts(
             mm.NotificationModules.generic,
         )
 
+@router.post("/get_fm_incidents_pg")
+async def get_fm_incidents_for_fm_health(
+    fm_incidents_req: rqm.FMIncidentsReqPg,
+    user_name=Depends(dpd.get_user_from_header)
+):
+    response = {}
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    from_dt = utils_util.str_to_dt(fm_incidents_req.from_dt)
+    to_dt = utils_util.str_to_dt(fm_incidents_req.to_dt)
+
+    with DBSession(engine=ccm.engine) as dbsession:
+        fm_incidents, count, limit, pages, sort_field, sort_order = dbsession.get_fm_incident_pg(
+            from_dt,
+            to_dt,
+            fm_incidents_req.error_type,
+            fm_incidents_req.sort_field,
+            fm_incidents_req.sort_order,
+            fm_incidents_req.page,
+            fm_incidents_req.limit,
+        )
+
+        result = []             
+
+        for fm_incident in fm_incidents:
+            result.append(
+                {
+                    fm_incident.id: {
+                        "type": fm_incident.type,
+                        "code": fm_incident.code,
+                        "incident_id": fm_incident.incident_id,
+                        "data_uploaded": fm_incident.data_uploaded,
+                        "data_path": fm_incident.data_path,
+                        "module": fm_incident.module,
+                        "message": fm_incident.message,
+                        "updated_at": fm_incident.updated_at,
+                        "created_at": fm_incident.created_at,
+                    }
+                }
+            )
+        
+        response = {
+            "fm_incidents": result,
+            "count": count,
+            "limit": limit,
+            "total_pages": pages,
+            "sort_field": sort_field,
+            "sort_order": sort_order,
+        }
+    return response
 
 @router.post("/get_fm_incidents")
 async def get_fm_incidents(
@@ -355,14 +411,14 @@ async def get_visa_assignments(user_name=Depends(dpd.get_user_from_header)):
         response = jsonable_encoder(zone_ids)
         for item in response:
             visa_assignments = dbsession.get_all_visa_assignments_as_dict(item["zone_id"])
-            item["resident_sherpas"] = (
-                visa_assignments["resident_sherpas"]
-                if (visa_assignments["resident_sherpas"])
+            item["resident_entities"] = (
+                visa_assignments["resident_entities"]
+                if (visa_assignments["resident_entities"])
                 else []
             )
-            item["waiting_sherpas"] = (
-                visa_assignments["waiting_sherpas"]
-                if (visa_assignments["waiting_sherpas"])
+            item["waiting_entities"] = (
+                visa_assignments["waiting_entities"]
+                if (visa_assignments["waiting_entities"])
                 else []
             )
     return response
@@ -498,7 +554,6 @@ async def fm_health_stats(
         response["disk_usage"] = total_disk_usage
 
     # get current folder
-    # redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
     with redis.from_url(os.getenv("FM_REDIS_URI")) as redis_conn:
         fm_backup_path = os.path.join(os.getenv("FM_STATIC_DIR"), "data_backup")
         current_data = redis_conn.get("current_data_folder").decode()
@@ -597,3 +652,65 @@ async def upload_map_file(
     await utils_util.write_to_file_async(file_path, uploaded_file)
 
     return response
+
+@router.get("/get_start_time_of_remote_terminal")
+async def get_start_time_of_remote_terminal(
+    user_name=Depends(dpd.get_user_from_header),
+):
+    response = {}
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    async with aioredis.Redis.from_url(os.getenv("FM_REDIS_URI")) as aredis_conn:
+        start_time_of_remote_terminal = await aredis_conn.get("start_time_of_remote_terminal")
+        if start_time_of_remote_terminal:
+            response["start_time_of_remote_terminal"] = (int(time.time()) - int(start_time_of_remote_terminal))
+
+    return response
+
+@router.post("/start_remote_terminal")
+async def start_remote_terminal(
+    remote_terminal_req: rqm.RemoteTerminalCtrlReq,
+    user_name=Depends(dpd.get_user_from_header)
+    ):
+
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+    async with aioredis.Redis.from_url(os.getenv("FM_REDIS_URI")) as aredis_conn:
+        code_for_remote_terminal = await aredis_conn.get("code_for_remote_terminal")
+        
+        if remote_terminal_req.enable_remote_terminal:
+            if code_for_remote_terminal:
+                code_for_remote_terminal = json.loads(code_for_remote_terminal)
+            if code_for_remote_terminal != remote_terminal_req.code or code_for_remote_terminal is None:
+                dpd.raise_error("Code is not correct", 403)
+            os.system("docker start fm_ttyd")
+            await aredis_conn.set("start_time_of_remote_terminal", int(time.time()))
+            await aredis_conn.delete("code_for_remote_terminal")
+        else:
+            os.system("docker stop fm_ttyd")
+            await aredis_conn.delete("start_time_of_remote_terminal")
+
+    return {}
+
+@router.get("/generate_code_for_remote_terminal")
+async def generate_code_for_remote_terminal(
+    user_name=Depends(dpd.get_user_from_header)
+    ):
+
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+    
+    async with aioredis.Redis.from_url(os.getenv("FM_REDIS_URI")) as aredis_conn:
+        code_for_remote_terminal = await aredis_conn.get("code_for_remote_terminal")
+        if code_for_remote_terminal:
+            code_for_remote_terminal = json.loads(code_for_remote_terminal)
+        if code_for_remote_terminal is None:            
+            code_for_remote_terminal = str(random.randint(100000, 999999))
+            await aredis_conn.setex(
+            "code_for_remote_terminal",
+            5*60,
+            json.dumps(code_for_remote_terminal),
+            )          
+
+    return {"code": code_for_remote_terminal}

@@ -56,20 +56,21 @@ def start_router_module():
                 redis_conn.delete("update_router_for")
                 logger.info(f"Updated router module for {fleet_name}")
 
-            for key in redis_conn.keys("control_router_rl_job_*"):
-                str_job = redis_conn.get(key)
-                logger.info(f"Got a route length estimation job {str_job}")
-                control_router_rl_job = json.loads(str_job)
+            keys = redis_conn.keys("control_router_rl_job_*")
+            job_values = redis_conn.mget(keys)
+
+            for key, str_job in zip(keys, job_values):
+                logger.info(f"Got a route length estimation job {str_job.decode('utf-8')}")
+                control_router_rl_job = json.loads(str_job.decode("utf-8"))
                 pose_1 = control_router_rl_job[0]
                 pose_2 = control_router_rl_job[1]
                 fleet_name = control_router_rl_job[2]
                 job_id = control_router_rl_job[3]
-                rm = all_router_modules.get_router_module(fleet_name)
-
                 route_length = 0
                 if not are_poses_close(pose_1, pose_2):
                     try:
                         route_length = redis_conn.get(f"rl_{str(pose_1)}_{str(pose_2)}")
+                        rm = all_router_modules.get_router_module(fleet_name)
                         if route_length is None:
                             route_length = rm.get_route_length(pose_1, pose_2)
                             redis_conn.set(f"rl_{str(pose_1)}_{str(pose_2)}", route_length)
@@ -90,16 +91,19 @@ def start_router_module():
                 logger.info(f"Result : {control_router_rl_job} - {route_length}")
                 redis_conn.delete(key)
 
-            for key in redis_conn.keys("control_router_wps_job_*"):
+            keys = redis_conn.keys("control_router_wps_job_*")
+            job_values = redis_conn.mget(keys)
+
+            for key, str_job in zip(keys, job_values):
                 try:
-                    str_job = redis_conn.get(key)
-                    logger.info(f"got a route preview estimation job {str_job}")
-                    control_router_wps_job = json.loads(str_job)
+                    logger.info(
+                        f"got a route preview estimation job {str_job.decode('utf-8')}"
+                    )
+                    control_router_wps_job = json.loads(str_job.decode("utf-8"))
                     station_poses = control_router_wps_job[0]
                     fleet_name = control_router_wps_job[1]
                     job_id = control_router_wps_job[2]
                     rm = all_router_modules.get_router_module(fleet_name)
-
                     start_pose = station_poses[0]
                     dest_poses = station_poses[1:]
                     wps_list = rm.get_path_wps(start_pose, dest_poses)
@@ -118,20 +122,22 @@ def start_router_module():
                     json.dumps(wps_list),
                 )
 
-            for key in redis_conn.keys("control_router_dp_rl_job_*"):
-                str_job = redis_conn.get(key)
-                logger.info(f"Got a dp_rl job {str_job}")
-                control_router_get_route_job = json.loads(str_job)
+            keys = redis_conn.keys("control_router_dp_rl_job_*")
+            job_values = redis_conn.mget(keys)
+
+            for key, str_job in zip(keys, job_values):
+                logger.info(f"Got a dp_rl job {str_job.decode('utf-8')}")
+                control_router_get_route_job = json.loads(str_job.decode("utf-8"))
                 pose_1 = control_router_get_route_job[0]
                 pose_2 = control_router_get_route_job[1]
                 fleet_name = control_router_get_route_job[2]
                 job_id = control_router_get_route_job[3]
-                rm = all_router_modules.get_router_module(fleet_name)
 
                 route_length = 0
                 dp_rl_result = [[], [], [], 0]
                 if not are_poses_close(pose_1, pose_2):
                     try:
+                        rm = all_router_modules.get_router_module(fleet_name)
                         final_route, visa_obj, rl = rm.get_route(pose_1, pose_2)
                         x_vals, y_vals, t_vals, _ = get_dense_path(final_route)
                         dp_rl_result = [
@@ -152,4 +158,4 @@ def start_router_module():
                 )
                 redis_conn.delete(key)
 
-        time.sleep(0.2)
+            time.sleep(0.2)

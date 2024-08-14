@@ -17,6 +17,7 @@ class NotificationModules:
     trolley = "trolley"
     stoppages = "stoppages"
     dispatch_button = "dispatch_button"
+    optimal_dispatch = "optimal_dispatch"
 
 
 class NotificationLevels:
@@ -81,6 +82,7 @@ class FMIncidents(TimestampMixin, Base):
     message = Column(String, nullable=False)
     display_message = Column(String)
     recovery_message = Column(String)
+    error_code = Column(String)
     other_info = Column(JSONB)
 
 

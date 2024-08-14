@@ -12,6 +12,7 @@ import models.request_models as rqm
 from models.mongo_client import FMMongo
 from models.db_session import DBSession
 import models.misc_models as mm
+import models.user_models as um
 import utils.util as utils_util
 import utils.config_utils as cu
 import core.common as ccm
@@ -23,6 +24,12 @@ router = APIRouter(
     tags=["auth"],
     responses={404: {"description": "Not found"}},
 )
+
+"""
+user details are stored in unstructured database mongodb
+Any new details such as email_id, contact number, access_restriction etc can be added
+as and when required
+"""
 
 
 # performs user authentication
@@ -49,9 +56,12 @@ async def login(user_login: rqm.UserLogin, request: Request):
                     mm.NotificationLevels.alert,
                     mm.NotificationModules.generic,
                 )
+        expiry_interval = None
+        if user_details.get("expiry_interval") and user_details["role"] == "viewer":
+            expiry_interval = user_details["expiry_interval"]
 
         response = {
-            "access_token": dpd.generate_jwt_token(user_login.name),
+            "access_token": dpd.generate_jwt_token(user_login.name, expiry_interval=expiry_interval),
             "user_details": {"user_name": user_login.name, "role": user_details["role"]},
             "static_files_auth": {
                 "username": os.getenv("ATI_STATIC_AUTH_USERNAME"),
@@ -150,6 +160,10 @@ async def add_edit_user_details(
             logging.getLogger("configure_fleet").info(
                 f"Modified frontend user details: {frontend_user_details.name}"
             )
+
+    if frontend_user_details.role == "superuser":
+        update_superuser_details_db()
+
     return response
 
 
@@ -173,6 +187,8 @@ async def delete_frontend_user(
         user_details_db = fm_mongo.get_frontend_user_details(user_query)
         if user_details_db is None:
             dpd.raise_error("User not found")
+        
+        role = user_details_db["role"]
 
         db = fm_mongo.get_database("frontend_users")
         collection = fm_mongo.get_collection("user_details", db)
@@ -181,6 +197,9 @@ async def delete_frontend_user(
             collection.delete_one(user_query)
         else:
             dpd.raise_error("Cannot delete, atleat one user needs to exists")
+
+    if role == "superuser":
+        update_superuser_details_db()
 
     return response
 
@@ -202,3 +221,29 @@ async def get_all_frontend_users(
         user_detail["hashed_password"] = "Confidential"
 
     return all_user_details
+
+
+def update_superuser_details_db():
+    with FMMongo() as fm_mongo:
+        super_users_details = fm_mongo.get_all_frontend_users_with_role(role="superuser")
+
+    with DBSession() as dbsession:
+        all_super_user_db = dbsession.get_all_super_users()
+        all_super_user_names_db = [super_user.name for super_user in all_super_user_db]
+        super_users_to_del = all_super_user_names_db
+        for user_detail in super_users_details:
+            superuser = dbsession.get_super_user(name=user_detail["name"])
+            if superuser is None:
+                api_key = user_detail["name"]
+                hashed_api_key = hashlib.sha256(api_key.encode("utf-8")).hexdigest()
+                new_superuser = um.SuperUser(
+                    name=user_detail["name"], hashed_api_key=hashed_api_key
+                )
+                dbsession.add_to_session(new_superuser)
+            if user_detail["name"] in super_users_to_del:
+                super_users_to_del.remove(user_detail["name"])
+
+        for user_to_del in super_users_to_del:
+            superuser = dbsession.get_super_user(name=user_to_del)
+            superuser.exclusion_zones = []
+            dbsession.session.delete(superuser)

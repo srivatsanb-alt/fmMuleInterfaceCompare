@@ -21,6 +21,7 @@ class MFMContext:
     update_freq: int
     ws_update_freq: int
     send_updates: bool
+    recent_hours: int
 
 
 def get_mfm_ws_url(mfm_context: MFMContext):
@@ -73,9 +74,12 @@ def get_mfm_url(mfm_context: MFMContext, endpoint, query=""):
         ),
         "download_file": os.path.join(mfm_url, "api/static/downloads", str(query)),
         "get_basic_auth": os.path.join(mfm_url, "api/v1/master_fm/user/get_basic_auth"),
-        "delete_map_file": os.path.join(mfm_url, "api/v1/master_fm/fm_client/delete_map_file"),
-        "get_map_file_info": os.path.join(mfm_url, "api/v1/master_fm/fm_client/get_map_file_info", str(query)),
-
+        "delete_map_file": os.path.join(
+            mfm_url, "api/v1/master_fm/fm_client/delete_map_file"
+        ),
+        "get_map_file_info": os.path.join(
+            mfm_url, "api/v1/master_fm/fm_client/get_map_file_info", str(query)
+        ),
     }
     return fm_endpoints.get(endpoint, None)
 
@@ -100,6 +104,7 @@ def send_http_req_to_mfm(
     params=None,
     query="",
     auth=None,
+    timeout=120,
 ):
     response_json = None
     response_status_code = None
@@ -121,6 +126,9 @@ def send_http_req_to_mfm(
 
     if auth:
         kwargs.update({"auth": auth})
+
+    if timeout:
+        kwargs.update({"timeout": timeout})
 
     if mfm_context.http_scheme == "https":
         kwargs.update({"verify": mfm_context.cert_file})
@@ -154,6 +162,7 @@ def get_mfm_context():
         update_freq=mfm_config["update_freq"],
         ws_update_freq=mfm_config["ws_update_freq"],
         send_updates=mfm_config["send_updates"],
+        recent_hours=mfm_config["recent_hours"],
     )
 
     if mfm_context.send_updates is False:
@@ -183,7 +192,9 @@ def prune_fleet_status(fleet_status_msg: dict):
         pruned_sherpa_status.update({"battery_status": sherpa_status["battery_status"]})
         pruned_sherpa_status.update({"ip_address": sherpa_status["ip_address"]})
         if sherpa_status["other_info"]:
-            pruned_sherpa_status.update({"other_info": json.dumps(sherpa_status["other_info"])})
+            pruned_sherpa_status.update(
+                {"other_info": json.dumps(sherpa_status["other_info"])}
+            )
 
         # update new_sherpa_status
         new_sherpa_status.update({sherpa_name: pruned_sherpa_status})

@@ -48,6 +48,7 @@ def add_fm_incident(dbsession, error_dict):
         message=error_dict["error_msg"],
         data_path=error_dict["file_path"],
         data_uploaded=True,
+        error_code=error_dict.get("error_code"),
     )
     dbsession.add_to_session(fm_incident)
     logging.getLogger().info(f"fm_incident {fm_incident.incident_id} uploaded")

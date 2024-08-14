@@ -13,6 +13,7 @@ import models.misc_models as mm
 import models.request_models as rqm
 import models.trip_models as tm
 import models.visa_models as vm
+import models.user_models as um
 from models.base_models import StationProperties
 from models.db_session import DBSession
 from models.mongo_client import FMMongo
@@ -346,7 +347,7 @@ class Handlers:
         )
 
         self.dbsession.add_notification(
-            [sherpa.name, fleet.name, fleet.customer],
+            sherpa.get_notification_entity_names(),
             started_leg_log,
             mm.NotificationLevels.info,
             mm.NotificationModules.trip,
@@ -376,7 +377,7 @@ class Handlers:
 
         self.do_post_actions(ongoing_trip, sherpa, curr_station)
         self.dbsession.add_notification(
-            [sherpa.name, sherpa.fleet.name, sherpa.fleet.customer],
+            sherpa.get_notification_entity_names(),
             end_leg_log,
             mm.NotificationLevels.info,
             mm.NotificationModules.trip,
@@ -427,6 +428,17 @@ class Handlers:
                     self.run_optimal_dispatch(req_ctxt.fleet_names)
         except Exception as e:
             logging.getLogger().error(f"couldn't run optimal dispatch, {e}")
+            optimal_dispatch_fail = (
+                f"Unable to run optimal dispatch for fleet {req_ctxt.fleet_names}"
+            )
+            with DBSession(engine=ccm.engine) as dbsession:
+                utils_util.maybe_add_notification(
+                    dbsession,
+                    req_ctxt.fleet_names,
+                    optimal_dispatch_fail,
+                    mm.NotificationLevels.alert,
+                    mm.NotificationModules.optimal_dispatch,
+                )
 
     def run_optimal_dispatch(self, fleet_names):
         with FMMongo() as fm_mongo:
@@ -599,7 +611,7 @@ class Handlers:
                 log_level = mm.NotificationLevels.action_request
 
             self.dbsession.add_notification(
-                [sherpa.name, sherpa.fleet.name, sherpa.fleet.customer],
+                sherpa.get_notification_entity_names(),
                 f"Need a dispatch button press on {sherpa.name} which is parked at {curr_station.name}",
                 log_level,
                 mm.NotificationModules.dispatch_button,
@@ -632,7 +644,7 @@ class Handlers:
                 logging.getLogger().warning(peripheral_msg)
                 self.add_dispatch_start_to_ongoing_trip(ongoing_trip, sherpa)
                 self.dbsession.add_notification(
-                    [sherpa.name, sherpa.fleet.name, sherpa.fleet.customer],
+                    sherpa.get_notification_entity_names(),
                     peripheral_msg,
                     mm.NotificationLevels.action_request,
                     mm.NotificationModules.trolley,
@@ -676,7 +688,7 @@ class Handlers:
 
             logging.getLogger().info(peripheral_msg)
             self.dbsession.add_notification(
-                [sherpa.name, sherpa.fleet.name, sherpa.fleet.customer],
+                sherpa.get_notification_entity_names(),
                 peripheral_msg,
                 mm.NotificationLevels.action_request,
                 mm.NotificationModules.conveyor,
@@ -724,6 +736,11 @@ class Handlers:
                 f"Deleted ongoing trip successfully trip_id: {ongoing_trip.trip.id} booking_id: {ongoing_trip.trip.booking_id}"
             )
         return {}
+
+    def force_delete_sherpa_current_trip(self, sherpa: fm.Sherpa):
+        if sherpa.status.trip_id is not None:
+            req = rqm.ForceDeleteOngoingTripReq(sherpa_name=sherpa.name)
+            self.handle_force_delete_ongoing_trip(req)
 
     def should_assign_next_task(
         self, sherpa: fm.Sherpa, ongoing_trip: tm.OngoingTrip, pending_trip: tm.PendingTrip
@@ -798,22 +815,41 @@ class Handlers:
             if visa_reject.sherpa_name == sherpa_name:
                 self.dbsession.session.delete(visa_reject)
 
-    def release_visas(self, visas_to_release, sherpa, notify=False):
+    def release_visas(self, visas_to_release, requester, notify=False):
 
         # update db
         for ezone in set(visas_to_release):
-            utils_visa.unlock_exclusion_zone(self.dbsession, ezone, sherpa)
-            visa_log = f"{sherpa.name} released {ezone.zone_id} visa"
+            utils_visa.unlock_exclusion_zone(self.dbsession, ezone, requester)
+            visa_log = f"{requester.name} released {ezone.zone_id} visa"
             logging.getLogger("visa").info(visa_log)
 
             if notify is True:
                 utils_util.maybe_add_notification(
                     self.dbsession,
-                    [sherpa.name, sherpa.fleet.name, sherpa.fleet.customer],
+                    requester.get_notification_entity_names(),
                     visa_log,
                     mm.NotificationLevels.info,
                     mm.NotificationModules.visa,
                 )
+
+    def get_resource_requester(self, req):
+        is_sherpa = True
+        if isinstance(req, rqm.ResourceReq):
+            requester: fm.Sherpa = self.dbsession.get_sherpa(req.source)
+        elif isinstance(req, rqm.SuperUserResourceReq):
+            requester: um.SuperUser = self.dbsession.get_super_user(req.source)
+            is_sherpa = False
+        elif isinstance(req, rqm.ManualVisaReleaseReq):
+            try:
+                requester: fm.Sherpa = self.dbsession.get_sherpa(req.revoke_visa_for)
+            except:
+                requester: um.SuperUser = self.dbsession.get_super_user(req.revoke_visa_for)
+                is_sherpa = False
+                if requester is None:
+                    raise ValueError(f"No such superuser {req.revoke_visa_for}")
+        else:
+            raise ValueError("Invalid Request")
+        return requester, is_sherpa
 
     def handle_fleet_start_stop(self, req: rqm.StartStopCtrlReq):
         # query DB
@@ -1064,7 +1100,7 @@ class Handlers:
             sherpa_error_alert = f"{req.sherpa_name} in error mode"
             utils_util.maybe_add_notification(
                 self.dbsession,
-                [sherpa.name, sherpa.fleet.name, sherpa.fleet.customer],
+                sherpa.get_notification_entity_names(),
                 sherpa_error_alert,
                 mm.NotificationLevels.alert,
                 mm.NotificationModules.errors,
@@ -1129,7 +1165,7 @@ class Handlers:
                 )
                 utils_util.maybe_add_notification(
                     self.dbsession,
-                    [sherpa.name, sherpa.fleet.name, sherpa.fleet.customer],
+                    sherpa.get_notification_entity_names(),
                     dispatch_button_stoppage,
                     mm.NotificationLevels.action_request,
                     mm.NotificationModules.dispatch_button,
@@ -1210,7 +1246,7 @@ class Handlers:
                     logging.getLogger().warning(trip_error_msg_e)
                     utils_util.maybe_add_notification(
                         self.dbsession,
-                        [sherpa.name, sherpa.fleet.name, sherpa.fleet.customer],
+                        sherpa.get_notification_entity_names(),
                         trip_error_msg,
                         mm.NotificationLevels.alert,
                         mm.NotificationModules.errors,
@@ -1276,6 +1312,9 @@ class Handlers:
         # query db
         sherpa: fm.Sherpa = self.dbsession.get_sherpa(req.source)
         ongoing_trip: tm.OngoingTrip = self.dbsession.get_ongoing_trip(sherpa.name)
+
+        if ongoing_trip is None:
+            raise ValueError(f"No ongoing trip for sherpa: {sherpa.name}")
 
         if (
             ongoing_trip.trip_leg_id != req.trip_leg_id
@@ -1524,63 +1563,67 @@ class Handlers:
             )
 
             self.dbsession.add_notification(
-                [sherpa.name, curr_station.name, sherpa.fleet.name, sherpa.fleet.customer],
+                sherpa.get_notification_entity_names(),
                 transfer_tote_msg,
                 mm.NotificationLevels.info,
                 mm.NotificationModules.conveyor,
             )
 
-    def handle_resource_access(self, req: rqm.ResourceReq):
-        sherpa: fm.Sherpa = self.dbsession.get_sherpa(req.source)
+    def handle_resource_access(self, req):
+        requester, is_sherpa = self.get_resource_requester(req)
         if not req.visa:
-            logging.getLogger(sherpa.name).warning("requested access type not supported")
+            logging.getLogger().warning("requested access type not supported")
             return None
-        return self.handle_visa_access(req.visa, req.access_type, sherpa)
+
+        return self.handle_visa_access(req.visa, req.access_type, requester, is_sherpa)
 
     def handle_visa_access(
-        self, req: rqm.VisaReq, access_type: rqm.AccessType, sherpa: fm.Sherpa
+        self, req: rqm.VisaReq, access_type: rqm.AccessType, requester, is_sherpa
     ):
+        # requester is either a super_user or a sherpa
         # do not assign next destination after processing a visa request.
         if access_type == rqm.AccessType.REQUEST:
-            return self.handle_visa_request(req, sherpa)
+            return self.handle_visa_request(req, requester, is_sherpa)
         elif access_type == rqm.AccessType.RELEASE:
-            return self.handle_visa_release(req, sherpa)
+            return self.handle_visa_release(req, requester)
 
-    def handle_visa_request(self, req: rqm.VisaReq, sherpa: fm.Sherpa):
+    def handle_visa_request(self, req: rqm.VisaReq, requester, is_sherpa):
         # query db
         granted, reason, reqd_ezones = utils_visa.can_grant_visa(
-            self.dbsession, sherpa, req
+            self.dbsession, requester, req
         )
-        visa_rejects = self.dbsession.get_visa_rejects(reqd_ezones, sherpa.name)
+        visa_rejects = self.dbsession.get_visa_rejects(reqd_ezones, requester.name)
 
         # end transaction
         self.dbsession.session.commit()
 
         # update db
-        if not sherpa.status.inducted:
+
+        if is_sherpa and not requester.status.inducted:
             granted = False
             reason = "sherpa disabled for trips"
 
         if granted:
             for ezone in set(reqd_ezones):
-                utils_visa.lock_exclusion_zone(ezone, sherpa)
-                if sherpa in ezone.waiting_sherpas:
-                    ezone.waiting_sherpas.remove(sherpa)
+                ezone.provide_access(requester)
+        elif is_sherpa and not requester.status.inducted:
+            pass
         else:
-            # Add to visa rejects only if sherpa is inducted
-            if sherpa.status.inducted:
-                for ezone, visa_reject in zip(set(reqd_ezones), visa_rejects):
-                    if visa_reject is None:
-                        vr = vm.VisaRejects(reason=reason)
-                        vr.zone_id = ezone.zone_id
-                        vr.sherpa_name = sherpa.name
-                        self.dbsession.add_to_session(vr)
+            for ezone, visa_reject in zip(set(reqd_ezones), visa_rejects):
+                if visa_reject is None:
+                    vr = vm.VisaRejects(reason=reason)
+                    vr.zone_id = ezone.zone_id
+                    if is_sherpa:
+                        vr.sherpa_name = requester.name
                     else:
-                        visa_reject.reason = reason
+                        vr.user_name = requester.name
+                    self.dbsession.add_to_session(vr)
+                else:
+                    visa_reject.reason = reason
 
         granted_message = "granted" if granted else "not granted"
-        visa_log = f"{sherpa.name} {granted_message} {req.visa_type} type visa to zone {req.zone_name}, reason: {reason}"
-        logging.getLogger("visa").info(f"visa {granted_message} to {sherpa.name}")
+        visa_log = f"{requester.name} {granted_message} {req.visa_type} type visa to zone {req.zone_name}, reason: {reason}"
+        logging.getLogger("visa").info(f"visa {granted_message} to {requester.name}")
 
         response: rqm.ResourceResp = rqm.ResourceResp(
             granted=granted, visa=req, access_type=rqm.AccessType.REQUEST
@@ -1588,7 +1631,7 @@ class Handlers:
 
         utils_util.maybe_add_notification(
             self.dbsession,
-            [sherpa.name, sherpa.fleet.name, sherpa.fleet.customer],
+            requester.get_notification_entity_names(),
             visa_log,
             mm.NotificationLevels.info,
             mm.NotificationModules.visa,
@@ -1596,29 +1639,68 @@ class Handlers:
 
         return response.to_json()
 
-    def handle_visa_release(self, req: rqm.VisaReq, sherpa: fm.Sherpa):
+    def handle_visa_release(self, req: rqm.VisaReq, requester):
         # query db
-        visas_to_release = utils_visa.get_visas_to_release(self.dbsession, sherpa, req)
+        visas_to_release = utils_visa.get_visas_to_release(self.dbsession, requester, req)
 
         # end transaction
         self.dbsession.session.commit()
 
-        self.release_visas(visas_to_release, sherpa)
+        self.release_visas(visas_to_release, requester)
 
         response: rqm.ResourceResp = rqm.ResourceResp(
             granted=True, visa=req, access_type=rqm.AccessType.RELEASE
         )
 
-        visa_log = f"{sherpa.name} released {req.visa_type} visa of zone {req.zone_name}"
+        visa_log = f"{requester.name} released {req.visa_type} visa of zone {req.zone_name}"
         utils_util.maybe_add_notification(
             self.dbsession,
-            [sherpa.name, sherpa.fleet.name, sherpa.fleet.customer],
+            requester.get_notification_entity_names(),
             visa_log,
             mm.NotificationLevels.info,
             mm.NotificationModules.visa,
         )
 
         return response.to_json()
+
+    def handle_manual_visa_release(self, req: rqm.ManualVisaReleaseReq):
+        response = {}
+        # query db
+        requester, is_sherpa = self.get_resource_requester(req)
+        (
+            visas_to_release,
+            revoke_visa_req,
+        ) = utils_visa.get_visas_to_release_on_manual_trigger(
+            self.dbsession, requester.exclusion_zones, req.zone_id
+        )
+
+        # end transaction
+        self.dbsession.session.commit()
+
+        # update_db
+        if is_sherpa:
+            if requester.status.mode == "disconnected":
+                uninduct_req = rqm.SherpaInductReq(induct=False, sherpa_name=requester.name)
+                if requester.status.inducted:
+                    self.handle_induct_sherpa(uninduct_req)
+                    self.force_delete_sherpa_current_trip(requester)
+                    disable_sherpa_alert = f"Disabling {requester.name} for trips. Will delete ongoing trips for {requester.name} if any"
+                    self.dbsession.add_notification(
+                        requester.get_notification_entity_names(),
+                        disable_sherpa_alert,
+                        mm.NotificationLevels.alert,
+                        mm.NotificationModules.visa,
+                    )
+                    return
+
+        self.release_visas(visas_to_release, requester)
+
+        if is_sherpa:
+            response = utils_comms.send_req_to_sherpa(
+                self.dbsession, requester, revoke_visa_req
+            )
+
+        return response
 
     def handle_sherpa_img_update(self, req: rqm.SherpaImgUpdateCtrlReq):
         response = {}
@@ -1674,13 +1756,13 @@ class Handlers:
             if sherpa.parking_id == saved_route.route[-1]:
                 raise ValueError(f"Sherpa already parked at {saved_route.route[-1]}")
 
-            if sherpa.status.trip_id is not None:
-                req = rqm.ForceDeleteOngoingTripReq(sherpa_name=req.sherpa_name)
-                self.handle_force_delete_ongoing_trip(req)
+            self.force_delete_sherpa_current_trip(sherpa)
+
             trip_metadata = {
                 "booked_by": f"manual_park_{req.sherpa_name}",
                 "sherpa_name": req.sherpa_name,
             }
+
             booking_req = rqm.BookingReq(
                 trips=[rqm.TripMsg(route=saved_route.route, metadata=trip_metadata)]
             )

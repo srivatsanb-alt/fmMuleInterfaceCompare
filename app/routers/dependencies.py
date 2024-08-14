@@ -85,6 +85,19 @@ def get_sherpa(x_api_key: str = Header(None)):
     return sherpa_name
 
 
+def get_super_user(x_api_key: str = Header(None)):
+    if x_api_key is None:
+        return None
+
+    hashed_api_key = hashlib.sha256(x_api_key.encode("utf-8")).hexdigest()
+
+    with DBSession() as dbsession:
+        super_user = dbsession.get_super_user_with_hashed_api_key(hashed_api_key)
+        user_name = super_user.name if super_user else None
+
+    return user_name
+
+
 def get_user_from_header(x_user_token: str = Header(None)):
     if x_user_token is None:
         return None
@@ -104,6 +117,34 @@ def get_real_ip_from_header(x_real_ip: str = Header(None)):
 def get_forwarded_for_from_header(x_forwarded_for: str = Header(None)):
     return x_forwarded_for
 
+def get_number_of_request(times=1, seconds=60,fleet_name=None):
+    redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
+    number_of_request = redis_conn.get(f"{fleet_name}_number_of_request")
+    if number_of_request is None:
+        redis_conn.setex(
+            f"{fleet_name}_number_of_request",
+            seconds,
+            json.dumps(1)
+        )
+    else:
+        if int(number_of_request) > times:
+            number_of_request = int(number_of_request) + 1
+            remaing_time = redis_conn.ttl(f"{fleet_name}_number_of_request")
+            if remaing_time > 0:
+                redis_conn.setex(
+                    f"{fleet_name}_number_of_request",
+                    remaing_time,
+                    json.dumps(number_of_request)
+                )
+            else:
+                redis_conn.setex(
+                    f"{fleet_name}_number_of_request",
+                    seconds,
+                    json.dumps(1)
+                )
+        else:
+            raise_error("Too many requests", 429)
+
 
 def decode_token(token: str):
     redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
@@ -120,13 +161,15 @@ def decode_token(token: str):
         return None
 
 
-def generate_jwt_token(username: str, role=None):
+def generate_jwt_token(username: str, role=None, expiry_interval=None):
     redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
+    if expiry_interval is None:
+        expiry_interval = int(redis_conn.get("token_expiry_time_sec").decode())
     access_token = jwt.encode(
         {
             "sub": username,
             "role": role,
-            "exp": time.time() + int(redis_conn.get("token_expiry_time_sec").decode()),
+            "exp": time.time() + expiry_interval,
         },
         redis_conn.get("FM_SECRET_TOKEN"),
         algorithm="HS256",
@@ -134,10 +177,18 @@ def generate_jwt_token(username: str, role=None):
     return access_token
 
 
+async def check_token_expiry(token, client_ip, check_freq=30):
+    while True:
+        valid_user = decode_token(token)
+        if valid_user is None:
+            raise Exception(f"User token expired for {client_ip}")
+        await asyncio.sleep(check_freq)
+
+
 # processes the requests in the job queue.
 def process_req(queue, req, user, redis_conn=None, dt=None):
     if not user:
-        raise HTTPException(status_code=403, detail=f"Unknown requeter {user}")
+        raise HTTPException(status_code=403, detail=f"Unknown requester {user}")
 
     if redis_conn is None:
         redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
@@ -174,6 +225,20 @@ def process_req(queue, req, user, redis_conn=None, dt=None):
     return job
 
 
+def relay_error_details(e: Exception):
+    error_detail = "Unable to process request"
+    status_code = 500
+    if isinstance(e, ValueError):
+        # request conflicts with the current state of the server.
+        status_code = 409
+        error_detail = str(e)
+
+    elif isinstance(e, Exception):
+        status_code = 400
+        error_detail = str(e)
+    raise_error(detail=error_detail, code=status_code)
+
+
 async def process_req_with_response(queue, req, user: str):
     redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
     job = process_req(queue, req, user, redis_conn)
@@ -190,19 +255,11 @@ async def process_req_with_response(queue, req, user: str):
     remove_job_from_queued_jobs(job.id, req.source, redis_conn)
 
     if status == "failed":
-        error_detail = "Unable to process request"
-        status_code = 500
-
         await asyncio.sleep(0.1)
         job_meta = job.get_meta(refresh=True)
         error_value = job_meta.get("error_value")
-
-        if isinstance(error_value, ValueError):
-            error_detail = str(error_value)
-            status_code = 409  # request conflicts with the current state of the server.
-
         job.cancel()
-        raise HTTPException(status_code=status_code, detail=error_detail)
+        relay_error_details(error_value)
 
     # Fetching the job result
     response = job.result

@@ -172,15 +172,26 @@ class MuleWS:
                 req = ast.literal_eval(message["data"].decode())
                 req_id = req.get("req_id")
                 if req_id:
-                    ws_ack_url = (
-                        "http://127.0.0.1:"
-                        + os.getenv("FM_PORT")
-                        + f"/api/v1/sherpa/req_ack/{req_id}"
-                    )
+                    # ws_ack_url = (
+                    #     "http://127.0.0.1:"
+                    #     + os.getenv("FM_PORT")
+                    #     + f"/api/v1/sherpa/req_ack/{req_id}"
+                    # )
                     req_json = {}
                     req_json["response"] = {}
                     req_json["success"] = True
-                    requests.post(ws_ack_url, json=req_json)
+                    # requests.post(ws_ack_url, json=req_json)
+                    redis_conn.setex(
+                        f"response_{req_id}",
+                        int((redis_conn.get("default_job_timeout_ms")).decode()),
+                        json.dumps(req_json["response"]),
+                    )
+                    
+                    redis_conn.setex(
+                        f"success_{req_id}",
+                        int((redis_conn.get("default_job_timeout_ms")).decode()),
+                        json.dumps(req_json["success"]),
+                    )
                     print(f"sent ws ack to req with req_id {req_id}")
                 else:
                     print(f"got a ws msg without req_id. sherpa_name: {sherpa_name}")

@@ -32,8 +32,12 @@ class FrontendUsersValidator:
                 },
                 "role": {
                     "bsonType": "string",
-                    "enum": ["viewer", "operator", "supervisor", "support"],
+                    "enum": ["viewer", "operator", "supervisor", "support", "superuser"],
                     "description": "Role based access would be provided in the frontend app",
+                },
+                "expiry_interval": {
+                    "bsonType": "int",
+                    "description": "Login session expiry in seconds",
                 },
             },
         }
@@ -199,6 +203,7 @@ class ConfigValidator:
                 "ws_update_freq",
                 "update_freq",
                 "api_key",
+                "recent_hours",
             ],
             "properties": {
                 "mfm_ip": {
@@ -247,7 +252,13 @@ class ConfigValidator:
                     "bsonType": "string",
                     "description": "Api_key required to connect to master_fm/sanjaya server",
                 },
-            },
+                "recent_hours": {
+                    "bsonType": "int",
+                    "minimum": 24,
+                    "maximum": 168,
+                    "description": "Number of hours of recent data to be sent to master_fm/sanjaya server",
+                },
+            }
         }
     }
 
@@ -405,6 +416,10 @@ class ConfigValidator:
                     "bsonType": "int",
                     "description": "Token expiry time in seconds",
                 },
+                "secret_token": {
+                    "bsonType": "string",
+                    "description": "Secret token for authentication",
+                }
             },
         }
     }
@@ -451,6 +466,7 @@ class ConfigDefaults:
         "ws_update_freq": 60,
         "update_freq": 120,
         "api_key": "",
+        "recent_hours": 72,
     }
     conditional_trips = {
         "trip_types": ["battery_swap", "auto_park"],

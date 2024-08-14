@@ -11,9 +11,11 @@ services:
     depends_on:
       - db
       - mongo
+      - fm_redis
     links:
       - db
       - mongo
+      - fm_redis
     networks:
       fm_dn:
         aliases:
@@ -24,7 +26,8 @@ services:
       FM_PORT: 8001
       FM_SERVER_USERNAME: "ati"
       REDIS_PORT: 6379
-      FM_REDIS_URI: redis://localhost:6379
+      REDIS_HOST: fm_redis
+      FM_REDIS_URI: redis://fm_redis:6379
       PGTZ: Asia/Kolkata
       TZ: Asia/Kolkata
       PGHOST: db
@@ -45,9 +48,11 @@ services:
     depends_on:
       - db
       - mongo
+      - fm_redis
     links:
       - db
       - mongo
+      - fm_redis
     networks:
       fm_dn:
         aliases:
@@ -56,8 +61,9 @@ services:
       - "8002:8002"
     environment:
       PLUGIN_PORT: 8002
-      REDIS_PORT: 6390
-      PLUGIN_REDIS_URI: redis://localhost:6390
+      REDIS_PORT: 6379
+      REDIS_HOST: fm_redis
+      PLUGIN_REDIS_URI: redis://fm_redis:6379
       PGTZ: Asia/Kolkata
       TZ: Asia/Kolkata
       PLUGIN_DATABASE_URI: postgresql://postgres:postgres@db
@@ -147,6 +153,31 @@ services:
     restart: always
     image: registry:2
     container_name: fm_docker_registry
+    networks:
+      - fm_dn
+
+  fm_redis:
+    image: redis:latest
+    container_name: fm_redis
+    restart: always
+    networks:
+      - fm_dn
+    ports:
+      - "6379:6379"
+
+  ttyd:
+    image: fm_ttyd:fm_version
+    container_name: fm_ttyd
+    restart: always
+    privileged: true
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "7681:7681" 
+    depends_on:
+      - fleet_manager
+    links:
+      - fleet_manager
     networks:
       - fm_dn
 

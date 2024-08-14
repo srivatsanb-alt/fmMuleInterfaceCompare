@@ -52,6 +52,10 @@ async def plugin_comms_ws(
         [t.cancel() for t in rw]
     finally:
         [t.cancel() for t in rw]
+    
+    logger.info(
+        f"websocket connection(plugin) closed with client_ip: {x_real_ip}"
+    )
 
 
 async def reader(websocket, x_real_ip):

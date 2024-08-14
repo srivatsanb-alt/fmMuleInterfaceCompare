@@ -21,6 +21,7 @@ router = APIRouter()
 @router.websocket("/ws/api/v1/updates/{token}")
 async def update_ws(
     websocket: WebSocket,
+    token: str,
     user_name=Depends(dpd.get_user_from_query),
     x_real_ip=Depends(dpd.get_real_ip_from_header),
 ):
@@ -47,6 +48,9 @@ async def update_ws(
         asyncio.create_task(
             writer(websocket, x_real_ip),
         ),
+        asyncio.create_task(
+            dpd.check_token_expiry(token, x_real_ip),
+        ),
     ]
     try:
         await asyncio.gather(*rw)
@@ -54,6 +58,9 @@ async def update_ws(
         [t.cancel() for t in rw]
     finally:
         [t.cancel() for t in rw]
+    logger.info(
+        f"websocket connection(generic updates) closed with client {x_real_ip}"
+    )
 
 
 async def reader(websocket, x_real_ip):

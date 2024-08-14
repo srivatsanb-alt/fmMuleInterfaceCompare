@@ -83,7 +83,7 @@ def load_ez_json(fleet_name):
         try:
             ez_gates = json.load(f)
         except Exception as e:
-            raise ValueError(f"Unable to parse ez.json, Exception: {e}")
+            raise Exception(f"Unable to parse ez.json, Exception: {e}")
 
     return ez_gates
 
@@ -118,7 +118,7 @@ def maybe_create_gmaj_file(fleet_name: str) -> None:
     wpsj_path = get_map_file_path(fleet_name, "waypoints.json")
 
     if not os.path.exists(wpsj_path):
-        raise ValueError(f"Unable to fetch {wpsj_path}")
+        raise Exception(f"Unable to fetch {wpsj_path}")
 
     rpi.maybe_update_gmaj(gmaj_path, wpsj_path, True)
     return
@@ -186,7 +186,7 @@ class FleetUtils:
                 dbsession.session.query(fm.Map).filter(fm.Map.name == name).one_or_none()
             )
             if map is None:
-                raise ValueError("Add map before adding fleet")
+                raise Exception("Add map before adding fleet")
             fleet = fm.Fleet(
                 name=name,
                 site=site,
@@ -410,6 +410,7 @@ class SherpaUtils:
         ip_address=None,
         api_key=None,
         fleet_id=None,
+        sherpa_type=None,
     ):
         sherpa: fm.Sherpa = (
             dbsession.session.query(fm.Sherpa)
@@ -426,6 +427,7 @@ class SherpaUtils:
         if sherpa:
             sherpa.hwid = hwid
             sherpa.ip_address = None
+            sherpa.sherpa_type = sherpa_type
             if api_key is not None:
                 sherpa.hashed_api_key = hashed_api_key
                 logger.info(f"updated sherpa {sherpa_name} ")
@@ -457,6 +459,7 @@ class SherpaUtils:
                 ip_address=None,
                 hashed_api_key=hashed_api_key,
                 fleet_id=fleet_id,
+                sherpa_type=sherpa_type,
             )
             dbsession.add_to_session(sherpa)
             logger.info(

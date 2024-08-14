@@ -568,8 +568,8 @@ async def update_saved_route_metadata(
     return response
 
 
-@router.post("/export_analytics_data")
-async def export_analytics_data(
+@router.post("/export_all_analytics_data")
+async def export_all_analytics_data(
     trip_analytics_req: rqm.TripStatusReq, user_name=Depends(dpd.get_user_from_header)
 ):
     if not user_name:
@@ -580,11 +580,11 @@ async def export_analytics_data(
             # Convert string dates to datetime objects
             trip_analytics_req.from_dt = str_to_dt(trip_analytics_req.from_dt)
             trip_analytics_req.to_dt = str_to_dt(trip_analytics_req.to_dt)
-            all_trip_analytics = dbsession.get_trip_analytics_with_timestamp(
+            all_trip_analytics = dbsession.get_trip_analytics_booking_time_with_timestamp(
                 trip_analytics_req.from_dt, trip_analytics_req.to_dt
             )
         elif trip_analytics_req.trip_ids:
-            all_trip_analytics = dbsession.get_trip_analytics_with_trip_ids(
+            all_trip_analytics = dbsession.get_trip_analytics_and_booking_time_with_trip_ids(
                 trip_analytics_req.trip_ids
             )
         else:
@@ -592,7 +592,54 @@ async def export_analytics_data(
         
         data = []
         for all_trip_analytic in all_trip_analytics:
-            data.append(utils_util.get_table_as_dict(tm.TripAnalytics, all_trip_analytic)) 
+            encoded_data_dict = utils_util.get_table_as_dict(tm.TripAnalytics, all_trip_analytic.TripAnalytics) 
+            encoded_data_dict["booking_time"] = all_trip_analytic.booking_time
+            data.append(encoded_data_dict)
+            data.append(encoded_data_dict)
+             
+        # Convert to DataFrame
+        df = pd.DataFrame(data)
+    logging.getLogger("misc").info(f"data_frame: {df}")
+    # Convert DataFrame to CSV
+    output = io.StringIO()
+    df.to_csv(output, index=False)
+    # Prepare the response
+    output.seek(0)
+    return StreamingResponse(
+        io.BytesIO(output.getvalue().encode()),  # Convert string buffer to bytes
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=detail_analytics.csv"},
+    )
+
+@router.post("/export_analytics_data/{fleet_name}")
+async def export_analytics_data(
+    fleet_name: str,
+    trip_analytics_req: rqm.TripStatusReq,
+    user_name=Depends(dpd.get_user_from_header)
+):
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+    response = {}
+    with DBSession() as dbsession:
+        if trip_analytics_req.from_dt and trip_analytics_req.to_dt:
+            # Convert string dates to datetime objects
+            trip_analytics_req.from_dt = str_to_dt(trip_analytics_req.from_dt)
+            trip_analytics_req.to_dt = str_to_dt(trip_analytics_req.to_dt)
+            all_trip_analytics = dbsession.get_trip_analytics_booking_time_with_timestamp(
+                trip_analytics_req.from_dt, trip_analytics_req.to_dt, fleet_name
+            )
+        elif trip_analytics_req.trip_ids:
+            all_trip_analytics = dbsession.get_trip_analytics_and_booking_time_with_trip_ids(
+                trip_analytics_req.trip_ids, fleet_name
+            )
+        else:
+            return response
+        
+        data = []
+        for all_trip_analytic in all_trip_analytics:
+            encoded_data_dict = utils_util.get_table_as_dict(tm.TripAnalytics, all_trip_analytic.TripAnalytics) 
+            encoded_data_dict["booking_time"] = all_trip_analytic.booking_time
+            data.append(encoded_data_dict) 
         # Convert to DataFrame
         df = pd.DataFrame(data)
     # Convert DataFrame to CSV
