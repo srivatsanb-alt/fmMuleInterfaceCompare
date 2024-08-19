@@ -159,6 +159,7 @@ services:
   fm_redis:
     image: redis:latest
     container_name: fm_redis
+    command: [sh, -c, "rm -f /data/dump.rdb && redis-server"]
     restart: always
     networks:
       - fm_dn
