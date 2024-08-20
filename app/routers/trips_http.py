@@ -346,6 +346,7 @@ async def trip_analytics_pg(
             trip_analytics_req.to_dt,
             trip_analytics_req.filter_fleets,
             trip_analytics_req.filter_sherpa_names,
+            trip_analytics_req.filter_status,
             trip_analytics_req.sort_field,
             trip_analytics_req.sort_order,
             trip_analytics_req.page_no,

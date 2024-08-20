@@ -617,6 +617,7 @@ class DBSession:
         to_dt,
         filter_fleets,
         sherpa_names,
+        filter_status,
         sort_field="id",
         sort_order="desc",
         page=0,
@@ -645,6 +646,10 @@ class DBSession:
 
         if sherpa_names and sherpa_names != "[]":
             base_query = base_query.filter(tm.Trip.sherpa_name.in_(sherpa_names))
+
+        if filter_status and filter_status != "[]":
+            base_query = base_query.filter(tm.Trip.status.in_(filter_status))
+
 
         count = base_query.count()
 
