@@ -18,8 +18,7 @@ router = APIRouter(
 )
 async def super_user_resource_access(
     super_user_resource_req: rqm.SuperUserResourceReq,
-    #username= Depends(dpd.get_super_user),
-    username=Depends(dpd.get_user_from_header),
+    username= Depends(dpd.get_super_user)
 ):
     if username is None:
         dpd.raise_error("Unknown requester", 401)
