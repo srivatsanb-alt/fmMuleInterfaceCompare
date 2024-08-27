@@ -2,11 +2,12 @@ import os
 import time
 import logging
 import glob
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Form, File, HTTPException, UploadFile, status
 from fastapi.encoders import jsonable_encoder
 import shutil
 import json
 import aioredis
+import zipfile
 from rq.command import send_shutdown_command
 
 # ati code imports
@@ -178,19 +179,43 @@ async def get_all_available_maps(
                 response.append(map_folder_name)
 
     return response
-
+    
 
 @router.post("/add_edit_fleet/{fleet_name}")
 async def add_fleet(
-    add_fleet_req: rqm.AddFleetReq,
     fleet_name: str,
+    site: str = Form(...),
+    location: str = Form(...),
+    customer: str = Form(...),
+    map_name: str = Form(...),
+    map_file: UploadFile = File(...),
     user_name=Depends(dpd.get_user_from_header),
 ):
 
     response = {}
+    add_fleet_req = rqm.AddFleetReq(
+        site=site,
+        location=location,
+        customer=customer,
+        map_name=map_name,
+    )
 
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
+
+    if map_file:
+        dir_to_save = os.getenv("FM_STATIC_DIR")
+        os.makedirs(dir_to_save, exist_ok=True)
+        file_path = os.path.join(dir_to_save, map_file.filename)
+        try:
+            with open(file_path, "wb") as f:
+                f.write(await map_file.read())
+            logging.getLogger("uvicorn").info(f"Uploaded file: {file_path} successfully")
+            
+            with zipfile.ZipFile(file_path, 'r') as zip_ref:
+                zip_ref.extractall(os.getenv("FM_STATIC_DIR"))
+        except Exception as e:
+            dpd.raise_error(f"Couldn't upload file: {file_path}, exception: {e}")
 
     with DBSession(engine=ccm.engine) as dbsession:
         all_fleets = dbsession.get_all_fleet_names()
