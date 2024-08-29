@@ -183,6 +183,9 @@ class DBSession:
 
     def get_sherpa(self, name: str) -> fm.Sherpa:
         return self.session.query(fm.Sherpa).filter(fm.Sherpa.name == name).one_or_none()
+    
+    def get_sherpa_without_return_class(self, name: str):
+        return self.session.query(fm.Sherpa).filter(fm.Sherpa.name == name).one_or_none()
 
     def get_sherpa_with_hwid(self, hwid: str) -> fm.Sherpa:
         return self.session.query(fm.Sherpa).filter(fm.Sherpa.hwid == hwid).one_or_none()
@@ -1023,6 +1026,11 @@ class DBSession:
         return response
 
     def get_super_user(self, name: str) -> um.SuperUser:
+        return (
+            self.session.query(um.SuperUser).filter(um.SuperUser.name == name).one_or_none()
+        )
+    
+    def get_super_user_without_return_class(self, name: str):
         return (
             self.session.query(um.SuperUser).filter(um.SuperUser.name == name).one_or_none()
         )
