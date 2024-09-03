@@ -39,7 +39,8 @@ build_base_images()
    docker pull mongo:7.0
    docker pull postgres:14.0
    docker pull grafana/grafana:9.5.2
-   docker pull registry:2   
+   docker pull registry:2
+   docker pull redis:latest
 }
 
 

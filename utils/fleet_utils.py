@@ -304,7 +304,7 @@ class FleetUtils:
         if station:
             if station.fleet_id != fleet_id:
                 raise ValueError(
-                    "Station names cannot be repeated, two fleets cannot have same station names"
+                    f"Station: {station_name} is repeated, two fleets cannot have same station names"
                 )
             station.pose = station_info["pose"]
             station.properties = properties
