@@ -26,6 +26,7 @@ AVAILABLE_UPGRADES = [
     "4.1",
     "4.15",
     "4.2",
+    "4.21"
 ]
 NO_SCHEMA_CHANGES = ["3.0", "3.01", "3.1"]
 
@@ -175,6 +176,19 @@ class DBUpgrade:
                 print("column error_code added to fm_incidents table")
             else:
                 print("column error_code already present in fm_incidents table")
+
+    def upgrade_to_4_21(self):
+        with get_engine(os.getenv("FM_DATABASE_URI")).connect() as conn:
+            conn.execute("commit")
+            result = conn.execute(
+                "SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='ongoing_trips'"
+            )
+            column_names = [row[0] for row in result]
+            if "post_action_initiated" not in column_names:
+                conn.execute('ALTER TABLE "ongoing_trips" ADD COLUMN "post_action_initiated" BOOLEAN')
+                print("column post_action_initiated added to ongoing_trips table")
+            else:
+                print("column post_action_initiated already present in sherpa table")
 
 
 def upgrade_db_schema():

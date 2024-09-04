@@ -61,6 +61,7 @@ class SherpaType(str, Enum):
     lite = "lite"
     lifter = "lifter"
     pallet_mover = "pallet_mover"
+    pivot = "pivot"
 
 
 class ConveyorReq(BaseModel):

@@ -183,6 +183,9 @@ class DBSession:
 
     def get_sherpa(self, name: str) -> fm.Sherpa:
         return self.session.query(fm.Sherpa).filter(fm.Sherpa.name == name).one_or_none()
+    
+    def get_sherpa_without_return_class(self, name: str):
+        return self.session.query(fm.Sherpa).filter(fm.Sherpa.name == name).one_or_none()
 
     def get_sherpa_with_hwid(self, hwid: str) -> fm.Sherpa:
         return self.session.query(fm.Sherpa).filter(fm.Sherpa.hwid == hwid).one_or_none()
@@ -617,6 +620,7 @@ class DBSession:
         to_dt,
         filter_fleets,
         sherpa_names,
+        filter_status,
         sort_field="id",
         sort_order="desc",
         page=0,
@@ -645,6 +649,10 @@ class DBSession:
 
         if sherpa_names and sherpa_names != "[]":
             base_query = base_query.filter(tm.Trip.sherpa_name.in_(sherpa_names))
+
+        if filter_status and filter_status != "[]":
+            base_query = base_query.filter(tm.Trip.status.in_(filter_status))
+
 
         count = base_query.count()
 
@@ -1018,6 +1026,11 @@ class DBSession:
         return response
 
     def get_super_user(self, name: str) -> um.SuperUser:
+        return (
+            self.session.query(um.SuperUser).filter(um.SuperUser.name == name).one_or_none()
+        )
+    
+    def get_super_user_without_return_class(self, name: str):
         return (
             self.session.query(um.SuperUser).filter(um.SuperUser.name == name).one_or_none()
         )

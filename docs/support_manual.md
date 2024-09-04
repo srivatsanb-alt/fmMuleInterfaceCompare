@@ -10,25 +10,26 @@
 7. [Generate api keys](#generate-api-keys)
 8. [Setup plugin conveyor](#setup-plugin-conveyor)
 9. [Setup plugin summon buttons](#setup-plugin-summon-buttons)
-10. [Flash summon buttons](#flash-summon-buttons)
-11. [Setup plugin IES](#setup-plugin-ies)
-12. [Restart FM](#restart-fm)
-13. [Debug FM](#debug-fm)
-14. [Access Postgres DB](#access-postgres-db)
-15. [Some docker commands](#some-docker-commands)
-16. [Update FM with master FM credentials](#update-fm-with-master-fm-credentials)
-17. [Setup optimal dispatch config](#setup-optimal-dispatch-config)
-18. [Clean up disk space in FM server](#clean-up-disk-space-in-fm-server)
-19. [Create self signed certs for FM](#create-self-signed-certs-for-fm)
-19. [Use trusted CA for FM](#use-trusted-ca-for-fm)
-21. [Run FM simulator](#run-fm-simulator)
-22. [Where to get the logs?](#where-to-get-the-logs)
-23. [Forgot password for frontend_user: admin ?](#forgot-password-for-frontend_user-admin)
-24. [Add new fleet](#add-new-fleet)
-25. [Switch between multiple maps corresponding to the same fleet](#switch-between-multiple-maps-corresponding-to-the-same-fleet)
-26. [Simulate summon_button/conveyor with postman](#simulate-summon_buttonconveyor-with-postman)
-27. [Setup run on host service](#setup-run-on-host-service)
-28. [Configure expiry interval time for access token](#configure-expiry-interval-time-for-access-tokens)
+10. [Setup plugin plc](#setup-plugin-plc)
+11. [Flash summon buttons](#flash-summon-buttons)
+12. [Setup plugin IES](#setup-plugin-ies)
+13. [Restart FM](#restart-fm)
+14. [Debug FM](#debug-fm)
+15. [Access Postgres DB](#access-postgres-db)
+16. [Some docker commands](#some-docker-commands)
+17. [Update FM with master FM credentials](#update-fm-with-master-fm-credentials)
+18. [Setup optimal dispatch config](#setup-optimal-dispatch-config)
+19. [Clean up disk space in FM server](#clean-up-disk-space-in-fm-server)
+20. [Create self signed certs for FM](#create-self-signed-certs-for-fm)
+21. [Use trusted CA for FM](#use-trusted-ca-for-fm)
+22. [Run FM simulator](#run-fm-simulator)
+23. [Where to get the logs?](#where-to-get-the-logs)
+24. [Forgot password for frontend_user: admin ?](#forgot-password-for-frontend_user-admin)
+25. [Add new fleet](#add-new-fleet)
+26. [Switch between multiple maps corresponding to the same fleet](#switch-between-multiple-maps-corresponding-to-the-same-fleet)
+27. [Simulate summon_button/conveyor with postman](#simulate-summon_buttonconveyor-with-postman)
+28. [Setup run on host service](#setup-run-on-host-service)
+29. [Configure expiry interval time for access token](#configure-expiry-interval-time-for-access-tokens)
 
 ## Setup sherpas ##
 
@@ -228,6 +229,22 @@ activate_plugin: true
  "blinking green" - Waiting at station(Trip enroute)
  "rotating green" - Trip enroute
 ```
+
+## Setup plugin plc ##
+
+1. Use the config editor, select the database plugin_config, select the collection plugin_plc, click on the document to edit it
+
+2. Set activate_plugin to true and add config related changes
+```
+activate_plugin: true
+agv_zone_name: 'AGV_Zone',
+plc_master_ip: 'XXX.XXX.XXX.XXX',
+plc_master_port: XXXX,
+plc_check_delay: 5,
+api_key: 'agv_plc'
+```
+
+Note: Ensure to add the superuser, and verify that the name matches the api_key set in the config editor.
 
 ## Flash summon buttons ##
 

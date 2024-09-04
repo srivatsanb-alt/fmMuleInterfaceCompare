@@ -356,6 +356,7 @@ def proc_retry(times=np.inf, sleep_time=5):
 
 def format_fm_incident(fm_incident):
     temp = {}
+    temp.update({"error_code": fm_incident.error_code})
     temp.update({"code": fm_incident.code})
     temp.update({"message": fm_incident.message})
     temp.update({"description": fm_incident.display_message})
