@@ -278,9 +278,9 @@ class OptimalDispatch:
         MIN_ACCEPTABLE_ETA = 100
         max_trips_to_consider = self.config["max_trips_to_consider"]
         with redis.from_url(os.getenv("FM_REDIS_URI")) as redis_conn:
-            cost_matrix = np.ones((len(self.pickup_q), len(self.sherpa_q))) * np.inf
+            cost_matrix = np.zeros((len(self.pickup_q), len(self.sherpa_q))) 
             priority_normalised_cost_matrix = (
-                np.ones((len(self.pickup_q), len(self.sherpa_q))) * np.inf
+                np.zeros((len(self.pickup_q), len(self.sherpa_q)))
             )
             priority_matrix = np.zeros((len(self.pickup_q), len(self.sherpa_q)))
             i = 0
@@ -359,16 +359,6 @@ class OptimalDispatch:
 
                     j += 1
                 i += 1
-
-        """
-        Reasons for adding MIN_ACCEPTABLE_ETA:
-            1. It also helps in differentiating multiple entries with eta==0
-        """
-
-        # epsilon = np.max(priority_matrix, initial=1)
-
-        # if len(priority_normalised_cost_matrix) > 0:
-        #     priority_normalised_cost_matrix += epsilon**w2
 
         return cost_matrix, priority_matrix, priority_normalised_cost_matrix
 
