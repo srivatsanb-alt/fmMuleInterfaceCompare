@@ -12,7 +12,7 @@ import models.fleet_models as fm
 import models.trip_models as tm
 import models.visa_models as vm
 import models.user_models as um
-from utils.util import check_if_timestamp_has_passed, str_to_dt
+from utils.util import check_if_timestamp_has_passed, str_to_dt, get_table_as_dict
 
 
 class DBSession:
@@ -302,6 +302,9 @@ class DBSession:
 
     def get_all_stations(self) -> List[fm.Station]:
         return self.session.query(fm.Station).all()
+    
+    def get_all_stations_of_fleet(self, fleet_id: int):
+        return self.session.query(fm.Station).filter(fm.Station.fleet_id == fleet_id).all()
 
     def get_all_stations_in_fleet(self, fleet_name: str) -> List[fm.Station]:
         return (
