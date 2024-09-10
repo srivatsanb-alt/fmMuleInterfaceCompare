@@ -260,6 +260,8 @@ class OngoingTrip(Base, TimestampMixin):
     next_idx_aug = Column(Integer)
     # list of TripStates
     states = Column(ARRAY(String), server_default="{}")
+    # whether the post action has been initiated
+    post_action_initiated = Column(Boolean)
 
     def init(self):
         self.next_idx_aug = 0
@@ -302,6 +304,11 @@ class OngoingTrip(Base, TimestampMixin):
 
     def finished_booked(self):
         return self.next_idx >= len(self.trip.route)
+
+    def should_assign_post_action(self):
+        if self.post_action_initiated is not True and self.trip.status == TripStatus.WAITING_STATION:
+            return True 
+        return False
 
     def check_continue(self):
         # Trip can continue if every state has a matching end state.

@@ -275,11 +275,12 @@ class OptimalDispatch:
     def assemble_cost_matrix(self, fleet_name):
         w1 = self.config["eta_power_factor"]
         w2 = self.config["priority_power_factor"]
+        MIN_ACCEPTABLE_ETA = 100
         max_trips_to_consider = self.config["max_trips_to_consider"]
         with redis.from_url(os.getenv("FM_REDIS_URI")) as redis_conn:
-            cost_matrix = np.ones((len(self.pickup_q), len(self.sherpa_q))) * np.inf
+            cost_matrix = np.zeros((len(self.pickup_q), len(self.sherpa_q))) 
             priority_normalised_cost_matrix = (
-                np.ones((len(self.pickup_q), len(self.sherpa_q))) * np.inf
+                np.zeros((len(self.pickup_q), len(self.sherpa_q)))
             )
             priority_matrix = np.zeros((len(self.pickup_q), len(self.sherpa_q)))
             i = 0
@@ -337,8 +338,8 @@ class OptimalDispatch:
                         route_length = utils_util.get_route_length(
                             pose_1, pose_2, fleet_name, redis_conn
                         )
-                        total_eta = route_length + sherpa_q_val["remaining_eta"]
-
+                        total_eta = route_length + sherpa_q_val["remaining_eta"] + MIN_ACCEPTABLE_ETA
+                
                     # to handle w1 == 0  and eta == np.inf case
                     weighted_total_eta = (
                         (total_eta**w1) if (total_eta != np.inf) else total_eta
@@ -348,27 +349,16 @@ class OptimalDispatch:
                         if (pickup_priority != np.inf)
                         else pickup_priority
                     )
-
                     cost_matrix[i, j] = total_eta
                     priority_matrix[i, j] = pickup_priority
 
-                    priority_normalised_cost_matrix[i, j] = (
-                        weighted_total_eta / weighted_pickup_priority
-                    )
+                    if total_eta != np.inf:
+                        priority_normalised_cost_matrix[i, j] = (
+                            weighted_pickup_priority / weighted_total_eta 
+                        )
 
                     j += 1
                 i += 1
-
-        """
-        Reasons for adding epsilon:
-            1. making sure that the values in priority_normalised_cost_matrix are not below 10-3 incase waiting times are higher
-            2. It also helps in differentiating multiple entries with eta==0
-        """
-
-        epsilon = np.max(priority_matrix, initial=1)
-
-        if len(priority_normalised_cost_matrix) > 0:
-            priority_normalised_cost_matrix += epsilon**w2
 
         return cost_matrix, priority_matrix, priority_normalised_cost_matrix
 
