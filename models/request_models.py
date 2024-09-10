@@ -413,6 +413,15 @@ class TripStatusReq_pg(GenericFromToTimeReq):
     sort_order: Optional[str]
     search_txt: Optional[str]
 
+class TripAnalyticsReq(ClientReq):
+    start_time: str
+    end_time: str
+    fleet_name: Optional[str]
+    status: Optional[List[str]]
+    sherpa_name: Optional[List[str]]
+    sort_field: Optional[str] = None
+    sort_order: Optional[str] = None
+
 
 class GiveRouteWPS(ClientReq):
     start_pose: List = None  # Start station pose

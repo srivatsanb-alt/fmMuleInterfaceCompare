@@ -576,6 +576,53 @@ class DBSession:
         base_query = base_query.order_by(tm.TripAnalytics.trip_leg_id.desc())
         base_query = base_query.all()
         return base_query
+    
+    def get_trip_analytics_to_export(
+        self,
+        from_dt,
+        to_dt,
+        fleet_name=None,
+        status : List [str] = None,
+        sherpa_names : List [str] = None,
+        sort_field="id",
+        sort_order="desc"
+    ):
+        # data validation
+        if sort_field == "":
+            sort_field = "id"
+        if sort_order == "":
+            sort_order = "desc"
+        trip_analytics = []
+
+        base_query = (
+            self.session.query(tm.Trip)
+            .filter(tm.Trip.start_time >= from_dt)
+            .filter(tm.Trip.end_time <= to_dt)
+        )
+
+        if fleet_name:
+            base_query = base_query.filter(tm.Trip.fleet_name == fleet_name)
+
+        if sherpa_names and sherpa_names != "[]":
+            base_query = base_query.filter(tm.Trip.sherpa_name.in_(sherpa_names))
+
+        if status and status != "[]":
+            base_query = base_query.filter(tm.Trip.status.in_(status))
+
+        base_query = (
+            base_query.order_by(text(f"{sort_field} {sort_order}"))
+        )
+
+        trips = base_query.all()
+        
+        for trip in trips:
+            trip_detail = get_table_as_dict(tm.Trip,trip)
+            trip_details = []
+            trip_details = trip_detail
+            trip_details["legs"] = self.get_legs(str(trip_detail["id"]))
+            trip_analytics.append(trip_details)
+        
+        return trip_analytics
 
     def get_trip_analytics_with_trip_ids(self, trip_ids, fleet_name = None):
         base_query = (
@@ -615,7 +662,11 @@ class DBSession:
             .filter(tm.TripAnalytics.trip_id == trip_id)
             .all()
         )
-        return jsonable_encoder(legs)
+        leg_details =[]
+        for leg in legs:
+            leg_detail = get_table_as_dict(tm.TripAnalytics,leg)
+            leg_details.append(leg_detail)
+        return leg_details
 
     def get_trip_analytics_with_pagination(
         self,
