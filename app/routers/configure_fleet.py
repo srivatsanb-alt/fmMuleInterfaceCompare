@@ -66,7 +66,7 @@ async def switch_sherpa(
         fleet = dbsession.get_fleet(add_edit_sherpa.fleet_name)
         if not sherpa_status:
             dpd.raise_error(f"Sherpa {sherpa_name} not found")
-        hashed_api_key =sherpa.hashed_api_key
+        hashed_api_key = sherpa.hashed_api_key
 
         if sherpa_status.trip_id:
             trip = dbsession.get_trip(sherpa_status.trip_id)
@@ -92,6 +92,7 @@ async def switch_sherpa(
                 ]
                 for q_name in queues_to_delete:
                     send_shutdown_command(aredis_conn, q_name)
+
             fu.SherpaUtils.add_edit_sherpa(
                 dbsession,
                 sherpa_name,
@@ -99,6 +100,7 @@ async def switch_sherpa(
                 api_key=hashed_api_key,
                 fleet_id=fleet.id,
                 sherpa_type=add_edit_sherpa.sherpa_type,
+                is_add=add_edit_sherpa.is_add,
             )
             import utils.rq_utils as rqu
             from multiprocessing import Process

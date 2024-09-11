@@ -310,6 +310,7 @@ class AddEditSherpaReq(ClientReq):
     fleet_name: str
     api_key: Optional[str]
     sherpa_type: SherpaType
+    is_add: Optional[bool] = True
 
 
 class AddFleetReq(ClientReq):
