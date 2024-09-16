@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends
 from fastapi.encoders import jsonable_encoder
 import shutil
 import json
+import hashlib
 import aioredis
 from rq.command import send_shutdown_command
 
@@ -66,7 +67,10 @@ async def switch_sherpa(
         fleet = dbsession.get_fleet(add_edit_sherpa.fleet_name)
         if not sherpa_status:
             dpd.raise_error(f"Sherpa {sherpa_name} not found")
-        hashed_api_key = sherpa.hashed_api_key
+        if add_edit_sherpa.api_key is None:
+            hashed_api_key = sherpa.hashed_api_key
+        else:
+            hashed_api_key = hashlib.sha256(add_edit_sherpa.api_key.encode("utf-8")).hexdigest()
 
         if sherpa_status.trip_id:
             trip = dbsession.get_trip(sherpa_status.trip_id)
