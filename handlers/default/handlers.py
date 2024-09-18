@@ -839,16 +839,15 @@ class Handlers:
     def get_resource_requester(self, req):
         is_sherpa = True
         if isinstance(req, rqm.ResourceReq):
-            requester: fm.Sherpa = self.dbsession.get_sherpa(req.source)
+            requester: fm.Sherpa = self.dbsession.get_sherpa_without_return_class(req.source)
         elif isinstance(req, rqm.SuperUserResourceReq):
-            requester: um.SuperUser = self.dbsession.get_super_user(req.source)
+            requester: um.SuperUser = self.dbsession.get_super_user_without_return_class(req.source)
             is_sherpa = False
         elif isinstance(req, rqm.ManualVisaReleaseReq):
-            try:
-                requester: fm.Sherpa = self.dbsession.get_sherpa(req.revoke_visa_for)
-            except:
-                requester: um.SuperUser = self.dbsession.get_super_user(req.revoke_visa_for)
+            requester: fm.Sherpa = self.dbsession.get_sherpa_without_return_class(req.revoke_visa_for)
+            if requester is None:
                 is_sherpa = False
+                requester: um.SuperUser = self.dbsession.get_super_user_without_return_class(req.revoke_visa_for)
                 if requester is None:
                     raise ValueError(f"No such superuser {req.revoke_visa_for}")
         else:

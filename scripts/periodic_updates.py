@@ -82,11 +82,11 @@ def get_visas_held_msg(dbsession):
         zone_types.append(visa_held.zone_id.rsplit("_", 1)[1])
         if visa_held.sherpa_name is not None:
             visa_msg.update(
-                {visa_held.sherpa_name: {"zone_ids": zone_ids, "zone_types": zone_types}}
+                {visa_held.sherpa_name: {"zone_ids": zone_ids, "zone_types": zone_types, "vehicle_type": "sherpa"}}
             )
         else:
             visa_msg.update(
-                {visa_held.user_name: {"zone_ids": zone_ids, "zone_types": zone_types}}
+                {visa_held.user_name: {"zone_ids": zone_ids, "zone_types": zone_types, "vehicle_type": "superuser"}}
             )
     visa_msg["type"] = "visas_held"
     return visa_msg

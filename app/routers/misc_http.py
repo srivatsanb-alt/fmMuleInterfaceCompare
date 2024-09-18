@@ -52,7 +52,7 @@ async def site_info(user_name=Depends(dpd.get_user_from_header)):
         "software_version": fm_tag,
         "compatible_sherpa_versions": compatible_sherpa_versions,
         "simulator": simulator_config["simulate"],
-        "sherpa_types": cc.ListofSherpaTypes
+        "sherpa_types": [i.lower() for i in list(cc.SherpaTypes.__dict__.keys()) if not i.startswith("__")]
     }
 
     return response

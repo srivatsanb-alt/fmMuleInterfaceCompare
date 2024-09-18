@@ -63,6 +63,7 @@ class SherpaTypes:
     LITE = "lite"
     LIFTER = "lifter"
     PALLET_MOVER = "pallet_mover"
+    PIVOT = "pivot"
 
 ListofSherpaTypes = [SherpaTypes.TUG, SherpaTypes.TUG_LITE, SherpaTypes.LITE, SherpaTypes.LIFTER, SherpaTypes.PALLET_MOVER]
 

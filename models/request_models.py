@@ -61,6 +61,7 @@ class SherpaType(str, Enum):
     lite = "lite"
     lifter = "lifter"
     pallet_mover = "pallet_mover"
+    pivot = "pivot"
 
 
 class ConveyorReq(BaseModel):
@@ -309,6 +310,7 @@ class AddEditSherpaReq(ClientReq):
     fleet_name: str
     api_key: Optional[str]
     sherpa_type: SherpaType
+    is_add: Optional[bool] = True
 
 
 class AddFleetReq(ClientReq):
@@ -411,6 +413,15 @@ class TripStatusReq_pg(GenericFromToTimeReq):
     sort_field: Optional[str]
     sort_order: Optional[str]
     search_txt: Optional[str]
+
+class TripAnalyticsReq(ClientReq):
+    start_time: str
+    end_time: str
+    fleet_name: Optional[str]
+    status: Optional[List[str]]
+    sherpa_name: Optional[List[str]]
+    sort_field: Optional[str] = None
+    sort_order: Optional[str] = None
 
 
 class GiveRouteWPS(ClientReq):

@@ -571,78 +571,48 @@ async def update_saved_route_metadata(
 
 @router.post("/export_all_analytics_data")
 async def export_all_analytics_data(
-    trip_analytics_req: rqm.TripStatusReq, user_name=Depends(dpd.get_user_from_header)
-):
-    if not user_name:
-        dpd.raise_error("Unknown requester", 401)
-    response = {}
-    with DBSession() as dbsession:
-        if trip_analytics_req.from_dt and trip_analytics_req.to_dt:
-            # Convert string dates to datetime objects
-            trip_analytics_req.from_dt = str_to_dt(trip_analytics_req.from_dt)
-            trip_analytics_req.to_dt = str_to_dt(trip_analytics_req.to_dt)
-            all_trip_analytics = dbsession.get_trip_analytics_booking_time_with_timestamp(
-                trip_analytics_req.from_dt, trip_analytics_req.to_dt
-            )
-        elif trip_analytics_req.trip_ids:
-            all_trip_analytics = dbsession.get_trip_analytics_and_booking_time_with_trip_ids(
-                trip_analytics_req.trip_ids
-            )
-        else:
-            return response
-        
-        data = []
-        for all_trip_analytic in all_trip_analytics:
-            encoded_data_dict = utils_util.get_table_as_dict(tm.TripAnalytics, all_trip_analytic.TripAnalytics) 
-            encoded_data_dict["booking_time"] = all_trip_analytic.booking_time
-            data.append(encoded_data_dict)
-            data.append(encoded_data_dict)
-             
-        # Convert to DataFrame
-        df = pd.DataFrame(data)
-    logging.getLogger("misc").info(f"data_frame: {df}")
-    # Convert DataFrame to CSV
-    output = io.StringIO()
-    df.to_csv(output, index=False)
-    # Prepare the response
-    output.seek(0)
-    return StreamingResponse(
-        io.BytesIO(output.getvalue().encode()),  # Convert string buffer to bytes
-        media_type="text/csv",
-        headers={"Content-Disposition": "attachment; filename=detail_analytics.csv"},
-    )
-
-@router.post("/export_analytics_data/{fleet_name}")
-async def export_analytics_data(
-    fleet_name: str,
-    trip_analytics_req: rqm.TripStatusReq,
+    trip_analytics_req: rqm.TripAnalyticsReq,
     user_name=Depends(dpd.get_user_from_header)
 ):
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
     response = {}
     with DBSession() as dbsession:
-        if trip_analytics_req.from_dt and trip_analytics_req.to_dt:
+        if trip_analytics_req.start_time and trip_analytics_req.end_time:
             # Convert string dates to datetime objects
-            trip_analytics_req.from_dt = str_to_dt(trip_analytics_req.from_dt)
-            trip_analytics_req.to_dt = str_to_dt(trip_analytics_req.to_dt)
-            all_trip_analytics = dbsession.get_trip_analytics_booking_time_with_timestamp(
-                trip_analytics_req.from_dt, trip_analytics_req.to_dt, fleet_name
-            )
-        elif trip_analytics_req.trip_ids:
-            all_trip_analytics = dbsession.get_trip_analytics_and_booking_time_with_trip_ids(
-                trip_analytics_req.trip_ids, fleet_name
+            trip_analytics_req.start_time = utils_util.str_to_dt(trip_analytics_req.start_time)
+            trip_analytics_req.end_time = utils_util.str_to_dt(trip_analytics_req.end_time)
+            all_trip_analytics = dbsession.get_trip_analytics_to_export(
+                trip_analytics_req.start_time,
+                trip_analytics_req.end_time,
+                trip_analytics_req.fleet_name,
+                trip_analytics_req.status,
+                trip_analytics_req.sherpa_name,
+                trip_analytics_req.sort_field,
+                trip_analytics_req.sort_order,
             )
         else:
-            return response
+            dpd.raise_error("start_time and end_time are required")
         
         data = []
-        for all_trip_analytic in all_trip_analytics:
-            encoded_data_dict = utils_util.get_table_as_dict(tm.TripAnalytics, all_trip_analytic.TripAnalytics) 
-            encoded_data_dict["booking_time"] = all_trip_analytic.booking_time
-            data.append(encoded_data_dict) 
+        for trip_analytic in all_trip_analytics:
+            processed_trip_data = {} 
+            trip_analytic_legs = trip_analytic.get("legs")
+            processed_trip_data = trip_analytic
+            if trip_analytic.get("legs"):
+                del trip_analytic["legs"]
+            for trip_analytic_leg in trip_analytic_legs:
+                trip_analytic_leg_details = {}
+                if trip_analytic_leg.get("sherpa_name"):
+                    del trip_analytic_leg["sherpa_name"]
+                del trip_analytic_leg["trip_id"]
+                trip_analytic_leg_details = trip_analytic_leg
+                trip_analytic_leg_details.update(processed_trip_data)
+                data.append(trip_analytic_leg_details)
+             
         # Convert to DataFrame
         df = pd.DataFrame(data)
+
     # Convert DataFrame to CSV
     output = io.StringIO()
     df.to_csv(output, index=False)

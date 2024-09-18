@@ -208,7 +208,7 @@ class ConfigValidator:
             "properties": {
                 "mfm_ip": {
                     "bsonType": "string",
-                    "pattern": "^(\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3})|(sanjaya.atimotors.com)|(staging-sanjaya.atimotors.com)$",
+                    "pattern": "^(\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3})|(sanjaya.atimotors.com)|(staging-sanjaya.atimotors.com)|([a-zA-Z0-9.-]+\.atimotors\.com)$",
                     "description": "domain name or ip for accessing sanjaya/master_fm",
                 },
                 "mfm_port": {
