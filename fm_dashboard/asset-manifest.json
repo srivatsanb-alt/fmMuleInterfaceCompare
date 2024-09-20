@@ -1,12 +1,11 @@
 {
   "files": {
-    "main.css": "/static/css/main.0c232373.css",
-    "main.js": "/static/js/main.c0968db9.js",
+    "main.css": "/static/css/main.be104fc7.css",
+    "main.js": "/static/js/main.45ad71d3.js",
     "static/js/27.25cb0711.chunk.js": "/static/js/27.25cb0711.chunk.js",
-    "static/media/Login Image.png": "/static/media/Login Image.885a80af3ca6e7d909a4.png",
+    "static/media/Login Image.png": "/static/media/Login Image.1ea3271d9f847e559c2c.png",
     "static/media/OpenSans-Regular-400.ttf": "/static/media/OpenSans-Regular-400.57cd57a648021fa1c396.ttf",
     "static/media/Montserrat-Medium.ttf": "/static/media/Montserrat-Medium.a281f04d4c8926e7dea1.ttf",
-    "static/media/ati-logo.svg": "/static/media/ati-logo.7580eeb2c44fb6c2bf6bcfb7938e2acc.svg",
     "service-worker.js": "/service-worker.js",
     "static/media/sherpa-handy.svg": "/static/media/sherpa-handy.84e43bbcba4be336e6dac524a4dca28f.svg",
     "static/media/sherpa-pivot.svg": "/static/media/sherpa-pivot.3af72fe6bb0991464527c6fd54d3fd88.svg",
@@ -14,6 +13,7 @@
     "static/media/sherpa-tug.svg": "/static/media/sherpa-tug.f6aef6a5839680f7a87dfb9dfc7f9197.svg",
     "static/media/sherpa-tug-lite.svg": "/static/media/sherpa-tug-lite.bf2dd2fc15548edbe9100bfa419564be.svg",
     "static/media/sherpa.svg": "/static/media/sherpa.d69d000168d6b36cf5e600f607d6df82.svg",
+    "static/media/ati-logo.svg": "/static/media/ati-logo.2cfb423c6bcc820c9a0145dc062b1584.svg",
     "static/media/configuration.svg": "/static/media/configuration.c148b080eb1da6ffec9a5b9091712f20.svg",
     "static/media/palette-mover.svg": "/static/media/palette-mover.34a7dccc4091f9d589e0807dcbf828a4.svg",
     "static/media/alert-sherpa.svg": "/static/media/alert-sherpa.d08dd9e45f314377365a0b7c73f354aa.svg",
@@ -56,6 +56,7 @@
     "static/media/close-circle.svg": "/static/media/close-circle.1a634255da07a3c9063ffe165f626f43.svg",
     "static/media/stop-ops.svg": "/static/media/stop-ops.6c7b29fbe8941d0af4a88cc140a38fbf.svg",
     "static/media/resume-ops.svg": "/static/media/resume-ops.7eaed0ce19cc32d0d9d68e2c29c4ed05.svg",
+    "static/media/microsoft-login.svg": "/static/media/microsoft-login.42b61fa109e1e5d566ff8226348f1657.svg",
     "static/media/battery-full.svg": "/static/media/battery-full.45b82a6518fb7040e4054addbf044299.svg",
     "static/media/battery-1-bar.svg": "/static/media/battery-1-bar.8ccfce6e85b99a826e2fa441201d5c4f.svg",
     "static/media/battery-2-bar.svg": "/static/media/battery-2-bar.99aec8f365b710a90006b52d6b2a9b56.svg",
@@ -67,7 +68,7 @@
     "static/media/vector-straight2.svg": "/static/media/vector-straight2.a4c9a1f3e3ce81f384c4240012840a08.svg"
   },
   "entrypoints": [
-    "static/css/main.0c232373.css",
-    "static/js/main.c0968db9.js"
+    "static/css/main.be104fc7.css",
+    "static/js/main.45ad71d3.js"
   ]
 }
