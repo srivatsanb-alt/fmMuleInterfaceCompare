@@ -304,6 +304,7 @@ class FrontendUserDetails(ClientReq):
     name: str
     role: str
     password: Optional[str] = None
+    operating_user_password: Optional[str] = None
 
 
 class AddEditSherpaReq(ClientReq):

@@ -105,6 +105,13 @@ async def add_edit_user_details(
         operating_user_query = {"name": user_name}
         operating_user_details = fm_mongo.get_frontend_user_details(operating_user_query)
         operating_user_role = operating_user_details["role"]
+        operating_user_hashed_password = operating_user_details["hashed_password"]
+        operating_user_provided_hashed_password = hashlib.sha256(
+            frontend_user_details.operating_user_password.encode("utf-8")
+        ).hexdigest()
+
+        if operating_user_hashed_password != operating_user_provided_hashed_password:
+            dpd.raise_error(f"Invalid password for operating user: {user_name}")
 
         if getattr(rqm.FrontendUserRoles, operating_user_role) < getattr(
             rqm.FrontendUserRoles, frontend_user_details.role
