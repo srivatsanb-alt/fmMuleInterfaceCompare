@@ -62,6 +62,7 @@ class SherpaType(str, Enum):
     lifter = "lifter"
     pallet_mover = "pallet_mover"
     pivot = "pivot"
+    sherpa_xt = "sherpa_xt"
 
 
 class ConveyorReq(BaseModel):
