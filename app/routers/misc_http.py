@@ -45,6 +45,7 @@ async def site_info(user_name=Depends(dpd.get_user_from_header)):
 
     with FMMongo() as fm_mongo:
         simulator_config = fm_mongo.get_document_from_fm_config("simulator")
+        low_battery_config = fm_mongo.get_document_from_fm_config("low_battery")
 
     response = {
         "fleet_names": fleet_names,
@@ -52,7 +53,8 @@ async def site_info(user_name=Depends(dpd.get_user_from_header)):
         "software_version": fm_tag,
         "compatible_sherpa_versions": compatible_sherpa_versions,
         "simulator": simulator_config["simulate"],
-        "sherpa_types": [i.lower() for i in list(cc.SherpaTypes.__dict__.keys()) if not i.startswith("__")]
+        "sherpa_types": [i.lower() for i in list(cc.SherpaTypes.__dict__.keys()) if not i.startswith("__")],
+        "battery_threshold": low_battery_config["battery_thresh"]
     }
 
     return response
