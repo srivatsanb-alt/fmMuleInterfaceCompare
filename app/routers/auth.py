@@ -111,7 +111,7 @@ async def add_edit_user_details(
         ).hexdigest()
 
         if operating_user_hashed_password != operating_user_provided_hashed_password:
-            dpd.raise_error(f"Invalid password for operating user: {user_name}")
+            dpd.raise_error(f"Wrong password", 409)
 
         if getattr(rqm.FrontendUserRoles, operating_user_role) < getattr(
             rqm.FrontendUserRoles, frontend_user_details.role
