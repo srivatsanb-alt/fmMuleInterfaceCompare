@@ -60,7 +60,7 @@ async def basic_info(sherpa_name: str = Depends(dpd.get_sherpa)):
             "fm_time": (datetime.now(pytz.timezone(os.getenv("PGTZ")))).strftime(
                 "%A, %d %b %Y %X %Z"
             ),
-            "battery_threshold": battery_threshold
+            "soc_threshold": battery_threshold
         }
 
     return response
