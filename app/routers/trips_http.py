@@ -607,8 +607,8 @@ async def export_all_analytics_data(
                     del trip_analytic_leg["sherpa_name"]
                 del trip_analytic_leg["trip_id"]
                 trip_analytic_leg_details = trip_analytic_leg
-                trip_analytic_leg_details.update(processed_trip_data)
-                data.append(trip_analytic_leg_details)
+                processed_trip_data.update(trip_analytic_leg_details)
+                data.append(processed_trip_data)
              
         # Convert to DataFrame
         df = pd.DataFrame(data)
