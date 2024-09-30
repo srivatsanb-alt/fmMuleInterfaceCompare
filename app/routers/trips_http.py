@@ -609,6 +609,8 @@ async def export_all_analytics_data(
                 trip_analytic_leg_details = trip_analytic_leg
                 processed_trip_data.update(trip_analytic_leg_details)
                 data.append(processed_trip_data)
+            if len(trip_analytic_legs) == 0:
+                data.append(processed_trip_data)
              
         # Convert to DataFrame
         df = pd.DataFrame(data)
