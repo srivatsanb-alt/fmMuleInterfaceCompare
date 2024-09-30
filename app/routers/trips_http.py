@@ -623,3 +623,51 @@ async def export_all_analytics_data(
         media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=detail_analytics.csv"},
     )
+
+
+@router.post("/pause_schedule_trip")
+async def pause_schedule_trip(
+    pause_schedule_trip_req: rqm.PauseScheduleTripReq,
+    user_name=Depends(dpd.get_user_from_header),
+):
+    response = {}
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    with DBSession(engine=ccm.engine) as dbsession:
+        trips : tm.Trip = dbsession.get_trips_with_booking_id(pause_schedule_trip_req.booking_id)
+
+        if trips is None:
+            dpd.raise_error(f"Trip with booking id:{pause_schedule_trip_req.booking_id} does not exist")
+        
+        trip = trips[0]
+
+        if trip.scheduled is False:
+            dpd.raise_error(
+                f"Trip with booking id:{pause_schedule_trip_req.booking_id} is not scheduled"
+            )
+        
+        new_trip_metadata = trip.trip_metadata
+        old_scheduled_end_time = new_trip_metadata.get("scheduled_end_time", None)
+        old_scheduled = new_trip_metadata.get("scheduled", None)
+        old_description = new_trip_metadata.get("description", None)
+        old_num_days_to_repeat = new_trip_metadata.get("num_days_to_repeat", None)
+        old_scheduled_time_period = new_trip_metadata.get("scheduled_time_period", None)
+        
+        for t in trips:
+            t.trip_metadata["scheduled_end_time"] = pause_schedule_trip_req.from_dt
+            flag_modified(t, "trip_metadata")
+
+        trip_metadata = {}
+        trip_metadata["scheduled"] = old_scheduled
+        trip_metadata["description"] = old_description
+        trip_metadata["num_days_to_repeat"] = old_num_days_to_repeat
+        trip_metadata["scheduled_end_time"] = old_scheduled_end_time
+        trip_metadata["scheduled_start_time"] = pause_schedule_trip_req.to_dt
+        trip_metadata["scheduled_time_period"] = old_scheduled_time_period
+
+        trip_msg_req = rqm.TripMsg(route=trip.route, metadata=trip_metadata)
+        booking_req = rqm.BookingReq(trips=[trip_msg_req])
+        response = await dpd.process_req_with_response(None, booking_req, user_name)
+
+    return response
