@@ -598,9 +598,13 @@ async def export_all_analytics_data(
         for trip_analytic in all_trip_analytics:
             processed_trip_data = {} 
             trip_analytic_legs = trip_analytic.get("legs")
-            processed_trip_data = trip_analytic
-            if trip_analytic.get("legs"):
-                del trip_analytic["legs"]
+            processed_trip_data["trip_id"] = trip_analytic.get("id")
+            
+            # if trip_analytic.get("legs"):
+            del trip_analytic["legs"]
+            processed_trip_data.update(trip_analytic)
+            
+            del processed_trip_data["id"]
             for trip_analytic_leg in trip_analytic_legs:
                 trip_analytic_leg_details = {}
                 if trip_analytic_leg.get("sherpa_name"):
