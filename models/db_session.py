@@ -596,8 +596,8 @@ class DBSession:
 
         base_query = (
             self.session.query(tm.Trip)
-            .filter(tm.Trip.start_time >= from_dt)
-            .filter(tm.Trip.end_time <= to_dt)
+            .filter(or_(tm.Trip.booking_time >= from_dt,tm.Trip.start_time >= from_dt))
+            .filter(or_(tm.Trip.booking_time <= to_dt,tm.Trip.end_time <= to_dt))
         )
 
         if fleet_name:
@@ -694,8 +694,9 @@ class DBSession:
 
         base_query = (
             self.session.query(tm.Trip)
-            .filter(tm.Trip.start_time >= from_dt)
-            .filter(tm.Trip.end_time <= to_dt)
+              
+            .filter(or_(tm.Trip.booking_time >= from_dt, tm.Trip.start_time >= from_dt))
+            .filter(or_(tm.Trip.booking_time <= to_dt, tm.Trip.end_time <= to_dt))
         )
 
         if filter_fleets and filter_fleets != "[]":

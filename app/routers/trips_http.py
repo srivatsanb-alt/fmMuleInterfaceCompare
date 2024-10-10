@@ -598,17 +598,23 @@ async def export_all_analytics_data(
         for trip_analytic in all_trip_analytics:
             processed_trip_data = {} 
             trip_analytic_legs = trip_analytic.get("legs")
-            processed_trip_data = trip_analytic
-            if trip_analytic.get("legs"):
-                del trip_analytic["legs"]
+            processed_trip_data["trip_id"] = trip_analytic.get("id")
+            
+            # if trip_analytic.get("legs"):
+            del trip_analytic["legs"]
+            processed_trip_data.update(trip_analytic)
+            
+            del processed_trip_data["id"]
             for trip_analytic_leg in trip_analytic_legs:
                 trip_analytic_leg_details = {}
                 if trip_analytic_leg.get("sherpa_name"):
                     del trip_analytic_leg["sherpa_name"]
                 del trip_analytic_leg["trip_id"]
                 trip_analytic_leg_details = trip_analytic_leg
-                trip_analytic_leg_details.update(processed_trip_data)
-                data.append(trip_analytic_leg_details)
+                processed_trip_data.update(trip_analytic_leg_details)
+                data.append(processed_trip_data)
+            if len(trip_analytic_legs) == 0:
+                data.append(processed_trip_data)
              
         # Convert to DataFrame
         df = pd.DataFrame(data)
