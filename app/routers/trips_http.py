@@ -6,8 +6,9 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm.attributes import flag_modified
 import asyncio
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
 import io
+import math
 
 # ati code imports
 import app.routers.dependencies as dpd
@@ -15,7 +16,7 @@ import models.request_models as rqm
 import models.trip_models as tm
 import models.misc_models as mm
 from models.db_session import DBSession
-from utils.util import str_to_dt
+from utils.util import str_to_dt, dt_to_str
 import utils.trip_utils as tu
 import core.constants as cc
 import utils.util as utils_util
@@ -649,25 +650,139 @@ async def pause_schedule_trip(
         
         new_trip_metadata = trip.trip_metadata
         old_scheduled_end_time = new_trip_metadata.get("scheduled_end_time", None)
+        old_scheduled_start_time = new_trip_metadata.get("scheduled_start_time", None)
         old_scheduled = new_trip_metadata.get("scheduled", None)
         old_description = new_trip_metadata.get("description", None)
         old_num_days_to_repeat = new_trip_metadata.get("num_days_to_repeat", None)
-        old_scheduled_time_period = new_trip_metadata.get("scheduled_time_period", None)
+        old_scheduled_time_period = int(new_trip_metadata.get("scheduled_time_period", None))
+        old_repeat_count = int(new_trip_metadata.get("repeat_count", None))
+        old_actual_start_time = new_trip_metadata.get("actual_start_time", None)
+        old_actual_end_time = new_trip_metadata.get("actual_end_time", None)
         
-        for t in trips:
-            t.trip_metadata["scheduled_end_time"] = pause_schedule_trip_req.from_dt
-            flag_modified(t, "trip_metadata")
+        if old_num_days_to_repeat != '0':
+            scheduled_start_time = str_to_dt(old_scheduled_start_time)
+            scheduled_end_time = str_to_dt(old_scheduled_end_time)
+            actual_start_time = str_to_dt(old_actual_start_time)
+            start = str_to_dt(pause_schedule_trip_req.from_dt)
+            end = str_to_dt(pause_schedule_trip_req.to_dt)
+            no_of_days = math.ceil((end - scheduled_start_time).total_seconds() / 86400)
+            no_of_days_for_older_trips = math.ceil((end - actual_start_time).total_seconds() / 86400)
+            trip_metadata = {}
 
-        trip_metadata = {}
-        trip_metadata["scheduled"] = old_scheduled
-        trip_metadata["description"] = old_description
-        trip_metadata["num_days_to_repeat"] = old_num_days_to_repeat
-        trip_metadata["scheduled_end_time"] = old_scheduled_end_time
-        trip_metadata["scheduled_start_time"] = pause_schedule_trip_req.to_dt
-        trip_metadata["scheduled_time_period"] = old_scheduled_time_period
+            for t in trips:
+                t.trip_metadata["num_days_to_repeat"] = str(no_of_days_for_older_trips)
+                flag_modified(t, "trip_metadata")
+
+            trip_metadata["scheduled"] = old_scheduled
+            trip_metadata["description"] = old_description
+            trip_metadata["repeat_count"] = "1"
+            trip_metadata["scheduled_end_time"] = dt_to_str(scheduled_end_time + timedelta(days=no_of_days))
+            trip_metadata["scheduled_start_time"] = dt_to_str(scheduled_start_time + timedelta(days=no_of_days))
+            trip_metadata["scheduled_time_period"] = old_scheduled_time_period
+            trip_metadata["actual_start_time"] = dt_to_str(scheduled_start_time + timedelta(days=no_of_days))
+            trip_metadata["actual_end_time"] = dt_to_str(scheduled_end_time + timedelta(days=no_of_days))
+            trip_metadata["num_days_to_repeat"] = str(int(old_num_days_to_repeat)- no_of_days_for_older_trips)
+
+        else:          
+            for t in trips:
+                t.trip_metadata["scheduled_end_time"] = pause_schedule_trip_req.from_dt
+                flag_modified(t, "trip_metadata")
+            
+            start = str_to_dt(old_scheduled_start_time)
+            unix_time = int(start.timestamp())
+            end = str_to_dt(pause_schedule_trip_req.to_dt)
+            difference = end - start 
+            seconds = difference.total_seconds()
+            unix_timestamp = (unix_time + math.ceil(seconds/old_scheduled_time_period)*old_scheduled_time_period)
+            dt_object = datetime.fromtimestamp(unix_timestamp)
+            dt_str = dt_to_str(dt_object)
+
+            trip_metadata = {}
+            trip_metadata["scheduled"] = old_scheduled
+            trip_metadata["description"] = old_description
+            trip_metadata["num_days_to_repeat"] = old_num_days_to_repeat
+            trip_metadata["scheduled_end_time"] = old_scheduled_end_time
+            trip_metadata["scheduled_start_time"] = dt_str
+            trip_metadata["scheduled_time_period"] = str(old_scheduled_time_period)
 
         trip_msg_req = rqm.TripMsg(route=trip.route, metadata=trip_metadata)
         booking_req = rqm.BookingReq(trips=[trip_msg_req])
         response = await dpd.process_req_with_response(None, booking_req, user_name)
 
     return response
+
+@router.post("/pause_schedule_trip_refactor")
+async def pause_schedule_trip_refactor(
+    pause_schedule_trip_req: rqm.PauseScheduleTripReq,
+    user_name=Depends(dpd.get_user_from_header),
+):
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    with DBSession(engine=ccm.engine) as dbsession:
+        trips = dbsession.get_trips_with_booking_id(pause_schedule_trip_req.booking_id)
+        
+        if not trips:
+            dpd.raise_error(f"Trip with booking id:{pause_schedule_trip_req.booking_id} does not exist")
+        
+        trip = trips[0]
+        
+        if not trip.scheduled:
+            dpd.raise_error(f"Trip with booking id:{pause_schedule_trip_req.booking_id} is not scheduled")
+
+        trip_metadata = trip.trip_metadata
+        new_trip_metadata = prepare_new_trip_metadata(
+            trip_metadata, pause_schedule_trip_req.from_dt, pause_schedule_trip_req.to_dt
+        )
+
+        # Update metadata for all trips in the batch
+        for t in trips:
+            t.trip_metadata.update(new_trip_metadata)
+            flag_modified(t, "trip_metadata")
+
+        trip_msg_req = rqm.TripMsg(route=trip.route, metadata=new_trip_metadata)
+        booking_req = rqm.BookingReq(trips=[trip_msg_req])
+        response = await dpd.process_req_with_response(None, booking_req, user_name)
+
+    return response
+
+def prepare_new_trip_metadata(trip_metadata, from_dt, to_dt):
+    """Helper function to generate updated trip metadata based on pause dates."""
+    new_metadata = trip_metadata.copy()
+    
+    scheduled_start = str_to_dt(trip_metadata.get("scheduled_start_time"))
+    scheduled_end = str_to_dt(trip_metadata.get("scheduled_end_time"))
+    actual_start = str_to_dt(trip_metadata.get("actual_start_time"))
+    time_period = int(trip_metadata.get("scheduled_time_period", 0))
+    repeat_days = int(trip_metadata.get("num_days_to_repeat", 0))
+    
+    start = str_to_dt(from_dt)
+    end = str_to_dt(to_dt)
+    
+    # Calculate necessary day differences
+    days_since_start = (start - actual_start).days
+    days_to_end = (end - scheduled_start).days
+
+    # If repeat days exist, adjust the repeat interval and scheduled times
+    if repeat_days > 0:
+        new_metadata["num_days_to_repeat"] = str(days_since_start)
+        new_metadata["scheduled_start_time"] = dt_to_str(scheduled_start + datetime.timedelta(days=days_to_end))
+        new_metadata["scheduled_end_time"] = dt_to_str(scheduled_end + datetime.timedelta(days=days_to_end))
+        new_metadata["actual_start_time"] = dt_to_str(scheduled_start + datetime.timedelta(days=days_to_end))
+        new_metadata["actual_end_time"] = dt_to_str(scheduled_end + datetime.timedelta(days=days_to_end))
+        new_metadata["num_days_to_repeat"] = str(repeat_days - days_since_start)
+    else:
+        # Adjust single scheduled trip timing
+        end_unix = adjust_to_closest_interval(scheduled_start, start, end, time_period)
+        new_metadata["scheduled_start_time"] = dt_to_str(end_unix)
+        new_metadata["scheduled_end_time"] = from_dt
+
+    return new_metadata
+
+def adjust_to_closest_interval(scheduled_start, start, end, period):
+    """Calculate adjusted Unix timestamp based on time period."""
+    unix_start = int(scheduled_start.timestamp())
+    seconds_diff = (end - start).total_seconds()
+    adjusted_timestamp = unix_start + math.ceil(seconds_diff / period) * period
+    return datetime.fromtimestamp(adjusted_timestamp)
+
