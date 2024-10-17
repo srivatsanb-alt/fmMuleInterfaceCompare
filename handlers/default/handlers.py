@@ -218,33 +218,26 @@ class Handlers:
     def should_recreate_scheduled_trip(self, pending_trip: tm.PendingTrip):
         trip_metadata = pending_trip.trip.trip_metadata
         scheduled_end_time = utils_util.str_to_dt(trip_metadata["scheduled_end_time"])
-
-        if not utils_util.check_if_timestamp_has_passed(scheduled_end_time):
-            new_metadata = pending_trip.trip.trip_metadata
-            time_period = new_metadata["scheduled_time_period"]
-            new_start_time = datetime.datetime.now() + datetime.timedelta(
-                seconds=int(time_period)
-            )
-            if new_start_time > scheduled_end_time:
-                logging.getLogger().info(
-                    f"will not recreate trip {pending_trip.trip.id}, new trip start_time past scheduled_end_time"
-                )
-                return
-
+        new_metadata = pending_trip.trip.trip_metadata
+        time_period = new_metadata["scheduled_time_period"]
+        new_start_time = datetime.datetime.now() + datetime.timedelta(
+            seconds=int(time_period)
+        )
+        if new_start_time > scheduled_end_time:     
             logging.getLogger().info(
                 f"recreating trip {pending_trip.trip.id}, scheduled trip needs to be continued"
             )
-
             new_start_time = utils_util.dt_to_str(new_start_time)
             new_metadata["scheduled_start_time"] = new_start_time
             logging.getLogger().info(f"scheduled new metadata {new_metadata}")
             self.create_new_trip_from_pending_trip(pending_trip, new_metadata)
-        elif not self.maybe_repeat_for_multiple_days(pending_trip):
+        elif self.maybe_repeat_for_multiple_days(pending_trip):
             pass
         else:
             logging.getLogger().info(
-                f"will not recreate trip {pending_trip.trip.id}, scheduled_end_time past current time"
+                f"will not recreate trip {pending_trip.trip.id}, scheduled_end_time greater than subsequent trip's start time"
             )
+       
 
     def assign_new_trip(
         self,
