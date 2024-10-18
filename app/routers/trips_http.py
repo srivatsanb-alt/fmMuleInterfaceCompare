@@ -704,6 +704,9 @@ async def pause_schedule_trip(
             trip_metadata["scheduled_end_time"] = old_scheduled_end_time
             trip_metadata["scheduled_start_time"] = dt_str
             trip_metadata["scheduled_time_period"] = str(old_scheduled_time_period)
+        
+        trip_metadata["paused_from"] = pause_schedule_trip_req.from_dt
+        trip_metadata["paused_till"] = pause_schedule_trip_req.to_dt
 
         trip_msg_req = rqm.TripMsg(route=trip.route, metadata=trip_metadata)
         booking_req = rqm.BookingReq(trips=[trip_msg_req])
