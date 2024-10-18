@@ -223,7 +223,7 @@ class Handlers:
         new_start_time = datetime.datetime.now() + datetime.timedelta(
             seconds=int(time_period)
         )
-        if new_start_time > scheduled_end_time:     
+        if new_start_time < scheduled_end_time:     
             logging.getLogger().info(
                 f"recreating trip {pending_trip.trip.id}, scheduled trip needs to be continued"
             )
