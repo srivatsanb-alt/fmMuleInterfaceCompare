@@ -514,6 +514,62 @@ class DBSession:
             "sort_order": sort_order,
         }
         return trips
+    
+    def get_scheduled_trips(
+        self,
+        filter_fleets,
+        valid_status,
+        search_text,
+        sort_field="id",
+        sort_order="desc",
+        page=0,
+        limit=50,
+    ):
+        skip = page * limit
+        trips = {}
+        count = 0
+        base_query = self.session.query(tm.Trip).filter(tm.Trip.status.in_(valid_status)).filter(tm.Trip.scheduled.is_(True))
+
+        if filter_fleets and filter_fleets != "[]":
+            base_query = base_query.filter(tm.Trip.fleet_name.in_(filter_fleets))
+        
+        if search_text and search_text != "":
+            columns_to_search = [
+                tm.Trip.sherpa_name,
+                tm.Trip.status,
+                tm.Trip.booked_by,
+            ]
+            conditions = or_(
+                *[column.ilike(f"%{search_text}%") for column in columns_to_search]
+            )
+            base_query = base_query.filter(conditions)
+
+        count = base_query.count()
+
+        base_query = (
+            base_query.order_by(text(f"{sort_field} {sort_order}"))
+            .offset(skip)
+            .limit(limit)
+        )
+
+        trips = base_query.all()
+
+        pages = int(count / limit) if (count % limit == 0) else int(count / limit + 1)
+
+        trips = jsonable_encoder(trips)
+
+        for item in trips:
+            item["progress"] = self.get_trip_progress(str(item["id"]))
+        trips = {
+            "trips": trips,
+            "count": count,
+            "limit": limit,
+            "total_pages": pages,
+            "sort_field": sort_field,
+            "sort_order": sort_order,
+        }
+        return trips
+
 
     def get_trips_with_timestamp_and_status(self, from_dt, to_dt, valid_status):
         return (

@@ -655,7 +655,6 @@ async def pause_schedule_trip(
         old_description = new_trip_metadata.get("description", None)
         old_num_days_to_repeat = new_trip_metadata.get("num_days_to_repeat", None)
         old_scheduled_time_period = int(new_trip_metadata.get("scheduled_time_period", None))
-        old_repeat_count = int(new_trip_metadata.get("repeat_count", None))
         old_actual_start_time = new_trip_metadata.get("actual_start_time", None)
         old_actual_end_time = new_trip_metadata.get("actual_end_time", None)
         
@@ -713,6 +712,31 @@ async def pause_schedule_trip(
         response = await dpd.process_req_with_response(None, booking_req, user_name)
 
     return response
+
+@router.post("/scheduled_trip")
+async def scheduled_trip(
+    trip_status_req: rqm.TripStatusReq_pg,
+    user_name=Depends(dpd.get_user_from_header),
+):
+    response = {}
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+    
+    valid_status = []
+    valid_status = tm.YET_TO_START_TRIP_STATUS
+
+    with DBSession(engine=ccm.engine) as dbsession:
+        response = dbsession.get_scheduled_trips(
+            trip_status_req.filter_fleets,
+            valid_status,
+            trip_status_req.search_txt,
+            trip_status_req.sort_field,
+            trip_status_req.sort_order,
+            trip_status_req.page_no,
+            trip_status_req.rec_limit,
+        )
+        
+        return response
 
 @router.post("/pause_schedule_trip_refactor")
 async def pause_schedule_trip_refactor(
@@ -788,4 +812,6 @@ def adjust_to_closest_interval(scheduled_start, start, end, period):
     seconds_diff = (end - start).total_seconds()
     adjusted_timestamp = unix_start + math.ceil(seconds_diff / period) * period
     return datetime.fromtimestamp(adjusted_timestamp)
+
+
 
