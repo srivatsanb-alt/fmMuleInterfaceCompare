@@ -236,7 +236,7 @@ async def trip_status_pg_with_type(
         dpd.raise_error("Unknown requester", 401)
 
     valid_status = []
-    if type == "yet_to_start":
+    if type == "yet_to_start" or type == "scheduled":
         valid_status = tm.YET_TO_START_TRIP_STATUS
     elif type == "completed":
         valid_status = tm.COMPLETED_TRIP_STATUS
@@ -256,19 +256,30 @@ async def trip_status_pg_with_type(
             trip_status_req.from_dt = str_to_dt(trip_status_req.from_dt)
             trip_status_req.to_dt = str_to_dt(trip_status_req.to_dt)
 
-        response = dbsession.get_trips_with_timestamp_and_status_pagination(
-            trip_status_req.from_dt,
-            trip_status_req.to_dt,
-            trip_status_req.filter_fleets,
-            valid_status,
-            trip_status_req.filter_sherpa_names,
-            trip_status_req.filter_status,
-            trip_status_req.search_txt,
-            trip_status_req.sort_field,
-            trip_status_req.sort_order,
-            trip_status_req.page_no,
-            trip_status_req.rec_limit,
-        )
+        if type == "scheduled":
+            response = dbsession.get_scheduled_trips(
+                trip_status_req.filter_fleets,
+                valid_status,
+                trip_status_req.search_txt,
+                trip_status_req.sort_field,
+                trip_status_req.sort_order,
+                trip_status_req.page_no,
+                trip_status_req.rec_limit,
+            )
+        else:
+            response = dbsession.get_trips_with_timestamp_and_status_pagination(
+                trip_status_req.from_dt,
+                trip_status_req.to_dt,
+                trip_status_req.filter_fleets,
+                valid_status,
+                trip_status_req.filter_sherpa_names,
+                trip_status_req.filter_status,
+                trip_status_req.search_txt,
+                trip_status_req.sort_field,
+                trip_status_req.sort_order,
+                trip_status_req.page_no,
+                trip_status_req.rec_limit,
+            )
 
     return response
 
