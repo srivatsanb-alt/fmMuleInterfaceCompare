@@ -598,6 +598,7 @@ class DBSession:
             self.session.query(tm.Trip)
             .filter(or_(tm.Trip.booking_time >= from_dt,tm.Trip.start_time >= from_dt))
             .filter(or_(tm.Trip.booking_time <= to_dt,tm.Trip.end_time <= to_dt))
+            .filter(tm.Trip.status.in_(tm.COMPLETED_TRIP_STATUS))
         )
 
         if fleet_name:
