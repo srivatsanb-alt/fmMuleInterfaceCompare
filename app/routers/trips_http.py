@@ -636,6 +636,72 @@ async def export_all_analytics_data(
         headers={"Content-Disposition": "attachment; filename=detail_analytics.csv"},
     )
 
+@router.post("/resume_schedule_trip")
+async def resume_schedule_trip(
+    resume_schedule_trip_req: rqm.PauseScheduleTripReq,
+    user_name=Depends(dpd.get_user_from_header),
+):
+    response = {}
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    with DBSession(engine=ccm.engine) as dbsession:
+        trips : tm.Trip = dbsession.get_trips_with_booking_id(resume_schedule_trip_req.booking_id)
+
+        if trips is None:
+            dpd.raise_error(f"Trip with booking id:{resume_schedule_trip_req.booking_id} does not exist")
+        
+        trip = trips[0]
+
+        if trip.scheduled is False:
+            dpd.raise_error(
+                f"Trip with booking id:{resume_schedule_trip_req.booking_id} is not scheduled"
+            )
+
+        new_trip_metadata = trip.trip_metadata
+        old_scheduled_end_time = new_trip_metadata.get("scheduled_end_time", None)
+        old_scheduled_start_time = new_trip_metadata.get("scheduled_start_time", None)
+        old_scheduled = new_trip_metadata.get("scheduled", None)
+        old_description = new_trip_metadata.get("description", None)
+        old_num_days_to_repeat = new_trip_metadata.get("num_days_to_repeat", None)
+        old_scheduled_time_period = int(new_trip_metadata.get("scheduled_time_period", None))
+        old_actual_start_time = new_trip_metadata.get("actual_start_time", None)
+        old_actual_end_time = new_trip_metadata.get("actual_end_time", None)
+
+        if old_num_days_to_repeat != '0':
+            scheduled_start_time = str_to_dt(old_scheduled_start_time)
+            scheduled_end_time = str_to_dt(old_scheduled_end_time)
+            actual_start_time = str_to_dt(old_actual_start_time)
+            actual_end_time = str_to_dt(old_actual_end_time)
+            start = str_to_dt(resume_schedule_trip_req.from_dt)
+            no_of_days = ((scheduled_start_time - start).total_seconds() / 86400)
+            # no_of_days_for_older_trips = math.ceil((end - actual_start_time).total_seconds() / 86400)
+            trip_metadata = {}
+
+            for t in trips:
+                t.trip_metadata["num_days_to_repeat"] = str(no_of_days + int(old_num_days_to_repeat))
+                t.trip_metadata["scheduled_start_time"] = dt_to_str(scheduled_start_time - timedelta(days=no_of_days))
+                t.trip_metadata["scheduled_end_time"] = dt_to_str(scheduled_end_time - timedelta(days=no_of_days))
+                t.trip_metadata["actual_start_time"] = dt_to_str(actual_start_time - timedelta(days=no_of_days))
+                t.trip_metadata["actual_end_time"] = dt_to_str(actual_end_time - timedelta(days=no_of_days))
+                t.trip_metadata["paused_till"] = resume_schedule_trip_req.to_dt
+                flag_modified(t, "trip_metadata")
+        else:
+            start = str_to_dt(old_scheduled_start_time)
+            unix_time = int(start.timestamp())
+            end = str_to_dt(resume_schedule_trip_req.from_dt)
+            difference = start - end 
+            seconds = difference.total_seconds()
+            unix_timestamp = (unix_time - math.floor(seconds/old_scheduled_time_period)*old_scheduled_time_period)
+            dt_object = datetime.fromtimestamp(unix_timestamp)
+            dt_str = dt_to_str(dt_object)
+
+            for t in trips:
+                t.trip_metadata["scheduled_start_time"] = dt_str
+                t.trip_metadata["paused_till"] = resume_schedule_trip_req.from_dt
+                flag_modified(t, "trip_metadata")
+
+    return response
 
 @router.post("/pause_schedule_trip")
 async def pause_schedule_trip(
