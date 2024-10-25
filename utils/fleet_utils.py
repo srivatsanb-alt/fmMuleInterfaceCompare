@@ -436,7 +436,7 @@ class SherpaUtils:
                 logger.info(f"updated sherpa {sherpa_name} ")
             if sherpa.fleet_id != fleet_id and is_add is True:
                 raise ValueError(
-                    f"Cannot duplicate sherpas across fleet, {sherpa.name} is already present in {sherpa.fleet.name}"
+                    f"Cannot duplicate sherpas across fleet, {sherpa.name} is already present"
                 )
             logger.info(f"updated sherpa {sherpa_name}, with hwid: {hwid}")
         else:

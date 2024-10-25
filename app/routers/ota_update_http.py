@@ -27,6 +27,10 @@ async def get_available_updates(
     user_name=Depends(dpd.get_user_from_header),
 ):
     response = {}
+
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
     mfm_context = mu.get_mfm_context()
     status_code, available_updates_json = mu.get_available_updates_fm(mfm_context)
     if status_code != 200:
@@ -61,6 +65,10 @@ async def update_fm(
     user_name=Depends(dpd.get_user_from_header),
 ):
     response = {}
+    
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
     redis_conn = aioredis.Redis.from_url(
         os.getenv("FM_REDIS_URI"), max_connections=10, decode_responses=True
     )
