@@ -1,7 +1,7 @@
 {
   "files": {
-    "main.css": "/static/css/main.41593310.css",
-    "main.js": "/static/js/main.d2b394ce.js",
+    "main.css": "/static/css/main.3dd93f53.css",
+    "main.js": "/static/js/main.bbeff1fe.js",
     "static/js/27.25cb0711.chunk.js": "/static/js/27.25cb0711.chunk.js",
     "static/media/Login Image.webp": "/static/media/Login Image.5f6be016522306b4829c.webp",
     "static/media/OpenSans-Regular-400.ttf": "/static/media/OpenSans-Regular-400.57cd57a648021fa1c396.ttf",
@@ -68,7 +68,7 @@
     "static/media/vector-straight2.svg": "/static/media/vector-straight2.a4c9a1f3e3ce81f384c4240012840a08.svg"
   },
   "entrypoints": [
-    "static/css/main.41593310.css",
-    "static/js/main.d2b394ce.js"
+    "static/css/main.3dd93f53.css",
+    "static/js/main.bbeff1fe.js"
   ]
 }
