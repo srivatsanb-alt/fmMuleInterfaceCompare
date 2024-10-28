@@ -716,3 +716,16 @@ async def generate_code_for_remote_terminal(
             )          
 
     return {"code": code_for_remote_terminal}
+
+@router.get("/get_directories_in_tree_structure/{dir_name}")
+async def get_directories_in_tree_structure(
+    dir_name: str,
+    user_name=Depends(dpd.get_user_from_header)
+    ):
+
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    return utils_util.list_filtered_directories(
+        os.path.join(os.getenv("FM_STATIC_DIR"), dir_name)
+)
