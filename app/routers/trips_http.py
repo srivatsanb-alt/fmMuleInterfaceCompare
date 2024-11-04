@@ -741,6 +741,7 @@ async def pause_schedule_trip(
         old_num_days_to_repeat = new_trip_metadata.get("num_days_to_repeat", None)
         old_scheduled_time_period = int(new_trip_metadata.get("scheduled_time_period", None))
         old_actual_start_time = new_trip_metadata.get("actual_start_time", None)
+        old_repeat_count = new_trip_metadata.get("repeat_count", None)
         old_actual_end_time = new_trip_metadata.get("actual_end_time", None)
         
         if old_num_days_to_repeat != '0':
@@ -749,29 +750,28 @@ async def pause_schedule_trip(
             actual_start_time = str_to_dt(old_actual_start_time)
             start = str_to_dt(pause_schedule_trip_req.from_dt)
             end = str_to_dt(pause_schedule_trip_req.to_dt)
-            no_of_days = math.ceil((end - scheduled_start_time).total_seconds() / 86400)
-            no_of_days_for_older_trips = math.ceil((end - actual_start_time).total_seconds() / 86400)
-            trip_metadata = {}
+            days_diff = math.ceil((end - scheduled_end_time).total_seconds() / 86400)
+            no_of_days = ((end - start).total_seconds() / 86400)
+            # no_of_days_for_older_trips = math.ceil((end - actual_start_time).total_seconds() / 86400)
+            # trip_metadata = {}
 
             for t in trips:
-                t.trip_metadata["num_days_to_repeat"] = str(no_of_days_for_older_trips)
+                t.trip_metadata["repeat_count"] = str(no_of_days+ int(old_repeat_count))
+                t.trip_metadata["paused_from"] = old_scheduled_end_time
+                t.trip_metadata["paused_till"] = dt_to_str(scheduled_end_time + timedelta(days=days_diff))
                 flag_modified(t, "trip_metadata")
 
-            trip_metadata["scheduled"] = old_scheduled
-            trip_metadata["description"] = old_description
-            trip_metadata["repeat_count"] = "1"
-            trip_metadata["scheduled_end_time"] = dt_to_str(scheduled_end_time + timedelta(days=no_of_days))
-            trip_metadata["scheduled_start_time"] = dt_to_str(scheduled_start_time + timedelta(days=no_of_days))
-            trip_metadata["scheduled_time_period"] = old_scheduled_time_period
-            trip_metadata["actual_start_time"] = dt_to_str(scheduled_start_time + timedelta(days=no_of_days))
-            trip_metadata["actual_end_time"] = dt_to_str(scheduled_end_time + timedelta(days=no_of_days))
-            trip_metadata["num_days_to_repeat"] = str(int(old_num_days_to_repeat)- no_of_days_for_older_trips)
+            # trip_metadata["scheduled"] = old_scheduled
+            # trip_metadata["description"] = old_description
+            # trip_metadata["repeat_count"] = "1"
+            # trip_metadata["scheduled_end_time"] = dt_to_str(scheduled_end_time + timedelta(days=no_of_days))
+            # trip_metadata["scheduled_start_time"] = dt_to_str(scheduled_start_time + timedelta(days=no_of_days))
+            # trip_metadata["scheduled_time_period"] = old_scheduled_time_period
+            # trip_metadata["actual_start_time"] = dt_to_str(scheduled_start_time + timedelta(days=no_of_days))
+            # trip_metadata["actual_end_time"] = dt_to_str(scheduled_end_time + timedelta(days=no_of_days))
+            # trip_metadata["num_days_to_repeat"] = str(int(old_num_days_to_repeat)- no_of_days_for_older_trips)
 
-        else:          
-            for t in trips:
-                t.trip_metadata["scheduled_end_time"] = pause_schedule_trip_req.from_dt
-                flag_modified(t, "trip_metadata")
-            
+        else:
             start = str_to_dt(old_scheduled_start_time)
             unix_time = int(start.timestamp())
             end = str_to_dt(pause_schedule_trip_req.to_dt)
@@ -781,20 +781,27 @@ async def pause_schedule_trip(
             dt_object = datetime.fromtimestamp(unix_timestamp)
             dt_str = dt_to_str(dt_object)
 
-            trip_metadata = {}
-            trip_metadata["scheduled"] = old_scheduled
-            trip_metadata["description"] = old_description
-            trip_metadata["num_days_to_repeat"] = old_num_days_to_repeat
-            trip_metadata["scheduled_end_time"] = old_scheduled_end_time
-            trip_metadata["scheduled_start_time"] = dt_str
-            trip_metadata["scheduled_time_period"] = str(old_scheduled_time_period)
-        
-        trip_metadata["paused_from"] = pause_schedule_trip_req.from_dt
-        trip_metadata["paused_till"] = pause_schedule_trip_req.to_dt
+            for t in trips:
+                t.trip_metadata["paused_from"] = pause_schedule_trip_req.from_dt
+                t.trip_metadata["paused_till"] = dt_str
+                flag_modified(t, "trip_metadata")
+            
+            
 
-        trip_msg_req = rqm.TripMsg(route=trip.route, metadata=trip_metadata)
-        booking_req = rqm.BookingReq(trips=[trip_msg_req])
-        response = await dpd.process_req_with_response(None, booking_req, user_name)
+            # trip_metadata = {}
+            # trip_metadata["scheduled"] = old_scheduled
+            # trip_metadata["description"] = old_description
+            # trip_metadata["num_days_to_repeat"] = old_num_days_to_repeat
+            # trip_metadata["scheduled_end_time"] = old_scheduled_end_time
+            # trip_metadata["scheduled_start_time"] = dt_str
+            # trip_metadata["scheduled_time_period"] = str(old_scheduled_time_period)
+        
+            # trip_metadata["paused_from"] = pause_schedule_trip_req.from_dt
+            # trip_metadata["paused_till"] = pause_schedule_trip_req.to_dt
+
+        # trip_msg_req = rqm.TripMsg(route=trip.route, metadata=trip_metadata)
+        # booking_req = rqm.BookingReq(trips=[trip_msg_req])
+        # response = await dpd.process_req_with_response(None, booking_req, user_name)
 
     return response
 
