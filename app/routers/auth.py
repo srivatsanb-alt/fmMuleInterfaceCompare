@@ -61,7 +61,7 @@ async def login(user_login: rqm.UserLogin, request: Request):
 
         response = {
             "access_token": dpd.generate_jwt_token(user_login.name, expiry_interval=expiry_interval),
-            "user_details": {"user_name": user_login.name, "role": user_details["role"]},
+            "user_details": {"user_name": user_login.name, "role": user_details["role"], "fleet_names": user_details["fleet_names"]},
             "static_files_auth": {
                 "username": os.getenv("ATI_STATIC_AUTH_USERNAME"),
                 "password": os.getenv("ATI_STATIC_AUTH_PASSWORD"),
@@ -142,6 +142,7 @@ async def add_edit_user_details(
                 ).hexdigest(),
                 "name": frontend_user_details.name,
                 "role": frontend_user_details.role,
+                "fleet_names": frontend_user_details.fleet_names,
             }
             collection.insert_one(temp)
             logging.getLogger("configure_fleet").info(
@@ -160,6 +161,9 @@ async def add_edit_user_details(
                 dpd.raise_error(
                     f"Cannot change role for default frontend_user {default_admin_username}"
                 )
+            
+            if frontend_user_details.fleet_names is not None:
+                user_details_db["fleet_names"] = frontend_user_details.fleet_names
 
             user_details_db["role"] = frontend_user_details.role
             collection.find_one_and_replace(user_query, user_details_db)

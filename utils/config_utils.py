@@ -23,7 +23,7 @@ class FrontendUsersValidator:
     user_details = {
         "$jsonSchema": {
             "bsonType": "object",
-            "required": ["name", "hashed_password", "role"],
+            "required": ["name", "hashed_password", "role", "fleet_names"],
             "properties": {
                 "name": {"bsonType": "string", "description": "login username"},
                 "hashed_password": {
@@ -34,6 +34,11 @@ class FrontendUsersValidator:
                     "bsonType": "string",
                     "enum": ["viewer", "operator", "supervisor", "support", "superuser"],
                     "description": "Role based access would be provided in the frontend app",
+                },
+                "fleet_names": {
+                    "bsonType": "array",
+                    "items": {"bsonType": "string"},
+                    "description": "List of fleet names",
                 },
                 "expiry_interval": {
                     "bsonType": "int",

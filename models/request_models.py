@@ -304,6 +304,7 @@ class FrontendUserDetails(ClientReq):
     name: str
     role: str
     password: Optional[str] = None
+    fleet_names: Optional[List[str]] = None
     operating_user_password: Optional[str] = None
 
 
