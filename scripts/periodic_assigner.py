@@ -1,5 +1,7 @@
 import time
 import logging
+import pytz
+import os
 from sqlalchemy.sql import not_
 
 
@@ -29,8 +31,12 @@ def enqueue_scheduled_trips(db_session: DBSession, schdeuled_job_id):
                 trigger_optimal_dispatch_req = rqm.TriggerOptimalDispatch(
                     fleet_name=pending_trip.trip.fleet_name
                 )
+                local_tz = pytz.timezone(os.getenv("TZ"))
+                local_time_with_tz = local_tz.localize(scheduled_start_time)
+                scheduled_start_time_in_utc = local_time_with_tz.astimezone(pytz.utc)
+
                 logging.getLogger().info(
-                    f"will enqueue a job at {scheduled_start_time} for pending_trip with trip_id: {pending_trip.trip_id}"
+                    f"will enqueue a job at {scheduled_start_time_in_utc} for pending_trip with trip_id: {pending_trip.trip_id}"
                 )
 
                 process_req(
@@ -38,7 +44,7 @@ def enqueue_scheduled_trips(db_session: DBSession, schdeuled_job_id):
                     trigger_optimal_dispatch_req,
                     "self",
                     redis_conn=None,
-                    dt=scheduled_start_time,
+                    dt=scheduled_start_time_in_utc,
                 )
                 schdeuled_job_id.append(pending_trip.trip_id)
 
