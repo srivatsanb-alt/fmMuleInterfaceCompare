@@ -387,7 +387,7 @@ def get_release_date(item):
     lines = item.split('\n')
     for line in lines:
         if "updated" in line.lower():
-            date_str = line.split(": ")[1].split("+")[0]
+            date_str = line.split(": ")[1].split("+" if "+" in line else "-")[0]
             return parse_date(date_str.strip())
 
 def extract_and_sort_release_dates(data_dict):
