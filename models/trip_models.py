@@ -81,6 +81,16 @@ class SavedRoutes(Base):
     fleet_name = Column(String)
     other_info = Column(JSONB)
 
+class PausedTrip(Base, TimestampMixin):
+    __tablename__ = "paused_trips"
+    id = Column(Integer, primary_key=True, index=True)
+    booking_id = Column(Integer, index=True)
+    route = Column(ARRAY(String))
+    priority = Column(Float)
+    fleet_name = Column(String)
+    trip_metadata = Column(JSONB)
+    booked_by = Column(String)
+    status = Column(String, default="paused")
 
 class Trip(Base, TimestampMixin):
     __tablename__ = "trips"

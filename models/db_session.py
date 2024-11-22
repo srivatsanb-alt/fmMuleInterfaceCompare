@@ -3,6 +3,7 @@ import os
 from typing import List
 from sqlalchemy import func, any_, or_, and_, extract, text
 from sqlalchemy.orm import Session
+from sqlalchemy.types import DateTime
 from fastapi.encoders import jsonable_encoder
 
 # ati code imports
@@ -89,6 +90,26 @@ class DBSession:
         trip_leg = tm.TripLeg(trip_id, curr_station, next_station)
         self.add_to_session(trip_leg)
         return trip_leg
+    
+    def create_paused_trip(
+        self,
+        route,
+        priority,
+        metadata=None,
+        booking_id=None,
+        fleet_name=None,
+        booked_by=None,
+    ):
+        paused_trip = tm.PausedTrip(
+            route=route,
+            priority=priority,
+            trip_metadata=metadata,
+            fleet_name=fleet_name,
+            booking_id=booking_id,
+            booked_by=booked_by,
+        )
+        self.add_to_session(paused_trip)
+        return paused_trip
 
     def get_new_booking_id(self):
         booking_id = self.session.query(func.max(tm.Trip.booking_id)).first()
@@ -533,18 +554,24 @@ class DBSession:
         if filter_fleets and filter_fleets != "[]":
             base_query = base_query.filter(tm.Trip.fleet_name.in_(filter_fleets))
         
-        if search_text and search_text != "":
-            columns_to_search = [
-                tm.Trip.sherpa_name,
-                tm.Trip.status,
-                tm.Trip.booked_by,
-            ]
-            conditions = or_(
-                *[column.ilike(f"%{search_text}%") for column in columns_to_search]
-            )
-            base_query = base_query.filter(conditions)
+        # if search_text and search_text != "":
+        #     columns_to_search = [
+        #         tm.Trip.sherpa_name,
+        #         tm.Trip.status,
+        #         tm.Trip.booked_by,
+        #     ]
+        #     conditions = or_(
+        #         *[column.ilike(f"%{search_text}%") for column in columns_to_search]
+        #     )
+        #     base_query = base_query.filter(conditions)
+        current_datetime = datetime.datetime.now()
+        paused_trips = (
+            self.session.query(tm.PausedTrip)
+            .filter(func.jsonb_extract_path_text(tm.PausedTrip.trip_metadata, "scheduled_end_time").cast(DateTime) > current_datetime)
+            .all()
+        )
 
-        count = base_query.count()
+        count = base_query.count() + len(paused_trips)
 
         base_query = (
             base_query.order_by(text(f"{sort_field} {sort_order}"))
@@ -555,9 +582,10 @@ class DBSession:
         trips = base_query.all()
 
         pages = int(count / limit) if (count % limit == 0) else int(count / limit + 1)
-
+        
         trips = jsonable_encoder(trips)
-
+        paused_trips = jsonable_encoder(paused_trips)
+        trips.extend(paused_trips)
         for item in trips:
             item["progress"] = self.get_trip_progress(str(item["id"]))
         trips = {
@@ -830,6 +858,9 @@ class DBSession:
 
     def delete_ongoing_trip(self, ongoing_trip):
         self.session.delete(ongoing_trip)
+
+    def delete_paused_trip(self, paused_trip):
+        self.session.delete(paused_trip)
 
     def add_notification(
         self, entity_names, log, log_level, module, repetitive=False, repetition_freq=None
@@ -1154,5 +1185,12 @@ class DBSession:
         return (
             self.session.query(um.SuperUser)
             .filter(um.SuperUser.hashed_api_key == hashed_api_key)
+            .one_or_none()
+        )
+    
+    def get_paused_trip_with_booking_id(self, booking_id):
+        return (
+            self.session.query(tm.PausedTrip)
+            .filter(tm.PausedTrip.booking_id == booking_id)
             .one_or_none()
         )

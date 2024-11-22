@@ -355,8 +355,9 @@ class BookingReq(ClientReq):
     trips: List[TripMsg]
     type: str = MessageType.BOOKING
 
-class PauseScheduleTripReq(GenericFromToTimeReq):
+class PauseResumeScheduleTripReq(ClientReq):
     booking_id: int
+    pause: bool
 
 class DeleteOngoingTripReq(ClientReq):
     booking_id: int

@@ -247,15 +247,15 @@ class Handlers:
         new_start_time = datetime.datetime.now() + datetime.timedelta(
             seconds=int(time_period)
         )
-        if pause_from is not None and utils_util.check_if_timestamp_has_passed(pause_from) and pause_till > datetime.datetime.now():
-            logging.getLogger().info(
-                f"recreating trip {pending_trip.trip.id}, scheduled trip needs to be continued from {pause_till}"
-            )
-            new_start_time = utils_util.dt_to_str(pause_till)
-            new_metadata["scheduled_start_time"] = new_start_time
-            logging.getLogger().info(f"scheduled new metadata {new_metadata}")
-            self.create_new_trip_from_pending_trip(pending_trip, new_metadata)
-        elif new_start_time < scheduled_end_time:     
+        # if pause_from is not None and utils_util.check_if_timestamp_has_passed(pause_from) and pause_till > datetime.datetime.now():
+        #     logging.getLogger().info(
+        #         f"recreating trip {pending_trip.trip.id}, scheduled trip needs to be continued from {pause_till}"
+        #     )
+        #     new_start_time = utils_util.dt_to_str(pause_till)
+        #     new_metadata["scheduled_start_time"] = new_start_time
+        #     logging.getLogger().info(f"scheduled new metadata {new_metadata}")
+        #     self.create_new_trip_from_pending_trip(pending_trip, new_metadata)
+        if new_start_time < scheduled_end_time:     
             logging.getLogger().info(
                 f"recreating trip {pending_trip.trip.id}, scheduled trip needs to be continued"
             )
