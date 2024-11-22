@@ -537,33 +537,52 @@ class DBSession:
         return trips
     
     def get_scheduled_trips(
-        self,
-        filter_fleets,
-        valid_status,
-        search_text,
-        sort_field="id",
-        sort_order="desc",
-        page=0,
-        limit=50,
-    ):
+            self,
+            filter_fleets,
+            valid_status,
+            search_text,
+            sort_field="id",
+            sort_order="desc",
+            page=0,
+            limit=50,
+        ):
         skip = page * limit
-        trips = {}
-        count = 0
-        base_query = self.session.query(tm.Trip).filter(tm.Trip.status.in_(valid_status)).filter(tm.Trip.scheduled.is_(True))
+
+        booking_ids = (
+            self.session.query(tm.Trip.booking_id)
+            .filter(tm.Trip.status.in_(valid_status))
+            .filter(tm.Trip.scheduled.is_(True))
+            .distinct()
+            .all()
+        )
+
+        booking_ids = [bid[0] for bid in booking_ids]
+
+        first_trip_subquery = (
+            self.session.query(tm.Trip.id)
+            .filter(tm.Trip.booking_id.in_(booking_ids))
+            .filter(tm.Trip.scheduled.is_(True))
+            .order_by(tm.Trip.booking_id, tm.Trip.id.asc())
+            .distinct(tm.Trip.booking_id)
+            .subquery()
+        )
+
+        base_query = self.session.query(tm.Trip).filter(tm.Trip.id.in_(first_trip_subquery))
 
         if filter_fleets and filter_fleets != "[]":
             base_query = base_query.filter(tm.Trip.fleet_name.in_(filter_fleets))
-        
-        # if search_text and search_text != "":
-        #     columns_to_search = [
-        #         tm.Trip.sherpa_name,
-        #         tm.Trip.status,
-        #         tm.Trip.booked_by,
-        #     ]
-        #     conditions = or_(
-        #         *[column.ilike(f"%{search_text}%") for column in columns_to_search]
-        #     )
-        #     base_query = base_query.filter(conditions)
+
+        if search_text and search_text.strip() != "":
+            columns_to_search = [
+                tm.Trip.sherpa_name,
+                tm.Trip.status,
+                tm.Trip.booked_by,
+            ]
+            conditions = or_(
+                *[column.ilike(f"%{search_text}%") for column in columns_to_search]
+            )
+            base_query = base_query.filter(conditions)
+
         current_datetime = datetime.datetime.now()
         paused_trips = (
             self.session.query(tm.PausedTrip)
@@ -581,13 +600,15 @@ class DBSession:
 
         trips = base_query.all()
 
-        pages = int(count / limit) if (count % limit == 0) else int(count / limit + 1)
-        
         trips = jsonable_encoder(trips)
         paused_trips = jsonable_encoder(paused_trips)
         trips.extend(paused_trips)
+
         for item in trips:
             item["progress"] = self.get_trip_progress(str(item["id"]))
+
+        pages = int(count / limit) if (count % limit == 0) else int(count / limit + 1)
+
         trips = {
             "trips": trips,
             "count": count,
