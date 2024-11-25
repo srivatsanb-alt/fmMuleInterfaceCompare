@@ -365,7 +365,7 @@ class DBSession:
         return self.session.query(tm.Trip).filter(tm.Trip.id == trip_id).one()
 
     def get_trips_with_booking_id(self, booking_id):
-        return self.session.query(tm.Trip).filter(tm.Trip.booking_id == booking_id).all()
+        return self.session.query(tm.Trip).filter(tm.Trip.booking_id == booking_id).order_by(tm.Trip.booking_time.asc()).all()
 
     def get_pending_trip(self, sherpa_name: str):
         pending_trips = (

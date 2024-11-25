@@ -6,7 +6,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm.attributes import flag_modified
 import asyncio
 import pandas as pd
-from datetime import datetime, timedelta
+from datetime import datetime, date
 import io
 import math
 
@@ -740,7 +740,7 @@ async def pause_schedule_trip(
                 dpd.raise_error(f"Trip with booking id:{pause_schedule_trip_req.booking_id} is already paused")
             
             new_trip_metadata = trip.trip_metadata
-            if new_trip_metadata["total_trip_progress"]:
+            if new_trip_metadata.get("total_trip_progress"):
                 del new_trip_metadata["total_trip_progress"]
             dbsession.create_paused_trip(
                 trip.route,
@@ -749,8 +749,13 @@ async def pause_schedule_trip(
                 trip.booking_id,
                 trip.fleet_name,
                 trip.booked_by,
-            )
+            ) 
             for t in trips:
+                if t.status == "booked":
+                    delete_booked_trip_req: rqm.DeleteBookedTripReq = rqm.DeleteBookedTripReq(
+                    booking_id=pause_schedule_trip_req.booking_id, trip_id=t.id)
+                    response = await dpd.process_req_with_response(None, delete_booked_trip_req, user_name)
+
                 t.trip_metadata["scheduled_end_time"] = trip.trip_metadata["scheduled_start_time"]
                 flag_modified(t, "trip_metadata")
         else:
@@ -759,6 +764,7 @@ async def pause_schedule_trip(
 
             new_trip_metadata = pause_trip.trip_metadata
             new_trip_metadata = modify_trip_metadata(new_trip_metadata)
+            
             #new_trip_metadata["scheduled_start_time"] = utils_util.dt_to_str(datetime.now())
             new_trip: tm.Trip = dbsession.create_trip(
                 pause_trip.route,
@@ -848,7 +854,8 @@ def modify_trip_metadata(trip_metadata):
     old_scheduled_start_time = trip_metadata.get("scheduled_start_time", None)
     old_scheduled_time_period = int(trip_metadata.get("scheduled_time_period", None))
     if old_num_days_to_repeat != '0':
-        pass
+        trip_metadata["scheduled_start_time"] = update_to_current_date(trip_metadata["scheduled_start_time"])
+        trip_metadata["scheduled_end_time"] = update_to_current_date(trip_metadata["scheduled_end_time"])
     else:
         start = str_to_dt(old_scheduled_start_time)
         unix_time = int(start.timestamp())
@@ -862,8 +869,12 @@ def modify_trip_metadata(trip_metadata):
 
     return trip_metadata
 
-
-    
+def update_to_current_date(timestamp_str):
+    dt = datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M:%S")
+    current_date = date.today()
+    updated_dt = dt.replace(year=current_date.year, month=current_date.month, day=current_date.day)
+    updated_timestamp = updated_dt.strftime("%Y-%m-%d %H:%M:%S")    
+    return updated_timestamp   
 
 @router.post("/scheduled_trip")
 async def scheduled_trip(
