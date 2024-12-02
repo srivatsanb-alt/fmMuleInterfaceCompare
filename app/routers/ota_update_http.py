@@ -26,6 +26,10 @@ router = APIRouter(
 async def get_available_updates(
     user_name=Depends(dpd.get_user_from_header),
 ):
+    response = {}
+
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
 
     mfm_context = mu.get_mfm_context()
     status_code, available_updates_json = mu.get_available_updates_fm(mfm_context)
@@ -44,10 +48,15 @@ async def get_available_updates(
         )
         available_updates.update({available_update_version: {}})
 
-        available_updates[available_update_version].update({"release_notes": release_notes})
+        #available_updates[available_update_version].update({"release_notes": release_notes})
         available_updates[available_update_version].update({"release_dt": release_dt})
+    
+    sorted_releases = utils_util.extract_and_sort_release_dates(available_updates)
 
-    return available_updates
+    for software, release_date in sorted_releases:
+        response[software]= release_date.strftime('%Y-%m-%d %H:%M:%S')
+
+    return response
 
 
 @router.get("/fm/update_to/{fm_version}")
@@ -56,6 +65,10 @@ async def update_fm(
     user_name=Depends(dpd.get_user_from_header),
 ):
     response = {}
+    
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
     redis_conn = aioredis.Redis.from_url(
         os.getenv("FM_REDIS_URI"), max_connections=10, decode_responses=True
     )

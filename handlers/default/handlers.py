@@ -766,13 +766,13 @@ class Handlers:
             ongoing_trip is accessed by multiple handlers, added try block to resolve this
             """
             try:
-                if ongoing_trip.finished():
-                    done = True
-                    next_task = "end_ongoing_trip"
-                
-                elif ongoing_trip.should_assign_post_action():
+                if ongoing_trip.should_assign_post_action():
                     done=True
                     next_task= "assign_peripheral_task"
+
+                elif ongoing_trip.finished():
+                    done = True
+                    next_task = "end_ongoing_trip"
 
                 elif (
                     self.check_continue_curr_leg(ongoing_trip)

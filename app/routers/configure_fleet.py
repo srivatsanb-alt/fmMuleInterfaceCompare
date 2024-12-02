@@ -2,11 +2,13 @@ import os
 import time
 import logging
 import glob
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Form, File, HTTPException, UploadFile, status
 from fastapi.encoders import jsonable_encoder
 import shutil
 import json
+import hashlib
 import aioredis
+import zipfile
 from rq.command import send_shutdown_command
 
 # ati code imports
@@ -45,6 +47,84 @@ async def get_all_sherpa_info(user_name=Depends(dpd.get_user_from_header)):
             response[sherpa.name].update({"fleet_name": sherpa.fleet.name})
             for sherpa in all_sherpas
         ]
+
+    return response
+
+@router.post("/switch_sherpa/{sherpa_name}")
+async def switch_sherpa(
+    add_edit_sherpa: rqm.AddEditSherpaReq,
+    sherpa_name: str,
+    user_name=Depends(dpd.get_user_from_header)
+    ):
+
+    response = {}
+
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    with DBSession(engine=ccm.engine) as dbsession:
+        sherpa_status: fm.SherpaStatus = dbsession.get_sherpa_status_with_none(sherpa_name)
+        sherpa: fm.Sherpa = dbsession.get_sherpa(sherpa_name)
+        fleet = dbsession.get_fleet(add_edit_sherpa.fleet_name)
+        if not sherpa_status:
+            dpd.raise_error(f"Sherpa {sherpa_name} not found")
+        if add_edit_sherpa.api_key is None:
+            hashed_api_key = sherpa.hashed_api_key
+        else:
+            hashed_api_key = hashlib.sha256(add_edit_sherpa.api_key.encode("utf-8")).hexdigest()
+
+        if sherpa_status.trip_id:
+            trip = dbsession.get_trip(sherpa_status.trip_id)
+            dpd.raise_error(
+                f"delete the ongoing trip with booking_id: {trip.booking_id} and disable {sherpa_status.sherpa_name} for trips to delete the sherpa"
+            )
+
+        if sherpa_status.inducted:
+            dpd.raise_error(
+                f"disable {sherpa_status.sherpa_name} for trips to delete the sherpa"
+            )
+
+        close_websocket_for_sherpa(sherpa_name)
+        try:
+            fu.SherpaUtils.delete_sherpa(dbsession, sherpa_name)
+            all_sherpa_names = dbsession.get_all_sherpa_names()
+            async with aioredis.Redis.from_url(os.getenv("FM_REDIS_URI")) as aredis_conn:
+                await fu.update_fleet_conf_in_redis(dbsession, aredis_conn)
+
+                queues_to_delete = [
+                    f"{sherpa_name}_update_handler",
+                    f"{sherpa_name}_trip_update_handler",
+                ]
+                for q_name in queues_to_delete:
+                    send_shutdown_command(aredis_conn, q_name)
+
+            fu.SherpaUtils.add_edit_sherpa(
+                dbsession,
+                sherpa_name,
+                hwid=add_edit_sherpa.hwid,
+                api_key=hashed_api_key,
+                fleet_id=fleet.id,
+                sherpa_type=add_edit_sherpa.sherpa_type,
+                is_add=add_edit_sherpa.is_add,
+            )
+            import utils.rq_utils as rqu
+            from multiprocessing import Process
+
+
+            all_sherpa_names.append(sherpa_name)
+            lu.set_log_config_dict(all_sherpa_names)
+
+            async with aioredis.Redis.from_url(os.getenv("FM_REDIS_URI")) as aredis_conn:
+                await fu.update_fleet_conf_in_redis(dbsession, aredis_conn)
+
+            new_qs = [f"{sherpa_name}_update_handler", f"{sherpa_name}_trip_update_handler"]
+            for new_q in new_qs:
+                rqu.Queues.add_queue(new_q)
+                process = Process(target=rqu.start_worker, args=(new_q,))
+                process.start()
+
+        except Exception as e:
+            dpd.relay_error_details(e)
 
     return response
 
@@ -178,19 +258,43 @@ async def get_all_available_maps(
                 response.append(map_folder_name)
 
     return response
-
+    
 
 @router.post("/add_edit_fleet/{fleet_name}")
 async def add_fleet(
-    add_fleet_req: rqm.AddFleetReq,
     fleet_name: str,
+    site: str = Form(...),
+    location: str = Form(...),
+    customer: str = Form(...),
+    map_name: str = Form(...),
+    map_file: UploadFile = File(...),
     user_name=Depends(dpd.get_user_from_header),
 ):
 
     response = {}
+    add_fleet_req = rqm.AddFleetReq(
+        site=site,
+        location=location,
+        customer=customer,
+        map_name=map_name,
+    )
 
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
+
+    if map_file:
+        dir_to_save = os.getenv("FM_STATIC_DIR")
+        os.makedirs(dir_to_save, exist_ok=True)
+        file_path = os.path.join(dir_to_save, map_file.filename)
+        try:
+            with open(file_path, "wb") as f:
+                f.write(await map_file.read())
+            logging.getLogger("uvicorn").info(f"Uploaded file: {file_path} successfully")
+            
+            with zipfile.ZipFile(file_path, 'r') as zip_ref:
+                zip_ref.extractall(os.getenv("FM_STATIC_DIR"))
+        except Exception as e:
+            dpd.raise_error(f"Couldn't upload file: {file_path}, exception: {e}")
 
     with DBSession(engine=ccm.engine) as dbsession:
         all_fleets = dbsession.get_all_fleet_names()

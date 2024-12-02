@@ -411,6 +411,7 @@ class SherpaUtils:
         api_key=None,
         fleet_id=None,
         sherpa_type=None,
+        is_add=True,
     ):
         sherpa: fm.Sherpa = (
             dbsession.session.query(fm.Sherpa)
@@ -421,8 +422,10 @@ class SherpaUtils:
         if hwid is None:
             raise ValueError("Cannot add a sherpa without hwid")
 
-        if api_key is not None:
+        if api_key is not None and is_add is True:
             hashed_api_key = hashlib.sha256(api_key.encode("utf-8")).hexdigest()
+        else:
+            hashed_api_key = api_key
 
         if sherpa:
             sherpa.hwid = hwid
@@ -431,9 +434,9 @@ class SherpaUtils:
             if api_key is not None:
                 sherpa.hashed_api_key = hashed_api_key
                 logger.info(f"updated sherpa {sherpa_name} ")
-            if sherpa.fleet_id != fleet_id:
+            if sherpa.fleet_id != fleet_id and is_add is True:
                 raise ValueError(
-                    f"Cannot duplicate sherpas across fleet, {sherpa.name} is already present in {sherpa.fleet.name}"
+                    f"Cannot duplicate sherpas across fleet, {sherpa.name} is already present"
                 )
             logger.info(f"updated sherpa {sherpa_name}, with hwid: {hwid}")
         else:
@@ -442,13 +445,13 @@ class SherpaUtils:
                 raise ValueError("API Key/Hardware id cannot be None")
 
             temp = dbsession.get_sherpa_with_hwid(hwid)
-            if temp:
+            if temp and is_add is True:
                 raise ValueError(
                     f"Cannot duplicate hwid {temp.name} already has the inputted hwid"
                 )
 
             temp = dbsession.get_sherpa_with_hashed_api_key(hashed_api_key)
-            if temp:
+            if temp and is_add is True:
                 raise ValueError(
                     f"Cannot duplicate api_key {temp.name} already has the inputted api key"
                 )

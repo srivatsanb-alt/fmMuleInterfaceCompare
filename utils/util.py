@@ -373,3 +373,30 @@ async def write_to_file_async(filename, in_file):
         while buffer:
             buffer = await in_file.read(1024)
             await file.write(buffer)
+
+def parse_date(date_str):
+    try:
+        return datetime.datetime.strptime(date_str, "%a %b %d %H:%M:%S %Y")
+    except ValueError:
+        try:
+            return datetime.datetime.strptime(date_str, "%A %B %d %I:%M:%S %p %Z %Y")
+        except ValueError:
+            return datetime(2000, 1, 1, 00, 00, 00)
+
+def get_release_date(item):
+    lines = item.split('\n')
+    for line in lines:
+        if "updated" in line.lower():
+            date_str = line.split(": ")[1].split("+" if "+" in line else "-")[0]
+            return parse_date(date_str.strip())
+
+def extract_and_sort_release_dates(data_dict):
+    release_dates = {}
+
+    for software, info in data_dict.items():
+        release_date = get_release_date(info['release_dt'])
+        release_dates[software] = release_date
+
+    sorted_items = sorted(release_dates.items(), key=lambda x: x[1], reverse=True)
+
+    return sorted_items
