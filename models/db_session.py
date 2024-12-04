@@ -141,6 +141,13 @@ class DBSession:
             .filter(vm.VisaAssignment.sherpa_name == sherpa_name)
             .all()
         )
+    
+    def get_visa_assignment_info(self, zone_ids):
+        return (
+            self.session.query(vm.VisaAssignment)
+            .filter(vm.VisaAssignment.zone_id == any_(zone_ids))
+            .all()
+        )
 
     def get_all_visa_assignments(self):
         return self.session.query(vm.VisaAssignment).all()
@@ -1079,7 +1086,7 @@ class DBSession:
             "waiting_entities": jsonable_encoder(waiting_entities),
         }
 
-        return response
+        return response           
 
     def get_super_user(self, name: str) -> um.SuperUser:
         return (

@@ -714,3 +714,27 @@ async def generate_code_for_remote_terminal(
             )          
 
     return {"code": code_for_remote_terminal}
+
+@router.get("/get_visa_assignment_time/{zone_name}")
+async def get_visa_assignment_time(
+    zone_name: str,
+    user_name=Depends(dpd.get_user_from_header),
+):
+    time_diff = 0
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    valid_zone_ids = [zone_name + "_station", zone_name + "_lane"]
+
+    with DBSession(engine=ccm.engine) as dbsession:
+        visa_info = dbsession.get_visa_assignment_info(valid_zone_ids)
+        if visa_info:
+            response = utils_util.get_table_as_dict(vm.VisaAssignment, visa_info[0])
+
+    if response:
+        visa_held_time = utils_util.str_to_ts(response["created_at"])
+        current_time = time.time()
+        time_diff = current_time - visa_held_time
+
+
+    return time_diff
