@@ -935,10 +935,10 @@ class DBSession:
         ).all()
         all_log_levels = self.session.query(func.distinct(mm.Notifications.log_level)).all()
         for log_level in all_log_levels:
-            if log_level in skip_log_levels:
+            if log_level[0] in skip_log_levels:
                 continue
             for mod in all_distinct_modules:
-                if mod in skip_modules:
+                if mod[0] in skip_modules:
                     continue
                 temp = (
                     self.session.query(mm.Notifications)
