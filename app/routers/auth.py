@@ -16,6 +16,7 @@ import models.user_models as um
 import utils.util as utils_util
 import utils.config_utils as cu
 import core.common as ccm
+import utils.fleet_utils as fu
 
 
 router = APIRouter(
@@ -43,7 +44,7 @@ async def login(user_login: rqm.UserLogin, request: Request):
         user_query = {"name": user_login.name, "hashed_password": hashed_password}
         user_details = fm_mongo.get_frontend_user_details(user_query)
         if user_details is None:
-            dpd.raise_error("Unknown requester", 401)
+            dpd.raise_error("Invalid credentials", 401)
 
         if hashed_password == cu.DefaultFrontendUser.admin["hashed_password"]:
             with DBSession(engine=ccm.engine) as dbsession:
@@ -59,9 +60,11 @@ async def login(user_login: rqm.UserLogin, request: Request):
         if user_details.get("expiry_interval") and user_details["role"] == "viewer":
             expiry_interval = user_details["expiry_interval"]
 
+        fleet_names = fu.get_all_fleets_list_as_per_user(user_login.name)
+
         response = {
             "access_token": dpd.generate_jwt_token(user_login.name, expiry_interval=expiry_interval),
-            "user_details": {"user_name": user_login.name, "role": user_details["role"], "fleet_names": user_details["fleet_names"]},
+            "user_details": {"user_name": user_login.name, "role": user_details["role"], "fleet_names": fleet_names},
             "static_files_auth": {
                 "username": os.getenv("ATI_STATIC_AUTH_USERNAME"),
                 "password": os.getenv("ATI_STATIC_AUTH_PASSWORD"),
@@ -162,8 +165,10 @@ async def add_edit_user_details(
                     f"Cannot change role for default frontend_user {default_admin_username}"
                 )
             
-            if frontend_user_details.fleet_names is not None:
+            if frontend_user_details.fleet_names is not None and user_details_db["role"] != "support":
                 user_details_db["fleet_names"] = frontend_user_details.fleet_names
+            else:
+                user_details_db["fleet_names"] = []
 
             user_details_db["role"] = frontend_user_details.role
             collection.find_one_and_replace(user_query, user_details_db)

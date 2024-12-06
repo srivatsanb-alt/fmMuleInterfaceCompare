@@ -23,6 +23,7 @@ import app.routers.dependencies as dpd
 import utils.util as utils_util
 import core.common as ccm
 import core.constants as cc
+import utils.fleet_utils as fu
 
 
 router = APIRouter(
@@ -40,17 +41,17 @@ async def site_info(user_name=Depends(dpd.get_user_from_header)):
         software_compatability = dbsession.get_compatability_info()
         compatible_sherpa_versions = software_compatability.info.get("sherpa_versions", [])
 
+    fleet_names = fu.get_all_fleets_list_as_per_user(user_name)
+
     timezone = os.environ["PGTZ"]
     fm_tag = os.environ["FM_TAG"]
 
     with FMMongo() as fm_mongo:
-        user_query = {"name": user_name}
-        user_details_db = fm_mongo.get_frontend_user_details(user_query)
         simulator_config = fm_mongo.get_document_from_fm_config("simulator")
         low_battery_config = fm_mongo.get_document_from_fm_config("low_battery")
 
     response = {
-        "fleet_names": user_details_db["fleet_names"],
+        "fleet_names": fleet_names,
         "timezone": timezone,
         "software_version": fm_tag,
         "compatible_sherpa_versions": compatible_sherpa_versions,
@@ -84,10 +85,7 @@ async def master_data(
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    with FMMongo() as fm_mongo:
-        user_query = {"name": user_name}
-        user_details_db = fm_mongo.get_frontend_user_details(user_query)
-        fleet_names = user_details_db["fleet_names"]
+    fleet_names = fu.get_all_fleets_list_as_per_user(user_name)
 
     with DBSession(engine=ccm.engine) as dbsession:
         #fleet_names = dbsession.get_all_fleet_names()

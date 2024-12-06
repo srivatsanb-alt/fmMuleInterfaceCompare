@@ -367,6 +367,8 @@ async def delete_fleet(
             async with aioredis.Redis.from_url(os.getenv("FM_REDIS_URI")) as aredis_conn:
                 await fu.update_fleet_conf_in_redis(dbsession, aredis_conn)
 
+            fu.remove_fleet_from_users_details(fleet_name)
+
     except Exception as e:
         dpd.relay_error_details(e)
 

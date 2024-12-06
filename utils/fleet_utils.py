@@ -15,6 +15,7 @@ from sqlalchemy.orm.attributes import flag_modified
 
 # ati code imports
 from models.db_session import DBSession
+from models.mongo_client import FMMongo
 import models.fleet_models as fm
 import models.visa_models as vm
 import models.misc_models as mm
@@ -741,3 +742,16 @@ async def update_fleet_conf_in_redis(dbsession: DBSession, aredis_conn):
     await aredis_conn.set("all_sherpas", json.dumps(all_sherpa_names))
     await aredis_conn.set("all_fleet_names", json.dumps(all_fleet_names))
     await aredis_conn.set("send_conf_to_mfm_unix_dt", time.time())
+
+
+def get_all_fleets_list_as_per_user(user_name):
+    with FMMongo() as fm_mongo:
+        user_query = {"name": user_name}
+        user_details_db = fm_mongo.get_frontend_user_details(user_query)
+    
+    if user_details_db['role'] == 'support':
+        with DBSession() as dbsession:
+            fleet_names = dbsession.get_all_fleet_names()
+            return fleet_names
+    else:
+        return user_details_db['fleet_names']
