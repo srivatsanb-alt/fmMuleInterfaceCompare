@@ -14,6 +14,7 @@ from rq.command import send_shutdown_command
 # ati code imports
 from utils import fleet_utils as fu
 from models.db_session import DBSession
+from models.mongo_client import FMMongo
 import models.fleet_models as fm
 import models.request_models as rqm
 import app.routers.dependencies as dpd
@@ -367,7 +368,8 @@ async def delete_fleet(
             async with aioredis.Redis.from_url(os.getenv("FM_REDIS_URI")) as aredis_conn:
                 await fu.update_fleet_conf_in_redis(dbsession, aredis_conn)
 
-            fu.remove_fleet_from_users_details(fleet_name)
+        with FMMongo() as fm_mongo:
+            fm_mongo.remove_fleet_from_users_details(fleet_name)
 
     except Exception as e:
         dpd.relay_error_details(e)

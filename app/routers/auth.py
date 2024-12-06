@@ -145,7 +145,7 @@ async def add_edit_user_details(
                 ).hexdigest(),
                 "name": frontend_user_details.name,
                 "role": frontend_user_details.role,
-                "fleet_names": frontend_user_details.fleet_names,
+                "fleet_names": frontend_user_details.fleet_names if frontend_user_details.role != "support" else [],
             }
             collection.insert_one(temp)
             logging.getLogger("configure_fleet").info(
@@ -234,6 +234,7 @@ async def get_all_frontend_users(
     # Modify each user detail to replace hashed_password with "Confidential"
     for user_detail in all_user_details:
         user_detail["hashed_password"] = "Confidential"
+        user_detail["fleet_names"] = fu.get_all_fleets_list_as_per_user(user_detail["name"])
 
     return all_user_details
 
