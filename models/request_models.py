@@ -12,6 +12,8 @@ from models.base_models import JsonMixin
 class HitchReq(BaseModel):
     hitch: bool
 
+class LifterActuatorReq(BaseModel):
+    lift: bool
 
 class DirectionEnum(str, Enum):
     send = "send"
@@ -147,6 +149,7 @@ class ReachedReq(SherpaReq):
 
 class SherpaPeripheralsReq(SherpaReq):
     auto_hitch: HitchReq = None
+    lifter_actuator: LifterActuatorReq = None
     conveyor: ConveyorReq = None
     dispatch_button: DispatchButtonReq = None
     speaker: SpeakerReq = None
@@ -529,6 +532,7 @@ class TerminateTripReq(FMReq):
 class PeripheralsReq(FMReq):
     endpoint: str = "peripherals"
     auto_hitch: Optional[HitchReq]
+    lifter_actuator: Optional[LifterActuatorReq]
     conveyor: Optional[ConveyorReq]
     speaker: Optional[SpeakerReq]
     indicator: Optional[IndicatorReq]
