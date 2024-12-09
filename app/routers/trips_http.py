@@ -260,6 +260,7 @@ async def trip_status_pg_with_type(
             response = dbsession.get_scheduled_trips(
                 trip_status_req.filter_fleets,
                 valid_status,
+                trip_status_req.filter_status,
                 trip_status_req.search_txt,
                 trip_status_req.sort_field,
                 trip_status_req.sort_order,

@@ -537,15 +537,16 @@ class DBSession:
         return trips
     
     def get_scheduled_trips(
-            self,
-            filter_fleets,
-            valid_status,
-            search_text,
-            sort_field="id",
-            sort_order="desc",
-            page=0,
-            limit=50,
-        ):
+        self,
+        filter_fleets,
+        valid_status,
+        filter_status,
+        search_text,
+        sort_field="id",
+        sort_order="desc",
+        page=0,
+        limit=50,
+    ):
         skip = page * limit
 
         booking_ids = (
@@ -567,7 +568,19 @@ class DBSession:
             .subquery()
         )
 
-        base_query = self.session.query(tm.Trip).filter(tm.Trip.id.in_(first_trip_subquery))
+        base_query = (
+            self.session.query(
+                tm.Trip.booking_id,
+                tm.Trip.route,
+                tm.Trip.priority,
+                tm.Trip.fleet_name,
+                tm.Trip.trip_metadata,
+                tm.Trip.booked_by,
+                tm.Trip.status,
+                tm.Trip.booking_time,
+            )
+            .filter(tm.Trip.id.in_(first_trip_subquery))
+        )
 
         if filter_fleets and filter_fleets != "[]":
             base_query = base_query.filter(tm.Trip.fleet_name.in_(filter_fleets))
@@ -586,7 +599,13 @@ class DBSession:
         current_datetime = datetime.datetime.now()
         paused_trips = (
             self.session.query(tm.PausedTrip)
-            .filter(func.jsonb_extract_path_text(tm.PausedTrip.trip_metadata, "scheduled_end_time").cast(DateTime) > current_datetime)
+            .filter(
+                func.jsonb_extract_path_text(
+                    tm.PausedTrip.trip_metadata, "scheduled_end_time"
+                )
+                .cast(DateTime)
+                > current_datetime
+            )
             .all()
         )
 
@@ -601,11 +620,26 @@ class DBSession:
         trips = base_query.all()
 
         trips = jsonable_encoder(trips)
+
+        for trip in trips:
+            trip_metadata = trip.get("trip_metadata", {})
+            scheduled_start_time = str_to_dt(trip_metadata.get("scheduled_start_time"))
+            if check_if_timestamp_has_passed(scheduled_start_time):
+                trip["status"] = "active"
+            else:
+                trip["status"] = "scheduled"
+
+
+            trip["progress"] = self.get_trip_progress(str(trip["booking_id"]))
+
+
         paused_trips = jsonable_encoder(paused_trips)
         trips.extend(paused_trips)
 
-        for item in trips:
-            item["progress"] = self.get_trip_progress(str(item["id"]))
+        if filter_status and filter_status != "[]":
+            filtered_trips = [trip for trip in trips if trip["status"] in filter_status]
+            count = len(filtered_trips)  
+            trips = filtered_trips
 
         pages = int(count / limit) if (count % limit == 0) else int(count / limit + 1)
 
@@ -618,7 +652,6 @@ class DBSession:
             "sort_order": sort_order,
         }
         return trips
-
 
     def get_trips_with_timestamp_and_status(self, from_dt, to_dt, valid_status):
         return (
