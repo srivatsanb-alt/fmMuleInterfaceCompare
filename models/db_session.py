@@ -587,9 +587,7 @@ class DBSession:
 
         if search_text and search_text.strip() != "":
             columns_to_search = [
-                tm.Trip.sherpa_name,
-                tm.Trip.status,
-                tm.Trip.booked_by,
+                tm.Trip.route
             ]
             conditions = or_(
                 *[column.ilike(f"%{search_text}%") for column in columns_to_search]
