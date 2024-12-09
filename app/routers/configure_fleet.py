@@ -293,9 +293,25 @@ async def add_fleet(
             logging.getLogger("uvicorn").info(f"Uploaded file: {file_path} successfully")
             
             with zipfile.ZipFile(file_path, 'r') as zip_ref:
-                zip_ref.extractall(os.getenv("FM_STATIC_DIR"))
+                zip_ref.extractall(dir_to_save)
+                
+                required_files = {"webui_map.png", "webui_map.json", "waypoints.json"}
+                extracted_files = set(zip_ref.namelist())
+                
+                missing_files = required_files - extracted_files
+                if missing_files:
+                    os.remove(file_path)
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"The uploaded ZIP file is missing required files: {', '.join(missing_files)}"
+                    )
         except Exception as e:
-            dpd.raise_error(f"Couldn't upload file: {file_path}, exception: {e}")
+            if os.path.exists(file_path):
+                os.remove(file_path)
+            raise HTTPException(
+                status_code=500,
+                detail=f"Couldn't upload file: {file_path}, exception: {e}"
+            )
 
     with DBSession(engine=ccm.engine) as dbsession:
         all_fleets = dbsession.get_all_fleet_names()
