@@ -108,8 +108,12 @@ async def master_data(
         if all_stations:
             station_list = [station.name for station in all_stations]
 
+        if all_sherpas:
+            sherpa_type_list = list(set([sherpa.sherpa_type for sherpa in all_sherpas]))
+
         response.update({"sherpa_list": sherpa_list})
         response.update({"station_list": station_list})
+        response.update({"sherpa_type_list": sherpa_type_list})
 
         sample_sherpa_status = {}
         all_sherpa_status = dbsession.get_all_sherpa_status()
