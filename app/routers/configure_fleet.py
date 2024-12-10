@@ -1,14 +1,12 @@
 import os
-import time
 import logging
 import glob
-from fastapi import APIRouter, Depends, Form, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, Form, File, UploadFile
 from fastapi.encoders import jsonable_encoder
 import shutil
-import json
 import hashlib
 import aioredis
-import zipfile
+
 from rq.command import send_shutdown_command
 
 # ati code imports
@@ -21,6 +19,7 @@ import app.routers.dependencies as dpd
 from utils.comms import close_websocket_for_sherpa
 import utils.log_utils as lu
 import core.common as ccm
+from utils.fleet_utils import save_map, strip_archive_extensions
 
 
 # manages the overall configuration of fleet by- deleting sherpa, fleet, map, station; update map.
@@ -269,7 +268,7 @@ async def add_fleet(
     customer: str = Form(...),
     map_name: str = Form(...),
     map_file: UploadFile = File(...),
-    user_name=Depends(dpd.get_user_from_header),
+    # user_name=Depends(dpd.get_user_from_header),
 ):
 
     response = {}
@@ -280,38 +279,13 @@ async def add_fleet(
         map_name=map_name,
     )
 
-    if not user_name:
-        dpd.raise_error("Unknown requester", 401)
+    # if not user_name:
+    #     dpd.raise_error("Unknown requester", 401)
 
-    if map_file:
-        dir_to_save = os.getenv("FM_STATIC_DIR")
-        os.makedirs(dir_to_save, exist_ok=True)
-        file_path = os.path.join(dir_to_save, map_file.filename)
-        try:
-            with open(file_path, "wb") as f:
-                f.write(await map_file.read())
-            logging.getLogger("uvicorn").info(f"Uploaded file: {file_path} successfully")
-            
-            with zipfile.ZipFile(file_path, 'r') as zip_ref:
-                zip_ref.extractall(dir_to_save)
-                
-                required_files = {"webui_map.png", "webui_map.json", "waypoints.json"}
-                extracted_files = set(zip_ref.namelist())
-                
-                missing_files = required_files - extracted_files
-                if missing_files:
-                    os.remove(file_path)
-                    raise HTTPException(
-                        status_code=400,
-                        detail=f"The uploaded ZIP file is missing required files: {', '.join(missing_files)}"
-                    )
-        except Exception as e:
-            if os.path.exists(file_path):
-                os.remove(file_path)
-            raise HTTPException(
-                status_code=500,
-                detail=f"Couldn't upload file: {file_path}, exception: {e}"
-            )
+    file_name = strip_archive_extensions(map_file.filename)
+    if map_file and file_name != fleet_name:
+        dpd.raise_error("Map file name and fleet name should match", 400)
+    await save_map(map_file)
 
     with DBSession(engine=ccm.engine) as dbsession:
         all_fleets = dbsession.get_all_fleet_names()
