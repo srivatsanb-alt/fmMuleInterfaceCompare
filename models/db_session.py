@@ -590,7 +590,10 @@ class DBSession:
                 tm.Trip.route
             ]
             conditions = or_(
-                *[column.ilike(f"%{search_text}%") for column in columns_to_search]
+                *[
+                    func.array_to_string(column, ',').ilike(f"%{search_text}%")
+                    for column in columns_to_search
+                ]
             )
             base_query = base_query.filter(conditions)
 
