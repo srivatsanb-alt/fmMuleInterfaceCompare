@@ -653,7 +653,7 @@ class Handlers:
                 if task is None:
                     raise ValueError(f"Invalid task request {task_}")
                 prop = [task]
-                logging.getLogger().info("Got a custom task for station: {curr_station.name} , task: {task}")
+                logging.getLogger().info(f"Got a custom task for station: {curr_station.name} , task: {task}")
 
         if StationProperties.LIFT in prop:
             self.add_lift_start_to_ongoing_trip(ongoing_trip, sherpa)
