@@ -53,3 +53,5 @@ class StationProperties(enum.Enum):
     DISPATCH_OPTIONAL = 11
     LIFT = 12
     UNLIFT = 13
+
+CustomTasks = [StationProperties.LIFT.name, StationProperties.UNLIFT.name]

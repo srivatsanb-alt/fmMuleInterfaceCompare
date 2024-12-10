@@ -1535,6 +1535,9 @@ class Handlers:
                 return
             self.handle_conveyor(ongoing_trip, sherpa, curr_station, req.conveyor)
 
+        elif req.lifter_actuator:
+            self.handle_lifter_actuator(ongoing_trip, sherpa, curr_station, req.lifter_actuator)
+
         return response
 
     def handle_peripheral_error(

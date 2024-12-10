@@ -18,6 +18,7 @@ import models.visa_models as vm
 import models.request_models as rqm
 import models.fleet_models as fm
 import models.misc_models as mm
+import models.base_models as bm
 from models.db_session import DBSession
 import app.routers.dependencies as dpd
 import utils.util as utils_util
@@ -57,7 +58,8 @@ async def site_info(user_name=Depends(dpd.get_user_from_header)):
         "compatible_sherpa_versions": compatible_sherpa_versions,
         "simulator": simulator_config["simulate"],
         "sherpa_types": [i.lower() for i in list(cc.SherpaTypes.__dict__.keys()) if not i.startswith("__")],
-        "battery_threshold": low_battery_config["battery_thresh"]
+        "battery_threshold": low_battery_config["battery_thresh"],
+        "station_properties": bm.CustomTasks
     }
 
     return response
