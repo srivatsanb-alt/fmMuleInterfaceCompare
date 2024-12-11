@@ -51,6 +51,11 @@ class TripState:
     WAITING_STATION_CONV_RECEIVE_END = "waiting_station_conv_receive_end"
     WAITING_STATION_CONV_SEND_START = "waiting_station_conv_send_start"
     WAITING_STATION_CONV_SEND_END = "waiting_station_conv_send_end"
+    WAITING_STATION_LIFT_START = "waiting_station_lift_start"
+    WAITING_STATION_LIFT_END = "waiting_station_lift_end"
+    WAITING_STATION_UNLIFT_START = "waiting_station_unlift_start"
+    WAITING_STATION_UNLIFT_END = "waiting_station_unlift_end"
+
 
 
 class TripAnalytics(Base, TimestampMixin):
@@ -81,6 +86,17 @@ class SavedRoutes(Base):
     fleet_name = Column(String)
     other_info = Column(JSONB)
 
+class PausedTrip(Base, TimestampMixin):
+    __tablename__ = "paused_trips"
+    id = Column(Integer, primary_key=True, index=True)
+    booking_id = Column(Integer, index=True)
+    route = Column(ARRAY(String))
+    priority = Column(Float)
+    fleet_name = Column(String)
+    trip_metadata = Column(JSONB)
+    booked_by = Column(String)
+    booking_time = Column(DateTime)
+    status = Column(String, default="paused")
 
 class Trip(Base, TimestampMixin):
     __tablename__ = "trips"
@@ -322,6 +338,14 @@ class OngoingTrip(Base, TimestampMixin):
         self.states.clear()
         flag_modified(self, "states")
 
+    def get_task(self):
+        metadata = self.trip.trip_metadata
+        tasks = metadata.get("tasks")
+        task = None
+        if tasks is not None:
+            task = tasks.get(str(self.next_idx_aug))
+        return task
+
     def get_basic_trip_description(self):
         trip_metadata = self.trip.trip_metadata
 
@@ -339,6 +363,7 @@ class OngoingTrip(Base, TimestampMixin):
             "route": self.trip.augmented_route,
             "curr_station": self.curr_station(),
             "next_station": self.next_station(),
+            "task": self.get_task(),
             "waiting_for": waiting_reason,
             "status": self.trip.status,
             "trip_id": self.trip.id,

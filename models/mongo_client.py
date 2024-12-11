@@ -84,6 +84,15 @@ class FMMongo:
         if temp is None:
             raise Exception(f"No {collection_name} config")
         return temp
+    
+    def remove_fleet_from_users_details(self, fleet_name_to_remove):
+        fu_db = self.mongo_client.get_database("frontend_users")
+        col = self.get_collection("user_details", fu_db)
+        
+        col.update_many(
+            {"fleet_names": fleet_name_to_remove},
+            {"$pull": {"fleet_names": fleet_name_to_remove}}
+        )
 
     def get_frontend_user_details(self, user_query):
         fu_db = self.mongo_client.get_database("frontend_users")

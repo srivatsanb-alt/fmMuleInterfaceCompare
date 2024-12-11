@@ -3,8 +3,9 @@ import os
 
 # ati code imports
 from models.mongo_client import FMMongo
+from models.db_session import DBSession
 
-AVAILABLE_UPGRADES = ["4.0", "4.2", "4.21", "4.22"]
+AVAILABLE_UPGRADES = ["4.0", "4.2", "4.21", "4.22", "4.3"]
 
 
 def read_fm_config_toml_and_update_mongo_db(fm_mongo, fc_db):
@@ -94,6 +95,19 @@ class MongoUpgrade:
         mule_config_doc["mule_site_config"].update({"redis": redis_conf})
         mule_config_col.find_one_and_replace({}, mule_config_doc)
         print("Updated FM redis conf to mule_config")
+
+    def upgrade_to_4_3(self, fm_mongo):
+        with DBSession() as db_session:
+            fleet_names = db_session.get_all_fleet_names()
+        fu_db = fm_mongo.get_database("frontend_users")
+        user_details_col = fm_mongo.get_collection("user_details", fu_db)
+          
+        result = user_details_col.update_many(
+            {},  
+            { "$set": { "fleet_names": fleet_names } } 
+        )
+        print(f"Modified {result.modified_count} documents to add `fleet_names` field.")
+
     
 
 def upgrade_mongo_schema():

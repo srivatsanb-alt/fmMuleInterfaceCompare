@@ -131,3 +131,4 @@ dmypy.json
 # psql backup, mongo 
 static/psql
 static/mongo
+static
