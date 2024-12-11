@@ -101,6 +101,7 @@ async def master_data(
         response = {}
         sherpa_list = []
         station_list = []
+        sherpa_type_list = []
 
         if all_sherpas:
             sherpa_list = [sherpa.name for sherpa in all_sherpas]
