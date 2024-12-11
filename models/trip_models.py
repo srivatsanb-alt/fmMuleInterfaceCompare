@@ -95,6 +95,7 @@ class PausedTrip(Base, TimestampMixin):
     fleet_name = Column(String)
     trip_metadata = Column(JSONB)
     booked_by = Column(String)
+    booking_time = Column(DateTime)
     status = Column(String, default="paused")
 
 class Trip(Base, TimestampMixin):

@@ -99,6 +99,7 @@ class DBSession:
         booking_id=None,
         fleet_name=None,
         booked_by=None,
+        booking_time=None,
     ):
         paused_trip = tm.PausedTrip(
             route=route,
@@ -107,6 +108,7 @@ class DBSession:
             fleet_name=fleet_name,
             booking_id=booking_id,
             booked_by=booked_by,
+            booking_time=booking_time
         )
         self.add_to_session(paused_trip)
         return paused_trip

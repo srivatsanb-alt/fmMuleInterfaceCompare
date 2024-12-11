@@ -689,6 +689,7 @@ async def pause_schedule_trip(
                 trip.booking_id,
                 trip.fleet_name,
                 trip.booked_by,
+                trip.booking_time,
             ) 
             for t in trips:
                 if t.status == "booked":
