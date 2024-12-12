@@ -690,15 +690,15 @@ async def pause_schedule_trip(
                 trip.fleet_name,
                 trip.booked_by,
                 trip.booking_time,
-            ) 
+            )
             for t in trips:
                 if t.status == "booked":
                     delete_booked_trip_req: rqm.DeleteBookedTripReq = rqm.DeleteBookedTripReq(
                     booking_id=pause_schedule_trip_req.booking_id, trip_id=t.id)
                     response = await dpd.process_req_with_response(None, delete_booked_trip_req, user_name)
-
-                t.trip_metadata["scheduled_end_time"] = trip.trip_metadata["scheduled_start_time"]
-                flag_modified(t, "trip_metadata")
+                if t.status in tm.ACTIVE_TRIP_STATUS:
+                    t.trip_metadata["scheduled_end_time"] = trip.trip_metadata["scheduled_start_time"]
+                    flag_modified(t, "trip_metadata")
         else:
             if pause_trip is None:
                 dpd.raise_error(f"Trip with booking id:{pause_schedule_trip_req.booking_id} is not paused")
