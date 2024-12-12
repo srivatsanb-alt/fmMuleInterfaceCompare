@@ -268,7 +268,7 @@ async def add_fleet(
     customer: str = Form(...),
     map_name: str = Form(...),
     map_file: UploadFile = File(...),
-    # user_name=Depends(dpd.get_user_from_header),
+    user_name=Depends(dpd.get_user_from_header),
 ):
 
     response = {}
@@ -279,8 +279,8 @@ async def add_fleet(
         map_name=map_name,
     )
 
-    # if not user_name:
-    #     dpd.raise_error("Unknown requester", 401)
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
 
     file_name = strip_archive_extensions(map_file.filename)
     if map_file and file_name != fleet_name:
