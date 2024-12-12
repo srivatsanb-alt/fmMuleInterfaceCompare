@@ -91,6 +91,7 @@ def modify_trip_metadata(trip_metadata):
     old_scheduled_start_time = trip_metadata.get("scheduled_start_time", None)
     old_scheduled_time_period = int(trip_metadata.get("scheduled_time_period", None))
     if old_num_days_to_repeat != '0':
+
         trip_metadata["scheduled_start_time"] = update_to_current_date(trip_metadata["scheduled_start_time"])
         trip_metadata["scheduled_end_time"] = update_to_current_date(trip_metadata["scheduled_end_time"])
     else:
@@ -109,7 +110,9 @@ def modify_trip_metadata(trip_metadata):
 def update_to_current_date(timestamp_str):
     dt = datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M:%S")
     current_date = date.today()
-    updated_dt = dt.replace(year=current_date.year, month=current_date.month, day=current_date.day)
-    updated_timestamp = updated_dt.strftime("%Y-%m-%d %H:%M:%S")    
-    return updated_timestamp
+    if dt.date() <= current_date:
+        updated_dt = dt.replace(year=current_date.year, month=current_date.month, day=current_date.day)
+        updated_timestamp = updated_dt.strftime("%Y-%m-%d %H:%M:%S")    
+        return updated_timestamp
+    return timestamp_str
 
