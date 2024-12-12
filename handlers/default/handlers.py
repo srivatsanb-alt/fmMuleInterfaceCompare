@@ -1433,8 +1433,13 @@ class Handlers:
             raise ValueError(
                 f"Trip information mismatch(trip_id: {req.trip_id} trip_leg_id: {req.trip_leg_id}) ongoing_trip_id: {ongoing_trip.trip_id} ongoing_trip_leg_id: {ongoing_trip.trip_leg_id}"
             )
+        curr_station_name = ongoing_trip.next_station()
+        if curr_station_name is None:
+            raise ValueError(
+                f"Invalid reached message, not expecting any more reached messages for trip_id: {req.trip_id}"
+           )
 
-        curr_station: fm.Station = self.dbsession.get_station(ongoing_trip.next_station())
+        curr_station: fm.Station = self.dbsession.get_station(curr_station_name)
 
         if not utils_util.are_poses_close(curr_station.pose, req.destination_pose):
             raise ValueError(
