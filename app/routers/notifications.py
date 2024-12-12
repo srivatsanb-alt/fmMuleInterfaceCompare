@@ -13,6 +13,7 @@ from models.db_session import DBSession
 import utils.log_utils as lu
 import models.misc_models as mm
 import core.common as ccm
+from utils.fleet_utils import get_all_fleets_list_as_per_user
 
 
 # module regarding the http and websocket notifications(read, write, delete)
@@ -132,7 +133,7 @@ async def notifications(
     rw = [
         asyncio.create_task(reader(websocket, token, x_real_ip)),
         asyncio.create_task(
-            writer(websocket, token, x_real_ip),
+            writer(websocket, token, x_real_ip, user_name),
         ),
         asyncio.create_task(
             dpd.check_token_expiry(token, x_real_ip),
@@ -156,12 +157,15 @@ async def reader(websocket, token, x_real_ip):
             raise e
 
 
-async def writer(websocket, token, x_real_ip):
+async def writer(websocket, token, x_real_ip, user_name):
     redis = aioredis.Redis.from_url(
         os.getenv("FM_REDIS_URI"), max_connections=10, decode_responses=True
     )
     psub = redis.pubsub()
     await psub.subscribe("channel:notifications")
+
+    
+    fleet_names = get_all_fleets_list_as_per_user(user_name)
 
     while True:
         message = await psub.get_message(ignore_subscribe_messages=True, timeout=5)
@@ -169,23 +173,25 @@ async def writer(websocket, token, x_real_ip):
             try:
                 notification = {}
                 data = ast.literal_eval(message["data"])
-                all_modules = data.get("modules", [])
+                fleet_name = data.get("fleet_name", None)
+                if fleet_name in fleet_names or fleet_name is None:
+                    all_modules = data.get("modules", [])
 
-                for module in all_modules:
-                    notification[module] = {}
+                    for module in all_modules:
+                        notification[module] = {}
 
-                for id, details in data.items():
-                    # have to if particular notification was check cleared_by the user, decide to send or not send that notification
-                    if id in all_modules:
-                        for notif_id, notif_val in details.items():
-                            if token not in notif_val.get("cleared_by", []):
-                                notif_val["num_actions"] = len(notif_val["cleared_by"])
-                                del notif_val["cleared_by"]
-                                notification[module].update({notif_id: notif_val})
-                    else:
-                        notification.update({id: details})
+                    for id, details in data.items():
+                        # have to if particular notification was check cleared_by the user, decide to send or not send that notification
+                        if id in all_modules:
+                            for notif_id, notif_val in details.items():
+                                if token not in notif_val.get("cleared_by", []):
+                                    notif_val["num_actions"] = len(notif_val["cleared_by"])
+                                    del notif_val["cleared_by"]
+                                    notification[module].update({notif_id: notif_val})
+                        else:
+                            notification.update({id: details})
 
-                await websocket.send_json(notification)
+                    await websocket.send_json(notification)
 
             except Exception as e:
                 logger.error(

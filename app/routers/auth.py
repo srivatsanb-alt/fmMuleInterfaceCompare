@@ -16,6 +16,7 @@ import models.user_models as um
 import utils.util as utils_util
 import utils.config_utils as cu
 import core.common as ccm
+import utils.fleet_utils as fu
 
 
 
@@ -44,7 +45,7 @@ async def login(user_login: rqm.UserLogin, request: Request):
         user_query = {"name": user_login.name, "hashed_password": hashed_password}
         user_details = fm_mongo.get_frontend_user_details(user_query)
         if user_details is None:
-            dpd.raise_error("Unknown requester", 401)
+            dpd.raise_error("Invalid credentials", 401)
 
         if hashed_password == cu.DefaultFrontendUser.admin["hashed_password"]:
             with DBSession(engine=ccm.engine) as dbsession:
@@ -60,9 +61,11 @@ async def login(user_login: rqm.UserLogin, request: Request):
         if user_details.get("expiry_interval") and user_details["role"] == "viewer":
             expiry_interval = user_details["expiry_interval"]
 
+        fleet_names = fu.get_all_fleets_list_as_per_user(user_login.name)
+
         response = {
             "access_token": dpd.generate_jwt_token(user_login.name, expiry_interval=expiry_interval),
-            "user_details": {"user_name": user_login.name, "role": user_details["role"]},
+            "user_details": {"user_name": user_login.name, "role": user_details["role"], "fleet_names": fleet_names},
             "static_files_auth": {
                 "username": os.getenv("ATI_STATIC_AUTH_USERNAME"),
                 "password": os.getenv("ATI_STATIC_AUTH_PASSWORD"),
@@ -106,6 +109,13 @@ async def add_edit_user_details(
         operating_user_query = {"name": user_name}
         operating_user_details = fm_mongo.get_frontend_user_details(operating_user_query)
         operating_user_role = operating_user_details["role"]
+        operating_user_hashed_password = operating_user_details["hashed_password"]
+        operating_user_provided_hashed_password = hashlib.sha256(
+            frontend_user_details.operating_user_password.encode("utf-8")
+        ).hexdigest()
+
+        if operating_user_hashed_password != operating_user_provided_hashed_password:
+            dpd.raise_error(f"Wrong password", 409)
 
         if getattr(rqm.FrontendUserRoles, operating_user_role) < getattr(
             rqm.FrontendUserRoles, frontend_user_details.role
@@ -136,6 +146,7 @@ async def add_edit_user_details(
                 ).hexdigest(),
                 "name": frontend_user_details.name,
                 "role": frontend_user_details.role,
+                "fleet_names": frontend_user_details.fleet_names if frontend_user_details.role != "support" else [],
             }
             collection.insert_one(temp)
             logging.getLogger("configure_fleet").info(
@@ -154,6 +165,11 @@ async def add_edit_user_details(
                 dpd.raise_error(
                     f"Cannot change role for default frontend_user {default_admin_username}"
                 )
+            
+            if frontend_user_details.fleet_names is not None and user_details_db["role"] != "support":
+                user_details_db["fleet_names"] = frontend_user_details.fleet_names
+            else:
+                user_details_db["fleet_names"] = []
 
             user_details_db["role"] = frontend_user_details.role
             collection.find_one_and_replace(user_query, user_details_db)
@@ -219,6 +235,7 @@ async def get_all_frontend_users(
     # Modify each user detail to replace hashed_password with "Confidential"
     for user_detail in all_user_details:
         user_detail["hashed_password"] = "Confidential"
+        user_detail["fleet_names"] = fu.get_all_fleets_list_as_per_user(user_detail["name"])
 
     return all_user_details
 

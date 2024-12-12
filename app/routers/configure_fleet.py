@@ -1,25 +1,25 @@
 import os
-import time
 import logging
 import glob
-from fastapi import APIRouter, Depends, Form, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, Form, File, UploadFile
 from fastapi.encoders import jsonable_encoder
 import shutil
-import json
 import hashlib
 import aioredis
-import zipfile
+
 from rq.command import send_shutdown_command
 
 # ati code imports
 from utils import fleet_utils as fu
 from models.db_session import DBSession
+from models.mongo_client import FMMongo
 import models.fleet_models as fm
 import models.request_models as rqm
 import app.routers.dependencies as dpd
 from utils.comms import close_websocket_for_sherpa
 import utils.log_utils as lu
 import core.common as ccm
+from utils.fleet_utils import save_map, strip_archive_extensions
 
 
 # manages the overall configuration of fleet by- deleting sherpa, fleet, map, station; update map.
@@ -282,19 +282,10 @@ async def add_fleet(
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    if map_file:
-        dir_to_save = os.getenv("FM_STATIC_DIR")
-        os.makedirs(dir_to_save, exist_ok=True)
-        file_path = os.path.join(dir_to_save, map_file.filename)
-        try:
-            with open(file_path, "wb") as f:
-                f.write(await map_file.read())
-            logging.getLogger("uvicorn").info(f"Uploaded file: {file_path} successfully")
-            
-            with zipfile.ZipFile(file_path, 'r') as zip_ref:
-                zip_ref.extractall(os.getenv("FM_STATIC_DIR"))
-        except Exception as e:
-            dpd.raise_error(f"Couldn't upload file: {file_path}, exception: {e}")
+    file_name = strip_archive_extensions(map_file.filename)
+    if map_file and file_name != fleet_name:
+        dpd.raise_error("Map file name and fleet name should match", 400)
+    await save_map(map_file)
 
     with DBSession(engine=ccm.engine) as dbsession:
         all_fleets = dbsession.get_all_fleet_names()
@@ -366,6 +357,9 @@ async def delete_fleet(
 
             async with aioredis.Redis.from_url(os.getenv("FM_REDIS_URI")) as aredis_conn:
                 await fu.update_fleet_conf_in_redis(dbsession, aredis_conn)
+
+        with FMMongo() as fm_mongo:
+            fm_mongo.remove_fleet_from_users_details(fleet_name)
 
     except Exception as e:
         dpd.relay_error_details(e)

@@ -96,17 +96,42 @@ def get_all_alert_notifications(dbsession):
     all_alerts = dbsession.get_notifications_filter_with_log_level(
         mm.NotificationLevels.alert
     )
+    alert_msg_list = []
     alert_msg = {}
     alert_msg["type"] = mm.NotificationLevels.alert
     alert_msg["modules"] = []
-    for alert in all_alerts:
-        if alert.module not in alert_msg["modules"]:
-            alert_msg[alert.module] = {}
-            alert_msg["modules"].append(alert.module)
-        alert_msg[alert.module].update(
-            {alert.id: get_table_as_dict(mm.Notifications, alert)}
-        )
-    return alert_msg
+
+    fleet_names = dbsession.get_all_fleet_names()
+
+    for fleet_name in fleet_names:
+        fleet_alert_msg = {
+            "type": mm.NotificationLevels.alert,
+            "modules": [],
+            "fleet_name": fleet_name,
+        }
+
+        for alert in all_alerts:
+            if fleet_name in alert.entity_names:  
+                if alert.module not in fleet_alert_msg["modules"]:
+                    fleet_alert_msg[alert.module] = {}
+                    fleet_alert_msg["modules"].append(alert.module)
+                fleet_alert_msg[alert.module].update(
+                    {alert.id: get_table_as_dict(mm.Notifications, alert)}
+                )
+        if fleet_alert_msg["modules"]:
+            alert_msg_list.append(fleet_alert_msg)
+        for alert in all_alerts:
+            if not any(elem in alert.entity_names for elem in fleet_names):
+                if alert.module not in alert_msg["modules"]:
+                    alert_msg[alert.module] = {}
+                    alert_msg["modules"].append(alert.module)
+                    alert_msg["fleet_name"] = 'all_hands_map'
+                alert_msg[alert.module].update(
+                    {alert.id: get_table_as_dict(mm.Notifications, alert)}
+                )
+    if len(alert_msg_list) == 0 or alert_msg["modules"]:
+        alert_msg_list.append(alert_msg)
+    return alert_msg_list
 
 
 def send_fleet_level_notifications(dbsession, fleet_name):
@@ -173,7 +198,8 @@ def send_periodic_updates():
             send_status_update(visa_msg)
 
             all_alerts = get_all_alert_notifications(dbsession)
-            send_notification(all_alerts)
+            for alert_msg in all_alerts:
+                send_notification(alert_msg)
 
             dbsession.session.expire_all()
             time.sleep(2)

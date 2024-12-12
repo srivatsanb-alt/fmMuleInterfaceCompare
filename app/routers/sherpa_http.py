@@ -11,6 +11,7 @@ from fastapi_limiter.depends import RateLimiter
 
 # ati code imports
 from models.db_session import DBSession
+from models.mongo_client import FMMongo
 import models.fleet_models as fm
 import models.misc_models as mm
 import models.request_models as rqm
@@ -44,6 +45,10 @@ async def basic_info(sherpa_name: str = Depends(dpd.get_sherpa)):
     if not sherpa_name:
         dpd.raise_error("Unknown requester", 401)
 
+    with FMMongo() as fm_mongo:
+        low_battery_config = fm_mongo.get_document_from_fm_config("low_battery")
+        battery_threshold = low_battery_config["battery_thresh"]
+
     with DBSession(engine=ccm.engine) as dbsession:
         sherpa: fm.Sherpa = dbsession.get_sherpa(sherpa_name)
         response = {
@@ -55,6 +60,7 @@ async def basic_info(sherpa_name: str = Depends(dpd.get_sherpa)):
             "fm_time": (datetime.now(pytz.timezone(os.getenv("PGTZ")))).strftime(
                 "%A, %d %b %Y %X %Z"
             ),
+            "soc_threshold": battery_threshold
         }
 
     return response
