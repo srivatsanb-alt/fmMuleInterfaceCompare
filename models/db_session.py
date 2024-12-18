@@ -141,13 +141,6 @@ class DBSession:
             .filter(vm.VisaAssignment.sherpa_name == sherpa_name)
             .all()
         )
-    
-    def get_visa_assignment_info(self, zone_ids):
-        return (
-            self.session.query(vm.VisaAssignment)
-            .filter(vm.VisaAssignment.zone_id == any_(zone_ids))
-            .all()
-        )
 
     def get_all_visa_assignments(self):
         return self.session.query(vm.VisaAssignment).all()
@@ -878,6 +871,26 @@ class DBSession:
     def delete_notification(self, id):
         self.session.query(mm.Notifications).filter(mm.Notifications.id == id).delete()
 
+    def get_error_alerts_which_are_not_acknowledged(self, threshold_time):
+        return (
+            self.session.query(mm.Notifications)
+            .filter(
+                or_(
+                    mm.Notifications.log_level == mm.NotificationLevels.alert,
+                    mm.Notifications.log_level == mm.NotificationLevels.stale_alert_or_action
+                )
+            )
+            .filter(
+                or_(
+                    mm.Notifications.created_at > datetime.datetime.now() - datetime.timedelta(seconds=threshold_time),
+                    mm.Notifications.updated_at > datetime.datetime.now() - datetime.timedelta(seconds=threshold_time),
+                )
+            )
+            .filter(mm.Notifications.module == mm.NotificationModules.errors)
+            .filter(mm.Notifications.cleared_by == [])
+            .all()
+        )
+    
     def get_compatability_info(self):
         return self.session.query(mm.SoftwareCompatability).one_or_none()
 
