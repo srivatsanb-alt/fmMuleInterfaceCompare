@@ -132,3 +132,5 @@ dmypy.json
 static/psql
 static/mongo
 static
+
+!fm_dashboard/static
