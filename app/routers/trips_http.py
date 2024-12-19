@@ -692,7 +692,7 @@ async def pause_schedule_trip(
                 trip.booking_time,
             )
             for t in trips:
-                if t.status == "booked":
+                if t.status in tm.YET_TO_START_TRIP_STATUS:
                     delete_booked_trip_req: rqm.DeleteBookedTripReq = rqm.DeleteBookedTripReq(
                     booking_id=pause_schedule_trip_req.booking_id, trip_id=t.id)
                     response = await dpd.process_req_with_response(None, delete_booked_trip_req, user_name)
