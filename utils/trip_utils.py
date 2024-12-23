@@ -1,4 +1,4 @@
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 import math
 
 from models.trip_models import Trip, OngoingTrip, TripAnalytics
@@ -89,21 +89,49 @@ def get_trip_analytics(trip_analytics: TripAnalytics):
 def modify_trip_metadata(trip_metadata):
     old_num_days_to_repeat = trip_metadata.get("num_days_to_repeat", None)
     old_scheduled_start_time = trip_metadata.get("scheduled_start_time", None)
-    old_scheduled_time_period = int(trip_metadata.get("scheduled_time_period", None))
-    if old_num_days_to_repeat != '0':
+    old_scheduled_time_period = int(trip_metadata.get("scheduled_time_period", 0))
+    current_date = date.today()
 
-        trip_metadata["scheduled_start_time"] = update_to_current_date(trip_metadata["scheduled_start_time"])
-        trip_metadata["scheduled_end_time"] = update_to_current_date(trip_metadata["scheduled_end_time"])
-    else:
-        start = util.str_to_dt(old_scheduled_start_time)
+    def update_scheduled_times():
+        trip_metadata["scheduled_start_time"] = update_to_current_date(trip_metadata["actual_start_time"])
+        trip_metadata["scheduled_end_time"] = update_to_current_date(trip_metadata["actual_end_time"])
+
+    def update_repeat_count():
+        trip_metadata["repeat_count"] = str(
+            (util.str_to_dt(trip_metadata["scheduled_start_time"]) - util.str_to_dt(trip_metadata["actual_start_time"])).days + 1
+        )
+
+    def calculate_next_scheduled_time(start_time):
+        start = util.str_to_dt(start_time)
         unix_time = int(start.timestamp())
-        end = datetime.now()
-        difference = end - start 
+        difference = datetime.now() - start
         seconds = difference.total_seconds()
-        unix_timestamp = (unix_time + math.ceil(seconds/old_scheduled_time_period)*old_scheduled_time_period)
-        dt_object = datetime.fromtimestamp(unix_timestamp)
-        dt_str = util.dt_to_str(dt_object)
-        trip_metadata["scheduled_start_time"] = dt_str
+        next_unix_timestamp = unix_time + math.ceil(seconds / old_scheduled_time_period) * old_scheduled_time_period
+        next_datetime = datetime.fromtimestamp(next_unix_timestamp)
+        return util.dt_to_str(next_datetime)
+
+    if old_num_days_to_repeat != '0':
+        actual_start_time = util.str_to_dt(trip_metadata["actual_start_time"]).time()
+        actual_end_time = util.str_to_dt(trip_metadata["actual_end_time"]).time()
+        current_time = datetime.now().time()
+
+        if actual_start_time <= current_time < actual_end_time:
+            if util.str_to_dt(trip_metadata["scheduled_end_time"]).date() != current_date:
+                update_scheduled_times()
+                trip_metadata["scheduled_start_time"] = calculate_next_scheduled_time(trip_metadata["scheduled_start_time"])
+                update_repeat_count()
+            else:
+                trip_metadata["scheduled_start_time"] = calculate_next_scheduled_time(old_scheduled_start_time)
+        else:
+            if util.str_to_dt(trip_metadata["scheduled_end_time"]).time() > current_time:
+                update_scheduled_times()
+                update_repeat_count()
+            else:
+                trip_metadata["scheduled_start_time"] = update_to_next_date(trip_metadata["actual_start_time"])
+                trip_metadata["scheduled_end_time"] = update_to_next_date(trip_metadata["actual_end_time"])
+                update_repeat_count()
+    else:
+        trip_metadata["scheduled_start_time"] = calculate_next_scheduled_time(old_scheduled_start_time)
 
     return trip_metadata
 
@@ -112,7 +140,14 @@ def update_to_current_date(timestamp_str):
     current_date = date.today()
     if dt.date() <= current_date:
         updated_dt = dt.replace(year=current_date.year, month=current_date.month, day=current_date.day)
-        updated_timestamp = updated_dt.strftime("%Y-%m-%d %H:%M:%S")    
-        return updated_timestamp
+        return updated_dt.strftime("%Y-%m-%d %H:%M:%S")
     return timestamp_str
 
+def update_to_next_date(timestamp_str):
+    dt = datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M:%S")
+    current_date = date.today()
+    next_date = current_date + timedelta(days=1)
+    if dt.date() <= current_date:
+        updated_dt = dt.replace(year=next_date.year, month=next_date.month, day=next_date.day)
+        return updated_dt.strftime("%Y-%m-%d %H:%M:%S")
+    return timestamp_str
