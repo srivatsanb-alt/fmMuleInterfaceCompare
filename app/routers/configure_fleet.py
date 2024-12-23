@@ -19,7 +19,7 @@ import app.routers.dependencies as dpd
 from utils.comms import close_websocket_for_sherpa
 import utils.log_utils as lu
 import core.common as ccm
-from utils.fleet_utils import save_map, strip_archive_extensions
+# from utils.fleet_utils import save_map, strip_archive_extensions
 
 
 # manages the overall configuration of fleet by- deleting sherpa, fleet, map, station; update map.
@@ -282,15 +282,14 @@ async def add_fleet(
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
-    file_name = strip_archive_extensions(map_file.filename)
-    if map_file and file_name != fleet_name:
-        dpd.raise_error("Map file name and fleet name should match", 400)
-    await save_map(map_file)
-
     with DBSession(engine=ccm.engine) as dbsession:
         all_fleets = dbsession.get_all_fleet_names()
         new_fleet = False if fleet_name in all_fleets else True
         try:
+            file_name = fu.strip_archive_extensions(map_file.filename)
+            if map_file and file_name != fleet_name:
+                dpd.raise_error("Map file name and fleet name should match", 400)
+            await fu.save_map(map_file)
             fu.FleetUtils.add_map(dbsession, fleet_name)
             fu.FleetUtils.add_fleet(
                 dbsession,

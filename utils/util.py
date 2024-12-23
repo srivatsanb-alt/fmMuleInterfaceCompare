@@ -447,3 +447,17 @@ def list_filtered_directories(starting_directory):
             result[backup] = backup_result
 
     return json.dumps(result, indent=2)
+
+def format_dates(data: dict) -> dict:
+    for key, value in data.items():
+        if isinstance(value, datetime.datetime):
+            data[key] = value.strftime("%d-%b-%Y %H:%M:%S")
+        elif isinstance(value, dict):
+            format_dates(value)
+        elif isinstance(value, str):
+            try:
+                dt = datetime.datetime.strptime(value, "%Y-%m-%d %H:%M:%S")
+                data[key] = dt.strftime("%d-%b-%Y %H:%M:%S")
+            except ValueError:
+                continue
+    return data

@@ -772,68 +772,42 @@ def strip_archive_extensions(filename):
     return os.path.splitext(filename)[0]
 
 async def save_map(map_file):
-    try:
-        dir_to_save = os.getenv("FM_STATIC_DIR")
-        os.makedirs(dir_to_save, exist_ok=True)
-        file_path = os.path.join(dir_to_save, map_file.filename)
-        with open(file_path, "wb") as buffer:
-            buffer.write(await map_file.read())
+    dir_to_save = os.getenv("FM_STATIC_DIR")
+    os.makedirs(dir_to_save, exist_ok=True)
+    file_path = os.path.join(dir_to_save, map_file.filename)
+    with open(file_path, "wb") as buffer:
+        buffer.write(await map_file.read())
 
-        logger.info(f"Attempting to extract archive: {file_path}")
-        logger.info(f"Extraction destination: {dir_to_save}")
+    logger.info(f"Attempting to extract archive: {file_path}")
+    logger.info(f"Extraction destination: {dir_to_save}")
 
-        file_name = strip_archive_extensions(map_file.filename)
-        required_files = {f"{file_name}/map/webui_map.png", f"{file_name}/map/webui_map.json", f"{file_name}/map/waypoints.json"}
+    file_name = strip_archive_extensions(map_file.filename)
+    required_files = {f"{file_name}/map/webui_map.png", f"{file_name}/map/webui_map.json", f"{file_name}/map/waypoints.json"}
 
-        if zipfile.is_zipfile(file_path):
-            logger.info("Detected ZIP archive")
-            archive_class = zipfile.ZipFile
-            is_zip = True
-        elif tarfile.is_tarfile(file_path):
-            logger.info("Detected TAR archive")
-            archive_class = tarfile.open
-            is_zip = False
-        else:
-            logger.info(f"Unrecognized archive type: {file_path}")
-            os.remove(file_path)
-            raise HTTPException(
-                status_code=400, 
-                detail="Uploaded file is not a valid ZIP or TAR archive"
-            )
-
-        with archive_class(file_path, 'r' if is_zip else 'r:*') as archive:
-            archive_files = set(archive.namelist() if is_zip else archive.getnames())
-            missing_files = required_files - archive_files
-            if missing_files:
-                logger.info(f"Missing files: {missing_files}")
-                os.remove(file_path)
-                raise HTTPException(
-                    status_code=400, 
-                    detail=f"The uploaded archive is missing required files: {', '.join(missing_files)}"
-                )
-            archive.extractall(dir_to_save)
-            logger.info(f"Successfully extracted files to {dir_to_save}")
+    if zipfile.is_zipfile(file_path):
+        logger.info("Detected ZIP archive")
+        archive_class = zipfile.ZipFile
+        is_zip = True
+    elif tarfile.is_tarfile(file_path):
+        logger.info("Detected TAR archive")
+        archive_class = tarfile.open
+        is_zip = False
+    else:
+        logger.info(f"Unrecognized archive type: {file_path}")
         os.remove(file_path)
+        raise ValueError(
+            "Uploaded file is not a valid ZIP or TAR archive"
+        )
 
-    except (zipfile.BadZipFile, tarfile.TarError):
-        logger.info("Corrupted archive file")
-        if os.path.exists(file_path):
+    with archive_class(file_path, 'r' if is_zip else 'r:*') as archive:
+        archive_files = set(archive.namelist() if is_zip else archive.getnames())
+        missing_files = required_files - archive_files
+        if missing_files:
+            logger.info(f"Missing files: {missing_files}")
             os.remove(file_path)
-        raise HTTPException(
-            status_code=400, 
-            detail="The uploaded archive file is corrupted"
-        )
-    except PermissionError:
-        logger.info("Permission error during file handling")
-        raise HTTPException(
-            status_code=500, 
-            detail="Permission denied when handling the uploaded file"
-        )
-    except Exception as e:
-        logger.info(f"Unexpected error during file upload: {str(e)}")
-        if os.path.exists(file_path):
-            os.remove(file_path)
-        raise HTTPException(
-            status_code=500, 
-            detail=f"Couldn't upload file: {str(e)}"
-        )
+            raise ValueError(
+                f"The uploaded archive is missing required files: {missing_files}"
+            )
+        archive.extractall(dir_to_save)
+        logger.info(f"Successfully extracted files to {dir_to_save}")
+    os.remove(file_path)

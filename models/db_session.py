@@ -3,7 +3,6 @@ import os
 from typing import List
 from sqlalchemy import func, any_, or_, and_, extract, text
 from sqlalchemy.orm import Session
-from sqlalchemy.types import DateTime
 from fastapi.encoders import jsonable_encoder
 
 # ati code imports
@@ -600,17 +599,20 @@ class DBSession:
             base_query = base_query.filter(conditions)
 
         current_datetime = datetime.datetime.now()
-        paused_trips = (
-            self.session.query(tm.PausedTrip)
-            .filter(
-                func.jsonb_extract_path_text(
-                    tm.PausedTrip.trip_metadata, "scheduled_end_time"
-                )
-                .cast(DateTime)
-                > current_datetime
-            )
-            .all()
-        )
+
+        paused_trips = self.session.query(tm.PausedTrip).all()
+
+        for paused_trip in paused_trips:
+            trip_metadata = paused_trip.trip_metadata
+            if trip_metadata.get("num_days_to_repeat") != "0":
+                actual_end_time = str_to_dt(trip_metadata["actual_end_time"]) + datetime.timedelta(days=(int(trip_metadata["num_days_to_repeat"]) - 1))
+                if actual_end_time < current_datetime:
+                    self.session.delete(paused_trip)
+            else:
+                scheduled_end_time = str_to_dt(trip_metadata["scheduled_end_time"])
+                if scheduled_end_time < current_datetime:
+                    self.session.delete(paused_trip)
+
 
         count = base_query.count() + len(paused_trips)
 
