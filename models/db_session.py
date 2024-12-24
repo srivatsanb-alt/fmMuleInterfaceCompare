@@ -871,19 +871,13 @@ class DBSession:
     def delete_notification(self, id):
         self.session.query(mm.Notifications).filter(mm.Notifications.id == id).delete()
 
-    def get_error_alerts_which_are_not_acknowledged(self, threshold_time):
+    def get_error_alerts_which_are_not_acknowledged(self):
         return (
             self.session.query(mm.Notifications)
             .filter(
                 or_(
                     mm.Notifications.log_level == mm.NotificationLevels.alert,
                     mm.Notifications.log_level == mm.NotificationLevels.stale_alert_or_action
-                )
-            )
-            .filter(
-                or_(
-                    mm.Notifications.created_at > datetime.datetime.now() - datetime.timedelta(seconds=threshold_time),
-                    mm.Notifications.updated_at > datetime.datetime.now() - datetime.timedelta(seconds=threshold_time),
                 )
             )
             .filter(mm.Notifications.module == mm.NotificationModules.errors)
