@@ -600,7 +600,24 @@ class DBSession:
 
         current_datetime = datetime.datetime.now()
 
-        paused_trips = self.session.query(tm.PausedTrip).all()
+        paused_trips = self.session.query(tm.PausedTrip)
+        
+        if filter_fleets and filter_fleets != "[]":
+            paused_trips = paused_trips.filter(tm.PausedTrip.fleet_name.in_(filter_fleets))
+
+        if search_text and search_text.strip() != "":
+            columns_to_search = [
+                tm.PausedTrip.route
+            ]
+            conditions = or_(
+                *[
+                    func.array_to_string(column, ',').ilike(f"%{search_text}%")
+                    for column in columns_to_search
+                ]
+            )
+            paused_trips = paused_trips.filter(conditions)
+
+        paused_trips = paused_trips.all()
 
         for paused_trip in paused_trips:
             trip_metadata = paused_trip.trip_metadata
