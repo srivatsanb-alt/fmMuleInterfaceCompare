@@ -600,7 +600,12 @@ class DBSession:
 
         current_datetime = datetime.datetime.now()
 
-        paused_trips = self.session.query(tm.PausedTrip).all()
+        paused_trips = self.session.query(tm.PausedTrip)
+        
+        if filter_fleets and filter_fleets != "[]":
+            paused_trips = paused_trips.filter(tm.PausedTrip.fleet_name.in_(filter_fleets))
+
+        paused_trips = paused_trips.all()
 
         for paused_trip in paused_trips:
             trip_metadata = paused_trip.trip_metadata
