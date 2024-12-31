@@ -6,8 +6,9 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm.attributes import flag_modified
 import asyncio
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, date
 import io
+import math
 
 # ati code imports
 import app.routers.dependencies as dpd
@@ -15,7 +16,7 @@ import models.request_models as rqm
 import models.trip_models as tm
 import models.misc_models as mm
 from models.db_session import DBSession
-from utils.util import str_to_dt
+from utils.util import str_to_dt, dt_to_str
 import utils.trip_utils as tu
 import core.constants as cc
 import utils.util as utils_util
@@ -115,7 +116,12 @@ async def delete_pending_trip(
 
     with DBSession(engine=ccm.engine) as dbsession:
         trips = dbsession.get_trip_with_booking_id(booking_id)
+        paused_trip = dbsession.get_paused_trip_with_booking_id(booking_id)
 
+        if paused_trip:
+            dbsession.session.delete(paused_trip)
+            return response
+        
         if not trips:
             dpd.raise_error("no trip with the given booking_id")
 
@@ -235,7 +241,7 @@ async def trip_status_pg_with_type(
         dpd.raise_error("Unknown requester", 401)
 
     valid_status = []
-    if type == "yet_to_start":
+    if type == "yet_to_start" or type == "scheduled":
         valid_status = tm.YET_TO_START_TRIP_STATUS
     elif type == "completed":
         valid_status = tm.COMPLETED_TRIP_STATUS
@@ -255,19 +261,31 @@ async def trip_status_pg_with_type(
             trip_status_req.from_dt = str_to_dt(trip_status_req.from_dt)
             trip_status_req.to_dt = str_to_dt(trip_status_req.to_dt)
 
-        response = dbsession.get_trips_with_timestamp_and_status_pagination(
-            trip_status_req.from_dt,
-            trip_status_req.to_dt,
-            trip_status_req.filter_fleets,
-            valid_status,
-            trip_status_req.filter_sherpa_names,
-            trip_status_req.filter_status,
-            trip_status_req.search_txt,
-            trip_status_req.sort_field,
-            trip_status_req.sort_order,
-            trip_status_req.page_no,
-            trip_status_req.rec_limit,
-        )
+        if type == "scheduled":
+            response = dbsession.get_scheduled_trips(
+                trip_status_req.filter_fleets,
+                valid_status,
+                trip_status_req.filter_status,
+                trip_status_req.search_txt,
+                trip_status_req.sort_field,
+                trip_status_req.sort_order,
+                trip_status_req.page_no,
+                trip_status_req.rec_limit,
+            )
+        else:
+            response = dbsession.get_trips_with_timestamp_and_status_pagination(
+                trip_status_req.from_dt,
+                trip_status_req.to_dt,
+                trip_status_req.filter_fleets,
+                valid_status,
+                trip_status_req.filter_sherpa_names,
+                trip_status_req.filter_status,
+                trip_status_req.search_txt,
+                trip_status_req.sort_field,
+                trip_status_req.sort_order,
+                trip_status_req.page_no,
+                trip_status_req.rec_limit,
+            )
 
     return response
 
@@ -600,22 +618,37 @@ async def export_all_analytics_data(
             del trip_analytic["legs"]
         
             for trip_analytic_leg in trip_analytic_legs:
-                processed_trip_data = {} 
-                processed_trip_data["trip_id"] = trip_analytic.get("id")
-                processed_trip_data.update(trip_analytic)
+                processed_trip_data = {
+                    "trip_id": trip_analytic.get("id"),
+                    **trip_analytic,
+                }
                 del processed_trip_data["id"]
-                trip_analytic_leg_details = {}
-                if trip_analytic_leg.get("sherpa_name"):
-                    del trip_analytic_leg["sherpa_name"]
-                del trip_analytic_leg["trip_id"]
-                trip_analytic_leg_details = trip_analytic_leg
+
+                trip_analytic_leg_details = {
+                    **trip_analytic_leg,
+                    "leg_route_length": trip_analytic_leg.pop("route_length", None),
+                    "leg_start_time": trip_analytic_leg.pop("start_time", None),
+                    "leg_end_time": trip_analytic_leg.pop("end_time", None),
+                    "leg_created_at": trip_analytic_leg.pop("created_at", None),
+                    "leg_updated_at": trip_analytic_leg.pop("updated_at", None),
+                }
+                if "sherpa_name" in trip_analytic_leg_details:
+                    del trip_analytic_leg_details["sherpa_name"]
+                if "trip_id" in trip_analytic_leg_details:
+                    del trip_analytic_leg_details["trip_id"]
+
                 processed_trip_data.update(trip_analytic_leg_details)
+
+                processed_trip_data = utils_util.format_dates(processed_trip_data)
                 data.append(processed_trip_data)
             if len(trip_analytic_legs) == 0:
-                processed_trip_data = {}
-                processed_trip_data["trip_id"] = trip_analytic.get("id")
-                processed_trip_data.update(trip_analytic)
+                processed_trip_data = {
+                    "trip_id": trip_analytic.get("id"),
+                    **trip_analytic,
+                }
                 del processed_trip_data["id"]
+
+                processed_trip_data = utils_util.format_dates(processed_trip_data)
                 data.append(processed_trip_data)
              
         # Convert to DataFrame
@@ -631,3 +664,72 @@ async def export_all_analytics_data(
         media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=detail_analytics.csv"},
     )
+
+
+@router.post("/pause_resume_schedule_trip")
+async def pause_schedule_trip(
+    pause_schedule_trip_req: rqm.PauseResumeScheduleTripReq,
+    user_name=Depends(dpd.get_user_from_header),
+):
+    response = {}
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    with DBSession(engine=ccm.engine) as dbsession:
+        trips : tm.Trip = dbsession.get_trips_with_booking_id(pause_schedule_trip_req.booking_id)
+
+        if trips is None:
+            dpd.raise_error(f"Trip with booking id:{pause_schedule_trip_req.booking_id} does not exist")
+        
+        trip : tm.Trip = trips[-1]
+
+        if trip.scheduled is False:
+            dpd.raise_error(
+                f"Trip with booking id:{pause_schedule_trip_req.booking_id} is not scheduled"
+            )
+
+        pause_trip = dbsession.get_paused_trip_with_booking_id(pause_schedule_trip_req.booking_id)
+        
+        if pause_schedule_trip_req.pause:
+            if pause_trip is not None:
+                dpd.raise_error(f"Trip with booking id:{pause_schedule_trip_req.booking_id} is already paused")
+            
+            new_trip_metadata = trip.trip_metadata
+            if new_trip_metadata.get("total_trip_progress"):
+                del new_trip_metadata["total_trip_progress"]
+            dbsession.create_paused_trip(
+                trip.route,
+                trip.priority,
+                new_trip_metadata,
+                trip.booking_id,
+                trip.fleet_name,
+                trip.booked_by,
+                trip.booking_time,
+            )
+            for t in trips:
+                if t.status in tm.YET_TO_START_TRIP_STATUS:
+                    delete_booked_trip_req: rqm.DeleteBookedTripReq = rqm.DeleteBookedTripReq(
+                    booking_id=pause_schedule_trip_req.booking_id, trip_id=t.id)
+                    response = await dpd.process_req_with_response(None, delete_booked_trip_req, user_name)
+                if t.status in tm.ONGOING_TRIP_STATUS:
+                    t.trip_metadata["scheduled_end_time"] = trip.trip_metadata["scheduled_start_time"]
+                    flag_modified(t, "trip_metadata")
+        else:
+            if pause_trip is None:
+                dpd.raise_error(f"Trip with booking id:{pause_schedule_trip_req.booking_id} is not paused")
+
+            new_trip_metadata = pause_trip.trip_metadata
+            new_trip_metadata = tu.modify_trip_metadata(new_trip_metadata)
+
+            new_trip: tm.Trip = dbsession.create_trip(
+                pause_trip.route,
+                pause_trip.priority,
+                new_trip_metadata,
+                pause_trip.booking_id,
+                pause_trip.fleet_name,
+                pause_trip.booked_by,
+            )
+            dbsession.create_pending_trip(new_trip.id)
+            dbsession.delete_paused_trip(pause_trip)
+
+    return response

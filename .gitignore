@@ -131,3 +131,6 @@ dmypy.json
 # psql backup, mongo 
 static/psql
 static/mongo
+static
+
+!fm_dashboard/static

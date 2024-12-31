@@ -12,6 +12,8 @@ from models.base_models import JsonMixin
 class HitchReq(BaseModel):
     hitch: bool
 
+class LifterActuatorReq(BaseModel):
+    lift: bool
 
 class DirectionEnum(str, Enum):
     send = "send"
@@ -62,6 +64,7 @@ class SherpaType(str, Enum):
     lifter = "lifter"
     pallet_mover = "pallet_mover"
     pivot = "pivot"
+    sherpa_xt = "sherpa_xt"
 
 
 class ConveyorReq(BaseModel):
@@ -146,6 +149,7 @@ class ReachedReq(SherpaReq):
 
 class SherpaPeripheralsReq(SherpaReq):
     auto_hitch: HitchReq = None
+    lifter_actuator: LifterActuatorReq = None
     conveyor: ConveyorReq = None
     dispatch_button: DispatchButtonReq = None
     speaker: SpeakerReq = None
@@ -303,6 +307,8 @@ class FrontendUserDetails(ClientReq):
     name: str
     role: str
     password: Optional[str] = None
+    fleet_names: Optional[List[str]] = None
+    operating_user_password: Optional[str] = None
 
 
 class AddEditSherpaReq(ClientReq):
@@ -352,6 +358,9 @@ class BookingReq(ClientReq):
     trips: List[TripMsg]
     type: str = MessageType.BOOKING
 
+class PauseResumeScheduleTripReq(ClientReq):
+    booking_id: int
+    pause: bool
 
 class DeleteOngoingTripReq(ClientReq):
     booking_id: int
@@ -523,6 +532,7 @@ class TerminateTripReq(FMReq):
 class PeripheralsReq(FMReq):
     endpoint: str = "peripherals"
     auto_hitch: Optional[HitchReq]
+    lifter_actuator: Optional[LifterActuatorReq]
     conveyor: Optional[ConveyorReq]
     speaker: Optional[SpeakerReq]
     indicator: Optional[IndicatorReq]

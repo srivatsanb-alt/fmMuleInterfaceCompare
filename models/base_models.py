@@ -51,3 +51,7 @@ class StationProperties(enum.Enum):
     CONVEYOR = 9
     CHUTE = 10
     DISPATCH_OPTIONAL = 11
+    LIFT = 12
+    UNLIFT = 13
+
+CustomTasks = [StationProperties.LIFT.name, StationProperties.UNLIFT.name]

@@ -400,3 +400,64 @@ def extract_and_sort_release_dates(data_dict):
     sorted_items = sorted(release_dates.items(), key=lambda x: x[1], reverse=True)
 
     return sorted_items
+
+def build_directory_tree(directory):
+    tree = {"name": os.path.basename(directory)}
+
+    try:
+        contents = os.listdir(directory)
+    except PermissionError:
+        tree["error"] = f"No permission to access '{directory}'"
+        return tree
+
+    tree["directories"] = []
+    tree["files"] = []
+
+    for item in contents:
+        item_path = os.path.join(directory, item)
+
+        if os.path.isdir(item_path):
+            if item in ["logs", "plugin_logs"]:
+                tree["directories"].append(build_directory_tree(item_path))
+        elif os.path.isfile(item_path):
+            tree["files"].append(item)
+
+    return tree
+
+def list_filtered_directories(starting_directory):
+    data_backup_dir = os.path.join(starting_directory)
+    result = {}
+
+    for backup in os.listdir(data_backup_dir):
+        backup_path = os.path.join(data_backup_dir, backup)
+
+        if os.path.isdir(backup_path):
+            backup_result = {
+                "date": backup,
+                "logs": None,
+                "plugin_logs": None
+            }
+
+            for dir_name in ["logs", "plugin_logs"]:
+                dir_path = os.path.join(backup_path, dir_name)
+
+                if os.path.exists(dir_path):
+                    backup_result[dir_name] = build_directory_tree(dir_path)
+
+            result[backup] = backup_result
+
+    return json.dumps(result, indent=2)
+
+def format_dates(data: dict) -> dict:
+    for key, value in data.items():
+        if isinstance(value, datetime.datetime):
+            data[key] = value.strftime("%d-%b-%Y %H:%M:%S")
+        elif isinstance(value, dict):
+            format_dates(value)
+        elif isinstance(value, str):
+            try:
+                dt = datetime.datetime.strptime(value, "%Y-%m-%d %H:%M:%S")
+                data[key] = dt.strftime("%d-%b-%Y %H:%M:%S")
+            except ValueError:
+                continue
+    return data

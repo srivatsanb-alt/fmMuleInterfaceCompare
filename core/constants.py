@@ -64,8 +64,9 @@ class SherpaTypes:
     LIFTER = "lifter"
     PALLET_MOVER = "pallet_mover"
     PIVOT = "pivot"
+    SHERPA_XT = "sherpa_xt"
 
-ListofSherpaTypes = [SherpaTypes.TUG, SherpaTypes.TUG_LITE, SherpaTypes.LITE, SherpaTypes.LIFTER, SherpaTypes.PALLET_MOVER]
+ListofSherpaTypes = [SherpaTypes.TUG, SherpaTypes.TUG_LITE, SherpaTypes.LITE, SherpaTypes.LIFTER, SherpaTypes.PALLET_MOVER, SherpaTypes.SHERPA_XT]
 
 class SoundVolume:
     LOW = 0
