@@ -875,10 +875,7 @@ class DBSession:
         return (
             self.session.query(mm.Notifications)
             .filter(
-                or_(
-                    mm.Notifications.log_level == mm.NotificationLevels.alert,
-                    mm.Notifications.log_level == mm.NotificationLevels.stale_alert_or_action
-                )
+                    mm.Notifications.log_level == mm.NotificationLevels.alert
             )
             .filter(mm.Notifications.module == mm.NotificationModules.errors)
             .filter(mm.Notifications.cleared_by == [])
