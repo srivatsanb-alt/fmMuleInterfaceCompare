@@ -778,6 +778,16 @@ class DBSession:
     def add_notification(
         self, entity_names, log, log_level, module, repetitive=False, repetition_freq=None
     ):
+        notifications = (
+            self.session.query(mm.Notifications)
+            .filter(mm.Notifications.entity_names == entity_names)
+            .filter(mm.Notifications.log == log)
+            .filter(mm.Notifications.log_level != log_level)
+            .all()
+        )
+        for notification in notifications:
+           self.delete_notification(notification.id)
+            
         new_notification = mm.Notifications(
             entity_names=entity_names,
             log=log,
