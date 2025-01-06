@@ -291,7 +291,7 @@ async def add_fleet(
                 file_name = fu.strip_archive_extensions(map_file.filename)
                 if map_file and file_name != fleet_name:
                     dpd.raise_error("Map file name and fleet name should match", 400)
-                    await fu.save_map(map_file)
+                await fu.save_map(map_file)
             fu.FleetUtils.add_map(dbsession, fleet_name)
             fu.FleetUtils.add_fleet(
                 dbsession,
