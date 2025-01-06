@@ -887,7 +887,12 @@ class DBSession:
             .filter(
                     mm.Notifications.log_level == mm.NotificationLevels.alert
             )
-            .filter(mm.Notifications.module == mm.NotificationModules.errors)
+            .filter(
+                or_(
+                    mm.Notifications.module == mm.NotificationModules.errors,
+                    mm.Notifications.module == mm.NotificationModules.stoppages
+                    )
+                )
             .filter(mm.Notifications.cleared_by == [])
             .all()
         )
