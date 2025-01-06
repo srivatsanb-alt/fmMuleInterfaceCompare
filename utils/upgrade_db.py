@@ -26,7 +26,8 @@ AVAILABLE_UPGRADES = [
     "4.1",
     "4.15",
     "4.2",
-    "4.21"
+    "4.21",
+    "4.3"
 ]
 NO_SCHEMA_CHANGES = ["3.0", "3.01", "3.1"]
 
@@ -189,6 +190,22 @@ class DBUpgrade:
                 print("column post_action_initiated added to ongoing_trips table")
             else:
                 print("column post_action_initiated already present in sherpa table")
+
+    def upgrade_to_4_3(self):
+        with get_engine(os.getenv("FM_DATABASE_URI")).connect() as conn:
+            try:
+                conn.execute("commit")
+                result = conn.execute("SELECT enum_range(NULL::stationproperties)")
+                enum_values_str = result.fetchall()[0][0]
+                new_values = ["LIFT", "UNLIFT", "CONVEYOR_PARK"]
+                for value in new_values:
+                    if value not in enum_values_str:
+                        conn.execute(f"ALTER TYPE stationproperties ADD VALUE '{value}'")
+                        print(f"Added '{value}' to stationproperties enum.")
+                    else:
+                        print(f"'{value}' already exists in stationproperties enum.")
+            except Exception as e:
+                print(f"Unable to add values to stationproperties enum, exception: {e}")
 
 
 def upgrade_db_schema():

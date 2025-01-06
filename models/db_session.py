@@ -89,6 +89,28 @@ class DBSession:
         trip_leg = tm.TripLeg(trip_id, curr_station, next_station)
         self.add_to_session(trip_leg)
         return trip_leg
+    
+    def create_paused_trip(
+        self,
+        route,
+        priority,
+        metadata=None,
+        booking_id=None,
+        fleet_name=None,
+        booked_by=None,
+        booking_time=None,
+    ):
+        paused_trip = tm.PausedTrip(
+            route=route,
+            priority=priority,
+            trip_metadata=metadata,
+            fleet_name=fleet_name,
+            booking_id=booking_id,
+            booked_by=booked_by,
+            booking_time=booking_time
+        )
+        self.add_to_session(paused_trip)
+        return paused_trip
 
     def get_new_booking_id(self):
         booking_id = self.session.query(func.max(tm.Trip.booking_id)).first()
@@ -344,7 +366,7 @@ class DBSession:
         return self.session.query(tm.Trip).filter(tm.Trip.id == trip_id).one()
 
     def get_trips_with_booking_id(self, booking_id):
-        return self.session.query(tm.Trip).filter(tm.Trip.booking_id == booking_id).all()
+        return self.session.query(tm.Trip).filter(tm.Trip.booking_id == booking_id).order_by(tm.Trip.booking_time.asc()).all()
 
     def get_pending_trip(self, sherpa_name: str):
         pending_trips = (
@@ -505,6 +527,144 @@ class DBSession:
 
         for item in trips:
             item["progress"] = self.get_trip_progress(str(item["id"]))
+        trips = {
+            "trips": trips,
+            "count": count,
+            "limit": limit,
+            "total_pages": pages,
+            "sort_field": sort_field,
+            "sort_order": sort_order,
+        }
+        return trips
+    
+    def get_scheduled_trips(
+        self,
+        filter_fleets,
+        valid_status,
+        filter_status,
+        search_text,
+        sort_field="id",
+        sort_order="desc",
+        page=0,
+        limit=50,
+    ):
+        skip = page * limit
+
+        booking_ids = (
+            self.session.query(tm.Trip.booking_id)
+            .filter(tm.Trip.status.in_(valid_status))
+            .filter(tm.Trip.scheduled.is_(True))
+            .distinct()
+            .all()
+        )
+
+        booking_ids = [bid[0] for bid in booking_ids]
+
+        first_trip_subquery = (
+            self.session.query(tm.Trip.id)
+            .filter(tm.Trip.booking_id.in_(booking_ids))
+            .filter(tm.Trip.scheduled.is_(True))
+            .order_by(tm.Trip.booking_id, tm.Trip.id.asc())
+            .distinct(tm.Trip.booking_id)
+            .subquery()
+        )
+
+        base_query = (
+            self.session.query(
+                tm.Trip.booking_id,
+                tm.Trip.route,
+                tm.Trip.priority,
+                tm.Trip.fleet_name,
+                tm.Trip.trip_metadata,
+                tm.Trip.booked_by,
+                tm.Trip.status,
+                tm.Trip.booking_time,
+            )
+            .filter(tm.Trip.id.in_(first_trip_subquery))
+        )
+
+        if filter_fleets and filter_fleets != "[]":
+            base_query = base_query.filter(tm.Trip.fleet_name.in_(filter_fleets))
+
+        if search_text and search_text.strip() != "":
+            columns_to_search = [
+                tm.Trip.route
+            ]
+            conditions = or_(
+                *[
+                    func.array_to_string(column, ',').ilike(f"%{search_text}%")
+                    for column in columns_to_search
+                ]
+            )
+            base_query = base_query.filter(conditions)
+
+        current_datetime = datetime.datetime.now()
+
+        paused_trips = self.session.query(tm.PausedTrip)
+        
+        if filter_fleets and filter_fleets != "[]":
+            paused_trips = paused_trips.filter(tm.PausedTrip.fleet_name.in_(filter_fleets))
+
+        if search_text and search_text.strip() != "":
+            columns_to_search = [
+                tm.PausedTrip.route
+            ]
+            conditions = or_(
+                *[
+                    func.array_to_string(column, ',').ilike(f"%{search_text}%")
+                    for column in columns_to_search
+                ]
+            )
+            paused_trips = paused_trips.filter(conditions)
+
+        paused_trips = paused_trips.all()
+
+        for paused_trip in paused_trips:
+            trip_metadata = paused_trip.trip_metadata
+            if trip_metadata.get("num_days_to_repeat") != "0":
+                actual_end_time = str_to_dt(trip_metadata["actual_end_time"]) + datetime.timedelta(days=(int(trip_metadata["num_days_to_repeat"]) - 1))
+                if actual_end_time < current_datetime:
+                    self.session.delete(paused_trip)
+            else:
+                scheduled_end_time = str_to_dt(trip_metadata["scheduled_end_time"])
+                if scheduled_end_time < current_datetime:
+                    self.session.delete(paused_trip)
+
+
+        count = base_query.count() + len(paused_trips)
+
+        base_query = (
+            base_query.order_by(text(f"{sort_field} {sort_order}"))
+            .offset(skip)
+            .limit(limit)
+        )
+
+        trips = base_query.all()
+
+        trips = jsonable_encoder(trips)
+
+        for trip in trips:
+            trip_metadata = trip.get("trip_metadata", {})
+            scheduled_start_time = str_to_dt(trip_metadata.get("scheduled_start_time"))
+            if check_if_timestamp_has_passed(scheduled_start_time):
+                trip["status"] = "active"
+            else:
+                trip["status"] = "scheduled"
+
+
+            trip["progress"] = self.get_trip_progress(str(trip["booking_id"]))
+
+
+        paused_trips = jsonable_encoder(paused_trips)
+        trips.extend(paused_trips)
+
+        if filter_status and filter_status != "[]":
+            filtered_trips = [trip for trip in trips if trip["status"] in filter_status]
+            count = len(filtered_trips)  
+            trips = filtered_trips
+
+        pages = int(count / limit) if (count % limit == 0) else int(count / limit + 1)
+
         trips = {
             "trips": trips,
             "count": count,
@@ -775,6 +935,9 @@ class DBSession:
     def delete_ongoing_trip(self, ongoing_trip):
         self.session.delete(ongoing_trip)
 
+    def delete_paused_trip(self, paused_trip):
+        self.session.delete(paused_trip)
+
     def add_notification(
         self, entity_names, log, log_level, module, repetitive=False, repetition_freq=None
     ):
@@ -837,10 +1000,10 @@ class DBSession:
         ).all()
         all_log_levels = self.session.query(func.distinct(mm.Notifications.log_level)).all()
         for log_level in all_log_levels:
-            if log_level in skip_log_levels:
+            if log_level[0] in skip_log_levels:
                 continue
             for mod in all_distinct_modules:
-                if mod in skip_modules:
+                if mod[0] in skip_modules:
                     continue
                 temp = (
                     self.session.query(mm.Notifications)
@@ -1124,5 +1287,12 @@ class DBSession:
         return (
             self.session.query(um.SuperUser)
             .filter(um.SuperUser.hashed_api_key == hashed_api_key)
+            .one_or_none()
+        )
+    
+    def get_paused_trip_with_booking_id(self, booking_id):
+        return (
+            self.session.query(tm.PausedTrip)
+            .filter(tm.PausedTrip.booking_id == booking_id)
             .one_or_none()
         )

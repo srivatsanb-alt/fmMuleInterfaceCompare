@@ -218,33 +218,27 @@ class Handlers:
     def should_recreate_scheduled_trip(self, pending_trip: tm.PendingTrip):
         trip_metadata = pending_trip.trip.trip_metadata
         scheduled_end_time = utils_util.str_to_dt(trip_metadata["scheduled_end_time"])
-
-        if not utils_util.check_if_timestamp_has_passed(scheduled_end_time):
-            new_metadata = pending_trip.trip.trip_metadata
-            time_period = new_metadata["scheduled_time_period"]
-            new_start_time = datetime.datetime.now() + datetime.timedelta(
-                seconds=int(time_period)
-            )
-            if new_start_time > scheduled_end_time:
-                logging.getLogger().info(
-                    f"will not recreate trip {pending_trip.trip.id}, new trip start_time past scheduled_end_time"
-                )
-                return
-
+        new_metadata = pending_trip.trip.trip_metadata
+        time_period = new_metadata["scheduled_time_period"]
+        new_start_time = datetime.datetime.now() + datetime.timedelta(
+            seconds=int(time_period)
+        )
+        
+        if new_start_time < scheduled_end_time:     
             logging.getLogger().info(
                 f"recreating trip {pending_trip.trip.id}, scheduled trip needs to be continued"
             )
-
             new_start_time = utils_util.dt_to_str(new_start_time)
             new_metadata["scheduled_start_time"] = new_start_time
             logging.getLogger().info(f"scheduled new metadata {new_metadata}")
             self.create_new_trip_from_pending_trip(pending_trip, new_metadata)
-        elif not self.maybe_repeat_for_multiple_days(pending_trip):
+        elif self.maybe_repeat_for_multiple_days(pending_trip):
             pass
         else:
             logging.getLogger().info(
-                f"will not recreate trip {pending_trip.trip.id}, scheduled_end_time past current time"
+                f"will not recreate trip {pending_trip.trip.id}, scheduled_end_time greater than subsequent trip's start time"
             )
+       
 
     def assign_new_trip(
         self,
@@ -518,6 +512,27 @@ class Handlers:
         _ = utils_comms.send_req_to_sherpa(self.dbsession, sherpa, sherpa_action_msg)
         self.record_dispatch_wait_start(ongoing_trip)
 
+    def add_lift_start_to_ongoing_trip(
+            self, ongoing_trip: tm.OngoingTrip, sherpa: fm.Sherpa
+    ):
+        ongoing_trip.add_state(tm.TripState.WAITING_STATION_LIFT_START)
+        lift_msg = rqm.PeripheralsReq(
+            lifter_actuator=rqm.LifterActuatorReq(lift=True), 
+            basic_trip_description=ongoing_trip.get_basic_trip_description(),
+        )
+        _ = utils_comms.send_req_to_sherpa(self.dbsession, sherpa, lift_msg)
+
+    def add_unlift_start_to_ongoing_trip(
+            self, ongoing_trip: tm.OngoingTrip, sherpa: fm.Sherpa
+    ):
+        ongoing_trip.add_state(tm.TripState.WAITING_STATION_UNLIFT_START)
+        lift_msg = rqm.PeripheralsReq(
+            lifter_actuator=rqm.LifterActuatorReq(lift=False), 
+            basic_trip_description=ongoing_trip.get_basic_trip_description(),
+        )
+        _ = utils_comms.send_req_to_sherpa(self.dbsession, sherpa, lift_msg)
+
+
     def add_auto_hitch_start_to_ongoing_trip(
         self, ongoing_trip: tm.OngoingTrip, sherpa: fm.Sherpa
     ):
@@ -595,6 +610,25 @@ class Handlers:
         logging.getLogger(sherpa.name).info(
             f"{sherpa.name} reached a station {curr_station.name} with properties {curr_station.properties}"
         )
+
+        prop = curr_station.properties
+        trip_meta_data = ongoing_trip.trip.trip_metadata
+        
+        custom_tasks = trip_meta_data.get("tasks")
+        if custom_tasks is not None:
+            task_ = custom_tasks.get(str(ongoing_trip.next_idx_aug - 1))
+            if task_ is not None:
+                task = getattr(StationProperties, task_.upper(), None)
+                if task is None:
+                    raise ValueError(f"Invalid task request {task_}")
+                prop = [task]
+                logging.getLogger().info(f"Got a custom task for station: {curr_station.name} , task: {task}")
+
+        if StationProperties.LIFT in prop:
+            self.add_lift_start_to_ongoing_trip(ongoing_trip, sherpa)
+
+        if StationProperties.UNLIFT in prop:
+            self.add_unlift_start_to_ongoing_trip(ongoing_trip, sherpa)
 
         if StationProperties.AUTO_HITCH in curr_station.properties:
             self.add_auto_hitch_start_to_ongoing_trip(ongoing_trip, sherpa)
@@ -697,6 +731,39 @@ class Handlers:
         else:
             logging.getLogger().info(
                 f"Ignoring {req.error_device} error message from {sherpa_name}"
+            )
+
+    def resolve_lifter_actuator_error(
+        self,
+        ongoing_trip: tm.OngoingTrip,
+        sherpa: fm.Sherpa,
+        curr_station: fm.Station,
+        req: rqm.SherpaPeripheralsReq,
+    ):
+        sherpa_name = req.source
+        peripheral_info = req.lifter_actuator
+
+        resolved=True
+        if not peripheral_info.lift and tm.TripState.WAITING_STATION_UNLIFT_START in ongoing_trip.states:
+            ongoing_trip.add_state(tm.TripState.WAITING_STATION_UNLIFT_END)
+
+        elif peripheral_info.lift and tm.TripState.WAITING_STATION_LIFT_START in ongoing_trip.states:
+                ongoing_trip.add_state(tm.TripState.WAITING_STATION_LIFT_END)
+        else:
+            logging.getLogger().info(
+                    f"Ignoring {req.error_device} error message from {sherpa_name}"
+            )
+            resolved=False
+
+        if resolved:
+            peripheral_msg = f"Resolving {req.error_device} error for {sherpa_name}, will wait for dispatch button press to continue"
+            logging.getLogger().warning(peripheral_msg)
+            self.add_dispatch_start_to_ongoing_trip(ongoing_trip, sherpa)
+            self.dbsession.add_notification(
+                [sherpa.name, sherpa.fleet.name, sherpa.fleet.customer],
+                peripheral_msg,
+                mm.NotificationLevels.action_request,
+                mm.NotificationModules.trolley,
             )
 
     def delete_ongoing_trip(
@@ -912,6 +979,9 @@ class Handlers:
             booked_by = req.source
             if trip_msg.metadata.get("booked_by") is not None:
                 booked_by = trip_msg.metadata.get("booked_by")
+
+            if trip_msg.tasks:
+                trip_msg.metadata.update({"tasks": trip_msg.tasks})
 
             trip: tm.Trip = self.dbsession.create_trip(
                 trip_msg.route,
@@ -1332,8 +1402,13 @@ class Handlers:
             raise ValueError(
                 f"Trip information mismatch(trip_id: {req.trip_id} trip_leg_id: {req.trip_leg_id}) ongoing_trip_id: {ongoing_trip.trip_id} ongoing_trip_leg_id: {ongoing_trip.trip_leg_id}"
             )
+        curr_station_name = ongoing_trip.next_station()
+        if curr_station_name is None:
+            raise ValueError(
+                f"Invalid reached message, not expecting any more reached messages for trip_id: {req.trip_id}"
+           )
 
-        curr_station: fm.Station = self.dbsession.get_station(ongoing_trip.next_station())
+        curr_station: fm.Station = self.dbsession.get_station(curr_station_name)
 
         if not utils_util.are_poses_close(curr_station.pose, req.destination_pose):
             raise ValueError(
@@ -1433,6 +1508,9 @@ class Handlers:
                 self.handle_conveyor_ack(ongoing_trip, sherpa, curr_station, req.conveyor)
                 return
             self.handle_conveyor(ongoing_trip, sherpa, curr_station, req.conveyor)
+
+        elif req.lifter_actuator:
+            self.handle_lifter_actuator(ongoing_trip, sherpa, curr_station, req.lifter_actuator)
 
         return response
 
@@ -1578,6 +1656,33 @@ class Handlers:
                 mm.NotificationLevels.info,
                 mm.NotificationModules.conveyor,
             )
+
+    def handle_lifter_actuator(
+        self,
+        ongoing_trip: tm.OngoingTrip,
+        sherpa: fm.Sherpa,
+        curr_station: fm.Station,
+        req: rqm.LifterActuatorReq
+    ):
+        # lift
+        if req.lift:
+            if tm.TripState.WAITING_STATION_LIFT_START not in ongoing_trip.states:
+                error = f"lift done by {sherpa.name} without lift command"
+                logging.getLogger(sherpa.name).error(error)
+                raise ValueError(error)
+
+            ongoing_trip.add_state(tm.TripState.WAITING_STATION_LIFT_END)
+            logging.getLogger(sherpa.name).info(f"lift done by {sherpa.name}")
+
+        # unlift
+        else:
+            if tm.TripState.WAITING_STATION_UNLIFT_START not in ongoing_trip.states:
+                error = f"unlift done by {sherpa.name} without unlift command"
+                logging.getLogger(sherpa.name).error(error)
+                raise ValueError(error)
+
+            ongoing_trip.add_state(tm.TripState.WAITING_STATION_UNLIFT_END)
+            logging.getLogger(sherpa.name).info(f"unlift done by {sherpa.name}")
 
     def handle_resource_access(self, req):
         requester, is_sherpa = self.get_resource_requester(req)

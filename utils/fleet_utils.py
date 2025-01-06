@@ -12,9 +12,13 @@ from core.constants import FleetStatus
 from sqlalchemy import or_
 from sqlalchemy.sql import not_
 from sqlalchemy.orm.attributes import flag_modified
+import zipfile
+import tarfile
+from fastapi import HTTPException
 
 # ati code imports
 from models.db_session import DBSession
+from models.mongo_client import FMMongo
 import models.fleet_models as fm
 import models.visa_models as vm
 import models.misc_models as mm
@@ -741,3 +745,69 @@ async def update_fleet_conf_in_redis(dbsession: DBSession, aredis_conn):
     await aredis_conn.set("all_sherpas", json.dumps(all_sherpa_names))
     await aredis_conn.set("all_fleet_names", json.dumps(all_fleet_names))
     await aredis_conn.set("send_conf_to_mfm_unix_dt", time.time())
+
+
+def get_all_fleets_list_as_per_user(user_name):
+    with FMMongo() as fm_mongo:
+        user_query = {"name": user_name}
+        user_details_db = fm_mongo.get_frontend_user_details(user_query)
+    
+    if user_details_db['role'] == 'support':
+        with DBSession() as dbsession:
+            fleet_names = dbsession.get_all_fleet_names()
+            return fleet_names
+    else:
+        return user_details_db['fleet_names']
+    
+
+def strip_archive_extensions(filename):
+    archive_extensions = [
+        '.tar.gz', '.tar.bz2', '.tar.xz', 
+        '.zip', '.tar', '.gz', '.bz2', 
+        '.xz', '.7z', '.rar'
+    ]
+    for ext in archive_extensions:
+        if filename.endswith(ext):
+            return filename[:-len(ext)]
+    return os.path.splitext(filename)[0]
+
+async def save_map(map_file):
+    dir_to_save = os.getenv("FM_STATIC_DIR")
+    os.makedirs(dir_to_save, exist_ok=True)
+    file_path = os.path.join(dir_to_save, map_file.filename)
+    with open(file_path, "wb") as buffer:
+        buffer.write(await map_file.read())
+
+    logger.info(f"Attempting to extract archive: {file_path}")
+    logger.info(f"Extraction destination: {dir_to_save}")
+
+    file_name = strip_archive_extensions(map_file.filename)
+    required_files = {f"{file_name}/map/webui_map.png", f"{file_name}/map/webui_map.json", f"{file_name}/map/waypoints.json"}
+
+    if zipfile.is_zipfile(file_path):
+        logger.info("Detected ZIP archive")
+        archive_class = zipfile.ZipFile
+        is_zip = True
+    elif tarfile.is_tarfile(file_path):
+        logger.info("Detected TAR archive")
+        archive_class = tarfile.open
+        is_zip = False
+    else:
+        logger.info(f"Unrecognized archive type: {file_path}")
+        os.remove(file_path)
+        raise ValueError(
+            "Uploaded file is not a valid ZIP or TAR archive"
+        )
+
+    with archive_class(file_path, 'r' if is_zip else 'r:*') as archive:
+        archive_files = set(archive.namelist() if is_zip else archive.getnames())
+        missing_files = required_files - archive_files
+        if missing_files:
+            logger.info(f"Missing files: {missing_files}")
+            os.remove(file_path)
+            raise ValueError(
+                f"The uploaded archive is missing required files: {missing_files}"
+            )
+        archive.extractall(dir_to_save)
+        logger.info(f"Successfully extracted files to {dir_to_save}")
+    os.remove(file_path)

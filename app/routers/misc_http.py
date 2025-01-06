@@ -18,11 +18,13 @@ import models.visa_models as vm
 import models.request_models as rqm
 import models.fleet_models as fm
 import models.misc_models as mm
+import models.base_models as bm
 from models.db_session import DBSession
 import app.routers.dependencies as dpd
 import utils.util as utils_util
 import core.common as ccm
 import core.constants as cc
+import utils.fleet_utils as fu
 
 
 router = APIRouter(
@@ -36,15 +38,18 @@ async def site_info(user_name=Depends(dpd.get_user_from_header)):
         dpd.raise_error("Unknown requester", 401)
 
     with DBSession(engine=ccm.engine) as dbsession:
-        fleet_names = dbsession.get_all_fleet_names()
+        #fleet_names = dbsession.get_all_fleet_names()
         software_compatability = dbsession.get_compatability_info()
         compatible_sherpa_versions = software_compatability.info.get("sherpa_versions", [])
+
+    fleet_names = fu.get_all_fleets_list_as_per_user(user_name)
 
     timezone = os.environ["PGTZ"]
     fm_tag = os.environ["FM_TAG"]
 
     with FMMongo() as fm_mongo:
         simulator_config = fm_mongo.get_document_from_fm_config("simulator")
+        low_battery_config = fm_mongo.get_document_from_fm_config("low_battery")
 
     response = {
         "fleet_names": fleet_names,
@@ -52,7 +57,9 @@ async def site_info(user_name=Depends(dpd.get_user_from_header)):
         "software_version": fm_tag,
         "compatible_sherpa_versions": compatible_sherpa_versions,
         "simulator": simulator_config["simulate"],
-        "sherpa_types": [i.lower() for i in list(cc.SherpaTypes.__dict__.keys()) if not i.startswith("__")]
+        "sherpa_types": [i.lower() for i in list(cc.SherpaTypes.__dict__.keys()) if not i.startswith("__")],
+        "battery_threshold": low_battery_config["battery_thresh"],
+        "station_properties": bm.CustomTasks
     }
 
     return response
@@ -80,8 +87,10 @@ async def master_data(
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
+    fleet_names = fu.get_all_fleets_list_as_per_user(user_name)
+
     with DBSession(engine=ccm.engine) as dbsession:
-        fleet_names = dbsession.get_all_fleet_names()
+        #fleet_names = dbsession.get_all_fleet_names()
 
         if master_data_info.fleet_name not in fleet_names:
             dpd.raise_error("Unknown fleet")
@@ -92,6 +101,7 @@ async def master_data(
         response = {}
         sherpa_list = []
         station_list = []
+        sherpa_type_list = []
 
         if all_sherpas:
             sherpa_list = [sherpa.name for sherpa in all_sherpas]
@@ -99,8 +109,12 @@ async def master_data(
         if all_stations:
             station_list = [station.name for station in all_stations]
 
+        if all_sherpas:
+            sherpa_type_list = list(set([sherpa.sherpa_type for sherpa in all_sherpas]))
+
         response.update({"sherpa_list": sherpa_list})
         response.update({"station_list": station_list})
+        response.update({"sherpa_type_list": sherpa_type_list})
 
         sample_sherpa_status = {}
         all_sherpa_status = dbsession.get_all_sherpa_status()
@@ -407,8 +421,8 @@ async def get_visa_assignments(user_name=Depends(dpd.get_user_from_header)):
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
     with DBSession(engine=ccm.engine) as dbsession:
-        zone_ids = dbsession.session.query(vm.ExclusionZone.zone_id).all()
-        response = jsonable_encoder(zone_ids)
+        zone_ids_with_fleet_names = dbsession.session.query(vm.ExclusionZone.zone_id, vm.ExclusionZone.fleets).all()
+        response = jsonable_encoder(zone_ids_with_fleet_names)
         for item in response:
             visa_assignments = dbsession.get_all_visa_assignments_as_dict(item["zone_id"])
             item["resident_entities"] = (
@@ -727,3 +741,15 @@ async def get_error_alerts_which_are_not_acknowledged(
         error_alerts = dbsession.get_error_alerts_which_are_not_acknowledged()
 
     return len(error_alerts) > 0
+@router.get("/get_directories_in_tree_structure/{dir_name}")
+async def get_directories_in_tree_structure(
+    dir_name: str,
+    user_name=Depends(dpd.get_user_from_header)
+    ):
+
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    return utils_util.list_filtered_directories(
+        os.path.join(os.getenv("FM_STATIC_DIR"), dir_name)
+)
