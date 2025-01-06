@@ -741,6 +741,8 @@ async def get_error_alerts_which_are_not_acknowledged(
         error_alerts = dbsession.get_error_alerts_which_are_not_acknowledged()
 
     return len(error_alerts) > 0
+
+
 @router.get("/get_directories_in_tree_structure/{dir_name}")
 async def get_directories_in_tree_structure(
     dir_name: str,
