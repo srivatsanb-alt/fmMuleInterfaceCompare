@@ -941,6 +941,16 @@ class DBSession:
     def add_notification(
         self, entity_names, log, log_level, module, repetitive=False, repetition_freq=None
     ):
+        notifications = (
+            self.session.query(mm.Notifications)
+            .filter(mm.Notifications.entity_names == entity_names)
+            .filter(mm.Notifications.log == log)
+            .filter(mm.Notifications.log_level != log_level)
+            .all()
+        )
+        for notification in notifications:
+           self.delete_notification(notification.id)
+            
         new_notification = mm.Notifications(
             entity_names=entity_names,
             log=log,
@@ -1034,6 +1044,22 @@ class DBSession:
     def delete_notification(self, id):
         self.session.query(mm.Notifications).filter(mm.Notifications.id == id).delete()
 
+    def get_error_alerts_which_are_not_acknowledged(self):
+        return (
+            self.session.query(mm.Notifications)
+            .filter(
+                    mm.Notifications.log_level == mm.NotificationLevels.alert
+            )
+            .filter(
+                or_(
+                    mm.Notifications.module == mm.NotificationModules.errors,
+                    mm.Notifications.module == mm.NotificationModules.stoppages
+                    )
+                )
+            .filter(mm.Notifications.cleared_by == [])
+            .all()
+        )
+    
     def get_compatability_info(self):
         return self.session.query(mm.SoftwareCompatability).one_or_none()
 
@@ -1242,7 +1268,7 @@ class DBSession:
             "waiting_entities": jsonable_encoder(waiting_entities),
         }
 
-        return response
+        return response           
 
     def get_super_user(self, name: str) -> um.SuperUser:
         return (

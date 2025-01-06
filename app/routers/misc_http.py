@@ -729,6 +729,18 @@ async def generate_code_for_remote_terminal(
 
     return {"code": code_for_remote_terminal}
 
+
+@router.get("/get_error_alerts_which_are_not_acknowledged")
+async def get_error_alerts_which_are_not_acknowledged(
+    user_name=Depends(dpd.get_user_from_header),
+):
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    with DBSession(engine=ccm.engine) as dbsession:
+        error_alerts = dbsession.get_error_alerts_which_are_not_acknowledged()
+
+    return len(error_alerts) > 0
 @router.get("/get_directories_in_tree_structure/{dir_name}")
 async def get_directories_in_tree_structure(
     dir_name: str,
