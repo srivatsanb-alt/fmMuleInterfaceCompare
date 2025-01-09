@@ -1,7 +1,7 @@
 {
   "files": {
     "main.css": "/static/css/main.29ab4f9a.css",
-    "main.js": "/static/js/main.7cacded6.js",
+    "main.js": "/static/js/main.cbce68ad.js",
     "static/js/27.25cb0711.chunk.js": "/static/js/27.25cb0711.chunk.js",
     "static/media/Login Image.webp": "/static/media/Login Image.5f6be016522306b4829c.webp",
     "static/media/OpenSans-Regular-400.ttf": "/static/media/OpenSans-Regular-400.57cd57a648021fa1c396.ttf",
@@ -10,6 +10,7 @@
     "static/media/sherpa-handy.svg": "/static/media/sherpa-handy.bf6cb108c054e682b823354b5ab2cda8.svg",
     "static/media/sherpa-pivot.svg": "/static/media/sherpa-pivot.3a11bbec8c6874ad8d2da097d3783a80.svg",
     "static/media/sherpa-xt.svg": "/static/media/sherpa-xt.82ef12f04a7e2901c8e95e8923779357.svg",
+    "static/media/ping-logo.svg": "/static/media/ping-logo.5e674959d59fba1cc4413d6c8cffab8c.svg",
     "static/media/sherpa-tug.svg": "/static/media/sherpa-tug.4e5199f27ce08dd531337fc8c7cbf632.svg",
     "static/media/sherpa-tug-lite.svg": "/static/media/sherpa-tug-lite.5ccecfe33abd010e7def6f0b9c11811d.svg",
     "static/media/sherpa.svg": "/static/media/sherpa.d69d000168d6b36cf5e600f607d6df82.svg",
@@ -69,6 +70,6 @@
   },
   "entrypoints": [
     "static/css/main.29ab4f9a.css",
-    "static/js/main.7cacded6.js"
+    "static/js/main.cbce68ad.js"
   ]
 }
