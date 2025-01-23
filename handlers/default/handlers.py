@@ -568,10 +568,13 @@ class Handlers:
 
         trip_metadata = ongoing_trip.trip.trip_metadata
         if direction == "receive":
-            num_units = utils_comms.get_num_units_converyor(station.name)
+            # num_units = utils_comms.get_num_units_converyor(station.name)
             # update metadata with num totes for dropping totes at chute
-            trip_metadata["num_units"] = num_units
-            flag_modified(ongoing_trip.trip, "trip_metadata")
+            num_units = trip_metadata.get("num_units", None)
+            if num_units is None:
+                raise ValueError("No tote/units information present")
+            # trip_metadata["num_units"] = num_units
+            # flag_modified(ongoing_trip.trip, "trip_metadata")
 
         else:
             num_units = trip_metadata.get("num_units", None)
@@ -963,9 +966,18 @@ class Handlers:
 
             fleet_name = self.dbsession.get_fleet_name_from_route(trip_msg.route)
 
+            site_metadata = {}
+            with FMMongo() as fm_mongo:
+                trip_metadata_config = fm_mongo.get_document_from_fm_config("trip_metadata")
+                metadata_config = trip_metadata_config.get("metadata")
+                if metadata_config is not None:
+                    site_metadata = metadata_config.get("site_metadata", {})
+
             # add fleet_names to req_ctxt - this is for optimal_dispatch
             if fleet_name not in req_ctxt.fleet_names:
                 req_ctxt.fleet_names.append(fleet_name)
+            
+            trip_msg.metadata.update(site_metadata)
 
             self.check_if_booking_is_valid(trip_msg, all_stations)
 
@@ -1638,24 +1650,37 @@ class Handlers:
             raise ValueError(error)
 
         if StationProperties.CONVEYOR in curr_station.properties:
-            transfer_tote_msg = f"will send msg to the conveyor at station: {curr_station.name} to transfer {req.num_units} tote(s)"
-            logging.getLogger().info(transfer_tote_msg)
+            # transfer_tote_msg = f"will send msg to the conveyor at station: {curr_station.name} to transfer {req.num_units} tote(s)"
+            # logging.getLogger().info(transfer_tote_msg)
 
-            if req.num_units == 2:
-                msg_to_forward = "transfer_2totes"
-            elif req.num_units == 1:
-                msg_to_forward = "transfer_tote"
+            # if req.num_units == 2:
+            #     msg_to_forward = "transfer_2totes"
+            # elif req.num_units == 1:
+            #     msg_to_forward = "transfer_tote"
 
-            utils_comms.send_msg_to_plugin(
-                msg_to_forward, f"plugin_conveyor_{curr_station.name}"
-            )
+            # utils_comms.send_msg_to_plugin(
+            #     msg_to_forward, f"plugin_conveyor_{curr_station.name}"
+            # )
+            # self.dbsession.add_notification(
+            #     sherpa.get_notification_entity_names(),
+            #     transfer_tote_msg,
+            #     mm.NotificationLevels.info,
+            #     mm.NotificationModules.conveyor,
+            # )
+            
+            status_code, response_json = utils_comms.send_ack_to_addverb_conveyor(f"{curr_station.name}_ACCEPT")
+            if status_code != 200:
+                raise ValueError(f"Failed to send ack to addverb conveyor plugin {response_json}")
+            else:
+                logging.getLogger(sherpa.name).info(f"Sent ack to addverb conveyor plugin {response_json}")    
+        
+        elif StationProperties.CHUTE in curr_station.properties:
+            status_code, response_json = utils_comms.send_ack_to_addverb_conveyor(f"{curr_station.name}_DISCHARGE")
+            if status_code != 200:
+                raise ValueError(f"Failed to send ack to addverb conveyor plugin {response_json}")
+            else:
+                logging.getLogger(sherpa.name).info(f"Sent ack to addverb conveyor plugin {response_json}")
 
-            self.dbsession.add_notification(
-                sherpa.get_notification_entity_names(),
-                transfer_tote_msg,
-                mm.NotificationLevels.info,
-                mm.NotificationModules.conveyor,
-            )
 
     def handle_lifter_actuator(
         self,

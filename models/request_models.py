@@ -663,3 +663,5 @@ class TripStatusUpdate(JsonMixin):
 @dataclass
 class RouteWPS(JsonMixin):
     route_wps: List
+
+

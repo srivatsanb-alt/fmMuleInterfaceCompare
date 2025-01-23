@@ -25,6 +25,7 @@ from models.request_models import FMReq, MoveReq
 from models.trip_models import OngoingTrip
 
 
+
 logging.config.dictConfig(lu.get_log_config_dict())
 
 
@@ -247,3 +248,51 @@ def get_num_units_converyor(conveyor_name):
     num_units = min(math.ceil(num_totes / num_trips), 2)
 
     return num_units
+
+def check_response(response):
+    response_json = None
+    if response.status_code == 200:
+        response_json = response.json()
+    return response.status_code, response_json
+
+def send_ack_to_addverb_conveyor(req_type):
+    with FMMongo() as fm_mongo:
+        plugin_info = fm_mongo.get_plugin_info()
+        plugin_port = plugin_info["plugin_port"]
+        plugin_ip = plugin_info["plugin_ip"]
+
+        plugin_conveyor = fm_mongo.get_plugin_conveyor()
+        tag_name : str = plugin_conveyor[req_type]
+        api_key = plugin_conveyor["api_key"]
+    
+    req_json : dict= {
+        "tag_value": True,
+        "tag_name": tag_name        
+        }
+
+    req_method = getattr(requests, "post")
+    kwargs = {"headers": {"X-API-Key": 'abcd'}}
+
+    if api_key:
+        kwargs.update({"headers": {"X-API-Key": api_key}})
+
+    if req_json:
+        kwargs.update({"json": req_json})
+
+    plugin_ip = plugin_ip + ":" + plugin_port
+
+    url = f"http://{plugin_ip}/api/v1/ati/status"
+
+
+    args = [url]    
+
+    response = req_method(*args, **kwargs)
+    response_status_code, response_json = check_response(response)
+
+    logging.getLogger().info(
+        f"Request to be sent to plugin_conveyor \n url: {url}, method: {req_type} \n body: {req_json}"
+    )
+
+    return response_status_code, response_json
+
+
