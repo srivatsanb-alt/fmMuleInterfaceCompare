@@ -265,10 +265,12 @@ def send_ack_to_addverb_conveyor(req_type):
         tag_name : str = plugin_conveyor[req_type]
         api_key = plugin_conveyor["api_key"]
     
-    req_json : dict= {
-        "tag_value": True,
-        "tag_name": tag_name        
+    req_json = [
+        {
+        "v": "1",
+        "id": tag_name        
         }
+    ]
 
     req_method = getattr(requests, "post")
     kwargs = {"headers": {"X-API-Key": 'abcd'}}
