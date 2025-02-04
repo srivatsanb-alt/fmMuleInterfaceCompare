@@ -419,6 +419,8 @@ class TripStatusReq_pg(GenericFromToTimeReq):
     filter_fleets: List[str]
     filter_sherpa_names: Optional[List[str]]
     filter_status: Optional[List[str]]
+    booked_by: Optional[List[str]]
+    search_by_station: Optional[str]
     sort_field: Optional[str]
     sort_order: Optional[str]
     search_txt: Optional[str]

@@ -473,6 +473,8 @@ class DBSession:
         valid_status,
         sherpa_names,
         filter_status,
+        booked_by,
+        search_by_station,
         search_text,
         sort_field="id",
         sort_order="desc",
@@ -499,7 +501,22 @@ class DBSession:
         # having to filter again due to filter in UI that overrides above filter
         if filter_status and filter_status != "[]":
             base_query = base_query.filter(tm.Trip.status.in_(filter_status))
+            
+        if booked_by and booked_by != "[]":
+            base_query = base_query.filter(tm.Trip.booked_by.in_(booked_by))
 
+        if search_by_station and search_by_station != "":
+            columns_to_search = [
+                tm.Trip.route
+            ]
+            conditions = or_(
+                *[
+                    func.array_to_string(column, ',').ilike(f"%{search_by_station}%")
+                    for column in columns_to_search
+                ]
+            )
+            base_query = base_query.filter(conditions)
+            
         if search_text and search_text != "":
             columns_to_search = [
                 tm.Trip.sherpa_name,
