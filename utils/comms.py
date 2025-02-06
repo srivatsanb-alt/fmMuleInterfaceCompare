@@ -255,7 +255,7 @@ def check_response(response):
         response_json = response.json()
     return response.status_code, response_json
 
-def send_ack_to_addverb_conveyor(req_type):
+def send_ack_to_addverb_conveyor(req_type, status):
     with FMMongo() as fm_mongo:
         plugin_info = fm_mongo.get_plugin_info()
         plugin_port = plugin_info["plugin_port"]
@@ -267,7 +267,7 @@ def send_ack_to_addverb_conveyor(req_type):
     
     req_json = [
         {
-        "v": "1",
+        "v": f"{status}",
         "id": tag_name        
         }
     ]

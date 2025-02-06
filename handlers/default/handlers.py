@@ -731,6 +731,21 @@ class Handlers:
                 mm.NotificationModules.conveyor,
             )
             self.add_dispatch_start_to_ongoing_trip(ongoing_trip, sherpa)
+
+            if StationProperties.CONVEYOR in curr_station.properties:            
+                status_code, response_json = utils_comms.send_ack_to_addverb_conveyor(f"{curr_station.name}_ACCEPT", False)
+                if status_code != 200:
+                    raise ValueError(f"Failed to send ack to addverb conveyor plugin {response_json}")
+                else:
+                    logging.getLogger(sherpa_name).info(f"Sent ack to addverb conveyor plugin {response_json}")    
+            
+            elif StationProperties.CHUTE in curr_station.properties:
+                status_code, response_json = utils_comms.send_ack_to_addverb_conveyor(f"{curr_station.name}_DISCHARGE", False)
+                if status_code != 200:
+                    raise ValueError(f"Failed to send ack to addverb conveyor plugin {response_json}")
+                else:
+                    logging.getLogger(sherpa_name).info(f"Sent ack to addverb conveyor plugin {response_json}")
+   
         else:
             logging.getLogger().info(
                 f"Ignoring {req.error_device} error message from {sherpa_name}"
@@ -1633,6 +1648,21 @@ class Handlers:
             f"CONV_{req.direction.upper()} completed by {sherpa.name}"
         )
 
+        if StationProperties.CONVEYOR in curr_station.properties:            
+            status_code, response_json = utils_comms.send_ack_to_addverb_conveyor(f"{curr_station.name}_ACCEPT", False)
+            if status_code != 200:
+                raise ValueError(f"Failed to send ack to addverb conveyor plugin {response_json}")
+            else:
+                logging.getLogger(sherpa.name).info(f"Sent ack to addverb conveyor plugin {response_json}")    
+        
+        elif StationProperties.CHUTE in curr_station.properties:
+            status_code, response_json = utils_comms.send_ack_to_addverb_conveyor(f"{curr_station.name}_DISCHARGE", False)
+            if status_code != 200:
+                raise ValueError(f"Failed to send ack to addverb conveyor plugin {response_json}")
+            else:
+                logging.getLogger(sherpa.name).info(f"Sent ack to addverb conveyor plugin {response_json}")
+
+        
     def handle_conveyor_ack(
         self,
         ongoing_trip: tm.OngoingTrip,
@@ -1668,14 +1698,14 @@ class Handlers:
             #     mm.NotificationModules.conveyor,
             # )
             
-            status_code, response_json = utils_comms.send_ack_to_addverb_conveyor(f"{curr_station.name}_ACCEPT")
+            status_code, response_json = utils_comms.send_ack_to_addverb_conveyor(f"{curr_station.name}_ACCEPT", True)
             if status_code != 200:
                 raise ValueError(f"Failed to send ack to addverb conveyor plugin {response_json}")
             else:
                 logging.getLogger(sherpa.name).info(f"Sent ack to addverb conveyor plugin {response_json}")    
         
         elif StationProperties.CHUTE in curr_station.properties:
-            status_code, response_json = utils_comms.send_ack_to_addverb_conveyor(f"{curr_station.name}_DISCHARGE")
+            status_code, response_json = utils_comms.send_ack_to_addverb_conveyor(f"{curr_station.name}_DISCHARGE", True)
             if status_code != 200:
                 raise ValueError(f"Failed to send ack to addverb conveyor plugin {response_json}")
             else:
