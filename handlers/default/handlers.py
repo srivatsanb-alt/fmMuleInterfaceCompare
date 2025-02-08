@@ -553,6 +553,28 @@ class Handlers:
             basic_trip_description=ongoing_trip.get_basic_trip_description(),
         )
         _ = utils_comms.send_req_to_sherpa(self.dbsession, sherpa, unhitch_msg)
+        
+    def is_conv_ready(self, curr_station: fm.Station, sherpa: fm.Sherpa):
+        if StationProperties.CONVEYOR in curr_station.properties:            
+            status_code, response_json = utils_comms.receive_ack_from_addverb_conveyor(f"{curr_station.name}_DISCHARGE")
+            if status_code != 200:
+                logging.getLogger(sherpa.name).error(f"Failed to receive ack from addverb conveyor plugin {response_json}")
+                return False
+            elif response_json == False:
+                return False
+            else:
+                return True  
+        
+        elif StationProperties.CHUTE in curr_station.properties:
+            status_code, response_json = utils_comms.receive_ack_from_addverb_conveyor(f"{curr_station.name}_ACCEPT")
+            if status_code != 200:
+                logging.getLogger(sherpa.name).error(f"Failed to receive ack from addverb conveyor plugin {response_json}")
+                return False
+            elif response_json == False:
+                return False
+            else:
+                return True
+   
 
     def add_conveyor_start_to_ongoing_trip(
         self, ongoing_trip: tm.OngoingTrip, sherpa: fm.Sherpa, station: fm.Station
@@ -661,7 +683,17 @@ class Handlers:
             logging.getLogger(sherpa.name).info(
                 f"{sherpa.name} reached a conveyor/chute station"
             )
-            self.add_conveyor_start_to_ongoing_trip(ongoing_trip, sherpa, curr_station)
+            if self.is_conv_ready(curr_station, sherpa):
+                self.add_conveyor_start_to_ongoing_trip(ongoing_trip, sherpa, curr_station)
+            else:
+                self.dbsession.add_notification(
+                    sherpa.get_notification_entity_names(),
+                    f"Conveyor not ready for {ongoing_trip.sherpa_name} at {curr_station.name}",
+                    mm.NotificationLevels.action_request,
+                    mm.NotificationModules.conveyor,
+                )
+                self.add_dispatch_start_to_ongoing_trip(ongoing_trip, sherpa)
+
 
     def resolve_auto_hitch_error(
         self,
