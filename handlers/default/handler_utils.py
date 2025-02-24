@@ -200,7 +200,7 @@ def is_sherpa_available_for_new_trip(dbsession: DBSession, sherpa_status: fm.She
             low_battery_config = fm_mongo.get_document_from_fm_config("low_battery")
             battery_thresh = low_battery_config["battery_thresh"]
 
-        if sherpa_status.battery_status < battery_thresh:
+        if sherpa_status.battery_status < battery_thresh and sherpa_status.battery_status != -1:
             reason = "battery low"
             utils_util.maybe_add_notification(
                 dbsession,
