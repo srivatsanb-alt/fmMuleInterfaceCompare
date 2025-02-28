@@ -667,68 +667,6 @@ async def upload_map_file(
 
     return response
 
-@router.get("/get_start_time_of_remote_terminal")
-async def get_start_time_of_remote_terminal(
-    user_name=Depends(dpd.get_user_from_header),
-):
-    response = {}
-    if not user_name:
-        dpd.raise_error("Unknown requester", 401)
-
-    async with aioredis.Redis.from_url(os.getenv("FM_REDIS_URI")) as aredis_conn:
-        start_time_of_remote_terminal = await aredis_conn.get("start_time_of_remote_terminal")
-        if start_time_of_remote_terminal:
-            response["start_time_of_remote_terminal"] = (int(time.time()) - int(start_time_of_remote_terminal))
-
-    return response
-
-@router.post("/start_remote_terminal")
-async def start_remote_terminal(
-    remote_terminal_req: rqm.RemoteTerminalCtrlReq,
-    user_name=Depends(dpd.get_user_from_header)
-    ):
-
-    if not user_name:
-        dpd.raise_error("Unknown requester", 401)
-    async with aioredis.Redis.from_url(os.getenv("FM_REDIS_URI")) as aredis_conn:
-        code_for_remote_terminal = await aredis_conn.get("code_for_remote_terminal")
-        
-        if remote_terminal_req.enable_remote_terminal:
-            if code_for_remote_terminal:
-                code_for_remote_terminal = json.loads(code_for_remote_terminal)
-            if code_for_remote_terminal != remote_terminal_req.code or code_for_remote_terminal is None:
-                dpd.raise_error("Code is not correct", 403)
-            os.system("docker start fm_ttyd")
-            await aredis_conn.set("start_time_of_remote_terminal", int(time.time()))
-            await aredis_conn.delete("code_for_remote_terminal")
-        else:
-            os.system("docker stop fm_ttyd")
-            await aredis_conn.delete("start_time_of_remote_terminal")
-
-    return {}
-
-@router.get("/generate_code_for_remote_terminal")
-async def generate_code_for_remote_terminal(
-    user_name=Depends(dpd.get_user_from_header)
-    ):
-
-    if not user_name:
-        dpd.raise_error("Unknown requester", 401)
-    
-    async with aioredis.Redis.from_url(os.getenv("FM_REDIS_URI")) as aredis_conn:
-        code_for_remote_terminal = await aredis_conn.get("code_for_remote_terminal")
-        if code_for_remote_terminal:
-            code_for_remote_terminal = json.loads(code_for_remote_terminal)
-        if code_for_remote_terminal is None:            
-            code_for_remote_terminal = str(random.randint(100000, 999999))
-            await aredis_conn.setex(
-            "code_for_remote_terminal",
-            5*60,
-            json.dumps(code_for_remote_terminal),
-            )          
-
-    return {"code": code_for_remote_terminal}
-
 
 @router.get("/get_error_alerts_which_are_not_acknowledged")
 async def get_error_alerts_which_are_not_acknowledged(

@@ -55,7 +55,6 @@ build_final_images()
 		      -t fleet_manager:$FM_VERSION -f docker_files/Dockerfile .
 
    docker image build -t fm_grafana:$FM_VERSION -f docker_files/grafana.Dockerfile .
-   docker image build -t fm_ttyd:$FM_VERSION -f docker_files/ttyd.Dockerfile .
 
    echo "Successfully built grafana Image"
 
