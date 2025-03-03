@@ -63,7 +63,7 @@ async def login(user_login: rqm.UserLogin, request: Request):
         fleet_names = fu.get_all_fleets_list_as_per_user(user_login.name)
 
         response = {
-            "access_token": dpd.generate_jwt_token(user_login.name, expiry_interval=expiry_interval),
+            "access_token": dpd.generate_jwt_token(user_login.name, user_details["role"], expiry_interval=expiry_interval),
             "user_details": {"user_name": user_login.name, "role": user_details["role"], "fleet_names": fleet_names},
             "static_files_auth": {
                 "username": os.getenv("ATI_STATIC_AUTH_USERNAME"),

@@ -12,6 +12,7 @@ import random
 from fastapi import APIRouter, Depends, UploadFile, File
 from sqlalchemy.orm.attributes import flag_modified
 
+
 # ati code imports
 from models.mongo_client import FMMongo
 import models.visa_models as vm
@@ -684,10 +685,12 @@ async def get_error_alerts_which_are_not_acknowledged(
 @router.get("/get_directories_in_tree_structure/{dir_name}")
 async def get_directories_in_tree_structure(
     dir_name: str,
-    user_name=Depends(dpd.get_user_from_header)
+    user_details: dpd.UserDetails = Depends(dpd.get_user_details_from_header)
     ):
-
-    if not user_name:
+    role = rqm.FrontendUserRoles.support
+    if user_details is not None:
+        user_details.basic_check(role)
+    else:
         dpd.raise_error("Unknown requester", 401)
 
     return utils_util.list_filtered_directories(
