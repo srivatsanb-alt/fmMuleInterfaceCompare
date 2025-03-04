@@ -711,7 +711,7 @@ async def get_analytics_data(
         fleet_name = dbsession.get_fleet(get_analytics_data_req.fleet_name)
         
         if fleet_name is None:
-            dpd.raise_error("Bad fleet name", 401)
+            dpd.raise_error("Bad fleet name", 409)
         
         queue = Queues.queues_dict["analytics_handler"]
             
