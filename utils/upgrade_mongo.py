@@ -5,7 +5,7 @@ import os
 from models.mongo_client import FMMongo
 from models.db_session import DBSession
 
-AVAILABLE_UPGRADES = ["4.0", "4.2", "4.21", "4.22", "4.3"]
+AVAILABLE_UPGRADES = ["4.0", "4.2", "4.21", "4.22", "4.3", "4.6"]
 
 
 def read_fm_config_toml_and_update_mongo_db(fm_mongo, fc_db):
@@ -107,6 +107,13 @@ class MongoUpgrade:
             { "$set": { "fleet_names": fleet_names } } 
         )
         print(f"Modified {result.modified_count} documents to add `fleet_names` field.")
+        
+    def upgrade_to_4_6(self, fm_mongo):
+        fc_db = fm_mongo.get_database("fm_config")
+        app_security_col = fm_mongo.get_collection("app_security", fc_db)
+        app_security_col.update_one({}, {"$set": {"regex_pattern": "^(?=.*[A-Z])(?=.*[\W_]).{8,}$"}})
+        print("Updated regex pattern in app_security config")
+
 
     
 

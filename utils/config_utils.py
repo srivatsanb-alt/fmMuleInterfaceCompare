@@ -424,6 +424,10 @@ class ConfigValidator:
                 "secret_token": {
                     "bsonType": "string",
                     "description": "Secret token for authentication",
+                },
+                "regex_pattern":{
+                    "bsonType": "string",
+                    "description": "Regex pattern for password validation",
                 }
             },
         }
