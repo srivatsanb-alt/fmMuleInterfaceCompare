@@ -109,6 +109,7 @@ async def add_edit_user_details(
         operating_user_details = fm_mongo.get_frontend_user_details(operating_user_query)
         app_security_params = fm_mongo.get_document_from_fm_config("app_security")
         regex_pattern = app_security_params["regex_pattern"]
+        regex_statement = app_security_params["regex_statement"]
         operating_user_role = operating_user_details["role"]
         operating_user_hashed_password = operating_user_details["hashed_password"]
         operating_user_provided_hashed_password = hashlib.sha256(
@@ -134,9 +135,7 @@ async def add_edit_user_details(
 
         if frontend_user_details.password is not None:
             if not utils_util.is_valid_password(frontend_user_details.password, regex_pattern):
-                dpd.raise_error(
-                    "Password is not as per specification."
-                )
+                dpd.raise_error(f"Low password strength: {regex_statement}")
 
         if user_details_db is None:
             if frontend_user_details.password is None:

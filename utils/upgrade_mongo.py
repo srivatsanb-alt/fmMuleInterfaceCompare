@@ -111,8 +111,12 @@ class MongoUpgrade:
     def upgrade_to_4_6(self, fm_mongo):
         fc_db = fm_mongo.get_database("fm_config")
         app_security_col = fm_mongo.get_collection("app_security", fc_db)
-        app_security_col.update_one({}, {"$set": {"regex_pattern": "^(?=.*[A-Z])(?=.*[\W_]).{8,}$"}})
-        print("Updated regex pattern in app_security config")
+        app_security_col.update_one({}, {"$set": {
+            "regex_pattern": "^(?=.*[A-Z])(?=.*[\W_]).{8,}$",
+            "regex_statement": "Password must be at least 8 characters long, contain at least one uppercase letter and one special character."
+        }})
+        print("Updated regex pattern and statement in app_security config")
+
 
 
     
