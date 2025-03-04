@@ -83,17 +83,6 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: ati_fleet
 
-  grafana:
-    image: fm_grafana:fm_version
-    container_name: fm_grafana
-    restart: always
-    user: "root:root"
-    ports:
-      - "3000:3000"
-    links:
-      - db
-    networks:
-      - fm_dn
 
   mongo:
     image: mongo:7.0
@@ -137,13 +126,11 @@ services:
     links:
       - fleet_manager
       - plugins
-      - grafana
       - registry
       - mongo-express
     depends_on:
       - fleet_manager
       - plugins
-      - grafana
       - registry
       - mongo-express
     networks:
