@@ -1356,21 +1356,34 @@ class DBSession:
         
         return tug_wise_distance, total_distance
     
+    
     def get_tug_wise_avg_takt_time(self, fleet_name: str, from_dt, to_dt):
-        tug_wise_avg_takt_time_query = select(
-            tm.Trip.sherpa_name,
-            func.avg(func.extract("epoch", tm.Trip.end_time) - func.extract("epoch", tm.Trip.start_time))
-        ).filter(
-            tm.Trip.fleet_name == fleet_name,
-            tm.Trip.start_time >= from_dt,
-            tm.Trip.end_time <= to_dt,
-            tm.Trip.status == 'succeeded'
-        ).group_by(tm.Trip.sherpa_name)
+        subquery = (
+            select(
+                tm.Trip.sherpa_name.label("Sherpa"),
+                tm.Trip.route,
+                func.avg(func.extract("epoch", tm.Trip.end_time) - func.extract("epoch", tm.Trip.start_time)).label("Trip_time"),
+                func.row_number().over(
+                    partition_by=tm.Trip.sherpa_name,
+                    order_by=func.count().desc()
+                ).label("route_rank")
+            )
+            .filter(
+                tm.Trip.fleet_name == fleet_name,
+                tm.Trip.start_time >= from_dt,
+                tm.Trip.end_time <= to_dt,
+                tm.Trip.status == 'succeeded'
+            )
+            .group_by(tm.Trip.sherpa_name, tm.Trip.route)
+            .subquery()
+        )
 
-        tug_wise_avg_takt_time = {
-            row[0]: row[1] for row in (self.session.execute(tug_wise_avg_takt_time_query)).fetchall()
-        }
-        return tug_wise_avg_takt_time
+        query = select(subquery.c.Sherpa, subquery.c.route, subquery.c.Trip_time).filter(subquery.c.route_rank == 1)
+        
+        result = {row[0]: row[2] for row in self.session.execute(query).fetchall()}
+        
+        return result
+
     
     def get_tug_wise_obstacle_time(self, fleet_name: str, from_dt, to_dt):
         tug_wise_avg_obstacle_query = select(
