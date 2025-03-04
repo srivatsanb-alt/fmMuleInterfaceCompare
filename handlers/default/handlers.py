@@ -193,8 +193,6 @@ class Handlers:
         trip_metadata = pending_trip.trip.trip_metadata
         num_days_to_repeat = int(trip_metadata.get("num_days_to_repeat", "0"))
         repeat_count = int(trip_metadata.get("repeat_count", "0"))
-        pause_from = utils_util.str_to_dt(trip_metadata.get("pause_from")) if trip_metadata.get("pause_from") else None
-        pause_till = utils_util.str_to_dt(trip_metadata.get("pause_till")) if trip_metadata.get("pause_till") else None
         if repeat_count < num_days_to_repeat:
             new_metadata = trip_metadata
             actual_start_time_str = trip_metadata["actual_start_time"]
@@ -214,47 +212,18 @@ class Handlers:
             logging.getLogger().info(f"scheduled new metadata {new_metadata}")
             self.create_new_trip_from_pending_trip(pending_trip, new_metadata)
             return True
-        elif pause_from is not None and utils_util.check_if_timestamp_has_passed(pause_from) and pause_till > datetime.datetime.now():
-            new_metadata = trip_metadata
-            actual_start_time_str = trip_metadata["actual_start_time"]
-            actual_end_time_str = trip_metadata["actual_end_time"]
-            logging.getLogger().info(
-                f"recreating trip {pending_trip.trip.id}, scheduled trip needs to be repeated for {num_days_to_repeat} days"
-            )
-            new_start_time = utils_util.str_to_dt(
-                actual_start_time_str
-            ) + datetime.timedelta(days=repeat_count)
-            new_end_time = utils_util.str_to_dt(actual_end_time_str) + datetime.timedelta(
-                days=repeat_count
-            )
-            new_metadata["scheduled_start_time"] = utils_util.dt_to_str(new_start_time)
-            new_metadata["scheduled_end_time"] = utils_util.dt_to_str(new_end_time)
-            new_metadata["repeat_count"] = str(repeat_count + 1)
-            logging.getLogger().info(f"scheduled new metadata {new_metadata}")
-            self.create_new_trip_from_pending_trip(pending_trip, new_metadata)
-
 
         return False
 
     def should_recreate_scheduled_trip(self, pending_trip: tm.PendingTrip):
         trip_metadata = pending_trip.trip.trip_metadata
         scheduled_end_time = utils_util.str_to_dt(trip_metadata["scheduled_end_time"])
-        pause_from = utils_util.str_to_dt(trip_metadata.get("pause_from")) if trip_metadata.get("pause_from") else None
-        logging.getLogger("misc").info(f"pause_from: {pause_from}, scheduled_end_time: {scheduled_end_time}")
-        pause_till = utils_util.str_to_dt(trip_metadata.get("pause_till")) if trip_metadata.get("pause_till") else None
         new_metadata = pending_trip.trip.trip_metadata
         time_period = new_metadata["scheduled_time_period"]
         new_start_time = datetime.datetime.now() + datetime.timedelta(
             seconds=int(time_period)
         )
-        # if pause_from is not None and utils_util.check_if_timestamp_has_passed(pause_from) and pause_till > datetime.datetime.now():
-        #     logging.getLogger().info(
-        #         f"recreating trip {pending_trip.trip.id}, scheduled trip needs to be continued from {pause_till}"
-        #     )
-        #     new_start_time = utils_util.dt_to_str(pause_till)
-        #     new_metadata["scheduled_start_time"] = new_start_time
-        #     logging.getLogger().info(f"scheduled new metadata {new_metadata}")
-        #     self.create_new_trip_from_pending_trip(pending_trip, new_metadata)
+        
         if new_start_time < scheduled_end_time:     
             logging.getLogger().info(
                 f"recreating trip {pending_trip.trip.id}, scheduled trip needs to be continued"

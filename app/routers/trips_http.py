@@ -280,6 +280,8 @@ async def trip_status_pg_with_type(
                 valid_status,
                 trip_status_req.filter_sherpa_names,
                 trip_status_req.filter_status,
+                trip_status_req.booked_by,
+                trip_status_req.search_by_station,
                 trip_status_req.search_txt,
                 trip_status_req.sort_field,
                 trip_status_req.sort_order,
@@ -618,22 +620,37 @@ async def export_all_analytics_data(
             del trip_analytic["legs"]
         
             for trip_analytic_leg in trip_analytic_legs:
-                processed_trip_data = {} 
-                processed_trip_data["trip_id"] = trip_analytic.get("id")
-                processed_trip_data.update(trip_analytic)
+                processed_trip_data = {
+                    "trip_id": trip_analytic.get("id"),
+                    **trip_analytic,
+                }
                 del processed_trip_data["id"]
-                trip_analytic_leg_details = {}
-                if trip_analytic_leg.get("sherpa_name"):
-                    del trip_analytic_leg["sherpa_name"]
-                del trip_analytic_leg["trip_id"]
-                trip_analytic_leg_details = trip_analytic_leg
+
+                trip_analytic_leg_details = {
+                    **trip_analytic_leg,
+                    "leg_route_length": trip_analytic_leg.pop("route_length", None),
+                    "leg_start_time": trip_analytic_leg.pop("start_time", None),
+                    "leg_end_time": trip_analytic_leg.pop("end_time", None),
+                    "leg_created_at": trip_analytic_leg.pop("created_at", None),
+                    "leg_updated_at": trip_analytic_leg.pop("updated_at", None),
+                }
+                if "sherpa_name" in trip_analytic_leg_details:
+                    del trip_analytic_leg_details["sherpa_name"]
+                if "trip_id" in trip_analytic_leg_details:
+                    del trip_analytic_leg_details["trip_id"]
+
                 processed_trip_data.update(trip_analytic_leg_details)
+
+                processed_trip_data = utils_util.format_dates(processed_trip_data)
                 data.append(processed_trip_data)
             if len(trip_analytic_legs) == 0:
-                processed_trip_data = {}
-                processed_trip_data["trip_id"] = trip_analytic.get("id")
-                processed_trip_data.update(trip_analytic)
+                processed_trip_data = {
+                    "trip_id": trip_analytic.get("id"),
+                    **trip_analytic,
+                }
                 del processed_trip_data["id"]
+
+                processed_trip_data = utils_util.format_dates(processed_trip_data)
                 data.append(processed_trip_data)
              
         # Convert to DataFrame
@@ -692,11 +709,11 @@ async def pause_schedule_trip(
                 trip.booking_time,
             )
             for t in trips:
-                if t.status == "booked":
+                if t.status in tm.YET_TO_START_TRIP_STATUS:
                     delete_booked_trip_req: rqm.DeleteBookedTripReq = rqm.DeleteBookedTripReq(
                     booking_id=pause_schedule_trip_req.booking_id, trip_id=t.id)
                     response = await dpd.process_req_with_response(None, delete_booked_trip_req, user_name)
-                if t.status in tm.ACTIVE_TRIP_STATUS:
+                if t.status in tm.ONGOING_TRIP_STATUS:
                     t.trip_metadata["scheduled_end_time"] = trip.trip_metadata["scheduled_start_time"]
                     flag_modified(t, "trip_metadata")
         else:

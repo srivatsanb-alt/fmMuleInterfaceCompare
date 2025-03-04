@@ -214,13 +214,14 @@ def get_route_length(pose_1, pose_2, fleet_name, redis_conn=None):
     return route_length
 
 
-def check_if_notification_alert_present(dbsession, log: str, enitity_names: list):
+def check_if_notification_alert_present(dbsession, log: str, log_level: str, enitity_names: list):
     import models.misc_models as mm
 
     notification = (
         dbsession.session.query(mm.Notifications)
         .filter(mm.Notifications.entity_names == enitity_names)
         .filter(mm.Notifications.log == log)
+        .filter(mm.Notifications.log_level == log_level)
         .all()
     )
     if len(notification):
@@ -238,7 +239,7 @@ def maybe_add_notification(
     if module is None:
         module = mm.NotificationModules.generic
 
-    if not check_if_notification_alert_present(dbsession, log, enitity_names):
+    if not check_if_notification_alert_present(dbsession, log, log_level, enitity_names):
         dbsession.add_notification(enitity_names, log, log_level, module)
 
 
@@ -447,3 +448,17 @@ def list_filtered_directories(starting_directory):
             result[backup] = backup_result
 
     return json.dumps(result, indent=2)
+
+def format_dates(data: dict) -> dict:
+    for key, value in data.items():
+        if isinstance(value, datetime.datetime):
+            data[key] = value.strftime("%d-%b-%Y %H:%M:%S")
+        elif isinstance(value, dict):
+            format_dates(value)
+        elif isinstance(value, str):
+            try:
+                dt = datetime.datetime.strptime(value, "%Y-%m-%d %H:%M:%S")
+                data[key] = dt.strftime("%d-%b-%Y %H:%M:%S")
+            except ValueError:
+                continue
+    return data

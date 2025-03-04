@@ -3,7 +3,6 @@ import os
 from typing import List
 from sqlalchemy import func, any_, or_, and_, extract, text
 from sqlalchemy.orm import Session
-from sqlalchemy.types import DateTime
 from fastapi.encoders import jsonable_encoder
 
 # ati code imports
@@ -474,6 +473,8 @@ class DBSession:
         valid_status,
         sherpa_names,
         filter_status,
+        booked_by,
+        search_by_station,
         search_text,
         sort_field="id",
         sort_order="desc",
@@ -500,7 +501,22 @@ class DBSession:
         # having to filter again due to filter in UI that overrides above filter
         if filter_status and filter_status != "[]":
             base_query = base_query.filter(tm.Trip.status.in_(filter_status))
+            
+        if booked_by and booked_by != "[]":
+            base_query = base_query.filter(tm.Trip.booked_by.in_(booked_by))
 
+        if search_by_station and search_by_station != "":
+            columns_to_search = [
+                tm.Trip.route
+            ]
+            conditions = or_(
+                *[
+                    func.array_to_string(column, ',').ilike(f"%{search_by_station}%")
+                    for column in columns_to_search
+                ]
+            )
+            base_query = base_query.filter(conditions)
+            
         if search_text and search_text != "":
             columns_to_search = [
                 tm.Trip.sherpa_name,
@@ -600,17 +616,37 @@ class DBSession:
             base_query = base_query.filter(conditions)
 
         current_datetime = datetime.datetime.now()
-        paused_trips = (
-            self.session.query(tm.PausedTrip)
-            .filter(
-                func.jsonb_extract_path_text(
-                    tm.PausedTrip.trip_metadata, "scheduled_end_time"
-                )
-                .cast(DateTime)
-                > current_datetime
+
+        paused_trips = self.session.query(tm.PausedTrip)
+        
+        if filter_fleets and filter_fleets != "[]":
+            paused_trips = paused_trips.filter(tm.PausedTrip.fleet_name.in_(filter_fleets))
+
+        if search_text and search_text.strip() != "":
+            columns_to_search = [
+                tm.PausedTrip.route
+            ]
+            conditions = or_(
+                *[
+                    func.array_to_string(column, ',').ilike(f"%{search_text}%")
+                    for column in columns_to_search
+                ]
             )
-            .all()
-        )
+            paused_trips = paused_trips.filter(conditions)
+
+        paused_trips = paused_trips.all()
+
+        for paused_trip in paused_trips:
+            trip_metadata = paused_trip.trip_metadata
+            if trip_metadata.get("num_days_to_repeat") != "0":
+                actual_end_time = str_to_dt(trip_metadata["actual_end_time"]) + datetime.timedelta(days=(int(trip_metadata["num_days_to_repeat"]) - 1))
+                if actual_end_time < current_datetime:
+                    self.session.delete(paused_trip)
+            else:
+                scheduled_end_time = str_to_dt(trip_metadata["scheduled_end_time"])
+                if scheduled_end_time < current_datetime:
+                    self.session.delete(paused_trip)
+
 
         count = base_query.count() + len(paused_trips)
 
@@ -922,6 +958,16 @@ class DBSession:
     def add_notification(
         self, entity_names, log, log_level, module, repetitive=False, repetition_freq=None
     ):
+        notifications = (
+            self.session.query(mm.Notifications)
+            .filter(mm.Notifications.entity_names == entity_names)
+            .filter(mm.Notifications.log == log)
+            .filter(mm.Notifications.log_level != log_level)
+            .all()
+        )
+        for notification in notifications:
+           self.delete_notification(notification.id)
+            
         new_notification = mm.Notifications(
             entity_names=entity_names,
             log=log,
@@ -1015,6 +1061,22 @@ class DBSession:
     def delete_notification(self, id):
         self.session.query(mm.Notifications).filter(mm.Notifications.id == id).delete()
 
+    def get_error_alerts_which_are_not_acknowledged(self):
+        return (
+            self.session.query(mm.Notifications)
+            .filter(
+                    mm.Notifications.log_level == mm.NotificationLevels.alert
+            )
+            .filter(
+                or_(
+                    mm.Notifications.module == mm.NotificationModules.errors,
+                    mm.Notifications.module == mm.NotificationModules.stoppages
+                    )
+                )
+            .filter(mm.Notifications.cleared_by == [])
+            .all()
+        )
+    
     def get_compatability_info(self):
         return self.session.query(mm.SoftwareCompatability).one_or_none()
 
@@ -1223,7 +1285,7 @@ class DBSession:
             "waiting_entities": jsonable_encoder(waiting_entities),
         }
 
-        return response
+        return response           
 
     def get_super_user(self, name: str) -> um.SuperUser:
         return (
