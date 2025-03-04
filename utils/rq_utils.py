@@ -57,6 +57,7 @@ class Queues:
     )
     queues_dict.update({"generic_handler": Queue("generic_handler", connection=redis_conn)})
     queues_dict.update({"misc_handler": Queue("misc_handler", connection=redis_conn)})
+    queues_dict.update({"analytics_handler": Queue("analytics_handler", connection=redis_conn)})
 
     queues = [q_name for q_name in queues_dict.keys()]
 

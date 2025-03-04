@@ -12,6 +12,7 @@ import random
 from fastapi import APIRouter, Depends, UploadFile, File
 from sqlalchemy.orm.attributes import flag_modified
 
+
 # ati code imports
 from models.mongo_client import FMMongo
 import models.visa_models as vm
@@ -25,6 +26,7 @@ import utils.util as utils_util
 import core.common as ccm
 import core.constants as cc
 import utils.fleet_utils as fu
+from utils.rq_utils import Queues
 
 
 router = APIRouter(
@@ -667,68 +669,6 @@ async def upload_map_file(
 
     return response
 
-@router.get("/get_start_time_of_remote_terminal")
-async def get_start_time_of_remote_terminal(
-    user_name=Depends(dpd.get_user_from_header),
-):
-    response = {}
-    if not user_name:
-        dpd.raise_error("Unknown requester", 401)
-
-    async with aioredis.Redis.from_url(os.getenv("FM_REDIS_URI")) as aredis_conn:
-        start_time_of_remote_terminal = await aredis_conn.get("start_time_of_remote_terminal")
-        if start_time_of_remote_terminal:
-            response["start_time_of_remote_terminal"] = (int(time.time()) - int(start_time_of_remote_terminal))
-
-    return response
-
-@router.post("/start_remote_terminal")
-async def start_remote_terminal(
-    remote_terminal_req: rqm.RemoteTerminalCtrlReq,
-    user_name=Depends(dpd.get_user_from_header)
-    ):
-
-    if not user_name:
-        dpd.raise_error("Unknown requester", 401)
-    async with aioredis.Redis.from_url(os.getenv("FM_REDIS_URI")) as aredis_conn:
-        code_for_remote_terminal = await aredis_conn.get("code_for_remote_terminal")
-        
-        if remote_terminal_req.enable_remote_terminal:
-            if code_for_remote_terminal:
-                code_for_remote_terminal = json.loads(code_for_remote_terminal)
-            if code_for_remote_terminal != remote_terminal_req.code or code_for_remote_terminal is None:
-                dpd.raise_error("Code is not correct", 403)
-            os.system("docker start fm_ttyd")
-            await aredis_conn.set("start_time_of_remote_terminal", int(time.time()))
-            await aredis_conn.delete("code_for_remote_terminal")
-        else:
-            os.system("docker stop fm_ttyd")
-            await aredis_conn.delete("start_time_of_remote_terminal")
-
-    return {}
-
-@router.get("/generate_code_for_remote_terminal")
-async def generate_code_for_remote_terminal(
-    user_name=Depends(dpd.get_user_from_header)
-    ):
-
-    if not user_name:
-        dpd.raise_error("Unknown requester", 401)
-    
-    async with aioredis.Redis.from_url(os.getenv("FM_REDIS_URI")) as aredis_conn:
-        code_for_remote_terminal = await aredis_conn.get("code_for_remote_terminal")
-        if code_for_remote_terminal:
-            code_for_remote_terminal = json.loads(code_for_remote_terminal)
-        if code_for_remote_terminal is None:            
-            code_for_remote_terminal = str(random.randint(100000, 999999))
-            await aredis_conn.setex(
-            "code_for_remote_terminal",
-            5*60,
-            json.dumps(code_for_remote_terminal),
-            )          
-
-    return {"code": code_for_remote_terminal}
-
 
 @router.get("/get_error_alerts_which_are_not_acknowledged")
 async def get_error_alerts_which_are_not_acknowledged(
@@ -746,12 +686,41 @@ async def get_error_alerts_which_are_not_acknowledged(
 @router.get("/get_directories_in_tree_structure/{dir_name}")
 async def get_directories_in_tree_structure(
     dir_name: str,
-    user_name=Depends(dpd.get_user_from_header)
+    user_details: dpd.UserDetails = Depends(dpd.get_user_details_from_header)
     ):
-
-    if not user_name:
+    role = rqm.FrontendUserRoles.support
+    if user_details is not None:
+        user_details.basic_check(role)
+    else:
         dpd.raise_error("Unknown requester", 401)
 
     return utils_util.list_filtered_directories(
         os.path.join(os.getenv("FM_STATIC_DIR"), dir_name)
 )
+
+
+@router.post("/get_analytics_data")
+async def get_analytics_data(
+    get_analytics_data_req: rqm.GetAnalyticsDataReq,
+    user_name=Depends(dpd.get_user_from_header),
+):
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+        
+    with DBSession(engine=ccm.engine) as dbsession:
+        fleet_name = dbsession.get_fleet(get_analytics_data_req.fleet_name)
+        
+        if fleet_name is None:
+            dpd.raise_error("Bad fleet name", 401)
+        
+        queue = Queues.queues_dict["analytics_handler"]
+            
+        analytics_req = rqm.AnalyticsDataReq(
+            from_dt=get_analytics_data_req.from_dt,
+            to_dt=get_analytics_data_req.to_dt,
+            fleet_name=get_analytics_data_req.fleet_name,
+        )
+            
+        response = await dpd.process_req_with_response(queue, analytics_req, user_name)
+            
+        return response

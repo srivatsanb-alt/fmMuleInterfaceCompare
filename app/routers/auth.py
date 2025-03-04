@@ -44,7 +44,7 @@ async def login(user_login: rqm.UserLogin, request: Request):
         user_query = {"name": user_login.name, "hashed_password": hashed_password}
         user_details = fm_mongo.get_frontend_user_details(user_query)
         if user_details is None:
-            dpd.raise_error("Invalid credentials", 401)
+            dpd.raise_error("Invalid username or password", 401)
 
         if hashed_password == cu.DefaultFrontendUser.admin["hashed_password"]:
             with DBSession(engine=ccm.engine) as dbsession:
@@ -63,7 +63,7 @@ async def login(user_login: rqm.UserLogin, request: Request):
         fleet_names = fu.get_all_fleets_list_as_per_user(user_login.name)
 
         response = {
-            "access_token": dpd.generate_jwt_token(user_login.name, expiry_interval=expiry_interval),
+            "access_token": dpd.generate_jwt_token(user_login.name, user_details["role"], expiry_interval=expiry_interval),
             "user_details": {"user_name": user_login.name, "role": user_details["role"], "fleet_names": fleet_names},
             "static_files_auth": {
                 "username": os.getenv("ATI_STATIC_AUTH_USERNAME"),
@@ -107,6 +107,8 @@ async def add_edit_user_details(
     with FMMongo() as fm_mongo:
         operating_user_query = {"name": user_name}
         operating_user_details = fm_mongo.get_frontend_user_details(operating_user_query)
+        app_security_params = fm_mongo.get_document_from_fm_config("app_security")
+        regex_pattern = app_security_params["regex_pattern"]
         operating_user_role = operating_user_details["role"]
         operating_user_hashed_password = operating_user_details["hashed_password"]
         operating_user_provided_hashed_password = hashlib.sha256(
@@ -131,9 +133,9 @@ async def add_edit_user_details(
         collection = fm_mongo.get_collection("user_details", db)
 
         if frontend_user_details.password is not None:
-            if not utils_util.good_password_check(frontend_user_details.password):
+            if not utils_util.is_valid_password(frontend_user_details.password, regex_pattern):
                 dpd.raise_error(
-                    "Low password strenght: Password should contain atleast one upper case and one special character. Also the length should be greater than 8"
+                    "Password is not as per specification."
                 )
 
         if user_details_db is None:

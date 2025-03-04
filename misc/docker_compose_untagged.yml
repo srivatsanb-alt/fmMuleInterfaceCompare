@@ -83,17 +83,6 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: ati_fleet
 
-  grafana:
-    image: fm_grafana:fm_version
-    container_name: fm_grafana
-    restart: always
-    user: "root:root"
-    ports:
-      - "3000:3000"
-    links:
-      - db
-    networks:
-      - fm_dn
 
   mongo:
     image: mongo:7.0
@@ -138,13 +127,11 @@ services:
     links:
       - fleet_manager
       - plugins
-      - grafana
       - registry
       - mongo-express
     depends_on:
       - fleet_manager
       - plugins
-      - grafana
       - registry
       - mongo-express
     networks:
@@ -167,21 +154,6 @@ services:
     ports:
       - "6379:6379"
 
-  ttyd:
-    image: fm_ttyd:fm_version
-    container_name: fm_ttyd
-    restart: always
-    privileged: true
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    ports:
-      - "7681:7681" 
-    depends_on:
-      - fleet_manager
-    links:
-      - fleet_manager
-    networks:
-      - fm_dn
 
 networks:
   fm_dn:

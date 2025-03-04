@@ -617,9 +617,6 @@ class SoundSettingCtrlReq(ClientReq):
     volume: Optional[float] = 0.01
     sound_type: str
 
-class RemoteTerminalCtrlReq(ClientReq):
-    enable_remote_terminal: bool
-    code: Optional[str]
 
 
 @dataclass
@@ -665,3 +662,12 @@ class TripStatusUpdate(JsonMixin):
 @dataclass
 class RouteWPS(JsonMixin):
     route_wps: List
+    
+
+class GetAnalyticsDataReq(GenericFromToTimeReq):
+    fleet_name: str
+
+    
+class AnalyticsDataReq(GenericFromToTimeReq):
+    fleet_name: str
+    type:str = MessageType.GET_ANALYTICS_DATA
