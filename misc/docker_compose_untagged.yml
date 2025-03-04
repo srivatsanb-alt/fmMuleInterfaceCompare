@@ -123,6 +123,7 @@ services:
       - ./certs:/certs
     ports:
       - "443:443"
+      - "8443:8443"
     links:
       - fleet_manager
       - plugins
