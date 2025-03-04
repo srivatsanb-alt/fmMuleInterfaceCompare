@@ -9,3 +9,8 @@ class HandlerConfiguration:
             from handlers.default.handlers import Handlers
 
             return Handlers()
+        
+        if version == "analytics":
+            from handlers.default.analytics_handlers import AnalyticsHandler
+            
+            return AnalyticsHandler()

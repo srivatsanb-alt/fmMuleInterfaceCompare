@@ -1,9 +1,11 @@
 import datetime
 import os
 from typing import List
-from sqlalchemy import func, any_, or_, and_, extract, text
-from sqlalchemy.orm import Session
+from sqlalchemy import select, func, any_, or_, and_, extract, text, literal_column, alias, cast
+from sqlalchemy.orm import Session, aliased
+from sqlalchemy.types import Numeric
 from fastapi.encoders import jsonable_encoder
+
 
 # ati code imports
 from core.db import get_session, get_session_with_engine
@@ -1313,3 +1315,134 @@ class DBSession:
             .filter(tm.PausedTrip.booking_id == booking_id)
             .one_or_none()
         )
+    
+    def get_tug_wise_and_total_trips(self, fleet_name: str, from_dt, to_dt):
+        tug_wise_trips_query = select(
+            tm.Trip.sherpa_name, func.count(tm.Trip.id)
+        ).filter(
+            tm.Trip.fleet_name == fleet_name,
+            tm.Trip.start_time >= from_dt,
+            tm.Trip.end_time <= to_dt
+        ).filter(tm.Trip.status == 'succeeded'
+        ).group_by(tm.Trip.sherpa_name)
+
+        tug_wise_trips = {
+            row[0]: row[1]for row in (self.session.execute(tug_wise_trips_query)).fetchall()
+        }
+        
+        total_trips = sum(tug_wise_trips.values())
+        
+        return tug_wise_trips, total_trips
+    
+    def get_tug_wise_distance_and_total_distance(self, fleet_name: str, from_dt, to_dt):
+        tug_wise_distance_query = select(
+            tm.Trip.sherpa_name,
+            func.sum(literal_column("route_length")).label("Total_Distance")
+        ).select_from(
+            tm.Trip, func.unnest(tm.Trip.route_lengths).alias("route_length")
+        ).filter(
+            tm.Trip.fleet_name == fleet_name,
+            tm.Trip.start_time >= from_dt,
+            tm.Trip.end_time <= to_dt,
+            tm.Trip.status == 'succeeded'
+        ).group_by(
+            tm.Trip.sherpa_name
+        )
+        
+        tug_wise_distance = {
+            row[0]: row[1] for row in (self.session.execute(tug_wise_distance_query)).fetchall()
+        }
+        total_distance = sum(tug_wise_distance.values()) or 0
+        
+        return tug_wise_distance, total_distance
+    
+    def get_tug_wise_avg_takt_time(self, fleet_name: str, from_dt, to_dt):
+        tug_wise_avg_takt_time_query = select(
+            tm.Trip.sherpa_name,
+            func.avg(func.extract("epoch", tm.Trip.end_time) - func.extract("epoch", tm.Trip.start_time))
+        ).filter(
+            tm.Trip.fleet_name == fleet_name,
+            tm.Trip.start_time >= from_dt,
+            tm.Trip.end_time <= to_dt,
+            tm.Trip.status == 'succeeded'
+        ).group_by(tm.Trip.sherpa_name)
+
+        tug_wise_avg_takt_time = {
+            row[0]: row[1] for row in (self.session.execute(tug_wise_avg_takt_time_query)).fetchall()
+        }
+        return tug_wise_avg_takt_time
+    
+    def get_tug_wise_obstacle_time(self, fleet_name: str, from_dt, to_dt):
+        tug_wise_avg_obstacle_query = select(
+            tm.Trip.sherpa_name,
+            tm.Trip.route,
+            func.avg(tm.TripAnalytics.time_elapsed_obstacle_stoppages).label("Average_Obstacle_Time")
+        ).join(
+            tm.TripAnalytics, tm.TripAnalytics.trip_id == tm.Trip.id
+        ).filter(
+            tm.Trip.fleet_name == fleet_name,
+            tm.Trip.start_time >= from_dt,
+            tm.Trip.end_time <= to_dt,
+            tm.Trip.status == 'succeeded'
+        ).group_by(
+            tm.Trip.sherpa_name,
+            tm.Trip.route
+        )
+
+        tug_wise_avg_obstacle_time = {
+            row[0]: row[2]
+            for row in self.session.execute(tug_wise_avg_obstacle_query).fetchall()
+        }
+        
+        return tug_wise_avg_obstacle_time
+    
+    def get_tug_wise_dispatch_wait(self, fleet_name: str, from_dt, to_dt):
+        tug_wise_dispatch_wait_query = select(
+            tm.Trip.sherpa_name,
+            tm.Trip.route,
+            func.avg(
+                func.coalesce(
+                    cast(tm.Trip.trip_metadata["total_dispatch_wait_time"].astext, Numeric), 0
+                )
+            ).label("Average_Dispatch_Wait_Time")
+        ).filter(
+            tm.Trip.fleet_name == fleet_name,
+            tm.Trip.start_time >= from_dt,
+            tm.Trip.end_time <= to_dt,
+            tm.Trip.status == 'succeeded'
+        ).group_by(
+            tm.Trip.sherpa_name,
+            tm.Trip.route
+        )
+
+        tug_wise_dispatch_wait_time = {
+            row[0] : row[2]  
+            for row in self.session.execute(tug_wise_dispatch_wait_query).fetchall()
+        }
+        return tug_wise_dispatch_wait_time
+        
+
+    def get_analytics_data(
+        self,
+        fleet_name: str,
+        from_dt,
+        to_dt
+    ):
+        tug_wise_trips, total_trips = self.get_tug_wise_and_total_trips(fleet_name, from_dt, to_dt)
+        tug_wise_distance, total_distance = self.get_tug_wise_distance_and_total_distance(fleet_name, from_dt, to_dt)
+        tug_wise_avg_takt_time = self.get_tug_wise_avg_takt_time(fleet_name, from_dt, to_dt)
+        tug_wise_avg_obstacle_time =  self.get_tug_wise_obstacle_time(fleet_name, from_dt, to_dt)
+        tug_wise_dispatch_wait_time = self.get_tug_wise_dispatch_wait(fleet_name, from_dt, to_dt)
+        
+        return {
+            "total_trips": total_trips,
+            "tug_wise_distance": tug_wise_distance,
+            "tug_wise_trips": tug_wise_trips,
+            "total_distance": total_distance,
+            "avg_takt_time": tug_wise_avg_takt_time,
+            "average_obstacle_time": tug_wise_avg_obstacle_time,
+            "avg_dispatch_wait_time": tug_wise_dispatch_wait_time
+        }
+
+
+            

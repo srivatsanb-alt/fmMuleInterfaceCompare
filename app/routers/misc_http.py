@@ -26,6 +26,7 @@ import utils.util as utils_util
 import core.common as ccm
 import core.constants as cc
 import utils.fleet_utils as fu
+from utils.rq_utils import Queues
 
 
 router = APIRouter(
@@ -696,3 +697,30 @@ async def get_directories_in_tree_structure(
     return utils_util.list_filtered_directories(
         os.path.join(os.getenv("FM_STATIC_DIR"), dir_name)
 )
+
+
+@router.post("/get_analytics_data")
+async def get_analytics_data(
+    get_analytics_data_req: rqm.GetAnalyticsDataReq,
+    user_name=Depends(dpd.get_user_from_header),
+):
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+        
+    with DBSession(engine=ccm.engine) as dbsession:
+        fleet_name = dbsession.get_fleet(get_analytics_data_req.fleet_name)
+        
+        if fleet_name is None:
+            dpd.raise_error("Bad fleet name", 401)
+        
+        queue = Queues.queues_dict["analytics_handler"]
+            
+        analytics_req = rqm.AnalyticsDataReq(
+            from_dt=get_analytics_data_req.from_dt,
+            to_dt=get_analytics_data_req.to_dt,
+            fleet_name=get_analytics_data_req.fleet_name,
+        )
+            
+        response = await dpd.process_req_with_response(queue, analytics_req, user_name)
+            
+        return response

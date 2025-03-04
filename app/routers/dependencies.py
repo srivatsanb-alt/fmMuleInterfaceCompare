@@ -237,7 +237,10 @@ def process_req(queue, req, user, redis_conn=None, dt=None):
     job = None
     req.source = user
 
-    handler_obj = hc.HandlerConfiguration.get_handler()
+    if req.type == "get_analytics_data":
+        handler_obj = hc.HandlerConfiguration.get_handler(version="analytics")
+    else:
+        handler_obj = hc.HandlerConfiguration.get_handler()
     args = [handler_obj, req]
     kwargs = {}
 
