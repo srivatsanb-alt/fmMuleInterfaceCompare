@@ -15,6 +15,7 @@ from rq import Worker
 import sys
 import functools
 import aiofiles
+import re
 
 TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
 IES_TIME_FORMAT = "%Y-%m-%dT%H:%M:%S.%f"
@@ -260,6 +261,12 @@ def read_docker_compose_yml():
         data = yaml.safe_load(f)
 
     return data
+
+
+def is_valid_password(password, pattern = None):
+    if pattern is None:
+        pattern = r'^(?=.*[A-Z])(?=.*[\W_]).{8,}$'
+    return bool(re.match(pattern, password))
 
 
 def good_password_check(password):

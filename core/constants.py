@@ -27,6 +27,7 @@ class MessageType:
     TRIGGER_OPTIMAL_DISPATCH = "trigger_optimal_dispatch"
     ACTIVATE_PARKING_MODE = "activate_parking_mode"
     MANUAL_VISA_RELEASE = "manual_visa_release"
+    GET_ANALYTICS_DATA = "get_analytics_data"
 
 
 OptimalDispatchInfluencers = [

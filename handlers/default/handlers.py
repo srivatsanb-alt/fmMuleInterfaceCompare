@@ -476,7 +476,7 @@ class Handlers:
             if total_dispatch_wait_time is None:
                 total_dispatch_wait_time = 0
 
-            trip_metadata.update({"total_dispatch_wait_time": str(disaptch_wait.seconds)})
+            trip_metadata.update({"total_dispatch_wait_time": str(int(total_dispatch_wait_time) + disaptch_wait.seconds)})
             del trip_metadata["dispatch_wait_start"]
             flag_modified(ongoing_trip.trip, "trip_metadata")
 

@@ -38,7 +38,6 @@ build_base_images()
    docker pull mongo-express:1.0.0-alpha
    docker pull mongo:7.0
    docker pull postgres:14.0
-   docker pull grafana/grafana:9.5.2
    docker pull registry:2
    docker pull redis:latest
 }
@@ -54,10 +53,6 @@ build_final_images()
 		      --build-arg LAST_COMMIT_DT="${LAST_COMMIT_DT}" \
 		      -t fleet_manager:$FM_VERSION -f docker_files/Dockerfile .
 
-   docker image build -t fm_grafana:$FM_VERSION -f docker_files/grafana.Dockerfile .
-   docker image build -t fm_ttyd:$FM_VERSION -f docker_files/ttyd.Dockerfile .
-
-   echo "Successfully built grafana Image"
 
    cd fm_plugins && bash scripts/build_final_image.sh $FM_VERSION
    cd ../
