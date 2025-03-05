@@ -1,7 +1,7 @@
 {
   "files": {
     "main.css": "/static/css/main.70f2e1f6.css",
-    "main.js": "/static/js/main.ceef2a95.js",
+    "main.js": "/static/js/main.b46e3370.js",
     "static/js/206.3e519ea9.chunk.js": "/static/js/206.3e519ea9.chunk.js",
     "static/media/Login Image.webp": "/static/media/Login Image.5f6be016522306b4829c.webp",
     "static/media/OpenSans-Regular-400.ttf": "/static/media/OpenSans-Regular-400.57cd57a648021fa1c396.ttf",
@@ -69,6 +69,6 @@
   },
   "entrypoints": [
     "static/css/main.70f2e1f6.css",
-    "static/js/main.ceef2a95.js"
+    "static/js/main.b46e3370.js"
   ]
 }
