@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum
-from typing import List, Optional, Union, Dict
+from typing import Any, List, Optional, Union, Dict
 import pydantic
 
 
@@ -343,7 +343,7 @@ class TripMsg(ClientReq):
     route: List[str]
     priority: Optional[float] = 1.0
     tasks: Optional[Dict[str, str]] = None
-    metadata: Optional[Dict[str, Union[str, None]]] = None
+    metadata: Optional[Dict[str, Union[Any, None]]] = None
 
 
 class RoutePreview(ClientReq):
