@@ -1,8 +1,9 @@
 import os
 from utils.router_utils import RouterModule
 from models.db_session import DBSession
+import sys
 
-fleet_name="gp_var_pad"
+fleet_name = sys.argv[1]
 map_path = os.path.join(os.environ["FM_STATIC_DIR"], f"{fleet_name}/map/")
 rm = RouterModule(map_path)
 
