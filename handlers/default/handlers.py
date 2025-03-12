@@ -4,6 +4,7 @@ import logging
 import logging.config
 from typing import List
 import redis
+import time
 from requests import Response
 from sqlalchemy.orm.attributes import flag_modified
 
@@ -555,25 +556,25 @@ class Handlers:
         _ = utils_comms.send_req_to_sherpa(self.dbsession, sherpa, unhitch_msg)
         
     def is_conv_ready(self, curr_station: fm.Station, sherpa: fm.Sherpa):
-        if StationProperties.CONVEYOR in curr_station.properties:            
-            status_code, response_json = utils_comms.receive_ack_from_addverb_conveyor(f"{curr_station.name}_DISCHARGE")
-            if status_code != 200:
-                logging.getLogger(sherpa.name).error(f"Failed to receive ack from addverb conveyor plugin {response_json}")
-                return False
-            elif response_json == False:
-                return False
-            else:
-                return True  
+        response_json = False
+        if StationProperties.CONVEYOR in curr_station.properties:
+            while response_json is not True:        
+                status_code, response_json = utils_comms.receive_ack_from_addverb_conveyor(f"{curr_station.name}_DISCHARGE")
+                if status_code != 200:
+                    logging.getLogger(sherpa.name).error(f"Failed to receive ack from addverb conveyor plugin {response_json}")
+                    return False
+                time.sleep(5) 
         
         elif StationProperties.CHUTE in curr_station.properties:
-            status_code, response_json = utils_comms.receive_ack_from_addverb_conveyor(f"{curr_station.name}_ACCEPT")
-            if status_code != 200:
-                logging.getLogger(sherpa.name).error(f"Failed to receive ack from addverb conveyor plugin {response_json}")
-                return False
-            elif response_json == False:
-                return False
-            else:
-                return True
+            while response_json is not True:
+                status_code, response_json = utils_comms.receive_ack_from_addverb_conveyor(f"{curr_station.name}_ACCEPT")
+                if status_code != 200:
+                    logging.getLogger(sherpa.name).error(f"Failed to receive ack from addverb conveyor plugin {response_json}")
+                    return False
+                time.sleep(5)
+        
+        return True 
+            
    
 
     def add_conveyor_start_to_ongoing_trip(
