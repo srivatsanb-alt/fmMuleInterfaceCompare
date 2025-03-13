@@ -343,7 +343,7 @@ class TripMsg(ClientReq):
     route: List[str]
     priority: Optional[float] = 1.0
     tasks: Optional[Dict[str, str]] = None
-    metadata: Optional[Dict[str, Union[Any, None]]] = None
+    metadata: Optional[Dict[str, Union[str, Any]]] = None
 
 
 class RoutePreview(ClientReq):
