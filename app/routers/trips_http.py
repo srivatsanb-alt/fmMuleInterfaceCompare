@@ -281,7 +281,7 @@ async def trip_status_pg_with_type(
                 trip_status_req.filter_sherpa_names,
                 trip_status_req.filter_status,
                 trip_status_req.booked_by,
-                trip_status_req.search_by_station,
+                trip_status_req.search_by_stations,
                 trip_status_req.search_txt,
                 trip_status_req.sort_field,
                 trip_status_req.sort_order,

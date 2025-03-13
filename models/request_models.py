@@ -420,7 +420,7 @@ class TripStatusReq_pg(GenericFromToTimeReq):
     filter_sherpa_names: Optional[List[str]]
     filter_status: Optional[List[str]]
     booked_by: Optional[List[str]]
-    search_by_station: Optional[str]
+    search_by_stations: Optional[List[str]]
     sort_field: Optional[str]
     sort_order: Optional[str]
     search_txt: Optional[str]

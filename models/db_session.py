@@ -507,17 +507,19 @@ class DBSession:
         if booked_by and booked_by != "[]":
             base_query = base_query.filter(tm.Trip.booked_by.in_(booked_by))
 
-        if search_by_station and search_by_station != "":
-            columns_to_search = [
-                tm.Trip.route
-            ]
-            conditions = or_(
-                *[
-                    func.array_to_string(column, ',').ilike(f"%{search_by_station}%")
-                    for column in columns_to_search
+        if search_by_station and search_by_station != "[]":
+            base_query = base_query.filter()
+            for station in search_by_station:
+                columns_to_search = [
+                    tm.Trip.route
                 ]
-            )
-            base_query = base_query.filter(conditions)
+                conditions = or_(
+                    *[
+                        func.array_to_string(column, ',').ilike(f"%{station}%")
+                        for column in columns_to_search
+                    ]
+                )
+                base_query = base_query.filter(conditions)
             
         if search_text and search_text != "":
             columns_to_search = [
