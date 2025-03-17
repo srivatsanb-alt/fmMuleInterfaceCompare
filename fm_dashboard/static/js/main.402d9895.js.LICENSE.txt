@@ -27,11 +27,11 @@ OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 PERFORMANCE OF THIS SOFTWARE.
 ***************************************************************************** */
 
-/*! @azure/msal-browser v3.28.1 2025-01-14 */
+/*! @azure/msal-browser v3.21.0 2024-08-13 */
 
-/*! @azure/msal-common v14.16.0 2024-11-05 */
+/*! @azure/msal-common v14.14.1 2024-08-13 */
 
-/*! @azure/msal-react v2.2.0 2024-11-05 */
+/*! @azure/msal-react v2.0.22 2024-07-23 */
 
 /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/facebook/regenerator/blob/main/LICENSE */
 
@@ -76,9 +76,9 @@ PERFORMANCE OF THIS SOFTWARE.
 
 /**
  * @license React
- * react-is.production.js
+ * react-is.production.min.js
  *
- * Copyright (c) Meta Platforms, Inc. and affiliates.
+ * Copyright (c) Facebook, Inc. and its affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -116,9 +116,9 @@ PERFORMANCE OF THIS SOFTWARE.
 
 /**
  * @license React
- * use-sync-external-store-shim.production.js
+ * use-sync-external-store-shim.production.min.js
  *
- * Copyright (c) Meta Platforms, Inc. and affiliates.
+ * Copyright (c) Facebook, Inc. and its affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -126,16 +126,24 @@ PERFORMANCE OF THIS SOFTWARE.
 
 /**
  * @license React
- * use-sync-external-store-shim/with-selector.production.js
+ * use-sync-external-store-shim/with-selector.production.min.js
  *
- * Copyright (c) Meta Platforms, Inc. and affiliates.
+ * Copyright (c) Facebook, Inc. and its affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  */
 
 /**
- * @remix-run/router v1.23.0
+ * @mui/styled-engine v5.13.2
+ *
+ * @license MIT
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+/**
+ * @remix-run/router v1.6.2
  *
  * Copyright (c) Remix Software Inc.
  *
@@ -146,7 +154,7 @@ PERFORMANCE OF THIS SOFTWARE.
  */
 
 /**
- * React Router DOM v6.30.0
+ * React Router DOM v6.11.2
  *
  * Copyright (c) Remix Software Inc.
  *
@@ -157,7 +165,7 @@ PERFORMANCE OF THIS SOFTWARE.
  */
 
 /**
- * React Router v6.30.0
+ * React Router v6.11.2
  *
  * Copyright (c) Remix Software Inc.
  *
@@ -196,6 +204,6 @@ PERFORMANCE OF THIS SOFTWARE.
 
 //! new ies
 
-//! version : 0.5.47
+//! version : 0.5.43
 
 //!dateSelected && setDateSelected(true);
