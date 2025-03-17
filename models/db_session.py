@@ -1,4 +1,5 @@
 import datetime
+import logging
 import os
 from typing import List
 from sqlalchemy import select, func, any_, or_, and_, extract, text, literal_column, alias, cast
@@ -508,18 +509,12 @@ class DBSession:
             base_query = base_query.filter(tm.Trip.booked_by.in_(booked_by))
 
         if search_by_station and search_by_station != "[]":
-            base_query = base_query.filter()
-            for station in search_by_station:
-                columns_to_search = [
-                    tm.Trip.route
-                ]
-                conditions = or_(
-                    *[
-                        func.array_to_string(column, ',').ilike(f"%{station}%")
-                        for column in columns_to_search
-                    ]
+            base_query = base_query.filter(
+                or_(
+                    *[any_(tm.Trip.route) == station for station in search_by_station]
                 )
-                base_query = base_query.filter(conditions)
+            )
+            
             
         if search_text and search_text != "":
             columns_to_search = [
