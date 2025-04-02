@@ -27,7 +27,8 @@ AVAILABLE_UPGRADES = [
     "4.15",
     "4.2",
     "4.21",
-    "4.3"
+    "4.3",
+    "4.61"
 ]
 NO_SCHEMA_CHANGES = ["3.0", "3.01", "3.1"]
 
@@ -206,6 +207,15 @@ class DBUpgrade:
                         print(f"'{value}' already exists in stationproperties enum.")
             except Exception as e:
                 print(f"Unable to add values to stationproperties enum, exception: {e}")
+                
+    def upgrade_to_4_61(self):
+        with get_engine(os.getenv("FM_DATABASE_URI")).connect() as conn:
+            conn.execute("commit")
+            try:
+                conn.execute("DROP DATABASE plugin_erp")
+                print("plugin_erp database dropped")
+            except Exception as e:
+                print(f"Unable to drop plugin_erp database, exception: {e}")
 
 
 def upgrade_db_schema():
