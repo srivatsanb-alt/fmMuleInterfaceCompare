@@ -22,7 +22,6 @@ import models.misc_models as mm
 import models.base_models as bm
 from models.db_session import DBSession
 import app.routers.dependencies as dpd
-from scripts import conditional_trips
 import utils.util as utils_util
 import core.common as ccm
 import core.constants as cc
