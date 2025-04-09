@@ -834,9 +834,12 @@ class DBSession:
         return jsonable_encoder(progress)
 
     def get_legs(self, trip_id):
+        sort_field="trip_leg_id"
+        sort_order="asc"
         legs = (
             self.session.query(tm.TripAnalytics)
             .filter(tm.TripAnalytics.trip_id == trip_id)
+            .order_by(text(f"{sort_field} {sort_order}"))
             .all()
         )
         leg_details =[]
@@ -1454,5 +1457,3 @@ class DBSession:
             "avg_dispatch_wait_time": tug_wise_dispatch_wait_time
         }
 
-
-            
