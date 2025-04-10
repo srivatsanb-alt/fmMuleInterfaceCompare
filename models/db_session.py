@@ -1,4 +1,5 @@
 import datetime
+import logging
 import os
 from typing import List
 from sqlalchemy import select, func, any_, or_, and_, extract, text, literal_column, alias, cast
@@ -507,17 +508,13 @@ class DBSession:
         if booked_by and booked_by != "[]":
             base_query = base_query.filter(tm.Trip.booked_by.in_(booked_by))
 
-        if search_by_station and search_by_station != "":
-            columns_to_search = [
-                tm.Trip.route
-            ]
-            conditions = or_(
-                *[
-                    func.array_to_string(column, ',').ilike(f"%{search_by_station}%")
-                    for column in columns_to_search
-                ]
+        if search_by_station and search_by_station != "[]":
+            base_query = base_query.filter(
+                or_(
+                    *[any_(tm.Trip.route) == station for station in search_by_station]
+                )
             )
-            base_query = base_query.filter(conditions)
+            
             
         if search_text and search_text != "":
             columns_to_search = [
@@ -1389,7 +1386,8 @@ class DBSession:
         tug_wise_avg_obstacle_query = select(
             tm.Trip.sherpa_name,
             tm.Trip.route,
-            func.avg(tm.TripAnalytics.time_elapsed_obstacle_stoppages).label("Average_Obstacle_Time")
+            func.avg(tm.TripAnalytics.time_elapsed_obstacle_stoppages).label("Average_Obstacle_Time"),
+            func.count(tm.Trip.route).label("route_count")
         ).join(
             tm.TripAnalytics, tm.TripAnalytics.trip_id == tm.Trip.id
         ).filter(
@@ -1400,12 +1398,19 @@ class DBSession:
         ).group_by(
             tm.Trip.sherpa_name,
             tm.Trip.route
+        ).order_by(
+            func.count(tm.Trip.route).desc()
         )
+        
+        results = self.session.execute(tug_wise_avg_obstacle_query).fetchall()
 
-        tug_wise_avg_obstacle_time = {
-            row[0]: row[2]
-            for row in self.session.execute(tug_wise_avg_obstacle_query).fetchall()
-        }
+        tug_wise_avg_obstacle_time = {}
+        
+        for row in results:
+            sherpa_name, route, avg_obstacle_time, route_count = row
+            
+            if sherpa_name not in tug_wise_avg_obstacle_time:
+                tug_wise_avg_obstacle_time[sherpa_name] = float(avg_obstacle_time)
         
         return tug_wise_avg_obstacle_time
     
@@ -1417,7 +1422,8 @@ class DBSession:
                 func.coalesce(
                     cast(tm.Trip.trip_metadata["total_dispatch_wait_time"].astext, Numeric), 0
                 )
-            ).label("Average_Dispatch_Wait_Time")
+            ).label("Average_Dispatch_Wait_Time"),
+            func.count(tm.Trip.route).label("route_count")
         ).filter(
             tm.Trip.fleet_name == fleet_name,
             tm.Trip.start_time >= from_dt,
@@ -1426,14 +1432,22 @@ class DBSession:
         ).group_by(
             tm.Trip.sherpa_name,
             tm.Trip.route
+        ).order_by(
+            func.count(tm.Trip.route).desc()
         )
 
-        tug_wise_dispatch_wait_time = {
-            row[0] : row[2]  
-            for row in self.session.execute(tug_wise_dispatch_wait_query).fetchall()
-        }
+        results = self.session.execute(tug_wise_dispatch_wait_query).fetchall()
+
+        tug_wise_dispatch_wait_time = {}
+
+        for row in results:
+            sherpa_name, route, avg_wait_time, route_count = row
+            
+            if sherpa_name not in tug_wise_dispatch_wait_time:
+                tug_wise_dispatch_wait_time[sherpa_name] = float(avg_wait_time)
+                
         return tug_wise_dispatch_wait_time
-        
+    
 
     def get_analytics_data(
         self,
