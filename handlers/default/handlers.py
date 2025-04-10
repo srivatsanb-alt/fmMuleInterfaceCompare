@@ -600,6 +600,11 @@ class Handlers:
         )
         _ = utils_comms.send_req_to_sherpa(self.dbsession, sherpa, conveyor_send_msg)
 
+    def add_platform_start_to_ongoing_trip(
+        self, ongoing_trip: tm.OngoingTrip, sherpa: fm.Sherpa, station: fm.Station
+    ):
+        pass
+
     def do_post_actions(
         self, ongoing_trip: tm.OngoingTrip, sherpa: fm.Sherpa, curr_station: fm.Station
     ):
@@ -659,6 +664,15 @@ class Handlers:
                 f"{sherpa.name} reached a conveyor/chute station"
             )
             self.add_conveyor_start_to_ongoing_trip(ongoing_trip, sherpa, curr_station)
+
+        if any(
+            prop in curr_station.properties
+            for prop in [StationProperties.PLAT_DOWN, StationProperties.PLAT_UP, StationProperties.PLAT_ON, StationProperties.PLAT_OFF]
+        ):
+            logging.getLogger(sherpa.name).info(
+                f"{sherpa.name} reached a Modbus Lift station"
+            )
+            self.add_platform_start_to_ongoing_trip(ongoing_trip, sherpa, curr_station)
 
     def resolve_auto_hitch_error(
         self,
