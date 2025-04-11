@@ -634,43 +634,24 @@ class Handlers:
         
         if operation_type:
             logger.info(f"{sherpa.name} performing {operation_type} at station {station.name}")
-            
-            # Call the Modbus lift API
-            try:
-                # Get the API URL from environment or use default
-                api_url = os.getenv("MODBUS_LIFT_API_URL", "http://localhost:8002")
-                endpoint = f"{api_url}/plugin/api/v1/modbus_lift/operation"
-                
-                # Prepare the request payload
-                payload = {
+            payload = {
                     "station_name": station.name,
                     "operation_type": operation_type
                 }
                 
-                # Make the API request
-                response = requests.post(
-                    endpoint,
-                    json=payload,
-                    headers={"Content-Type": "application/json"}
-                )
-                
-                # Check the response
-                if response.status_code == 200:
-                    result = response.json()
-                    if result.get("status") == "success":
-                        logger.info(f"{operation_type} operation initiated successfully")
-                    else:
-                        error_msg = result.get("message", "Unknown error")
-                        logger.error(f"Failed to perform {operation_type}: {error_msg}")
-                        # Add error state to the trip
-                        ongoing_trip.add_state(tm.TripState.WAITING_STATION_PLAT_ERROR)
-                else:
-                    logger.error(f"API request failed with status code {response.status_code}")
-                    ongoing_trip.add_state(tm.TripState.WAITING_STATION_PLAT_ERROR)
-                    
-            except Exception as e:
-                logger.error(f"Error calling Modbus lift API: {e}")
+            status_code, response = utils_comms.send_req_to_plugin("post", payload)
+            
+        #    response_dict = json.loads(response)
+
+            if status_code == 200:
+                logger.info(f"{operation_type} operation initiated successfully")
+                self.handle_platform_operation(ongoing_trip, sherpa, station, True)
+            else:
+                error_msg = response.get("message", "Unknown error") if isinstance(response, dict) else str(response)
+                logger.error(f"Failed to perform {operation_type}: {error_msg}")
                 ongoing_trip.add_state(tm.TripState.WAITING_STATION_PLAT_ERROR)
+                self.handle_platform_operation(ongoing_trip, sherpa, station, False)
+
         else:
             logger.warning(f"No platform operation found for station {station.name}")
 
@@ -848,6 +829,16 @@ class Handlers:
                 mm.NotificationLevels.action_request,
                 mm.NotificationModules.trolley,
             )
+            
+    def resolve_platform_operation_error(
+        self,
+        ongoing_trip: tm.OngoingTrip,
+        sherpa: fm.Sherpa,
+        curr_station: fm.Station,
+        req: rqm.SherpaPeripheralsReq,
+    ):
+        pass
+    
 
     def delete_ongoing_trip(
         self,
@@ -1595,8 +1586,8 @@ class Handlers:
         elif req.lifter_actuator:
             self.handle_lifter_actuator(ongoing_trip, sherpa, curr_station, req.lifter_actuator)
             
-        elif req.platform_operation:
-            self.handle_platform_operation(ongoing_trip, sherpa, curr_station, req)
+        # elif req.platform_operation:
+        #     self.handle_platform_operation(ongoing_trip, sherpa, curr_station, req)
 
         return response
 
@@ -1769,6 +1760,58 @@ class Handlers:
 
             ongoing_trip.add_state(tm.TripState.WAITING_STATION_UNLIFT_END)
             logging.getLogger(sherpa.name).info(f"unlift done by {sherpa.name}")
+            
+            
+    def handle_platform_operation(
+        self,
+        ongoing_trip: tm.OngoingTrip,
+        sherpa: fm.Sherpa,
+        curr_station: fm.Station,
+        success: bool
+    ):
+        """Handle platform operation completion.
+        
+        This method is called when a platform operation is completed.
+        
+        Args:
+            ongoing_trip: The ongoing trip
+            sherpa: The sherpa performing the trip
+            curr_station: The current station
+            req: The peripherals request
+        """
+        sherpa_name = sherpa.name
+        if success:
+            # Determine the operation type and add the end state
+            if tm.TripState.WAITING_STATION_PLAT_UP_START in ongoing_trip.states:
+                ongoing_trip.add_state(tm.TripState.WAITING_STATION_PLAT_UP_END)
+                logging.getLogger(sherpa_name).info(f"Platform up operation completed by {sherpa_name}")
+            elif tm.TripState.WAITING_STATION_PLAT_DOWN_START in ongoing_trip.states:
+                ongoing_trip.add_state(tm.TripState.WAITING_STATION_PLAT_DOWN_END)
+                logging.getLogger(sherpa_name).info(f"Platform down operation completed by {sherpa_name}")
+            elif tm.TripState.WAITING_STATION_PLAT_ON_START in ongoing_trip.states:
+                ongoing_trip.add_state(tm.TripState.WAITING_STATION_PLAT_ON_END)
+                logging.getLogger(sherpa_name).info(f"Platform on operation completed by {sherpa_name}")
+            elif tm.TripState.WAITING_STATION_PLAT_OFF_START in ongoing_trip.states:
+                ongoing_trip.add_state(tm.TripState.WAITING_STATION_PLAT_OFF_END)
+                logging.getLogger(sherpa_name).info(f"Platform off operation completed by {sherpa_name}")
+            elif tm.TripState.WAITING_STATION_PLAT_ERROR in ongoing_trip.states:
+                # Clear the error state
+                ongoing_trip.states.remove(tm.TripState.WAITING_STATION_PLAT_ERROR)
+                logging.getLogger(sherpa_name).info(f"Platform operation error resolved for {sherpa_name}")
+        else:
+            error_msg = "Platform operation failed"
+            logging.getLogger(sherpa_name).error(error_msg)
+            ongoing_trip.add_state(tm.TripState.WAITING_STATION_PLAT_ERROR)
+            
+            # Add notification
+            self.dbsession.add_notification(
+                sherpa.get_notification_entity_names(),
+                f"Platform operation failed for {sherpa_name} at {curr_station.name}: {error_msg}",
+                mm.NotificationLevels.alert,
+                mm.NotificationModules.platform,
+            )
+
+
 
     def handle_resource_access(self, req):
         requester, is_sherpa = self.get_resource_requester(req)
@@ -2094,56 +2137,3 @@ class Handlers:
         self.maybe_run_optimal_dispatch(msg)
 
         return response
-
-    def handle_platform_operation(
-        self,
-        ongoing_trip: tm.OngoingTrip,
-        sherpa: fm.Sherpa,
-        curr_station: fm.Station,
-        req: rqm.SherpaPeripheralsReq
-    ):
-        """Handle platform operation completion.
-        
-        This method is called when a platform operation is completed.
-        
-        Args:
-            ongoing_trip: The ongoing trip
-            sherpa: The sherpa performing the trip
-            curr_station: The current station
-            req: The peripherals request
-        """
-        sherpa_name = req.source
-        peripheral_info = req.platform_operation
-        
-        # Check if the operation was successful
-        if peripheral_info.success:
-            # Determine the operation type and add the end state
-            if tm.TripState.WAITING_STATION_PLAT_UP_START in ongoing_trip.states:
-                ongoing_trip.add_state(tm.TripState.WAITING_STATION_PLAT_UP_END)
-                logging.getLogger(sherpa_name).info(f"Platform up operation completed by {sherpa_name}")
-            elif tm.TripState.WAITING_STATION_PLAT_DOWN_START in ongoing_trip.states:
-                ongoing_trip.add_state(tm.TripState.WAITING_STATION_PLAT_DOWN_END)
-                logging.getLogger(sherpa_name).info(f"Platform down operation completed by {sherpa_name}")
-            elif tm.TripState.WAITING_STATION_PLAT_ON_START in ongoing_trip.states:
-                ongoing_trip.add_state(tm.TripState.WAITING_STATION_PLAT_ON_END)
-                logging.getLogger(sherpa_name).info(f"Platform on operation completed by {sherpa_name}")
-            elif tm.TripState.WAITING_STATION_PLAT_OFF_START in ongoing_trip.states:
-                ongoing_trip.add_state(tm.TripState.WAITING_STATION_PLAT_OFF_END)
-                logging.getLogger(sherpa_name).info(f"Platform off operation completed by {sherpa_name}")
-            elif tm.TripState.WAITING_STATION_PLAT_ERROR in ongoing_trip.states:
-                # Clear the error state
-                ongoing_trip.states.remove(tm.TripState.WAITING_STATION_PLAT_ERROR)
-                logging.getLogger(sherpa_name).info(f"Platform operation error resolved for {sherpa_name}")
-        else:
-            # Operation failed
-            error_msg = peripheral_info.error_message or "Unknown error"
-            logging.getLogger(sherpa_name).error(f"Platform operation failed for {sherpa_name}: {error_msg}")
-            ongoing_trip.add_state(tm.TripState.WAITING_STATION_PLAT_ERROR)
-            
-            # Add notification
-            self.dbsession.add_notification(
-                sherpa.get_notification_entity_names(),
-                f"Platform operation failed for {sherpa_name} at {curr_station.name}: {error_msg}",
-                mm.NotificationLevels.alert,
-                mm.NotificationModules.platform,
-            )
