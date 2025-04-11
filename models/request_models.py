@@ -155,6 +155,7 @@ class SherpaPeripheralsReq(SherpaReq):
     speaker: SpeakerReq = None
     indicator: IndicatorReq = None
     error_device: str = None
+    platform_operation: bool = None
     type = MessageType.PERIPHERALS
 
 
