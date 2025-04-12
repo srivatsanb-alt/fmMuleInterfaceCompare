@@ -162,7 +162,12 @@ class SherpaPeripheralsReq(SherpaReq):
     platform_operation: PlatformOperationReq = None
     error_device: str = None
     type = MessageType.PERIPHERALS
+    
 
+class SoftPeripheralsReq(SherpaReq):
+    dispatch_button: DispatchButtonReq = None
+    type = MessageType.PERIPHERALS
+    
 
 class ResourceReq(SherpaReq):
     visa: VisaReq = None

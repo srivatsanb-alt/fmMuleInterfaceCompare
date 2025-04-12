@@ -636,7 +636,8 @@ class Handlers:
             logger.info(f"{sherpa.name} performing {operation_type} at station {station.name}")
             payload = {
                     "station_name": station.name,
-                    "operation_type": operation_type
+                    "operation_type": operation_type,
+                    "entity_name": sherpa.name
                 }
                 
             status_code, response = utils_comms.send_req_to_plugin("post", payload)
@@ -1798,10 +1799,10 @@ class Handlers:
                 # Clear the error state
                 ongoing_trip.states.remove(tm.TripState.WAITING_STATION_PLAT_ERROR)
                 logging.getLogger(sherpa_name).info(f"Platform operation error resolved for {sherpa_name}")
+            self.add_dispatch_start_to_ongoing_trip(ongoing_trip, sherpa)
         else:
             error_msg = "Platform operation failed"
             logging.getLogger(sherpa_name).error(error_msg)
-            ongoing_trip.add_state(tm.TripState.WAITING_STATION_PLAT_ERROR)
             
             # Add notification
             self.dbsession.add_notification(
@@ -1810,6 +1811,8 @@ class Handlers:
                 mm.NotificationLevels.alert,
                 mm.NotificationModules.platform,
             )
+            
+            self.add_dispatch_start_to_ongoing_trip(ongoing_trip, sherpa)
 
 
 
