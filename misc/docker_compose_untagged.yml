@@ -37,6 +37,7 @@ services:
       PGDATABASE: ati_fleet
       FM_DATABASE_URI: postgresql://postgres:postgres@db:5432
       FM_MONGO_DATABASE_URI: mongodb://ati:atiMongo@mongo:27017
+      APP_ENV: app_env
 
   plugins:
     image: plugin:fm_version
@@ -69,6 +70,7 @@ services:
       TZ: Asia/Kolkata
       PLUGIN_DATABASE_URI: postgresql://postgres:postgres@db
       PLUGIN_MONGO_DATABASE_URI: mongodb://ati:atiMongo@mongo:27017
+      APP_ENV: app_env
   
   db:
     image: postgres:14.0

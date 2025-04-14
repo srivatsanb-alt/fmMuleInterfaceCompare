@@ -36,8 +36,11 @@ start() {
     poetry run python /app/main.py > $LOGS/fm.out 2>&1 &
 
     echo "starting fleet manager uvicorn, listening on port $FM_PORT"
-    # poetry run python /app/app/main.py 2>&1 &
-    poetry run uvicorn app.main:app --reload --port 8001 --host 0.0.0.0 2>&1 &
+    if [ $APP_ENV != 'dev' ]; then 
+      poetry run python /app/app/main.py 2>&1 &
+    else 
+      poetry run uvicorn app.main:app --reload --port $FM_PORT --host 0.0.0.0 2>&1 &
+    fi
 }
 
 fm_init() {

@@ -80,7 +80,8 @@ build_final_images()
       sed -i "s/fm_volume/- ..:\\/app/g" static/docker_compose_v$FM_VERSION.yml
       sed -i "s/plugin_volume/- ..\\/fm_plugins:\\/app/g" static/docker_compose_v$FM_VERSION.yml
       sed -i "s/add_mongo_ports:/ports:\n      - 27017:27017/g" static/docker_compose_v$FM_VERSION.yml
-      sed -i "s/add_db_ports:/ports:\n      - 5432:5432/g" static/docker_compose_v$FM_VERSION.yml      
+      sed -i "s/add_db_ports:/ports:\n      - 5432:5432/g" static/docker_compose_v$FM_VERSION.yml    
+      sed -i "s/app_env/dev/g" static/docker_compose_v$FM_VERSION.yml     
      }
      else {
 
@@ -88,6 +89,7 @@ build_final_images()
       sed -i "s/plugin_volume//g" static/docker_compose_v$FM_VERSION.yml
       sed -i "s/add_db_ports://g" static/docker_compose_v$FM_VERSION.yml
       sed -i "s/add_mongo_ports://g" static/docker_compose_v$FM_VERSION.yml
+      sed -i "s/app_env/prod/g" static/docker_compose_v$FM_VERSION.yml 
      }
      fi
    }
