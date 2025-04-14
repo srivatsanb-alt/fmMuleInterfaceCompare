@@ -78,6 +78,7 @@ services:
       - ./psql/psql_backup:/var/lib/postgresql/data:rw
     networks:
      - fm_dn
+    add_db_ports:
     environment:
       TZ: Asia/Kolkata
       POSTGRES_USER: postgres
@@ -93,6 +94,7 @@ services:
      - ./mongo:/data/db:rw
     networks:
       - fm_dn
+    add_mongo_ports:
     environment:
       MONGO_INITDB_ROOT_USERNAME: ati
       MONGO_INITDB_ROOT_PASSWORD: atiMongo

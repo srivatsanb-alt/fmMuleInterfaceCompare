@@ -16,7 +16,14 @@ FM_IMAGE_INFO="FM image built on $USER@$(hostname), FM_VERSION: $FM_VERSION (des
 
 build_base_images_interactive()
 {
-   read -p "Should build base images? (y/n) - " build_base_images
+   if [ "$1" = "False" ]; then
+   {
+      read -p "Should build base images? (y/n) - " build_base_images
+   }
+   else {
+      build_base_images="y"
+   }
+   fi
    if [ "$build_base_images" = "y" ]; then 
    {
         build_base_images 
@@ -68,6 +75,21 @@ build_final_images()
    }
    else {
      sed -i "s/fm_version/$FM_VERSION/g" static/docker_compose_v$FM_VERSION.yml
+     if [ $DEV_MODE == "True" ]; then
+     {
+      sed -i "s/fm_volume/- ..:\\/app/g" static/docker_compose_v$FM_VERSION.yml
+      sed -i "s/plugin_volume/- ..\\/fm_plugins:\\/app/g" static/docker_compose_v$FM_VERSION.yml
+      sed -i "s/add_mongo_ports:/ports:\n      - 27017:27017/g" static/docker_compose_v$FM_VERSION.yml
+      sed -i "s/add_db_ports:/ports:\n      - 5432:5432/g" static/docker_compose_v$FM_VERSION.yml      
+     }
+     else {
+
+      sed -i "s/fm_volume/- .:\\/app\\/static/g" static/docker_compose_v$FM_VERSION.yml
+      sed -i "s/plugin_volume//g" static/docker_compose_v$FM_VERSION.yml
+      sed -i "s/add_db_ports://g" static/docker_compose_v$FM_VERSION.yml
+      sed -i "s/add_mongo_ports://g" static/docker_compose_v$FM_VERSION.yml
+     }
+     fi
    }
    fi
 }
