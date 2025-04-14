@@ -6,7 +6,7 @@ services:
     restart: always
     build: .
     volumes:
-      - .:/app/static
+      fm_volume
       - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
       - db
@@ -44,6 +44,7 @@ services:
     restart: always
     build: .
     volumes:
+      plugin_volume
       - .:/app/static
     depends_on:
       - db

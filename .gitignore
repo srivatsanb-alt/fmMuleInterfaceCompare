@@ -134,3 +134,7 @@ static/mongo
 static
 
 !fm_dashboard/static
+.gitmodules
+logs
+mule_config
+tmp
