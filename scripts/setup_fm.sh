@@ -24,12 +24,12 @@ echo "Running in development mode: $DEV_MODE"
 source scripts/build_fm_images.sh
 source scripts/upload_images.sh 
 
-if [ "$DEV_MODE" = "True" ]; then
+if [ "$DEV_MODE" = "False" ]; then
 {
-   remote_server="n"
+   read -p "Want to build images on a remote server? (y/n) - " remote_server
 }
 else {
-   read -p "Want to build images on a remote server? (y/n) - " remote_server
+   remote_server="n"
 }
 fi
 
