@@ -5,8 +5,7 @@ ARG FM_TAG
 ARG GIT_TAGGED
 ARG LAST_COMMIT_DT
 
-RUN mkdir /app/mule_config
-RUN mkdir /app/downloads
+
 
 ENV FM_INSTALL_DIR="/app"
 
@@ -39,17 +38,6 @@ RUN echo "alias hashpass='poetry run python utils/gen_hashed_password.py --passw
 RUN echo "alias create_certs='poetry run python utils/create_certs.py --ips'" >> ~/.bashrc
 
 COPY . /app/
-RUN echo "Copying messages_pb2.py to mule/ati/schema on the docker"
-COPY ./misc/messages_pb2.py /app/mule/ati/schema/
-
-# expose downloads
-COPY ./docs/support_manual.pdf /app/downloads/.
-COPY ./misc/FlashTool_SB.tar /app/downloads/.
-COPY ./master_fm_comms/mfm_rev_tunnel.tar /app/downloads/.
-
-RUN mkdir /app/logs
-RUN mkdir /app/tmp
-
 RUN cd /app
 RUN chmod +x scripts/fleet_orchestrator.sh
 CMD exec scripts/fleet_orchestrator.sh

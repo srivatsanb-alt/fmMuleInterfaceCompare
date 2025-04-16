@@ -6,7 +6,7 @@ services:
     restart: always
     build: .
     volumes:
-      - .:/app/static
+      fm_volume
       - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
       - db
@@ -37,6 +37,7 @@ services:
       PGDATABASE: ati_fleet
       FM_DATABASE_URI: postgresql://postgres:postgres@db:5432
       FM_MONGO_DATABASE_URI: mongodb://ati:atiMongo@mongo:27017
+      APP_ENV: app_env
 
   plugins:
     image: plugin:fm_version
@@ -44,6 +45,7 @@ services:
     restart: always
     build: .
     volumes:
+      plugin_volume
       - .:/app/static
     depends_on:
       - db
@@ -68,6 +70,7 @@ services:
       TZ: Asia/Kolkata
       PLUGIN_DATABASE_URI: postgresql://postgres:postgres@db
       PLUGIN_MONGO_DATABASE_URI: mongodb://ati:atiMongo@mongo:27017
+      APP_ENV: app_env
   
   db:
     image: postgres:14.0
@@ -77,6 +80,7 @@ services:
       - ./psql/psql_backup:/var/lib/postgresql/data:rw
     networks:
      - fm_dn
+    add_db_ports:
     environment:
       TZ: Asia/Kolkata
       POSTGRES_USER: postgres
@@ -92,6 +96,7 @@ services:
      - ./mongo:/data/db:rw
     networks:
       - fm_dn
+    add_mongo_ports:
     environment:
       MONGO_INITDB_ROOT_USERNAME: ati
       MONGO_INITDB_ROOT_PASSWORD: atiMongo
