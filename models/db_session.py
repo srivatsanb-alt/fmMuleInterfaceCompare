@@ -1389,7 +1389,8 @@ class DBSession:
         tug_wise_avg_obstacle_query = select(
             tm.Trip.sherpa_name,
             tm.Trip.route,
-            func.avg(tm.TripAnalytics.time_elapsed_obstacle_stoppages).label("Average_Obstacle_Time")
+            func.avg(tm.TripAnalytics.time_elapsed_obstacle_stoppages).label("Average_Obstacle_Time"),
+            func.count(tm.Trip.route).label("route_count")
         ).join(
             tm.TripAnalytics, tm.TripAnalytics.trip_id == tm.Trip.id
         ).filter(
@@ -1400,12 +1401,19 @@ class DBSession:
         ).group_by(
             tm.Trip.sherpa_name,
             tm.Trip.route
+        ).order_by(
+            func.count(tm.Trip.route).desc()
         )
+        
+        results = self.session.execute(tug_wise_avg_obstacle_query).fetchall()
 
-        tug_wise_avg_obstacle_time = {
-            row[0]: row[2]
-            for row in self.session.execute(tug_wise_avg_obstacle_query).fetchall()
-        }
+        tug_wise_avg_obstacle_time = {}
+        
+        for row in results:
+            sherpa_name, route, avg_obstacle_time, route_count = row
+            
+            if sherpa_name not in tug_wise_avg_obstacle_time:
+                tug_wise_avg_obstacle_time[sherpa_name] = float(avg_obstacle_time)
         
         return tug_wise_avg_obstacle_time
     
@@ -1417,7 +1425,8 @@ class DBSession:
                 func.coalesce(
                     cast(tm.Trip.trip_metadata["total_dispatch_wait_time"].astext, Numeric), 0
                 )
-            ).label("Average_Dispatch_Wait_Time")
+            ).label("Average_Dispatch_Wait_Time"),
+            func.count(tm.Trip.route).label("route_count")
         ).filter(
             tm.Trip.fleet_name == fleet_name,
             tm.Trip.start_time >= from_dt,
@@ -1426,14 +1435,22 @@ class DBSession:
         ).group_by(
             tm.Trip.sherpa_name,
             tm.Trip.route
+        ).order_by(
+            func.count(tm.Trip.route).desc()
         )
 
-        tug_wise_dispatch_wait_time = {
-            row[0] : row[2]  
-            for row in self.session.execute(tug_wise_dispatch_wait_query).fetchall()
-        }
+        results = self.session.execute(tug_wise_dispatch_wait_query).fetchall()
+
+        tug_wise_dispatch_wait_time = {}
+
+        for row in results:
+            sherpa_name, route, avg_wait_time, route_count = row
+            
+            if sherpa_name not in tug_wise_dispatch_wait_time:
+                tug_wise_dispatch_wait_time[sherpa_name] = float(avg_wait_time)
+                
         return tug_wise_dispatch_wait_time
-        
+    
 
     def get_analytics_data(
         self,

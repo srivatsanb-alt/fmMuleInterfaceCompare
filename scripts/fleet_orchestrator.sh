@@ -1,4 +1,29 @@
 #! /bin/bash
+
+
+# Create necessary directories
+mkdir -p /app/mule_config
+mkdir -p /app/downloads
+mkdir -p /app/logs
+mkdir -p /app/tmp
+
+# Set timezone
+ln -fs /usr/share/zoneinfo/Asia/Kolkata /etc/localtime
+dpkg-reconfigure -f noninteractive tzdata
+
+
+# Copy files
+echo "Copying messages_pb2.py to mule/ati/schema on the docker"
+cp ./misc/messages_pb2.py /app/mule/ati/schema/
+
+# Expose downloads
+cp ./docs/support_manual.pdf /app/downloads/.
+cp ./misc/FlashTool_SB.tar /app/downloads/.
+cp ./master_fm_comms/mfm_rev_tunnel.tar /app/downloads/.
+
+
+
+
 set -e
 
 redis-cli -h $REDIS_HOST -p $REDIS_PORT flushall
@@ -11,7 +36,11 @@ start() {
     poetry run python /app/main.py > $LOGS/fm.out 2>&1 &
 
     echo "starting fleet manager uvicorn, listening on port $FM_PORT"
-    poetry run python /app/app/main.py 2>&1 &
+    if [ $APP_ENV != 'dev' ]; then 
+      poetry run python /app/app/main.py 2>&1 &
+    else 
+      poetry run uvicorn app.main:app --reload --port $FM_PORT --host 0.0.0.0 2>&1 &
+    fi
 }
 
 fm_init() {
@@ -40,7 +69,8 @@ set_max_connections() {
   if [ "$n" -eq "1" ] ; then
      echo "Already modified psql max connections to $MC"
   else
-     sed -i "s/max_connections/#max_connections/g" /app/static/psql/psql_backup/postgresql.conf
+     sed "s/max_connections/#max_connections/g" /app/static/psql/psql_backup/postgresql.conf > /tmp/postgresql.conf.tmp
+     mv /tmp/postgresql.conf.tmp /app/static/psql/psql_backup/postgresql.conf
      echo "max_connections = $MC" >> /app/static/psql/psql_backup/postgresql.conf
      echo "Will set psql max connections to $MC"
      docker restart fleet_db
