@@ -223,6 +223,10 @@ def is_sherpa_available_for_new_trip(dbsession: DBSession, sherpa_status: fm.She
     return reason == AVAILABLE
 
 
+def is_battery_swap_trip(pending_trip: tm.PendingTrip):
+    trip_metadata = pending_trip.trip.trip_metadata
+    return trip_metadata.get("trip_type", None) == "battery_swap"
+
 # FM HEALTH CHECK #
 def record_rq_perf(current_data_folder):
     fm_backup_path = os.path.join(os.getenv("FM_STATIC_DIR"), "data_backup")
