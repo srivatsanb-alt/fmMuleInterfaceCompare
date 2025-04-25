@@ -276,12 +276,14 @@ class Handlers:
         sherpa_status: fm.SherpaStatus = sherpa.status
         sherpa_status.continue_curr_task = False
 
-        if hutils.is_battery_swap_trip(pending_trip) is False:
-            if hutils.is_sherpa_available_for_new_trip(self.dbsession, sherpa_status) is False:
-                logging.getLogger(sherpa.name).info(
-                    f"{sherpa.name} not available for {pending_trip.trip_id}"
-                )
-                return False
+        if (
+            hutils.is_battery_swap_trip(pending_trip) is False and
+            hutils.is_sherpa_available_for_new_trip(self.dbsession, sherpa_status) is False
+            ):
+            logging.getLogger(sherpa.name).info(
+                f"{sherpa.name} not available for {pending_trip.trip_id}"
+            )
+            return False
         
 
         if pending_trip.trip.scheduled:
