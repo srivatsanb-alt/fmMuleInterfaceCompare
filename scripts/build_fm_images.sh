@@ -17,21 +17,15 @@ FM_IMAGE_INFO="FM image built on $USER@$(hostname), FM_VERSION: $FM_VERSION (des
 build_base_images_interactive()
 {
    if [ "$1" = "False" ]; then
-   {
       read -p "Should build base images? (y/n) - " build_base_images
-   }
-   else {
+   else 
       build_base_images="y"
-   }
    fi
+   
    if [ "$build_base_images" = "y" ]; then 
-   {
         build_base_images 
-   }
    else
-   {
        echo "Not building base images"
-   }
    fi
 }
 

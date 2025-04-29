@@ -1,25 +1,28 @@
 #! /bin/bash
 
+echo $APP_ENV
 
+if [ $APP_ENV == 'dev' ]; then 
 # Create necessary directories
-mkdir -p /app/mule_config
-mkdir -p /app/downloads
-mkdir -p /app/logs
-mkdir -p /app/tmp
+  mkdir -p /app/mule_config
+  mkdir -p /app/downloads
+  mkdir -p /app/logs
+  mkdir -p /app/tmp
 
-# Set timezone
-ln -fs /usr/share/zoneinfo/Asia/Kolkata /etc/localtime
-dpkg-reconfigure -f noninteractive tzdata
+  # Set timezone
+  ln -fs /usr/share/zoneinfo/Asia/Kolkata /etc/localtime
+  dpkg-reconfigure -f noninteractive tzdata
 
 
-# Copy files
-echo "Copying messages_pb2.py to mule/ati/schema on the docker"
-cp ./misc/messages_pb2.py /app/mule/ati/schema/
+  # Copy files
+  echo "Copying messages_pb2.py to mule/ati/schema on the docker"
+  cp ./misc/messages_pb2.py /app/mule/ati/schema/
 
-# Expose downloads
-cp ./docs/support_manual.pdf /app/downloads/.
-cp ./misc/FlashTool_SB.tar /app/downloads/.
-cp ./master_fm_comms/mfm_rev_tunnel.tar /app/downloads/.
+  # Expose downloads
+  cp ./docs/support_manual.pdf /app/downloads/.
+  cp ./misc/FlashTool_SB.tar /app/downloads/.
+  cp ./master_fm_comms/mfm_rev_tunnel.tar /app/downloads/.
+fi
 
 
 
