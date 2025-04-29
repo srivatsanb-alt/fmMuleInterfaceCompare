@@ -2,7 +2,7 @@
 
 echo "FM environment: $APP_ENV"
 
-if [ $APP_ENV == 'dev' ]; then 
+if [ "$APP_ENV" == "dev" ]; then 
 # Create necessary directories
   mkdir -p /app/mule_config
   mkdir -p /app/downloads
