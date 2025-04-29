@@ -46,8 +46,8 @@ async def basic_info(sherpa_name: str = Depends(dpd.get_sherpa)):
         dpd.raise_error("Unknown requester", 401)
 
     with FMMongo() as fm_mongo:
-        low_battery_config = fm_mongo.get_document_from_fm_config("low_battery")
-        battery_threshold = low_battery_config["battery_thresh"]
+        conditional_trips_config = fm_mongo.get_document_from_fm_config("conditional_trips")
+        battery_threshold = conditional_trips_config.get("battery_swap", {}).get("threshold")
 
     with DBSession(engine=ccm.engine) as dbsession:
         sherpa: fm.Sherpa = dbsession.get_sherpa(sherpa_name)

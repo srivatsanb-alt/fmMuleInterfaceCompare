@@ -1,8 +1,8 @@
 {
   "files": {
-    "main.css": "/static/css/main.b4a4e02c.css",
-    "main.js": "/static/js/main.234bfa1e.js",
-    "static/js/27.25cb0711.chunk.js": "/static/js/27.25cb0711.chunk.js",
+    "main.css": "/static/css/main.c235e433.css",
+    "main.js": "/static/js/main.a8ccc687.js",
+    "static/js/206.3e519ea9.chunk.js": "/static/js/206.3e519ea9.chunk.js",
     "static/media/Login Image.webp": "/static/media/Login Image.5f6be016522306b4829c.webp",
     "static/media/OpenSans-Regular-400.ttf": "/static/media/OpenSans-Regular-400.57cd57a648021fa1c396.ttf",
     "static/media/Montserrat-Medium.ttf": "/static/media/Montserrat-Medium.a281f04d4c8926e7dea1.ttf",
@@ -139,7 +139,6 @@
     "static/media/delete.svg": "/static/media/delete.d5ed251e860147d1334b285bcd37f070.svg",
     "static/media/new-trip.svg": "/static/media/new-trip.5c24ead3ecaec583413ebbb4d4f0bafb.svg",
     "static/media/download.svg": "/static/media/download.b5e4a460d871c74369eaae5153f59f76.svg",
-    "static/media/bookmark.svg": "/static/media/bookmark.a40be2027dd64b9ea523175458d1a8e7.svg",
     "static/media/close.svg": "/static/media/close.168cbe73eceeadfd1d5420bf2d449ded.svg",
     "static/media/filters.svg": "/static/media/filters.fd1435cf892dd26c6fe1a8dd647d91c2.svg",
     "static/media/asset-events.svg": "/static/media/asset-events.016ce2f7925684130db167a04a790c37.svg",
@@ -162,7 +161,7 @@
     "static/media/vector-straight2.svg": "/static/media/vector-straight2.a4c9a1f3e3ce81f384c4240012840a08.svg"
   },
   "entrypoints": [
-    "static/css/main.b4a4e02c.css",
-    "static/js/main.234bfa1e.js"
+    "static/css/main.c235e433.css",
+    "static/js/main.a8ccc687.js"
   ]
 }
