@@ -1,6 +1,6 @@
 #! /bin/bash
 
-echo $APP_ENV
+echo "FM environment: $APP_ENV"
 
 if [ $APP_ENV == 'dev' ]; then 
 # Create necessary directories
