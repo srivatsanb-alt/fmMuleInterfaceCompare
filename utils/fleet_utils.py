@@ -285,7 +285,7 @@ class FleetUtils:
             for _, station_info in stations_info.items():
                 if station_info["station_name"] in valid_stations:
                     raise ValueError(
-                        f"Station: {station_info['station_name']} is already present in fleet {fleet_id}"
+                        f"Station: {station_info['station_name']} is already present in fleet"
                     )
                 cls.add_edit_station(dbsession, station_info, fleet_id)
                 valid_stations.append(station_info["station_name"])
