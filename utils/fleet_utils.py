@@ -314,10 +314,6 @@ class FleetUtils:
                 raise ValueError(
                     f"Station: {station_name} is repeated, two fleets cannot have same station names"
                 )
-            if station.name :
-                raise ValueError(
-                    f"Station: {station_name} is already present in fleet {fleet_id}"
-                )
             station.pose = station_info["pose"]
             station.properties = properties
             logger.info(
