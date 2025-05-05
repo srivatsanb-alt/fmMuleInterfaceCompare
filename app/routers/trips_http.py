@@ -416,6 +416,21 @@ async def trip_analytics(
     return response
 
 
+@router.post("/analytics_with_trip_info")
+async def trip_analytics_with_trip_info(
+    trip_analytics_req: rqm.TripAnalyticsWithTripInfoReq, user_name=Depends(dpd.get_user_from_header)
+):
+    response = {}
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+    with DBSession(engine=ccm.engine) as dbsession:
+        all_trip_analytics = dbsession.get_trip_analytics_with_trips_info(
+            trip_analytics_req.from_dt, trip_analytics_req.to_dt, trip_analytics_req.booked_by, trip_analytics_req.filter_fleets
+        )
+        response = all_trip_analytics
+
+    return response
+
 @router.post("/{trip_id}/add_trip_metadata")
 async def add_trip_metadata(
     trip_id: int,

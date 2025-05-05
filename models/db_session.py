@@ -847,6 +847,32 @@ class DBSession:
             leg_detail = get_table_as_dict(tm.TripAnalytics,leg)
             leg_details.append(leg_detail)
         return leg_details
+    
+    def get_trip_analytics_with_trips_info(self, from_dt, to_dt, booked_by, filter_fleets):
+        base_query = (
+            self.session.query(tm.Trip) 
+            .filter(or_(tm.Trip.booking_time >= from_dt, tm.Trip.start_time >= from_dt))
+            .filter(or_(tm.Trip.booking_time <= to_dt, tm.Trip.end_time <= to_dt))
+            .filter(tm.Trip.status.in_(tm.COMPLETED_TRIP_STATUS))
+        )
+        
+        if filter_fleets and filter_fleets != "[]":
+            base_query = base_query.filter(tm.Trip.fleet_name.in_(filter_fleets))
+
+        if booked_by and booked_by != "[]":
+            base_query = base_query.filter(tm.Trip.booked_by.in_(booked_by))
+
+        trips = base_query.all()
+        trip_analytics = []
+        for trip in trips:
+            trip_detail = get_table_as_dict(tm.Trip,trip)
+            trip_details = []
+            trip_details = trip_detail
+            trip_details["legs"] = self.get_legs(str(trip_detail["id"]))
+            trip_analytics.append(trip_details)
+        
+        return trip_analytics
+        
 
     def get_trip_analytics_with_pagination(
         self,
