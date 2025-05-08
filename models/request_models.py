@@ -413,8 +413,7 @@ class TripStatusReq(GenericFromToTimeReq):
     trip_ids: Optional[List[int]]
     
 class TripAnalyticsWithTripInfoReq(ClientReq):
-    from_dt: str
-    to_dt: str
+    request_date: Optional[str]
     booked_by: Optional[List[str]]
     filter_fleets: Optional[List[str]]
     

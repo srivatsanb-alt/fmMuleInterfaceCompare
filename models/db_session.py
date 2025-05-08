@@ -848,9 +848,38 @@ class DBSession:
             leg_details.append(leg_detail)
         return leg_details
     
+    def get_legs_info(self, trip_id):
+        sort_field="trip_leg_id"
+        sort_order="asc"
+        legs = (
+            self.session.query(
+                tm.TripAnalytics.trip_leg_id,
+                tm.TripAnalytics.from_station,
+                tm.TripAnalytics.to_station,
+                tm.TripAnalytics.start_time,
+                tm.TripAnalytics.end_time
+                )
+            .filter(tm.TripAnalytics.trip_id == trip_id)
+            .order_by(text(f"{sort_field} {sort_order}"))
+            .all()
+        )
+        leg_details =[]
+        for leg in legs:
+            leg_details.append(jsonable_encoder(leg))
+        return leg_details
+    
     def get_trip_analytics_with_trips_info(self, from_dt, to_dt, booked_by, filter_fleets):
         base_query = (
-            self.session.query(tm.Trip) 
+            self.session.query(
+                tm.Trip.id,
+                tm.Trip.fleet_name,
+                tm.Trip.sherpa_name,
+                tm.Trip.status,
+                tm.Trip.route,
+                tm.Trip.booking_time,
+                tm.Trip.start_time,
+                tm.Trip.end_time
+                )
             .filter(or_(tm.Trip.booking_time >= from_dt, tm.Trip.start_time >= from_dt))
             .filter(or_(tm.Trip.booking_time <= to_dt, tm.Trip.end_time <= to_dt))
             .filter(tm.Trip.status.in_(tm.COMPLETED_TRIP_STATUS))
@@ -865,10 +894,10 @@ class DBSession:
         trips = base_query.all()
         trip_analytics = []
         for trip in trips:
-            trip_detail = get_table_as_dict(tm.Trip,trip)
+            trip_detail =  jsonable_encoder(trip)
             trip_details = []
             trip_details = trip_detail
-            trip_details["legs"] = self.get_legs(str(trip_detail["id"]))
+            trip_details["legs"] = self.get_legs_info(str(trip_detail["id"]))
             trip_analytics.append(trip_details)
         
         return trip_analytics

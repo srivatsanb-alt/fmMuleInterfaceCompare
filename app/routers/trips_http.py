@@ -6,7 +6,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm.attributes import flag_modified
 import asyncio
 import pandas as pd
-from datetime import datetime, date
+from datetime import datetime, time, date
 import io
 import math
 
@@ -423,9 +423,20 @@ async def trip_analytics_with_trip_info(
     response = {}
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
+
+    if trip_analytics_req.request_date is not None:
+        request_date = str_to_dt(trip_analytics_req.request_date).date()
+        from_dt = datetime.combine(request_date, time.min)
+        to_dt = datetime.combine(request_date, time.max)
+    else:
+        request_date = datetime.datetime.now().date()
+        from_dt = datetime.combine(request_date, time.min)
+        to_dt = datetime.combine(request_date, time.max)
+    
+
     with DBSession(engine=ccm.engine) as dbsession:
         all_trip_analytics = dbsession.get_trip_analytics_with_trips_info(
-            trip_analytics_req.from_dt, trip_analytics_req.to_dt, trip_analytics_req.booked_by, trip_analytics_req.filter_fleets
+            from_dt, to_dt, trip_analytics_req.booked_by, trip_analytics_req.filter_fleets
         )
         response = all_trip_analytics
 
