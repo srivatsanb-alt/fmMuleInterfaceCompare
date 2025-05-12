@@ -422,21 +422,11 @@ async def trip_analytics_with_trip_info(
 ):
     response = {}
     if not user_name:
-        dpd.raise_error("Unknown requester", 401)
-
-    if trip_analytics_req.request_date is not None:
-        request_date = str_to_dt(trip_analytics_req.request_date).date()
-        from_dt = datetime.combine(request_date, time.min)
-        to_dt = datetime.combine(request_date, time.max)
-    else:
-        request_date = datetime.datetime.now().date()
-        from_dt = datetime.combine(request_date, time.min)
-        to_dt = datetime.combine(request_date, time.max)
-    
+        dpd.raise_error("Unknown requester", 401)    
 
     with DBSession(engine=ccm.engine) as dbsession:
         all_trip_analytics = dbsession.get_trip_analytics_with_trips_info(
-            from_dt, to_dt, trip_analytics_req.booked_by, trip_analytics_req.filter_fleets
+            trip_analytics_req.from_dt, trip_analytics_req.to_dt, trip_analytics_req.booked_by, trip_analytics_req.filter_fleets
         )
         response = all_trip_analytics
 
