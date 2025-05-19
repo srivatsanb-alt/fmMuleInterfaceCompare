@@ -8,12 +8,6 @@ BUILD_IMAGES=1
 setup_image_config() {
     branch=$(git rev-parse --abbrev-ref HEAD)
     
-    declare -A IMAGES_CONFIG=(
-        ["fleet_manager:$branch"]="fm-backend:rootless-main"
-        ["plugin:$branch"]="fm-plugin:rootless-main"
-        ["mongo-express:1.0.0-alpha"]="fm-mongo-express:rootless-main"
-        ["fm_nginx:$branch"]="fm-nginx:rootless-main"
-    )
     
     ORIGINAL_IMAGES=(
         "fleet_manager:$branch"
@@ -29,7 +23,6 @@ setup_image_config() {
         "fm-nginx:rootless-main"
     )
     
-    echo "Original images:${IMAGES_CONFIG[@]}"
     echo "Original images:${ORIGINAL_IMAGES[@]}"
 }
 
@@ -52,7 +45,11 @@ check_dependencies() {
 
 
 setup_environment() {
-    mkdir -p $OUTPUT_DIR
+    if [ -d "$OUTPUT_DIR" ]; then
+        echo "Directory $OUTPUT_DIR already exists."
+    else
+        mkdir -p "$OUTPUT_DIR"
+    fi
     chmod 755 "$OUTPUT_DIR"
 }
 
@@ -113,15 +110,16 @@ save_and_compress_images() {
     echo "This may take a few minutes depending on image sizes..."
 
     echo "Saving all images to a single tar file..."
-    docker save ${RETAGGED_IMAGES[@]} -o "$OUTPUT_DIR/temp_all_images.tar"
+    docker save ${RETAGGED_IMAGES[@]} -o "$OUTPUT_DIR/fm-airgap-images-amd64-uncompressed.tar"
+    
     SAVE_RESULT=$?
 
     if [ $SAVE_RESULT -eq 0 ]; then
         echo "Compressing tar file with zstd..."
-        zstd -f "$OUTPUT_DIR/temp_all_images.tar" -o "$OUTPUT_DIR/$OUTPUT_FILE"
+        zstd -f "$OUTPUT_DIR/fm-airgap-images-amd64-uncompressed.tar" -o "$OUTPUT_DIR/$OUTPUT_FILE"
         COMPRESS_RESULT=$?
 
-        rm -f "$OUTPUT_DIR/temp_all_images.tar"
+        rm -f "$OUTPUT_DIR/fm-airgap-images-amd64-uncompressed.tar"
     else
         COMPRESS_RESULT=1
     fi
