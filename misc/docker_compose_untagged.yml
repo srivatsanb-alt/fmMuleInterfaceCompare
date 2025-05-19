@@ -6,7 +6,7 @@ services:
     restart: always
     build: .
     volumes:
-      - .:/app/static
+      fm_volume
       - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
       - db
@@ -37,6 +37,7 @@ services:
       PGDATABASE: ati_fleet
       FM_DATABASE_URI: postgresql://postgres:postgres@db:5432
       FM_MONGO_DATABASE_URI: mongodb://ati:atiMongo@mongo:27017
+      APP_ENV: app_env
 
   plugins:
     image: plugin:fm_version
@@ -44,6 +45,7 @@ services:
     restart: always
     build: .
     volumes:
+      plugin_volume
       - .:/app/static
     depends_on:
       - db
@@ -68,6 +70,7 @@ services:
       TZ: Asia/Kolkata
       PLUGIN_DATABASE_URI: postgresql://postgres:postgres@db
       PLUGIN_MONGO_DATABASE_URI: mongodb://ati:atiMongo@mongo:27017
+      APP_ENV: app_env
   
   db:
     image: postgres:14.0
@@ -77,23 +80,13 @@ services:
       - ./psql/psql_backup:/var/lib/postgresql/data:rw
     networks:
      - fm_dn
+    add_db_ports:
     environment:
       TZ: Asia/Kolkata
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: ati_fleet
 
-  grafana:
-    image: fm_grafana:fm_version
-    container_name: fm_grafana
-    restart: always
-    user: "root:root"
-    ports:
-      - "3000:3000"
-    links:
-      - db
-    networks:
-      - fm_dn
 
   mongo:
     image: mongo:7.0
@@ -103,6 +96,7 @@ services:
      - ./mongo:/data/db:rw
     networks:
       - fm_dn
+    add_mongo_ports:
     environment:
       MONGO_INITDB_ROOT_USERNAME: ati
       MONGO_INITDB_ROOT_PASSWORD: atiMongo
@@ -137,13 +131,11 @@ services:
     links:
       - fleet_manager
       - plugins
-      - grafana
       - registry
       - mongo-express
     depends_on:
       - fleet_manager
       - plugins
-      - grafana
       - registry
       - mongo-express
     networks:
@@ -166,21 +158,6 @@ services:
     ports:
       - "6379:6379"
 
-  ttyd:
-    image: fm_ttyd:fm_version
-    container_name: fm_ttyd
-    restart: always
-    privileged: true
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    ports:
-      - "7681:7681" 
-    depends_on:
-      - fleet_manager
-    links:
-      - fleet_manager
-    networks:
-      - fm_dn
 
 networks:
   fm_dn:

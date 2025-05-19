@@ -6,7 +6,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm.attributes import flag_modified
 import asyncio
 import pandas as pd
-from datetime import datetime, date
+from datetime import datetime, time, date
 import io
 import math
 
@@ -280,6 +280,8 @@ async def trip_status_pg_with_type(
                 valid_status,
                 trip_status_req.filter_sherpa_names,
                 trip_status_req.filter_status,
+                trip_status_req.booked_by,
+                trip_status_req.search_by_stations,
                 trip_status_req.search_txt,
                 trip_status_req.sort_field,
                 trip_status_req.sort_order,
@@ -413,6 +415,22 @@ async def trip_analytics(
 
     return response
 
+
+@router.post("/analytics_with_trip_info")
+async def trip_analytics_with_trip_info(
+    trip_analytics_req: rqm.TripAnalyticsWithTripInfoReq, user_name=Depends(dpd.get_user_from_header)
+):
+    response = {}
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)    
+
+    with DBSession(engine=ccm.engine) as dbsession:
+        all_trip_analytics = dbsession.get_trip_analytics_with_trips_info(
+            trip_analytics_req.from_dt, trip_analytics_req.to_dt, trip_analytics_req.booked_by, trip_analytics_req.filter_fleets
+        )
+        response = all_trip_analytics
+
+    return response
 
 @router.post("/{trip_id}/add_trip_metadata")
 async def add_trip_metadata(

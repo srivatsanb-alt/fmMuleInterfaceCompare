@@ -314,7 +314,7 @@ class ConfigValidator:
                             "bsonType": "int",
                             "description": "Trip will be booked to battery swap/charging area if battery level is below the threshold",
                             "minimum": 5,
-                            "maximum": 25,
+                            "maximum": 50,
                         },
                         "priority": {
                             "bsonType": "int",
@@ -424,7 +424,15 @@ class ConfigValidator:
                 "secret_token": {
                     "bsonType": "string",
                     "description": "Secret token for authentication",
-                }
+                },
+                "regex_pattern":{
+                    "bsonType": "string",
+                    "description": "Regex pattern for password validation",
+                },
+                "regex_statement":{
+                    "bsonType": "string",
+                    "description": "Regex statement for password validation",
+                },
             },
         }
     }

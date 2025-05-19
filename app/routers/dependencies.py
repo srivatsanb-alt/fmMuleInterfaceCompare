@@ -15,7 +15,27 @@ import json
 import core.handler_configuration as hc
 from utils.rq_utils import enqueue, enqueue_at, Queues
 from models.db_session import DBSession
+import models.request_models as rqm 
 
+
+class UserDetails:
+    def __init__(self, username = None, role = None):
+        self.username = username
+        self.role = role
+
+    def role_check(self, role):
+        if getattr(rqm.FrontendUserRoles, self.role) < role:
+            logging.getLogger('misc').info(f"User {self.username} has role {self.role} and role we passed is {role}")
+            raise_error("Unauthorized requester", 401)
+    
+    def user_check(self):
+        if not self.username:
+            raise_error("Unknown requester", 401)
+            
+
+    def basic_check(self, role):
+        self.user_check()
+        self.role_check(role)
 
 # upon assignment of a task, it gets added into the job queue
 def add_job_to_queued_jobs(job_id, source, redis_conn=None):
@@ -109,6 +129,11 @@ def get_user_from_query(token: str = Query(None)):
         return None
     return decode_token(token)
 
+def get_user_details_from_header(x_user_token: str = Header(None)):
+    if x_user_token is None:
+        return None
+    return decode_user_details(x_user_token)
+
 
 def get_real_ip_from_header(x_real_ip: str = Header(None)):
     return x_real_ip
@@ -159,7 +184,23 @@ def decode_token(token: str):
 
     except jwt.exceptions.InvalidTokenError:
         return None
-
+    
+def decode_user_details(token: str):
+    redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
+    userdetails = UserDetails()
+    try:
+        details = jwt.decode(
+            token,
+            redis_conn.get("FM_SECRET_TOKEN"),
+            algorithms=["HS256"],
+            options={"require": ["exp", "sub", "role"]},
+        )
+        logging.getLogger('misc').info(f"User details: {details}")
+        userdetails = UserDetails(details["sub"], details["role"])
+    except jwt.exceptions.InvalidTokenError:
+        pass
+        
+    return userdetails
 
 def generate_jwt_token(username: str, role=None, expiry_interval=None):
     redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
@@ -196,7 +237,10 @@ def process_req(queue, req, user, redis_conn=None, dt=None):
     job = None
     req.source = user
 
-    handler_obj = hc.HandlerConfiguration.get_handler()
+    if req.type == "get_analytics_data":
+        handler_obj = hc.HandlerConfiguration.get_handler(version="analytics")
+    else:
+        handler_obj = hc.HandlerConfiguration.get_handler()
     args = [handler_obj, req]
     kwargs = {}
 

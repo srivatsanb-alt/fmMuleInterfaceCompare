@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum
-from typing import List, Optional, Union, Dict
+from typing import Any, List, Optional, Union, Dict
 import pydantic
 
 
@@ -343,7 +343,7 @@ class TripMsg(ClientReq):
     route: List[str]
     priority: Optional[float] = 1.0
     tasks: Optional[Dict[str, str]] = None
-    metadata: Optional[Dict[str, Union[str, None]]] = None
+    metadata: Optional[Dict[str, Union[str, Any]]] = None
 
 
 class RoutePreview(ClientReq):
@@ -411,6 +411,13 @@ class SherpaImgUpdateCtrlReq(ClientReq):
 
 class TripStatusReq(GenericFromToTimeReq):
     trip_ids: Optional[List[int]]
+    
+class TripAnalyticsWithTripInfoReq(ClientReq):
+    from_dt: str
+    to_dt: str
+    booked_by: Optional[List[str]]
+    filter_fleets: Optional[List[str]]
+    
 
 
 class TripStatusReq_pg(GenericFromToTimeReq):
@@ -419,6 +426,8 @@ class TripStatusReq_pg(GenericFromToTimeReq):
     filter_fleets: List[str]
     filter_sherpa_names: Optional[List[str]]
     filter_status: Optional[List[str]]
+    booked_by: Optional[List[str]]
+    search_by_stations: Optional[List[str]]
     sort_field: Optional[str]
     sort_order: Optional[str]
     search_txt: Optional[str]
@@ -615,9 +624,6 @@ class SoundSettingCtrlReq(ClientReq):
     volume: Optional[float] = 0.01
     sound_type: str
 
-class RemoteTerminalCtrlReq(ClientReq):
-    enable_remote_terminal: bool
-    code: Optional[str]
 
 
 @dataclass
@@ -663,5 +669,12 @@ class TripStatusUpdate(JsonMixin):
 @dataclass
 class RouteWPS(JsonMixin):
     route_wps: List
+    
 
+class GetAnalyticsDataReq(GenericFromToTimeReq):
+    fleet_name: str
 
+    
+class AnalyticsDataReq(GenericFromToTimeReq):
+    fleet_name: str
+    type:str = MessageType.GET_ANALYTICS_DATA

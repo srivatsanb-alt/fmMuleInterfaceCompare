@@ -16,15 +16,16 @@ FM_IMAGE_INFO="FM image built on $USER@$(hostname), FM_VERSION: $FM_VERSION (des
 
 build_base_images_interactive()
 {
-   read -p "Should build base images? (y/n) - " build_base_images
+   if [ "$1" = "False" ]; then
+      read -p "Should build base images? (y/n) - " build_base_images
+   else 
+      build_base_images="y"
+   fi
+   
    if [ "$build_base_images" = "y" ]; then 
-   {
         build_base_images 
-   }
    else
-   {
        echo "Not building base images"
-   }
    fi
 }
 
@@ -38,7 +39,6 @@ build_base_images()
    docker pull mongo-express:1.0.0-alpha
    docker pull mongo:7.0
    docker pull postgres:14.0
-   docker pull grafana/grafana:9.5.2
    docker pull registry:2
    docker pull redis:latest
 }
@@ -54,10 +54,6 @@ build_final_images()
 		      --build-arg LAST_COMMIT_DT="${LAST_COMMIT_DT}" \
 		      -t fleet_manager:$FM_VERSION -f docker_files/Dockerfile .
 
-   docker image build -t fm_grafana:$FM_VERSION -f docker_files/grafana.Dockerfile .
-   docker image build -t fm_ttyd:$FM_VERSION -f docker_files/ttyd.Dockerfile .
-
-   echo "Successfully built grafana Image"
 
    cd fm_plugins && bash scripts/build_final_image.sh $FM_VERSION
    cd ../
@@ -73,6 +69,23 @@ build_final_images()
    }
    else {
      sed -i "s/fm_version/$FM_VERSION/g" static/docker_compose_v$FM_VERSION.yml
+     if [ $DEV_MODE == "True" ]; then
+     {
+      sed -i "s/fm_volume/- ..:\\/app/g" static/docker_compose_v$FM_VERSION.yml
+      sed -i "s/plugin_volume/- ..\\/fm_plugins:\\/app/g" static/docker_compose_v$FM_VERSION.yml
+      sed -i "s/add_mongo_ports:/ports:\n      - 27017:27017/g" static/docker_compose_v$FM_VERSION.yml
+      sed -i "s/add_db_ports:/ports:\n      - 5432:5432/g" static/docker_compose_v$FM_VERSION.yml    
+      sed -i "s/app_env/dev/g" static/docker_compose_v$FM_VERSION.yml     
+     }
+     else {
+
+      sed -i "s/fm_volume/- .:\\/app\\/static/g" static/docker_compose_v$FM_VERSION.yml
+      sed -i "s/plugin_volume//g" static/docker_compose_v$FM_VERSION.yml
+      sed -i "s/add_db_ports://g" static/docker_compose_v$FM_VERSION.yml
+      sed -i "s/add_mongo_ports://g" static/docker_compose_v$FM_VERSION.yml
+      sed -i "s/app_env/prod/g" static/docker_compose_v$FM_VERSION.yml 
+     }
+     fi
    }
    fi
 }

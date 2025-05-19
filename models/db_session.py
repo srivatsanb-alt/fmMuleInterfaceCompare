@@ -1,9 +1,12 @@
 import datetime
+import logging
 import os
 from typing import List
-from sqlalchemy import func, any_, or_, and_, extract, text
-from sqlalchemy.orm import Session
+from sqlalchemy import select, func, any_, or_, and_, extract, text, literal_column, alias, cast
+from sqlalchemy.orm import Session, aliased
+from sqlalchemy.types import Numeric
 from fastapi.encoders import jsonable_encoder
+
 
 # ati code imports
 from core.db import get_session, get_session_with_engine
@@ -473,6 +476,8 @@ class DBSession:
         valid_status,
         sherpa_names,
         filter_status,
+        booked_by,
+        search_by_station,
         search_text,
         sort_field="id",
         sort_order="desc",
@@ -499,7 +504,18 @@ class DBSession:
         # having to filter again due to filter in UI that overrides above filter
         if filter_status and filter_status != "[]":
             base_query = base_query.filter(tm.Trip.status.in_(filter_status))
+            
+        if booked_by and booked_by != "[]":
+            base_query = base_query.filter(tm.Trip.booked_by.in_(booked_by))
 
+        if search_by_station and search_by_station != "[]":
+            base_query = base_query.filter(
+                or_(
+                    *[any_(tm.Trip.route) == station for station in search_by_station]
+                )
+            )
+            
+            
         if search_text and search_text != "":
             columns_to_search = [
                 tm.Trip.sherpa_name,
@@ -818,9 +834,12 @@ class DBSession:
         return jsonable_encoder(progress)
 
     def get_legs(self, trip_id):
+        sort_field="trip_leg_id"
+        sort_order="asc"
         legs = (
             self.session.query(tm.TripAnalytics)
             .filter(tm.TripAnalytics.trip_id == trip_id)
+            .order_by(text(f"{sort_field} {sort_order}"))
             .all()
         )
         leg_details =[]
@@ -828,6 +847,61 @@ class DBSession:
             leg_detail = get_table_as_dict(tm.TripAnalytics,leg)
             leg_details.append(leg_detail)
         return leg_details
+    
+    def get_legs_info(self, trip_id):
+        sort_field="trip_leg_id"
+        sort_order="asc"
+        legs = (
+            self.session.query(
+                tm.TripAnalytics.trip_leg_id,
+                tm.TripAnalytics.from_station,
+                tm.TripAnalytics.to_station,
+                tm.TripAnalytics.start_time,
+                tm.TripAnalytics.end_time
+                )
+            .filter(tm.TripAnalytics.trip_id == trip_id)
+            .order_by(text(f"{sort_field} {sort_order}"))
+            .all()
+        )
+        leg_details =[]
+        for leg in legs:
+            leg_details.append(jsonable_encoder(leg))
+        return leg_details
+    
+    def get_trip_analytics_with_trips_info(self, from_dt, to_dt, booked_by, filter_fleets):
+        base_query = (
+            self.session.query(
+                tm.Trip.id,
+                tm.Trip.fleet_name,
+                tm.Trip.sherpa_name,
+                tm.Trip.status,
+                tm.Trip.route,
+                tm.Trip.booking_time,
+                tm.Trip.start_time,
+                tm.Trip.end_time
+                )
+            .filter(or_(tm.Trip.booking_time >= from_dt, tm.Trip.start_time >= from_dt))
+            .filter(or_(tm.Trip.booking_time <= to_dt, tm.Trip.end_time <= to_dt))
+            .filter(tm.Trip.status.in_(tm.COMPLETED_TRIP_STATUS))
+        )
+        
+        if filter_fleets and filter_fleets != "[]":
+            base_query = base_query.filter(tm.Trip.fleet_name.in_(filter_fleets))
+
+        if booked_by and booked_by != "[]":
+            base_query = base_query.filter(tm.Trip.booked_by.in_(booked_by))
+
+        trips = base_query.all()
+        trip_analytics = []
+        for trip in trips:
+            trip_detail =  jsonable_encoder(trip)
+            trip_details = []
+            trip_details = trip_detail
+            trip_details["legs"] = self.get_legs_info(str(trip_detail["id"]))
+            trip_analytics.append(trip_details)
+        
+        return trip_analytics
+        
 
     def get_trip_analytics_with_pagination(
         self,
@@ -1296,3 +1370,162 @@ class DBSession:
             .filter(tm.PausedTrip.booking_id == booking_id)
             .one_or_none()
         )
+    
+    def get_tug_wise_and_total_trips(self, fleet_name: str, from_dt, to_dt):
+        tug_wise_trips_query = select(
+            tm.Trip.sherpa_name, func.count(tm.Trip.id)
+        ).filter(
+            tm.Trip.fleet_name == fleet_name,
+            tm.Trip.start_time >= from_dt,
+            tm.Trip.end_time <= to_dt
+        ).filter(tm.Trip.status == 'succeeded'
+        ).group_by(tm.Trip.sherpa_name)
+
+        tug_wise_trips = {
+            row[0]: row[1]for row in (self.session.execute(tug_wise_trips_query)).fetchall()
+        }
+        
+        total_trips = sum(tug_wise_trips.values())
+        
+        return tug_wise_trips, total_trips
+    
+    def get_tug_wise_distance_and_total_distance(self, fleet_name: str, from_dt, to_dt):
+        tug_wise_distance_query = select(
+            tm.Trip.sherpa_name,
+            func.sum(literal_column("route_length")).label("Total_Distance")
+        ).select_from(
+            tm.Trip, func.unnest(tm.Trip.route_lengths).alias("route_length")
+        ).filter(
+            tm.Trip.fleet_name == fleet_name,
+            tm.Trip.start_time >= from_dt,
+            tm.Trip.end_time <= to_dt,
+            tm.Trip.status == 'succeeded'
+        ).group_by(
+            tm.Trip.sherpa_name
+        )
+        
+        tug_wise_distance = {
+            row[0]: row[1] for row in (self.session.execute(tug_wise_distance_query)).fetchall()
+        }
+        total_distance = sum(tug_wise_distance.values()) or 0
+        
+        return tug_wise_distance, total_distance
+    
+    
+    def get_tug_wise_avg_takt_time(self, fleet_name: str, from_dt, to_dt):
+        subquery = (
+            select(
+                tm.Trip.sherpa_name.label("Sherpa"),
+                tm.Trip.route,
+                func.avg(func.extract("epoch", tm.Trip.end_time) - func.extract("epoch", tm.Trip.start_time)).label("Trip_time"),
+                func.row_number().over(
+                    partition_by=tm.Trip.sherpa_name,
+                    order_by=func.count().desc()
+                ).label("route_rank")
+            )
+            .filter(
+                tm.Trip.fleet_name == fleet_name,
+                tm.Trip.start_time >= from_dt,
+                tm.Trip.end_time <= to_dt,
+                tm.Trip.status == 'succeeded'
+            )
+            .group_by(tm.Trip.sherpa_name, tm.Trip.route)
+            .subquery()
+        )
+
+        query = select(subquery.c.Sherpa, subquery.c.route, subquery.c.Trip_time).filter(subquery.c.route_rank == 1)
+        
+        result = {row[0]: row[2] for row in self.session.execute(query).fetchall()}
+        
+        return result
+
+    
+    def get_tug_wise_obstacle_time(self, fleet_name: str, from_dt, to_dt):
+        tug_wise_avg_obstacle_query = select(
+            tm.Trip.sherpa_name,
+            tm.Trip.route,
+            func.avg(tm.TripAnalytics.time_elapsed_obstacle_stoppages).label("Average_Obstacle_Time"),
+            func.count(tm.Trip.route).label("route_count")
+        ).join(
+            tm.TripAnalytics, tm.TripAnalytics.trip_id == tm.Trip.id
+        ).filter(
+            tm.Trip.fleet_name == fleet_name,
+            tm.Trip.start_time >= from_dt,
+            tm.Trip.end_time <= to_dt,
+            tm.Trip.status == 'succeeded'
+        ).group_by(
+            tm.Trip.sherpa_name,
+            tm.Trip.route
+        ).order_by(
+            func.count(tm.Trip.route).desc()
+        )
+        
+        results = self.session.execute(tug_wise_avg_obstacle_query).fetchall()
+
+        tug_wise_avg_obstacle_time = {}
+        
+        for row in results:
+            sherpa_name, route, avg_obstacle_time, route_count = row
+            
+            if sherpa_name not in tug_wise_avg_obstacle_time:
+                tug_wise_avg_obstacle_time[sherpa_name] = float(avg_obstacle_time)
+        
+        return tug_wise_avg_obstacle_time
+    
+    def get_tug_wise_dispatch_wait(self, fleet_name: str, from_dt, to_dt):
+        tug_wise_dispatch_wait_query = select(
+            tm.Trip.sherpa_name,
+            tm.Trip.route,
+            func.avg(
+                func.coalesce(
+                    cast(tm.Trip.trip_metadata["total_dispatch_wait_time"].astext, Numeric), 0
+                )
+            ).label("Average_Dispatch_Wait_Time"),
+            func.count(tm.Trip.route).label("route_count")
+        ).filter(
+            tm.Trip.fleet_name == fleet_name,
+            tm.Trip.start_time >= from_dt,
+            tm.Trip.end_time <= to_dt,
+            tm.Trip.status == 'succeeded'
+        ).group_by(
+            tm.Trip.sherpa_name,
+            tm.Trip.route
+        ).order_by(
+            func.count(tm.Trip.route).desc()
+        )
+
+        results = self.session.execute(tug_wise_dispatch_wait_query).fetchall()
+
+        tug_wise_dispatch_wait_time = {}
+
+        for row in results:
+            sherpa_name, route, avg_wait_time, route_count = row
+            
+            if sherpa_name not in tug_wise_dispatch_wait_time:
+                tug_wise_dispatch_wait_time[sherpa_name] = float(avg_wait_time)
+                
+        return tug_wise_dispatch_wait_time
+    
+
+    def get_analytics_data(
+        self,
+        fleet_name: str,
+        from_dt,
+        to_dt
+    ):
+        tug_wise_trips, total_trips = self.get_tug_wise_and_total_trips(fleet_name, from_dt, to_dt)
+        tug_wise_distance, total_distance = self.get_tug_wise_distance_and_total_distance(fleet_name, from_dt, to_dt)
+        tug_wise_avg_takt_time = self.get_tug_wise_avg_takt_time(fleet_name, from_dt, to_dt)
+        tug_wise_avg_obstacle_time =  self.get_tug_wise_obstacle_time(fleet_name, from_dt, to_dt)
+        tug_wise_dispatch_wait_time = self.get_tug_wise_dispatch_wait(fleet_name, from_dt, to_dt)
+        
+        return {
+            "total_trips": total_trips,
+            "tug_wise_distance": tug_wise_distance,
+            "tug_wise_trips": tug_wise_trips,
+            "total_distance": total_distance,
+            "avg_takt_time": tug_wise_avg_takt_time,
+            "average_obstacle_time": tug_wise_avg_obstacle_time,
+            "avg_dispatch_wait_time": tug_wise_dispatch_wait_time
+        }
+
