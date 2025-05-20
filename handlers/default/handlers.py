@@ -596,13 +596,14 @@ class Handlers:
 
         trip_metadata = ongoing_trip.trip.trip_metadata
         if direction == "receive":
-            # num_units = utils_comms.get_num_units_converyor(station.name)
-            # update metadata with num totes for dropping totes at chute
-            num_units = trip_metadata.get("num_units", None)
-            if num_units is None:
-                raise ValueError("No tote/units information present")
-            # trip_metadata["num_units"] = num_units
-            # flag_modified(ongoing_trip.trip, "trip_metadata")
+            trip_metadata_num_units = trip_metadata.get("num_units", None)
+            if trip_metadata_num_units is None:
+                num_units = utils_comms.get_num_units_converyor(station.name)
+                # update metadata with num totes for dropping totes at chute
+                if num_units is None:
+                    raise ValueError("No tote/units information present")
+                trip_metadata["num_units"] = num_units
+                flag_modified(ongoing_trip.trip, "trip_metadata")
 
         else:
             num_units = trip_metadata.get("num_units", None)
@@ -1718,23 +1719,23 @@ class Handlers:
             raise ValueError(error)
 
         if StationProperties.CONVEYOR in curr_station.properties:
-            # transfer_tote_msg = f"will send msg to the conveyor at station: {curr_station.name} to transfer {req.num_units} tote(s)"
-            # logging.getLogger().info(transfer_tote_msg)
+            transfer_tote_msg = f"will send msg to the conveyor at station: {curr_station.name} to transfer {req.num_units} tote(s)"
+            logging.getLogger().info(transfer_tote_msg)
 
-            # if req.num_units == 2:
-            #     msg_to_forward = "transfer_2totes"
-            # elif req.num_units == 1:
-            #     msg_to_forward = "transfer_tote"
+            if req.num_units == 2:
+                msg_to_forward = "transfer_2totes"
+            elif req.num_units == 1:
+                msg_to_forward = "transfer_tote"
 
-            # utils_comms.send_msg_to_plugin(
-            #     msg_to_forward, f"plugin_conveyor_{curr_station.name}"
-            # )
-            # self.dbsession.add_notification(
-            #     sherpa.get_notification_entity_names(),
-            #     transfer_tote_msg,
-            #     mm.NotificationLevels.info,
-            #     mm.NotificationModules.conveyor,
-            # )
+            utils_comms.send_msg_to_plugin(
+                msg_to_forward, f"plugin_conveyor_{curr_station.name}"
+            )
+            self.dbsession.add_notification(
+                sherpa.get_notification_entity_names(),
+                transfer_tote_msg,
+                mm.NotificationLevels.info,
+                mm.NotificationModules.conveyor,
+            )
             
             status_code, response_json = utils_comms.send_ack_to_addverb_conveyor(f"{curr_station.name}_ACCEPT", True)
             if status_code != 200:
