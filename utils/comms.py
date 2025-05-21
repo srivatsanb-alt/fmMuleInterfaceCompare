@@ -255,79 +255,61 @@ def check_response(response):
         response_json = response.json()
     return response.status_code, response_json
 
-def send_ack_to_addverb_conveyor(req_type, status):
+def get_conveyor_url_req_json(endpoint, status=None, tag_name=None, plugin_ip=None):
+    if endpoint == "write":
+        req_json = [
+            {
+            "v": f"{status}",
+            "id": tag_name        
+            }
+        ]
+        url = f"http://{plugin_ip}/api/v1/addverb/status/write"
+        
+        return url, req_json
+    elif endpoint == "read":
+        url = f"http://{plugin_ip}/api/v1/addverb/status/read"
+        req_json = [tag_name]
+        return url, req_json
+    else:
+        raise ValueError(f"Invalid endpoint: {endpoint}")
+    
+
+def send_req_to_plugin_conveyor(
+    tag_name,
+    status = None,
+    endpoint = None,
+    method = None
+):
     with FMMongo() as fm_mongo:
         plugin_info = fm_mongo.get_plugin_info()
         plugin_port = plugin_info["plugin_port"]
         plugin_ip = plugin_info["plugin_ip"]
-
+        
         plugin_conveyor = fm_mongo.get_plugin_conveyor()
-        tag_name : str = plugin_conveyor[req_type]
+        tag_name : str = plugin_conveyor[tag_name]
         api_key = plugin_conveyor["api_key"]
-    
-    req_json = [
-        {
-        "v": f"{status}",
-        "id": tag_name        
-        }
-    ]
 
-    req_method = getattr(requests, "post")
+    req_method = getattr(requests, method)
     kwargs = {"headers": {"X-API-Key": 'abcd'}}
+    
+    plugin_ip = plugin_ip + ":" + plugin_port
+
+    url, req_json = get_conveyor_url_req_json(endpoint, status, tag_name, plugin_ip)
+
 
     if api_key:
         kwargs.update({"headers": {"X-API-Key": api_key}})
 
     if req_json:
         kwargs.update({"json": req_json})
-
-    plugin_ip = plugin_ip + ":" + plugin_port
-
-    url = f"http://{plugin_ip}/api/v1/addverb/status/write"
-
-
-    args = [url]    
-
+    
+    args = [url]
+    
     response = req_method(*args, **kwargs)
     response_status_code, response_json = check_response(response)
 
     logging.getLogger().info(
-        f"Request to be sent to plugin_conveyor \n url: {url}, method: {req_type} \n body: {req_json}"
+        f"Request to be sent to plugin_conveyor \n url: {url}, method: {method} \n body: {req_json}"
     )
 
     return response_status_code, response_json
-
-def receive_ack_from_addverb_conveyor(req_type):
-    with FMMongo() as fm_mongo:
-        plugin_info = fm_mongo.get_plugin_info()
-        plugin_port = plugin_info["plugin_port"]
-        plugin_ip = plugin_info["plugin_ip"]
-
-        plugin_conveyor = fm_mongo.get_plugin_conveyor()
-        tag_name : str = plugin_conveyor[req_type]
-        api_key = plugin_conveyor["api_key"]
-    
-    req_json = [tag_name]
-
-    req_method = getattr(requests, "post")
-    kwargs = {"headers": {"X-API-Key": 'abcd'}}
-
-    if api_key:
-        kwargs.update({"headers": {"X-API-Key": api_key}})
-
-    if req_json:
-        kwargs.update({"json": req_json})
-
-    plugin_ip = plugin_ip + ":" + plugin_port
-
-    url = f"http://{plugin_ip}/api/v1/addverb/status/read"
-
-
-    args = [url]    
-
-    response = req_method(*args, **kwargs)
-    response_status_code, response_json = check_response(response)
-
-    return response_status_code, response_json
-
-
