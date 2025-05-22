@@ -263,11 +263,11 @@ def get_conveyor_url_req_json(endpoint, status=None, tag_name=None, plugin_ip=No
             "id": tag_name        
             }
         ]
-        url = f"http://{plugin_ip}/api/v1/addverb/status/write"
+        url = f"http://{plugin_ip}/api/v1/conveyor/status/write"
         
         return url, req_json
     elif endpoint == "read":
-        url = f"http://{plugin_ip}/api/v1/addverb/status/read"
+        url = f"http://{plugin_ip}/api/v1/conveyor/status/read"
         req_json = [tag_name]
         return url, req_json
     else:
