@@ -1,9 +1,39 @@
 #!/bin/bash
 set -e 
+
+# Parse arguments
+for arg in "$@"; do
+  case $arg in
+    --dev=*)
+      DEV_MODE="${arg#*=}" # Extract the value after '='
+      shift
+      ;;
+    *)
+      echo "Unknown argument: $arg"
+      exit 1
+      ;;
+  esac
+done
+
+# Default value if --dev is not provided
+DEV_MODE=${DEV_MODE:-"False"}
+
+echo "Running in development mode: $DEV_MODE"
+
+
 source scripts/build_fm_images.sh
 source scripts/upload_images.sh 
 
-read -p "Want to build images on a remote server? (y/n) - " remote_server
+if [ "$DEV_MODE" = "False" ]; then
+{
+   read -p "Want to build images on a remote server? (y/n) - " remote_server
+}
+else {
+   remote_server="n"
+}
+fi
+
+
 if [ "$remote_server" = "y" ]; then
 {
    read -p "Enter remote server ssh address: (like ati@x.x.x.x) - " remote_server_addr
@@ -14,8 +44,8 @@ fi
 
 echo "FM Version: $FM_VERSION"
 
-build_base_images_interactive
-build_final_images 
+build_base_images_interactive $DEV_MODE
+build_final_images $DEV_MODE
 
 copy_default_certs="n"
 if [ "$remote_server" = "y" ]; then
@@ -49,6 +79,8 @@ else {
    else {
       upload_to_sanjaya_interactive
       tar_images
+      setup_tar_k3s
+      
    }
    fi
 }

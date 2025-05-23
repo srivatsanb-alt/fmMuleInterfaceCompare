@@ -314,7 +314,7 @@ class ConfigValidator:
                             "bsonType": "int",
                             "description": "Trip will be booked to battery swap/charging area if battery level is below the threshold",
                             "minimum": 5,
-                            "maximum": 25,
+                            "maximum": 50,
                         },
                         "priority": {
                             "bsonType": "int",

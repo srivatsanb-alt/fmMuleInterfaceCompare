@@ -10,7 +10,7 @@ upload_to_sanjaya_interactive() {
    }
    fi
 }
-
+source scripts/package-fm-images.sh
 upload_to_sanjaya() 
 {
    prod_release=$1
@@ -53,6 +53,28 @@ upload_to_sanjaya()
    docker-compose -f static/docker_compose_v$FM_VERSION.yml config | grep image | awk '{print $2}' | xargs -I % docker tag % "$MASTER_FM_IP:$MASTER_FM_PORT/"% || exit 1
    docker-compose -f static/docker_compose_v$FM_VERSION.yml config | grep image | awk -v registry="$MASTER_FM_IP:$MASTER_FM_PORT/" '{print registry$2}' | xargs -I % docker push % || exit 1
    docker logout $MASTER_FM_IP:$MASTER_FM_PORT
+}
+
+setup_tar_k3s() {
+   read -p "Want to setup k3s tarball? (y/n) - " setup_k3s
+   if [ "$setup_k3s" = "y" ]; then {
+     setup_environment
+     check_dependencies
+     verify_original_images
+     retag_images
+     verify_retagged_images
+     save_and_compress_images
+     
+     local save_result=$?
+     if [ $save_result -eq 0 ]; then {
+       display_results_and_cleanup
+     } else {
+       echo "Failed to create tarball"
+       return 1  
+     }
+     fi
+   }
+   fi
 }
 
 tar_images() {
