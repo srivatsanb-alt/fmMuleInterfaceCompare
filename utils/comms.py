@@ -328,30 +328,3 @@ def send_req_to_plugin(
     )
 
     return response_status_code, response_json
-
-
-# def send_req_to_plugin(req_type, req_json):
-#     with FMMongo() as fm_mongo:
-#         plugin_info = fm_mongo.get_plugin_info()
-#         plugin_port = plugin_info["plugin_port"]
-#         plugin_ip = plugin_info["plugin_ip"]
-        
-    
-
-#     req_method = getattr(requests, req_type)
-    
-
-#     if req_json:
-#         kwargs.update({"json": req_json})
-
-#     plugin_ip = plugin_ip + ":" + plugin_port
-
-#     url = f"http://{plugin_ip}/plugin/api/v1/modbus_lift/operation"
-
-
-#     args = [url]    
-
-#     response = req_method(*args, **kwargs)
-#     response_status_code, response_json = check_response(response)
-
-#     return response_status_code, response_json
