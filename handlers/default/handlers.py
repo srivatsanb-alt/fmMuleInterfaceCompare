@@ -1917,24 +1917,18 @@ class Handlers:
             req: The peripherals request
         """
         sherpa_name = sherpa.name
+
         if success:
-            # Determine the operation type and add the end state
-            if tm.TripState.WAITING_STATION_PLAT_UP_START in ongoing_trip.states:
-                ongoing_trip.add_state(tm.TripState.WAITING_STATION_PLAT_UP_END)
-                logging.getLogger(sherpa_name).info(f"Platform up operation completed by {sherpa_name}")
-            elif tm.TripState.WAITING_STATION_PLAT_DOWN_START in ongoing_trip.states:
-                ongoing_trip.add_state(tm.TripState.WAITING_STATION_PLAT_DOWN_END)
-                logging.getLogger(sherpa_name).info(f"Platform down operation completed by {sherpa_name}")
-            elif tm.TripState.WAITING_STATION_PLAT_ON_START in ongoing_trip.states:
-                ongoing_trip.add_state(tm.TripState.WAITING_STATION_PLAT_ON_END)
-                logging.getLogger(sherpa_name).info(f"Platform on operation completed by {sherpa_name}")
-            elif tm.TripState.WAITING_STATION_PLAT_OFF_START in ongoing_trip.states:
-                ongoing_trip.add_state(tm.TripState.WAITING_STATION_PLAT_OFF_END)
-                logging.getLogger(sherpa_name).info(f"Platform off operation completed by {sherpa_name}")
-            elif tm.TripState.WAITING_STATION_PLAT_ERROR in ongoing_trip.states:
-                # Clear the error state
-                ongoing_trip.states.remove(tm.TripState.WAITING_STATION_PLAT_ERROR)
-                logging.getLogger(sherpa_name).info(f"Platform operation error resolved for {sherpa_name}")
+            for start_state, end_state in tm.platform_operation_state_dict.items():
+                if start_state in ongoing_trip.states:
+                    if start_state == tm.TripState.WAITING_STATION_PLAT_ERROR:
+                        ongoing_trip.states.remove(start_state)
+                    else:
+                        ongoing_trip.add_state(end_state)
+                    
+                    operation = start_state.split("_")[-2]
+                    logging.getLogger(sherpa_name).info(f"Platform {operation} operation completed by {sherpa_name}")
+                    break
             self.add_dispatch_start_to_ongoing_trip(ongoing_trip, sherpa)
         else:
             error_msg = "Platform operation failed"

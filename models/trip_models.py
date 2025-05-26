@@ -65,8 +65,14 @@ class TripState:
     WAITING_STATION_PLAT_OFF_START = "waiting_station_plat_off_start"
     WAITING_STATION_PLAT_OFF_END = "waiting_station_plat_off_end"
     WAITING_STATION_PLAT_ERROR = "waiting_station_plat_error"
-
-
+    
+platform_operation_state_dict = {
+    TripState.WAITING_STATION_PLAT_UP_START: TripState.WAITING_STATION_PLAT_UP_END,
+    TripState.WAITING_STATION_PLAT_DOWN_START: TripState.WAITING_STATION_PLAT_DOWN_END,
+    TripState.WAITING_STATION_PLAT_ON_START: TripState.WAITING_STATION_PLAT_ON_END,
+    TripState.WAITING_STATION_PLAT_OFF_START: TripState.WAITING_STATION_PLAT_OFF_END,
+    TripState.WAITING_STATION_PLAT_ERROR: TripState.WAITING_STATION_PLAT_ERROR
+    }
 
 class TripAnalytics(Base, TimestampMixin):
     __tablename__ = "trip_analytics"
