@@ -4,6 +4,7 @@ import logging
 import logging.config
 from typing import List
 import redis
+import time
 from requests import Response
 from sqlalchemy.orm.attributes import flag_modified
 import requests
@@ -560,6 +561,36 @@ class Handlers:
             basic_trip_description=ongoing_trip.get_basic_trip_description(),
         )
         _ = utils_comms.send_req_to_sherpa(self.dbsession, sherpa, unhitch_msg)
+        
+    def is_conv_ready(self, curr_station: fm.Station, sherpa: fm.Sherpa):
+        response_json = False
+        if StationProperties.CONVEYOR in curr_station.properties:
+            while response_json is not True:        
+                status_code, response_json = utils_comms.send_req_to_plugin(
+                    tag_name=f"{curr_station.name}_DISCHARGE",
+                    endpoint="read",
+                    method="POST"
+                )
+                if status_code != 200:
+                    logging.getLogger(sherpa.name).error(f"Failed to receive ack from addverb conveyor plugin {response_json}")
+                    return False
+                time.sleep(5) 
+        
+        elif StationProperties.CHUTE in curr_station.properties:
+            while response_json is not True:
+                status_code, response_json = utils_comms.send_req_to_plugin(
+                    tag_name=f"{curr_station.name}_ACCEPT",
+                    endpoint="read",
+                    method="POST"
+                )
+                if status_code != 200:
+                    logging.getLogger(sherpa.name).error(f"Failed to receive ack from addverb conveyor plugin {response_json}")
+                    return False
+                time.sleep(5)
+        
+        return True 
+            
+   
 
     def add_conveyor_start_to_ongoing_trip(
         self, ongoing_trip: tm.OngoingTrip, sherpa: fm.Sherpa, station: fm.Station
@@ -575,10 +606,14 @@ class Handlers:
 
         trip_metadata = ongoing_trip.trip.trip_metadata
         if direction == "receive":
-            num_units = utils_comms.get_num_units_converyor(station.name)
-            # update metadata with num totes for dropping totes at chute
-            trip_metadata["num_units"] = num_units
-            flag_modified(ongoing_trip.trip, "trip_metadata")
+            trip_metadata_num_units = trip_metadata.get("num_units", None)
+            if trip_metadata_num_units is None:
+                num_units = utils_comms.get_num_units_converyor(station.name)
+                # update metadata with num totes for dropping totes at chute
+                if num_units is None:
+                    raise ValueError("No tote/units information present")
+                trip_metadata["num_units"] = num_units
+                flag_modified(ongoing_trip.trip, "trip_metadata")
 
         else:
             num_units = trip_metadata.get("num_units", None)
@@ -645,7 +680,11 @@ class Handlers:
                     "entity_name": sherpa.name
                 }
                 
-            status_code, response = utils_comms.send_req_to_plugin("post", payload)
+            status_code, response = utils_comms.send_req_to_plugin(
+                endpoint="modbus",
+                method="post",
+                req_request_json=payload
+            )
             
         #    response_dict = json.loads(response)
 
@@ -719,7 +758,17 @@ class Handlers:
             logging.getLogger(sherpa.name).info(
                 f"{sherpa.name} reached a conveyor/chute station"
             )
-            self.add_conveyor_start_to_ongoing_trip(ongoing_trip, sherpa, curr_station)
+            if self.is_conv_ready(curr_station, sherpa):
+                self.add_conveyor_start_to_ongoing_trip(ongoing_trip, sherpa, curr_station)
+            else:
+                self.dbsession.add_notification(
+                    sherpa.get_notification_entity_names(),
+                    f"Conveyor not ready for {ongoing_trip.sherpa_name} at {curr_station.name}",
+                    mm.NotificationLevels.action_request,
+                    mm.NotificationModules.conveyor,
+                )
+                self.add_dispatch_start_to_ongoing_trip(ongoing_trip, sherpa)
+
 
         if any(
             prop in curr_station.properties
@@ -798,6 +847,31 @@ class Handlers:
                 mm.NotificationModules.conveyor,
             )
             self.add_dispatch_start_to_ongoing_trip(ongoing_trip, sherpa)
+
+            if StationProperties.CONVEYOR in curr_station.properties:            
+                status_code, response_json = utils_comms.send_req_to_plugin(
+                    tag_name=f"{curr_station.name}_ACCEPT",
+                    status=False,
+                    endpoint="write",
+                    method="POST"
+                )
+                if status_code != 200:
+                    raise ValueError(f"Failed to send ack to addverb conveyor plugin {response_json}")
+                else:
+                    logging.getLogger(sherpa_name).info(f"Sent ack to addverb conveyor plugin {response_json}")    
+            
+            elif StationProperties.CHUTE in curr_station.properties:
+                status_code, response_json = utils_comms.send_req_to_plugin(
+                    tag_name=f"{curr_station.name}_DISCHARGE",
+                    status=False,
+                    endpoint="write",
+                    method="POST"
+                )
+                if status_code != 200:
+                    raise ValueError(f"Failed to send ack to addverb conveyor plugin {response_json}")
+                else:
+                    logging.getLogger(sherpa_name).info(f"Sent ack to addverb conveyor plugin {response_json}")
+   
         else:
             logging.getLogger().info(
                 f"Ignoring {req.error_device} error message from {sherpa_name}"
@@ -1043,9 +1117,18 @@ class Handlers:
 
             fleet_name = self.dbsession.get_fleet_name_from_route(trip_msg.route)
 
+            site_metadata = {}
+            with FMMongo() as fm_mongo:
+                trip_metadata_config = fm_mongo.get_document_from_fm_config("trip_metadata")
+                metadata_config = trip_metadata_config.get("metadata")
+                if metadata_config is not None:
+                    site_metadata = metadata_config.get("site_metadata", {})
+
             # add fleet_names to req_ctxt - this is for optimal_dispatch
             if fleet_name not in req_ctxt.fleet_names:
                 req_ctxt.fleet_names.append(fleet_name)
+            
+            trip_msg.metadata.update(site_metadata)
 
             self.check_if_booking_is_valid(trip_msg, all_stations)
 
@@ -1704,6 +1787,31 @@ class Handlers:
             f"CONV_{req.direction.upper()} completed by {sherpa.name}"
         )
 
+        if StationProperties.CONVEYOR in curr_station.properties:            
+            status_code, response_json = utils_comms.send_req_to_plugin(
+                tag_name=f"{curr_station.name}_ACCEPT",
+                status=False,
+                endpoint="write",
+                method="POST"
+            )
+            if status_code != 200:
+                raise ValueError(f"Failed to send ack to addverb conveyor plugin {response_json}")
+            else:
+                logging.getLogger(sherpa.name).info(f"Sent ack to addverb conveyor plugin {response_json}")    
+        
+        elif StationProperties.CHUTE in curr_station.properties:
+            status_code, response_json = utils_comms.send_req_to_plugin(
+                tag_name=f"{curr_station.name}_DISCHARGE",
+                status=False,
+                endpoint="write",
+                method="POST"
+            )
+            if status_code != 200:
+                raise ValueError(f"Failed to send ack to addverb conveyor plugin {response_json}")
+            else:
+                logging.getLogger(sherpa.name).info(f"Sent ack to addverb conveyor plugin {response_json}")
+
+        
     def handle_conveyor_ack(
         self,
         ongoing_trip: tm.OngoingTrip,
@@ -1732,13 +1840,36 @@ class Handlers:
             utils_comms.send_msg_to_plugin(
                 msg_to_forward, f"plugin_conveyor_{curr_station.name}"
             )
-
             self.dbsession.add_notification(
                 sherpa.get_notification_entity_names(),
                 transfer_tote_msg,
                 mm.NotificationLevels.info,
                 mm.NotificationModules.conveyor,
             )
+            
+            status_code, response_json = utils_comms.send_req_to_plugin(
+                tag_name=f"{curr_station.name}_ACCEPT",
+                status=True,
+                endpoint="write",
+                method="POST"
+            )
+            if status_code != 200:
+                raise ValueError(f"Failed to send ack to addverb conveyor plugin {response_json}")
+            else:
+                logging.getLogger(sherpa.name).info(f"Sent ack to addverb conveyor plugin {response_json}")    
+        
+        elif StationProperties.CHUTE in curr_station.properties:
+            status_code, response_json = utils_comms.send_req_to_plugin(
+                tag_name=f"{curr_station.name}_DISCHARGE",
+                status=True,
+                endpoint="write",
+                method="POST"
+            )
+            if status_code != 200:
+                raise ValueError(f"Failed to send ack to addverb conveyor plugin {response_json}")
+            else:
+                logging.getLogger(sherpa.name).info(f"Sent ack to addverb conveyor plugin {response_json}")
+
 
     def handle_lifter_actuator(
         self,
