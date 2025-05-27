@@ -79,6 +79,8 @@ else {
    else {
       upload_to_sanjaya_interactive
       tar_images
+      setup_tar_k3s
+      
    }
    fi
 }
