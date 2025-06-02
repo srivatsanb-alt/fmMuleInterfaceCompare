@@ -25,6 +25,7 @@ from models.request_models import FMReq, MoveReq
 from models.trip_models import OngoingTrip
 
 
+
 logging.config.dictConfig(lu.get_log_config_dict())
 
 
@@ -247,3 +248,83 @@ def get_num_units_converyor(conveyor_name):
     num_units = min(math.ceil(num_totes / num_trips), 2)
 
     return num_units
+
+def check_response(response):
+    response_json = None
+    if response.status_code == 200:
+        response_json = response.json()
+    return response.status_code, response_json
+
+def get_conveyor_url_req_json(endpoint, status=None, tag_name=None, plugin_ip=None):
+    if endpoint == "write":
+        req_json = [
+            {
+            "v": f"{status}",
+            "id": tag_name        
+            }
+        ]
+        url = f"http://{plugin_ip}/api/v1/conveyor/status/write"
+        
+        return url, req_json
+    elif endpoint == "read":
+        url = f"http://{plugin_ip}/api/v1/conveyor/status/read"
+        req_json = [tag_name]
+        return url, req_json
+    elif endpoint == "modbus":
+        url = f"http://{plugin_ip}/api/v1/modbus_lift/operation"
+        req_json = None
+        return url, req_json
+    else:
+        raise ValueError(f"Invalid endpoint: {endpoint}")
+    
+
+def send_req_to_plugin(
+    tag_name = None,
+    status = None,
+    endpoint = None,
+    req_type = None,
+    req_request_json = None
+):
+    api_key = None
+    with FMMongo() as fm_mongo:
+        plugin_info = fm_mongo.get_plugin_info()
+        plugin_port = plugin_info["plugin_port"]
+        plugin_ip = plugin_info["plugin_ip"]
+    
+        plugin_conveyor = fm_mongo.get_plugin_conveyor()
+        if tag_name and plugin_conveyor:
+            tag_name : str = plugin_conveyor[tag_name] if plugin_conveyor.get(tag_name) else None
+            api_key = plugin_conveyor["api_key"] if plugin_conveyor.get("api_key") else None
+
+    req_method = getattr(requests, req_type)
+    kwargs = {}
+    
+    
+    plugin_ip = plugin_ip + ":" + plugin_port
+
+    url, req_json = get_conveyor_url_req_json(endpoint, status, tag_name, plugin_ip)
+    
+    if req_request_json:
+        req_json = req_request_json
+
+
+    if api_key:
+        kwargs.update({"headers": {"X-API-Key": api_key}})
+    else:
+        username = "fm_to_plugin"
+        user_token = dpd.generate_jwt_token(username)
+        kwargs = {"headers": {"X-User-Token": user_token}}
+
+    if req_json:
+        kwargs.update({"json": req_json})
+    
+    args = [url]
+    
+    response = req_method(*args, **kwargs)
+    response_status_code, response_json = check_response(response)
+
+    logging.getLogger().info(
+        f"Request to be sent to plugin_conveyor \n url: {url}, method: {req_type} \n body: {req_json}"
+    )
+
+    return response_status_code, response_json

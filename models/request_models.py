@@ -86,6 +86,11 @@ class IndicatorReq(BaseModel):
 class DispatchButtonReq(BaseModel):
     value: bool
     timeout: Optional[float]
+    
+
+class PlatformOperationReq(BaseModel):
+    operation_type: str
+    
 
 
 @pydantic.dataclasses.dataclass
@@ -154,9 +159,15 @@ class SherpaPeripheralsReq(SherpaReq):
     dispatch_button: DispatchButtonReq = None
     speaker: SpeakerReq = None
     indicator: IndicatorReq = None
+    platform_operation: PlatformOperationReq = None
     error_device: str = None
     type = MessageType.PERIPHERALS
+    
 
+class SoftPeripheralsReq(SherpaReq):
+    dispatch_button: DispatchButtonReq = None
+    type = MessageType.PERIPHERALS
+    
 
 class ResourceReq(SherpaReq):
     visa: VisaReq = None
@@ -546,6 +557,7 @@ class PeripheralsReq(FMReq):
     speaker: Optional[SpeakerReq]
     indicator: Optional[IndicatorReq]
     dispatch_button: Optional[DispatchButtonReq]
+    platform_operation: Optional[PlatformOperationReq]
     basic_trip_description: Optional[dict]
 
 
