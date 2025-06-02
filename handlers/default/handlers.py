@@ -569,7 +569,7 @@ class Handlers:
                 status_code, response_json = utils_comms.send_req_to_plugin(
                     tag_name=f"{curr_station.name}_DISCHARGE",
                     endpoint="read",
-                    method="POST"
+                    req_type="post"
                 )
                 if status_code != 200:
                     logging.getLogger(sherpa.name).error(f"Failed to receive ack from addverb conveyor plugin {response_json}")
@@ -581,7 +581,7 @@ class Handlers:
                 status_code, response_json = utils_comms.send_req_to_plugin(
                     tag_name=f"{curr_station.name}_ACCEPT",
                     endpoint="read",
-                    method="POST"
+                    req_type="post"
                 )
                 if status_code != 200:
                     logging.getLogger(sherpa.name).error(f"Failed to receive ack from addverb conveyor plugin {response_json}")
@@ -606,41 +606,62 @@ class Handlers:
 
         trip_metadata = ongoing_trip.trip.trip_metadata
         if direction == "receive":
-            trip_metadata_num_units = trip_metadata.get("num_units", None)
-            if trip_metadata_num_units is None:
+            num_units = trip_metadata.get("num_units", None)
+            if num_units is None:
                 num_units = utils_comms.get_num_units_converyor(station.name)
                 # update metadata with num totes for dropping totes at chute
                 if num_units is None:
                     raise ValueError("No tote/units information present")
                 trip_metadata["num_units"] = num_units
                 flag_modified(ongoing_trip.trip, "trip_metadata")
+                
+            if num_units == 0:
+                logging.getLogger(sherpa.name).info(
+                    f"will not send conveyor msg to {ongoing_trip.sherpa_name}, reason: num_units is {num_units}"
+                )
+                ongoing_trip.clear_states()
+                return
 
+            if not num_units:
+                raise ValueError(
+                    f"{ongoing_trip.sherpa_name} has reached a {station_type} station, no tote info available in trip metadata"
+                )
+
+            ongoing_trip.add_state(conveyor_start_state)
+            conveyor_send_msg = rqm.PeripheralsReq(
+                conveyor=rqm.ConveyorReq(
+                    direction=direction,
+                    num_units=num_units,
+                    basic_trip_description=ongoing_trip.get_basic_trip_description(),
+                )
+            )
+            _ = utils_comms.send_req_to_sherpa(self.dbsession, sherpa, conveyor_send_msg)
         else:
             num_units = trip_metadata.get("num_units", None)
             if num_units is None:
                 raise ValueError("No tote/units information present")
 
-        if num_units == 0:
-            logging.getLogger(sherpa.name).info(
-                f"will not send conveyor msg to {ongoing_trip.sherpa_name}, reason: num_units is {num_units}"
-            )
-            ongoing_trip.clear_states()
-            return
+            if num_units == 0:
+                logging.getLogger(sherpa.name).info(
+                    f"will not send conveyor msg to {ongoing_trip.sherpa_name}, reason: num_units is {num_units}"
+                )
+                ongoing_trip.clear_states()
+                return
 
-        if not num_units:
-            raise ValueError(
-                f"{ongoing_trip.sherpa_name} has reached a {station_type} station, no tote info available in trip metadata"
-            )
+            if not num_units:
+                raise ValueError(
+                    f"{ongoing_trip.sherpa_name} has reached a {station_type} station, no tote info available in trip metadata"
+                )
 
-        ongoing_trip.add_state(conveyor_start_state)
-        conveyor_send_msg = rqm.PeripheralsReq(
-            conveyor=rqm.ConveyorReq(
-                direction=direction,
-                num_units=num_units,
-                basic_trip_description=ongoing_trip.get_basic_trip_description(),
+            ongoing_trip.add_state(conveyor_start_state)
+            conveyor_send_msg = rqm.PeripheralsReq(
+                conveyor=rqm.ConveyorReq(
+                    direction=direction,
+                    num_units=num_units,
+                    basic_trip_description=ongoing_trip.get_basic_trip_description(),
+                )
             )
-        )
-        _ = utils_comms.send_req_to_sherpa(self.dbsession, sherpa, conveyor_send_msg)
+            _ = utils_comms.send_req_to_sherpa(self.dbsession, sherpa, conveyor_send_msg)
 
     def add_platform_start_to_ongoing_trip(
         self, ongoing_trip: tm.OngoingTrip, sherpa: fm.Sherpa, station: fm.Station
@@ -682,7 +703,7 @@ class Handlers:
                 
             status_code, response = utils_comms.send_req_to_plugin(
                 endpoint="modbus",
-                method="post",
+                req_type="post",
                 req_request_json=payload
             )
             
@@ -853,7 +874,7 @@ class Handlers:
                     tag_name=f"{curr_station.name}_ACCEPT",
                     status=False,
                     endpoint="write",
-                    method="POST"
+                    req_type="post"
                 )
                 if status_code != 200:
                     raise ValueError(f"Failed to send ack to addverb conveyor plugin {response_json}")
@@ -865,7 +886,7 @@ class Handlers:
                     tag_name=f"{curr_station.name}_DISCHARGE",
                     status=False,
                     endpoint="write",
-                    method="POST"
+                    req_type="post"
                 )
                 if status_code != 200:
                     raise ValueError(f"Failed to send ack to addverb conveyor plugin {response_json}")
@@ -1792,7 +1813,7 @@ class Handlers:
                 tag_name=f"{curr_station.name}_ACCEPT",
                 status=False,
                 endpoint="write",
-                method="POST"
+                req_type="post"
             )
             if status_code != 200:
                 raise ValueError(f"Failed to send ack to addverb conveyor plugin {response_json}")
@@ -1804,7 +1825,7 @@ class Handlers:
                 tag_name=f"{curr_station.name}_DISCHARGE",
                 status=False,
                 endpoint="write",
-                method="POST"
+                req_type="post"
             )
             if status_code != 200:
                 raise ValueError(f"Failed to send ack to addverb conveyor plugin {response_json}")
@@ -1851,7 +1872,7 @@ class Handlers:
                 tag_name=f"{curr_station.name}_ACCEPT",
                 status=True,
                 endpoint="write",
-                method="POST"
+                req_type="post"
             )
             if status_code != 200:
                 raise ValueError(f"Failed to send ack to addverb conveyor plugin {response_json}")
@@ -1863,7 +1884,7 @@ class Handlers:
                 tag_name=f"{curr_station.name}_DISCHARGE",
                 status=True,
                 endpoint="write",
-                method="POST"
+                req_type="post"
             )
             if status_code != 200:
                 raise ValueError(f"Failed to send ack to addverb conveyor plugin {response_json}")

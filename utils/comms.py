@@ -282,7 +282,7 @@ def send_req_to_plugin(
     tag_name = None,
     status = None,
     endpoint = None,
-    method = None,
+    req_type = None,
     req_request_json = None
 ):
     api_key = None
@@ -290,13 +290,13 @@ def send_req_to_plugin(
         plugin_info = fm_mongo.get_plugin_info()
         plugin_port = plugin_info["plugin_port"]
         plugin_ip = plugin_info["plugin_ip"]
-        
+    
         plugin_conveyor = fm_mongo.get_plugin_conveyor()
-        if tag_name:
-            tag_name : str = plugin_conveyor[tag_name]
-            api_key = plugin_conveyor["api_key"]
+        if tag_name and plugin_conveyor:
+            tag_name : str = plugin_conveyor[tag_name] if plugin_conveyor.get(tag_name) else None
+            api_key = plugin_conveyor["api_key"] if plugin_conveyor.get("api_key") else None
 
-    req_method = getattr(requests, method)
+    req_method = getattr(requests, req_type)
     kwargs = {}
     
     
@@ -324,7 +324,7 @@ def send_req_to_plugin(
     response_status_code, response_json = check_response(response)
 
     logging.getLogger().info(
-        f"Request to be sent to plugin_conveyor \n url: {url}, method: {method} \n body: {req_json}"
+        f"Request to be sent to plugin_conveyor \n url: {url}, method: {req_type} \n body: {req_json}"
     )
 
     return response_status_code, response_json
