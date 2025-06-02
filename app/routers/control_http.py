@@ -521,3 +521,19 @@ async def sound_setting(
     return response
 
 
+@router.post("/sherpa/soft_peripherals/{entity_name}")
+async def soft_peripherals(
+    soft_peripherals_req: rqm.SherpaPeripheralsReq,
+    entity_name=Union[str, None],
+    user_name=Depends(dpd.get_user_from_header),
+):
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+
+    if not entity_name:
+        dpd.raise_error("No entity name")
+    response = await dpd.process_req_with_response(None, soft_peripherals_req, entity_name)
+    return response
+    
+    
+
