@@ -758,17 +758,22 @@ async def get_curr_station_of_ongoing_trip(
     station_name: str,
     user_name=Depends(dpd.get_user_from_header),
 ):
-    response = False
+    response = {
+        "status": False,
+    }
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
 
     with DBSession(engine=ccm.engine) as dbsession:
         ongoing_trips: list[tm.OngoingTrip] = dbsession.get_ongoing_trip_with_waiting_station_dispatch_start()
-        if ongoing_trips is not None:
-            for ongoing_trip in ongoing_trips:
-                curr_station = ongoing_trip.curr_station()
-                if curr_station == station_name:
-                    response = True
-                    break
+        
+        for ongoing_trip in ongoing_trips:
+            curr_station = ongoing_trip.curr_station()
+            if curr_station == station_name:
+                response = {
+                    "entity_name": ongoing_trip.sherpa_name,
+                    "status": True,
+                }
+                break
 
     return response
