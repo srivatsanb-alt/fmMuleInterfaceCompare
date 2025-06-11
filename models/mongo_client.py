@@ -112,6 +112,12 @@ class FMMongo:
         display_filter = {"_id": 0}
         return col.find_one({}, display_filter)
 
+    def get_plugin_conveyor(self):
+        pc_db = self.mongo_client.get_database("plugin_config")
+        col = self.get_collection("plugin_conveyor", pc_db)
+        display_filter = {"_id": 0}
+        return col.find_one({}, display_filter)
+
     def get_all_frontend_users(self):
         fu_db = self.mongo_client.get_database("frontend_users")
         col = self.get_collection("user_details", fu_db)
