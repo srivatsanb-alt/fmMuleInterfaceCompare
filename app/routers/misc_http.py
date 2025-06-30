@@ -440,6 +440,36 @@ async def get_visa_assignments(user_name=Depends(dpd.get_user_from_header)):
     return response
 
 
+@router.get("/get_all_zones")
+async def get_all_zones_info(user_name=Depends(dpd.get_user_from_header)):
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+    
+    with DBSession(engine=ccm.engine) as dbsession:
+        exclusion_zones = dbsession.session.query(vm.ExclusionZone.zone_id, vm.ExclusionZone.fleets).all()
+        
+        fleet_zones = {}
+        
+        for zone in exclusion_zones:
+            zone_id = zone.zone_id
+            
+            if zone_id.endswith(f"_{vm.ZoneType.LANE}") or zone_id.endswith(f"_{vm.ZoneType.STATION}"):
+                base_name = zone_id.rsplit('_', 1)[0]
+            else:
+                base_name = zone_id
+            
+            for fleet_name in zone.fleets:
+                if fleet_name not in fleet_zones:
+                    fleet_zones[fleet_name] = set()
+                
+                fleet_zones[fleet_name].add(base_name)
+        
+        for fleet_name in fleet_zones:
+            fleet_zones[fleet_name] = sorted(list(fleet_zones[fleet_name]))
+    
+    return fleet_zones
+
+
 @router.post("/get_sherpa_oee/{sherpa_name}")
 async def get_sherpa_oee(
     generic_time_req: rqm.GenericFromToTimeReq,

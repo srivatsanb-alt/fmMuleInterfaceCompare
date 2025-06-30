@@ -167,6 +167,9 @@ class DBSession:
             .all()
         )
 
+    def get_all_exclusion_zones(self):
+        return self.session.query(vm.ExclusionZone).all()
+        
     def get_all_visa_assignments(self):
         return self.session.query(vm.VisaAssignment).all()
 

@@ -1,0 +1,171 @@
+diff --git a/app/routers/misc_http.py b/app/routers/misc_http.py
+index 4ce8f0d4..fff00c40 100644
+--- a/app/routers/misc_http.py
++++ b/app/routers/misc_http.py
+@@ -440,6 +440,36 @@ async def get_visa_assignments(user_name=Depends(dpd.get_user_from_header)):
+     return response
+ 
+ 
++@router.get("/get_all_zones")
++async def get_all_zones_info(user_name=Depends(dpd.get_user_from_header)):
++    if not user_name:
++        dpd.raise_error("Unknown requester", 401)
++    
++    with DBSession(engine=ccm.engine) as dbsession:
++        exclusion_zones = dbsession.session.query(vm.ExclusionZone.zone_id, vm.ExclusionZone.fleets).all()
++        
++        fleet_zones = {}
++        
++        for zone in exclusion_zones:
++            zone_id = zone.zone_id
++            
++            if zone_id.endswith(f"_{vm.ZoneType.LANE}") or zone_id.endswith(f"_{vm.ZoneType.STATION}"):
++                base_name = zone_id.rsplit('_', 1)[0]
++            else:
++                base_name = zone_id
++            
++            for fleet_name in zone.fleets:
++                if fleet_name not in fleet_zones:
++                    fleet_zones[fleet_name] = set()
++                
++                fleet_zones[fleet_name].add(base_name)
++        
++        for fleet_name in fleet_zones:
++            fleet_zones[fleet_name] = sorted(list(fleet_zones[fleet_name]))
++    
++    return fleet_zones
++
++
+ @router.post("/get_sherpa_oee/{sherpa_name}")
+ async def get_sherpa_oee(
+     generic_time_req: rqm.GenericFromToTimeReq,
+diff --git a/fm_plugins b/fm_plugins
+--- a/fm_plugins
++++ b/fm_plugins
+@@ -1 +1 @@
+-Subproject commit eb839fbbbe4d999a11103db0effda1b0292b8a68
++Subproject commit eb839fbbbe4d999a11103db0effda1b0292b8a68-dirty
+diff --git a/models/db_session.py b/models/db_session.py
+index c42aff65..3499f261 100644
+--- a/models/db_session.py
++++ b/models/db_session.py
+@@ -167,6 +167,9 @@ class DBSession:
+             .all()
+         )
+ 
++    def get_all_exclusion_zones(self):
++        return self.session.query(vm.ExclusionZone).all()
++        
+     def get_all_visa_assignments(self):
+         return self.session.query(vm.VisaAssignment).all()
+ 
+diff --git a/restart.sh b/restart.sh
+index 1c21d761..60052969 100755
+--- a/restart.sh
++++ b/restart.sh
+@@ -1,5 +1,5 @@
+ GIT_TAG=$(git describe --all | awk '{split($0,a,"/"); print a[2];}')
+ 
+-docker-compose  -p $GIT_TAG -f static/docker_compose_v$GIT_TAG.yml down
++docker compose  -p $GIT_TAG -f static/docker_compose_v$GIT_TAG.yml down
+ ./scripts/setup_fm.sh --dev=True
+-docker-compose  -p $GIT_TAG -f static/docker_compose_v$GIT_TAG.yml up -d
+\ No newline at end of file
++docker compose  -p $GIT_TAG -f static/docker_compose_v$GIT_TAG.yml up -d
+diff --git a/scripts/periodic_updates.py b/scripts/periodic_updates.py
+index 3dc11472..9daeeddd 100644
+--- a/scripts/periodic_updates.py
++++ b/scripts/periodic_updates.py
+@@ -1,5 +1,8 @@
++import json
+ import logging
+ import time
++import os
++import redis
+ 
+ # ati code imports
+ from utils.comms import send_status_update, send_notification
+@@ -70,6 +73,65 @@ def get_ongoing_trips_status(dbsession, fleet):
+ 
+     return msg
+ 
++def get_all_zones_msg(dbsession):
++    all_zones = dbsession.get_all_exclusion_zones()
++    zones_msg = {}
++    
++    for zone in all_zones:
++        zone_id = zone.zone_id
++        
++        # Split zone_id to get zone_name and zone_type
++        if "_" in zone_id:
++            parts = zone_id.rsplit("_", 1)
++            if len(parts) == 2:
++                zone_name = parts[0]
++                zone_type = parts[1]
++        else:
++            zone_name = zone_id
++            zone_type = ""
++        
++        # Get assignments for this specific zone
++        assignments = dbsession.get_all_visa_assignments_as_dict(zone_id)
++        
++        # Create zone info with basic properties
++        zone_info = {
++            "zone_id": zone_id,
++            "zone_name": zone_name,
++            "zone_type": zone_type,
++            "exclusivity": zone.exclusivity,
++            "fleets": zone.fleets,
++            "created_at": str(zone.created_at) if zone.created_at else None,
++            "updated_at": str(zone.updated_at) if zone.updated_at else None,
++            "resident_entities": [],
++            "waiting_entities": []
++        }
++        
++        # Add resident entities
++        for entity in assignments["resident_entities"]:
++            entity_name = entity["entity_name"]
++            entity_type = "sherpa" if dbsession.get_sherpa(entity_name) else "superuser"
++            zone_info["resident_entities"].append({
++                "entity_name": entity_name,
++                "entity_type": entity_type,
++                "granted_time": entity["granted_time"]
++            })
++        
++        # Add waiting entities
++        for entity in assignments["waiting_entities"]:
++            entity_name = entity["entity_name"]
++            entity_type = "sherpa" if dbsession.get_sherpa(entity_name) else "superuser"
++            zone_info["waiting_entities"].append({
++                "entity_name": entity_name,
++                "entity_type": entity_type,
++                "denied_time": entity["denied_time"],
++                "reason": entity["reason"]
++            })
++        
++        zones_msg[zone_id] = zone_info
++    
++    zones_msg["type"] = "visas_held"
++    return zones_msg
++
+ 
+ def get_visas_held_msg(dbsession):
+     all_visas_held = dbsession.get_all_visa_assignments()
+@@ -182,6 +244,7 @@ def send_fleet_level_notifications(dbsession, fleet_name):
+ @report_error
+ def send_periodic_updates():
+     logging.getLogger().info("starting periodic updates script")
++    pub = redis.from_url(os.getenv("FM_REDIS_URI"), decode_responses=True)
+     with DBSession() as dbsession:
+         while True:
+             all_fleets = dbsession.get_all_fleets()
+@@ -197,6 +260,9 @@ def send_periodic_updates():
+             visa_msg = get_visas_held_msg(dbsession)
+             send_status_update(visa_msg)
+ 
++            zones_msg = get_all_zones_msg(dbsession)
++            pub.publish("channel:entities", json.dumps(zones_msg))
++
+             all_alerts = get_all_alert_notifications(dbsession)
+             for alert_msg in all_alerts:
+                 send_notification(alert_msg)
