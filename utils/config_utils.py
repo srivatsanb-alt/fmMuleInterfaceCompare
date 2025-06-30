@@ -276,6 +276,12 @@ class ConfigValidator:
                     "bsonType": "array",
                     "description": "list of all the conditional_trips that needs to be activated`",
                 },
+                "sleep_time": {
+                    "bsonType": "int",
+                    "minimum": 0,
+                    "maximum": 3600,
+                    "description": "Time in seconds to sleep before checking for conditional trips",
+                },
                 "auto_park": {
                     "bsonType": "object",
                     "required": ["book", "threshold", "priority"],
@@ -287,7 +293,7 @@ class ConfigValidator:
                         "threshold": {
                             "bsonType": "int",
                             "description": "Threshold in seconds to wait before booking a trip to parking area for a sherpa",
-                            "minimum": 60,
+                            "minimum": 0,
                         },
                         "priority": {
                             "bsonType": "int",

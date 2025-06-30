@@ -339,9 +339,12 @@ def book_conditional_trips():
     logging.getLogger("misc").info("Started book conditional trips script")
 
     conditional_trip_config = get_conditional_trip_config()
+    
     if conditional_trip_config is None:
         logging.getLogger("misc").error("Will not run conditional trips script config")
         return
+    
+    sleep_time = conditional_trip_config.get("sleep_time", 0) or 60
 
     trip_types = conditional_trip_config.get("trip_types", [])
 
@@ -352,4 +355,4 @@ def book_conditional_trips():
                 bct.dbsession = dbsession
                 bct.book_trip(trip_type)
 
-        time.sleep(60)
+        time.sleep(sleep_time)
