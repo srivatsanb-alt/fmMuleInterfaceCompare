@@ -10,6 +10,7 @@ import datetime
 import shutil
 import redis
 import json
+import glob
 
 # ati code imports
 from core.db import get_engine
@@ -82,7 +83,54 @@ def backup_data():
         valid_dbs,
         backup_config,
     )
+    
+def delete_old_health_reports():
+    try:
+        # Get the base path for sherpa_uploads
+        base_path = os.path.join(os.getenv("FM_STATIC_DIR"), "sherpa_uploads")
+        
+        # Calculate the cutoff date (7 days ago)
+        cutoff_date = datetime.datetime.now() - datetime.timedelta(days=7)
+        
+        # Find all map directories
+        map_dirs = glob.glob(os.path.join(base_path, "*"))
+        
+        deleted_count = 0
+        for map_dir in map_dirs:
+            if os.path.isdir(map_dir):
+                # Look for health_report directory inside this map directory
+                health_report_dir = os.path.join(map_dir, "health_report")
+                
+                if os.path.exists(health_report_dir) and os.path.isdir(health_report_dir):
+                    # Get all files inside the health_report directory
+                    health_report_files = glob.glob(os.path.join(health_report_dir, "*"))
+                    
+                    for health_report_file in health_report_files:
+                        if os.path.isfile(health_report_file):
+                            try:
+                                # Get file modification time
+                                file_mtime = datetime.datetime.fromtimestamp(os.path.getmtime(health_report_file))
+                                
+                                # Delete if older than 7 days
+                                if file_mtime < cutoff_date:
+                                    os.remove(health_report_file)
+                                    deleted_count += 1
+                                    logging.getLogger("misc").warning(f"Deleted old health report file: {health_report_file}")
+                            except Exception as e:
+                                logging.getLogger("misc").warning(f"Error deleting health report file {health_report_file}: {e}")
+        
+        if deleted_count > 0:
+            logging.getLogger("misc").info(f"Cleaned up {deleted_count} old health report files")
+        else:
+            logging.getLogger("misc").info("No old health report files found to clean up")
+            
+    except Exception as e:
+        logging.getLogger("misc").error(f"Error during health report cleanup: {e}")
 
+
+def should_run_health_cleanup():
+    current_hour = datetime.datetime.now().hour
+    return 1 <= current_hour < 6
 
 @report_error
 @proc_retry()
@@ -91,6 +139,9 @@ def periodic_data_backup(
 ):
     freq = 60
     last_prune_time = time.time()
+    last_health_cleanup_time = time.time()
+    health_cleanup_interval = 10
+    
     while True:
         for db_name in valid_dbs:
             path_to_db = os.path.join(os.getenv("FM_DATABASE_URI"), db_name)
@@ -128,11 +179,18 @@ def periodic_data_backup(
         )
         if docker_cp_returncod != 0:
             logging.getLogger("misc").warning(f"Unable to copy fm_plugin logs")
-
         # prune images every 30 minutes
         if time.time() - last_prune_time > 1800:
             prune_unused_images(backup_config)
             last_prune_time = time.time()
+            
+
+        # Run health cleanup between 6 AM and 10 AM, check every hour
+        current_time = time.time()
+        if current_time - last_health_cleanup_time > health_cleanup_interval:
+            if should_run_health_cleanup():
+                delete_old_health_reports()
+            last_health_cleanup_time = current_time
 
         try:
             shutil.copytree(os.getenv("FM_LOG_DIR"), logs_save_path)
