@@ -238,6 +238,7 @@ async def sherpa_alerts(
             module = mm.NotificationModules.stoppages
         elif alert_msg.emergency_button:
             alert = alert + alert_msg.emergency_button
+            fu.publish_emergency_to_redis(sherpa_obj, alert_msg.emergency_button)
         elif alert_msg.user_pause:
             alert = alert + alert_msg.user_pause
         else:

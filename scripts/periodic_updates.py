@@ -1,5 +1,8 @@
+import json
 import logging
 import time
+import os
+import redis
 
 # ati code imports
 from utils.comms import send_status_update, send_notification
@@ -71,26 +74,96 @@ def get_ongoing_trips_status(dbsession, fleet):
     return msg
 
 
-def get_visas_held_msg(dbsession):
-    all_visas_held = dbsession.get_all_visa_assignments()
-    visa_msg = {}
-    for visa_held in all_visas_held:
-        sherpa_visas = visa_msg.get(visa_held.sherpa_name, {})
+# This should be removed because we are already getting the zones from in status_updates channel.
+def get_all_zones_msg(dbsession):
+    all_zones = dbsession.get_all_exclusion_zones()
+    zones_msg = {}
+    
+    for zone in all_zones:
+        zone_id = zone.zone_id
+        
+        # Split zone_id to get zone_name and zone_type
+        if "_" in zone_id:
+            parts = zone_id.rsplit("_", 1)
+            if len(parts) == 2:
+                zone_name = parts[0]
+                zone_type = parts[1]
+        else:
+            zone_name = zone_id
+            zone_type = ""
+        
+        # Get assignments for this specific zone
+        assignments = dbsession.get_all_visa_assignments_as_dict(zone_id)
+        
+        # Create zone info with basic properties
+        zone_info = {
+            "zone_id": zone_id,
+            "zone_name": zone_name,
+            "zone_type": zone_type,
+            "exclusivity": zone.exclusivity,
+            "fleets": zone.fleets,
+            "created_at": str(zone.created_at) if zone.created_at else None,
+            "updated_at": str(zone.updated_at) if zone.updated_at else None,
+            "resident_entities": [],
+            "waiting_entities": []
+        }
+        
+        # Add resident entities
+        for entity in assignments["resident_entities"]:
+            entity_name = entity["entity_name"]
+            entity_type = "sherpa" if dbsession.get_sherpa(entity_name) else "superuser"
+            zone_info["resident_entities"].append({
+                "entity_name": entity_name,
+                "entity_type": entity_type,
+                "granted_time": entity["granted_time"]
+            })
+        
+        # Add waiting entities
+        for entity in assignments["waiting_entities"]:
+            entity_name = entity["entity_name"]
+            entity_type = "sherpa" if dbsession.get_sherpa(entity_name) else "superuser"
+            zone_info["waiting_entities"].append({
+                "entity_name": entity_name,
+                "entity_type": entity_type,
+                "denied_time": entity["denied_time"],
+                "reason": entity["reason"]
+            })
+        
+        zones_msg[zone_id] = zone_info
+    
+    zones_msg["type"] = "visas_held"
+    return zones_msg
+
+def process_visa_msg(visa_msgs):
+    processed_visa_msg = {}
+    for visa_msg in visa_msgs:
+        sherpa_visas = processed_visa_msg.get(visa_msg.sherpa_name, {})
         zone_ids = sherpa_visas.get("zone_ids", [])
-        zone_ids.append(visa_held.zone_id.rsplit("_", 1)[0])
+        zone_ids.append(visa_msg.zone_id.rsplit("_", 1)[0])
         zone_types = sherpa_visas.get("zone_types", [])
-        zone_types.append(visa_held.zone_id.rsplit("_", 1)[1])
-        if visa_held.sherpa_name is not None:
-            visa_msg.update(
-                {visa_held.sherpa_name: {"zone_ids": zone_ids, "zone_types": zone_types, "vehicle_type": "sherpa"}}
+        zone_types.append(visa_msg.zone_id.rsplit("_", 1)[1])
+        if visa_msg.sherpa_name is not None:
+            processed_visa_msg.update(
+                {visa_msg.sherpa_name: {"zone_ids": zone_ids, "zone_types": zone_types, "vehicle_type": "sherpa"}}
             )
         else:
-            visa_msg.update(
-                {visa_held.user_name: {"zone_ids": zone_ids, "zone_types": zone_types, "vehicle_type": "superuser"}}
+            processed_visa_msg.update(
+                {visa_msg.user_name: {"zone_ids": zone_ids, "zone_types": zone_types, "vehicle_type": "superuser"}}
             )
+    return processed_visa_msg
+
+
+def get_visas_held_msg(dbsession):
+    all_visas_held = dbsession.get_all_visa_assignments()
+    visa_msg = process_visa_msg(all_visas_held)
     visa_msg["type"] = "visas_held"
     return visa_msg
 
+def get_waiting_visa_msg(dbsession):
+    all_waiting_visa = dbsession.get_all_visa_rejects()
+    visa_msg = process_visa_msg(all_waiting_visa)
+    visa_msg["type"] = "visas_waiting"
+    return visa_msg
 
 def get_all_alert_notifications(dbsession):
     all_alerts = dbsession.get_notifications_filter_with_log_level(
@@ -182,6 +255,7 @@ def send_fleet_level_notifications(dbsession, fleet_name):
 @report_error
 def send_periodic_updates():
     logging.getLogger().info("starting periodic updates script")
+    pub = redis.from_url(os.getenv("FM_REDIS_URI"), decode_responses=True)
     with DBSession() as dbsession:
         while True:
             all_fleets = dbsession.get_all_fleets()
@@ -196,6 +270,13 @@ def send_periodic_updates():
 
             visa_msg = get_visas_held_msg(dbsession)
             send_status_update(visa_msg)
+
+            waiting_visa_msg = get_waiting_visa_msg(dbsession)
+            send_status_update(waiting_visa_msg)
+
+            # This should be removed because we are already getting the zones from in status_updates channel.
+            zones_msg = get_all_zones_msg(dbsession)
+            pub.publish("channel:entities", json.dumps(zones_msg)) # Add this to comms.py
 
             all_alerts = get_all_alert_notifications(dbsession)
             for alert_msg in all_alerts:
