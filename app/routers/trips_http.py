@@ -759,6 +759,7 @@ async def get_curr_station_of_ongoing_trip(
     user_name=Depends(dpd.get_user_from_header),
 ):
     response = {
+        "entity_name": None,
         "status": False,
     }
     if not user_name:
