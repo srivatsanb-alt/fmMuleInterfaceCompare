@@ -28,7 +28,8 @@ AVAILABLE_UPGRADES = [
     "4.2",
     "4.21",
     "4.3",
-    "4.61"
+    "4.61",
+    "4.9"
 ]
 NO_SCHEMA_CHANGES = ["3.0", "3.01", "3.1"]
 
@@ -216,7 +217,15 @@ class DBUpgrade:
                 print("plugin_erp database dropped")
             except Exception as e:
                 print(f"Unable to drop plugin_erp database, exception: {e}")
-
+                
+    def upgrade_to_4_9(self):
+        with get_engine(os.getenv("FM_DATABASE_URI")).connect() as conn:
+            conn.execute("commit")
+            try:
+                conn.execute("DROP DATABASE plugin_summon_button")
+                print("plugin_summon_button database dropped")
+            except Exception as e:
+                print(f"Unable to drop plugin_summon_button database, exception: {e}")
 
 def upgrade_db_schema():
     # fm version records available only after v2.1

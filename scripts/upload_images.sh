@@ -58,6 +58,7 @@ upload_to_sanjaya()
 setup_tar_k3s() {
    read -p "Want to setup k3s tarball? (y/n) - " setup_k3s
    if [ "$setup_k3s" = "y" ]; then {
+     setup_image_config
      setup_environment
      check_dependencies
      verify_original_images

@@ -167,6 +167,9 @@ class DBSession:
             .all()
         )
 
+    def get_all_exclusion_zones(self):
+        return self.session.query(vm.ExclusionZone).all()
+        
     def get_all_visa_assignments(self):
         return self.session.query(vm.VisaAssignment).all()
 
@@ -407,6 +410,13 @@ class DBSession:
             self.session.query(tm.OngoingTrip)
             .filter(tm.OngoingTrip.sherpa_name == sherpa_name)
             .one_or_none()
+        )
+    
+    def get_ongoing_trip_with_waiting_station_dispatch_start(self):
+        return (
+            self.session.query(tm.OngoingTrip)
+            .filter(tm.OngoingTrip.states.any(tm.TripState.WAITING_STATION_DISPATCH_START))
+            .all()
         )
 
     def get_enroute_trip(self, sherpa_name: str):

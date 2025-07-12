@@ -238,6 +238,7 @@ async def sherpa_alerts(
             module = mm.NotificationModules.stoppages
         elif alert_msg.emergency_button:
             alert = alert + alert_msg.emergency_button
+            fu.publish_emergency_to_redis(sherpa_obj, alert_msg.emergency_button)
         elif alert_msg.user_pause:
             alert = alert + alert_msg.user_pause
         else:
@@ -357,26 +358,75 @@ async def add_fm_incident(
             dpd.raise_error(
                 f"Will only accept incidents of type {mm.FMIncidentTypes} requester"
             )
-        error_code = None
+        error_code = ""
         if add_fm_incident_req.error_code:
             error_code = add_fm_incident_req.error_code
-
-        fm_incident = mm.FMIncidents(
-            type=add_fm_incident_req.type,
-            code=add_fm_incident_req.code,
-            incident_id=add_fm_incident_req.incident_id,
-            entity_name=sherpa,
-            module=add_fm_incident_req.module,
-            sub_module=add_fm_incident_req.sub_module,
-            message=add_fm_incident_req.message,
-            display_message=add_fm_incident_req.display_message,
-            recovery_message=add_fm_incident_req.recovery_message,
-            data_uploaded=add_fm_incident_req.data_uploaded,
-            data_path=add_fm_incident_req.data_path,
-            error_code=error_code,
-            other_info=add_fm_incident_req.other_info,
-        )
-        dbsession.add_to_session(fm_incident)
+            
+        async with aioredis.Redis.from_url(os.getenv("FM_REDIS_URI")) as aredis_conn:
+            
+            # Get all existing incident keys for this sherpa
+            fm_incident_keys = await aredis_conn.keys(f"fm_incident_{sherpa}_*")
+            
+            # Check if an incident with the same code and message already exists
+            existing_incident_found = False
+            existing_incident_key = None
+            
+            for key in fm_incident_keys:
+                logging.getLogger("misc").info(f"key: {key}")
+                try:
+                    incident_data = await aredis_conn.get(key)
+                    if incident_data:
+                        incident_dict = json.loads(incident_data)
+                        # Check if code and message match
+                        if (incident_dict.get('code') == add_fm_incident_req.code and 
+                            incident_dict.get('message') == add_fm_incident_req.message):
+                            existing_incident_found = True
+                            existing_incident_key = key
+                            break
+                except (json.JSONDecodeError, KeyError):
+                    # Skip invalid data
+                    continue
+            
+            if existing_incident_found:
+                # Update expiry time for existing incident
+                await aredis_conn.expire(existing_incident_key, 360)
+                
+                # Update the update_time in database for the existing incident
+                existing_incident = dbsession.session.query(mm.FMIncidents).filter(
+                    mm.FMIncidents.incident_id == incident_dict.get('incident_id'),
+                    mm.FMIncidents.entity_name == sherpa
+                ).first()
+                
+                if existing_incident:
+                    existing_incident.updated_at = datetime.now()
+                    dbsession.session.commit()
+        
+            else:
+                # Add new incident to Redis
+                await aredis_conn.setex(
+                    f"fm_incident_{sherpa}_{error_code}", 
+                    360, 
+                    json.dumps(add_fm_incident_req.dict())
+                )
+                
+                # Add new row to database
+                fm_incident = mm.FMIncidents(
+                    type=add_fm_incident_req.type,
+                    code=add_fm_incident_req.code,
+                    incident_id=add_fm_incident_req.incident_id,
+                    entity_name=sherpa,
+                    module=add_fm_incident_req.module,
+                    sub_module=add_fm_incident_req.sub_module,
+                    message=add_fm_incident_req.message,
+                    display_message=add_fm_incident_req.display_message,
+                    recovery_message=add_fm_incident_req.recovery_message,
+                    data_uploaded=add_fm_incident_req.data_uploaded,
+                    data_path=add_fm_incident_req.data_path,
+                    error_code=error_code,
+                    other_info=add_fm_incident_req.other_info,
+                )
+                dbsession.add_to_session(fm_incident)
+                logging.getLogger("misc").info(f"Incident {add_fm_incident_req.incident_id} added to database")
 
     return response
 

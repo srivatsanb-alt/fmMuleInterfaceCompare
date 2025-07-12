@@ -271,7 +271,7 @@ def get_conveyor_url_req_json(endpoint, status=None, tag_name=None, plugin_ip=No
         req_json = [tag_name]
         return url, req_json
     elif endpoint == "modbus":
-        url = f"http://{plugin_ip}/api/v1/modbus_lift/operation"
+        url = f"http://{plugin_ip}/plugin/api/v1/modbus_lift/operation"
         req_json = None
         return url, req_json
     else:
