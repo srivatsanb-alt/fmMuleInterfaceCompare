@@ -222,10 +222,19 @@ class DBUpgrade:
         with get_engine(os.getenv("FM_DATABASE_URI")).connect() as conn:
             conn.execute("commit")
             try:
+                result = conn.execute("SELECT enum_range(NULL::stationproperties)")
+                enum_values_str = result.fetchall()[0][0]
+                new_values = ["PLAT_ON", "PLAT_OFF", "PLAT_UP", "PLAT_DOWN"]
+                for value in new_values:
+                    if value not in enum_values_str:
+                        conn.execute(f"ALTER TYPE stationproperties ADD VALUE '{value}'")
+                        print(f"Added '{value}' to stationproperties enum.")
+                    else:
+                        print(f"'{value}' already exists in stationproperties enum.")
                 conn.execute("DROP DATABASE plugin_summon_button")
                 print("plugin_summon_button database dropped")
             except Exception as e:
-                print(f"Unable to drop plugin_summon_button database, exception: {e}")
+                print(f"Unable to drop plugin_summon_button database or add values to stationproperties enum, exception: {e}")
 
 def upgrade_db_schema():
     # fm version records available only after v2.1
