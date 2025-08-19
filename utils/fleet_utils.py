@@ -7,6 +7,7 @@ import logging.config
 import json
 import time
 import datetime
+import redis
 from typing import List, Dict
 from core.constants import FleetStatus
 from sqlalchemy import or_
@@ -113,6 +114,14 @@ def maybe_update_map_files(fleet_name: str) -> None:
     maybe_create_graph_object(fleet_name)
     return
 
+def publish_emergency_to_redis(sherpa,message):
+    data = {
+        "sherpa":sherpa.name,
+        "fleet_name":sherpa.fleet.name,
+        "epo_pressed": True if "pressed" in message else False,
+    }
+    with redis.from_url(os.getenv("FM_REDIS_URI")) as redis_conn:
+        redis_conn.publish("channel:emergency_button", json.dumps(data))
 
 def maybe_create_gmaj_file(fleet_name: str) -> None:
     # importing inside func call - initializes glob vars

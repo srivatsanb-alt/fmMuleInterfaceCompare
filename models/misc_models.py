@@ -18,7 +18,7 @@ class NotificationModules:
     stoppages = "stoppages"
     dispatch_button = "dispatch_button"
     optimal_dispatch = "optimal_dispatch"
-
+    platform = "platform"
 
 class NotificationLevels:
     info = "info"

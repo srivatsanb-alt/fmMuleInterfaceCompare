@@ -1,5 +1,8 @@
+import json
 import logging
 import time
+import os
+import redis
 
 # ati code imports
 from utils.comms import send_status_update, send_notification
@@ -71,26 +74,43 @@ def get_ongoing_trips_status(dbsession, fleet):
     return msg
 
 
-def get_visas_held_msg(dbsession):
-    all_visas_held = dbsession.get_all_visa_assignments()
-    visa_msg = {}
-    for visa_held in all_visas_held:
-        sherpa_visas = visa_msg.get(visa_held.sherpa_name, {})
-        zone_ids = sherpa_visas.get("zone_ids", [])
-        zone_ids.append(visa_held.zone_id.rsplit("_", 1)[0])
-        zone_types = sherpa_visas.get("zone_types", [])
-        zone_types.append(visa_held.zone_id.rsplit("_", 1)[1])
-        if visa_held.sherpa_name is not None:
-            visa_msg.update(
-                {visa_held.sherpa_name: {"zone_ids": zone_ids, "zone_types": zone_types, "vehicle_type": "sherpa"}}
+def get_zone_ids_and_types(entity_visas, visa_msg):
+    zone_ids = entity_visas.get("zone_ids", [])
+    zone_ids.append(visa_msg.zone_id.rsplit("_", 1)[0])
+    zone_types = entity_visas.get("zone_types", [])
+    zone_types.append(visa_msg.zone_id.rsplit("_", 1)[1])
+    return zone_ids, zone_types
+
+
+def process_visa_msg(visa_msgs):
+    processed_visa_msg = {}
+    for visa_msg in visa_msgs:
+        if visa_msg.sherpa_name is not None:
+            sherpa_visas = processed_visa_msg.get(visa_msg.sherpa_name, {})
+            zone_ids, zone_types = get_zone_ids_and_types(sherpa_visas, visa_msg)
+            processed_visa_msg.update(
+                {visa_msg.sherpa_name: {"zone_ids": zone_ids, "zone_types": zone_types, "vehicle_type": "sherpa"}}
             )
         else:
-            visa_msg.update(
-                {visa_held.user_name: {"zone_ids": zone_ids, "zone_types": zone_types, "vehicle_type": "superuser"}}
+            user_visas = processed_visa_msg.get(visa_msg.user_name, {})
+            zone_ids, zone_types = get_zone_ids_and_types(user_visas, visa_msg)
+            processed_visa_msg.update(
+                {visa_msg.user_name: {"zone_ids": zone_ids, "zone_types": zone_types, "vehicle_type": "superuser"}}
             )
+    return processed_visa_msg
+
+
+def get_visas_held_msg(dbsession):
+    all_visas_held = dbsession.get_all_visa_assignments()
+    visa_msg = process_visa_msg(all_visas_held)
     visa_msg["type"] = "visas_held"
     return visa_msg
 
+def get_waiting_visa_msg(dbsession):
+    all_waiting_visa = dbsession.get_all_visa_rejects()
+    visa_msg = process_visa_msg(all_waiting_visa)
+    visa_msg["type"] = "visas_waiting"
+    return visa_msg
 
 def get_all_alert_notifications(dbsession):
     all_alerts = dbsession.get_notifications_filter_with_log_level(
@@ -196,6 +216,9 @@ def send_periodic_updates():
 
             visa_msg = get_visas_held_msg(dbsession)
             send_status_update(visa_msg)
+
+            waiting_visa_msg = get_waiting_visa_msg(dbsession)
+            send_status_update(waiting_visa_msg)
 
             all_alerts = get_all_alert_notifications(dbsession)
             for alert_msg in all_alerts:
