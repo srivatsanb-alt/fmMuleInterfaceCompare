@@ -128,6 +128,7 @@ services:
       - ./certs:/certs
     ports:
       - "443:443"
+      - "9999:9999"
     links:
       - fleet_manager
       - plugins
