@@ -23,6 +23,7 @@ jobs:
         with:
           ref: main
           path: https://github.com/srivatsanb-alt/fmMuleInterfaceCompare/tree/main
+          token: ${{ secrets.MY_PAT }}
           submodules: false
 
       - name: Generate Snapshots
