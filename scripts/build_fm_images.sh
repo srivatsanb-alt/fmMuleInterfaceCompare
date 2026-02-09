@@ -37,14 +37,13 @@ build_base_images()
    cd ../
    docker pull nginx:1.23.3
    docker pull mongo-express:1.0.0-alpha
-   docker pull mongo:7.0
    docker pull postgres:14.0
    docker pull registry:2
    docker pull redis:latest
 }
 
 
-build_final_images() 
+build_final_images()
 {
    conf_file="nginx_bridge.conf"
    docker image build --build-arg CONF="${conf_file}" -t fm_nginx:$FM_VERSION -f docker_files/nginx.Dockerfile .
@@ -53,6 +52,7 @@ build_final_images()
 		      --build-arg GIT_TAGGED="${GIT_TAGGED}" \
 		      --build-arg LAST_COMMIT_DT="${LAST_COMMIT_DT}" \
 		      -t fleet_manager:$FM_VERSION -f docker_files/Dockerfile .
+   docker image build -t fm_mongo:prod -f docker_files/mongo.Dockerfile .
 
 
    cd fm_plugins && bash scripts/build_final_image.sh $FM_VERSION
@@ -61,8 +61,7 @@ build_final_images()
 
    # set fm version in docker_compose file
    mkdir -p static
-   cp misc/docker_compose_untagged.yml static/docker_compose_v$FM_VERSION.yml 
-    
+   cp misc/docker_compose_untagged.yml static/docker_compose_v$FM_VERSION.yml
    if [ "$(uname)" = "Darwin" ]; then
    {
      sed -i.bak "s/fm_version/$FM_VERSION/g" static/docker_compose_v$FM_VERSION.yml

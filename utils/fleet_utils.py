@@ -16,6 +16,7 @@ from sqlalchemy.orm.attributes import flag_modified
 import zipfile
 import tarfile
 from fastapi import HTTPException
+import shutil
 
 # ati code imports
 from models.db_session import DBSession
@@ -131,16 +132,36 @@ def maybe_create_gmaj_file(fleet_name: str) -> None:
     wpsj_path = get_map_file_path(fleet_name, "waypoints.json")
 
     if not os.path.exists(wpsj_path):
-        raise Exception(f"Unable to fetch {wpsj_path}")
+        try:
+            os.environ["ATI_MAP"] = os.path.join(
+                os.getenv("FM_STATIC_DIR"), fleet_name, "map"
+            )
+            rpi.RoutePlannerInterface(
+                gmaj_path, route_application="core_routes_only_solver", fleet=True
+            )
+        except Exception as e:
+            logger.error(f"Unable to build RPI from {fleet_name}, Exception: {e}")
+            raise ValueError(f"Unable to fetch {wpsj_path}")
+    else:
+        rpi.maybe_update_gmaj(gmaj_path, wpsj_path, True)
 
-    rpi.maybe_update_gmaj(gmaj_path, wpsj_path, True)
     return
 
 
 def maybe_create_graph_object(fleet_name: str) -> None:
+    waypoint_json_path = get_map_file_path(fleet_name, "waypoints.json")
+    if os.path.exists(waypoint_json_path):
+        logging.info(f"waypoints.json file {waypoint_json_path} exists! Not creating graph object!")
+        return
+    
     # importing inside func call - initializes glob vars
     import mule.ati.control.bridge.router_planner_interface as rpi
     import mule.ati.control.dynamic_router.graph_builder_utils as gbu
+    import mule.ati.tools.map_utils as mu
+    from mule.ati.common.config import load_mule_config
+
+    config = load_mule_config()
+    dynamic_router_release = config.get("control", {}).get("dynamic_router", {}).get("release", 1)
 
     graph_object_path = get_map_file_path(fleet_name, "graph_object.json")
     gmaj_path = get_map_file_path(fleet_name, "grid_map_attributes.json")
@@ -153,12 +174,22 @@ def maybe_create_graph_object(fleet_name: str) -> None:
     stations = gma["stations_info"]
     terminal_lines_int = rpi.process_dict(terminal_lines)
     stations_objects = rpi.process_stations_info(stations)
-    gbu.maybe_build_graph_object_json(
-        terminal_lines_int,
-        stations_objects,
-        gmaj_path=gmaj_path,
-        graph_object_path=graph_object_path,
-    )
+    gmaj_checksum = mu.get_checksum(gmaj_path)
+    graph_obj_metadata = {}
+
+    if os.path.isfile(graph_object_path):
+        with open(graph_object_path) as f:
+            graph_obj_metadata = json.load(f).get("metadata", {})
+
+    verified_checksum = gmaj_checksum == graph_obj_metadata.get("gmaj_checksum", None)
+    if not verified_checksum:
+        gbu.GraphObjectUtils.generate_graph_object_json(
+            terminal_lines_int,
+            stations_objects,
+            gmaj_checksum,
+            dynamic_router_release=dynamic_router_release,
+            graph_object_path=graph_object_path,
+        )
     return
 
 
@@ -178,6 +209,10 @@ def add_sherpa_metadata(dbsession: DBSession):
             sm = fm.SherpaMetaData(sherpa_name=sherpa.name, info={"can_edit": "True"})
             dbsession.add_to_session(sm)
 
+def add_super_user_if_none_exists(dbsession: DBSession):
+    super_user = dbsession.get_super_user(name="super_user")
+    if not super_user:
+        dbsession.create_default_super_user(name="super_user")
 
 class FleetUtils:
     @classmethod
@@ -403,7 +438,7 @@ class FleetUtils:
 
         ExclusionZoneUtils.delete_exclusion_zones(dbsession, fleet_name)
 
-        map_ip = fleet.map_id
+        map_id = fleet.map_id
 
         # delete optimal dispatch state
         dbsession.session.query(fm.OptimalDispatchState).filter(
@@ -413,7 +448,7 @@ class FleetUtils:
 
         dbsession.session.delete(fleet)
         logger.info(f"deleted fleet {fleet_name}")
-        cls.delete_map(dbsession, map_ip)
+        cls.delete_map(dbsession, map_id)
         cls.delete_saved_routes(dbsession, fleet_name)
 
 
@@ -487,6 +522,7 @@ class SherpaUtils:
             )
             cls.add_sherpa_status(dbsession, sherpa.name)
             cls.add_sherpa_metadata(dbsession, sherpa.name)
+            cls.add_mule_msg(dbsession,sherpa.name)
             cls.set_availability(dbsession, sherpa.name, sherpa.fleet.name)
 
     @classmethod
@@ -496,6 +532,12 @@ class SherpaUtils:
         )
         dbsession.add_to_session(sherpa_status)
         logger.info(f"added sherpa status entry for sherpa: {sherpa_name}")
+        
+    @classmethod
+    def add_mule_msg(cls,dbsession,sherpa_name):
+        mule_msg = fm.MuleMsg(sherpa_name=sherpa_name, message_jsons="")
+        dbsession.add_to_session(mule_msg)
+        logger.info(f"added mule msg entry for sherpa: {sherpa_name}")
 
     @classmethod
     def add_sherpa_metadata(cls, dbsession, sherpa_name):
@@ -550,6 +592,7 @@ class SherpaUtils:
     def delete_sherpa(cls, dbsession, sherpa_name):
         # delete sherpa status object
         sherpa_status: fm.SherpaStatus = dbsession.get_sherpa_status(sherpa_name)
+        mule_msg: fm.MuleMsg = dbsession.get_mule_msg(sherpa_name)
 
         if not sherpa_status:
             raise ValueError(f"Sherpa {sherpa_name} not found")
@@ -562,6 +605,10 @@ class SherpaUtils:
         # delete sherpa object
         dbsession.session.delete(sherpa)
         logger.info(f"deleted sherpa {sherpa_name}")
+
+        if mule_msg:
+            dbsession.session.delete(mule_msg)
+            logger.info(f"deleted mule msg entry for sherpa: {sherpa_name}")
 
         # delete available sherpa
         available_sherpa = (
@@ -761,16 +808,9 @@ async def update_fleet_conf_in_redis(dbsession: DBSession, aredis_conn):
 
 
 def get_all_fleets_list_as_per_user(user_name):
-    with FMMongo() as fm_mongo:
-        user_query = {"name": user_name}
-        user_details_db = fm_mongo.get_frontend_user_details(user_query)
-    
-    if user_details_db['role'] == 'support':
-        with DBSession() as dbsession:
-            fleet_names = dbsession.get_all_fleet_names()
-            return fleet_names
-    else:
-        return user_details_db['fleet_names']
+    with DBSession() as dbsession:
+        fleet_names = dbsession.get_all_fleet_names_for_user(user_name)
+        return fleet_names
     
 
 def strip_archive_extensions(filename):
@@ -784,7 +824,7 @@ def strip_archive_extensions(filename):
             return filename[:-len(ext)]
     return os.path.splitext(filename)[0]
 
-async def save_map(map_file):
+async def save_map(map_file, fleet_name: str):
     dir_to_save = os.getenv("FM_STATIC_DIR")
     os.makedirs(dir_to_save, exist_ok=True)
     file_path = os.path.join(dir_to_save, map_file.filename)
@@ -795,7 +835,7 @@ async def save_map(map_file):
     logger.info(f"Extraction destination: {dir_to_save}")
 
     file_name = strip_archive_extensions(map_file.filename)
-    required_files = {f"{file_name}/map/webui_map.png", f"{file_name}/map/webui_map.json", f"{file_name}/map/waypoints.json"}
+    required_files = {f"{file_name}/map/webui_map.png", f"{file_name}/map/webui_map.json"}
 
     if zipfile.is_zipfile(file_path):
         logger.info("Detected ZIP archive")
@@ -812,15 +852,25 @@ async def save_map(map_file):
             "Uploaded file is not a valid ZIP or TAR archive"
         )
 
-    with archive_class(file_path, 'r' if is_zip else 'r:*') as archive:
-        archive_files = set(archive.namelist() if is_zip else archive.getnames())
-        missing_files = required_files - archive_files
-        if missing_files:
-            logger.info(f"Missing files: {missing_files}")
+    try:
+        with archive_class(file_path, 'r' if is_zip else 'r:*') as archive:
+            archive_files = set(archive.namelist() if is_zip else archive.getnames())
+            missing_files = required_files - archive_files
+            if missing_files:
+                logger.info(f"Missing files: {missing_files}")
+                raise ValueError(
+                    f"The uploaded archive is missing required files: {missing_files}"
+                )
+            
+            archive.extractall(dir_to_save)
+            
+            dest_path = os.path.join(dir_to_save, fleet_name)
+            if os.path.exists(dest_path):
+                shutil.rmtree(dest_path)
+            shutil.move(os.path.join(dir_to_save, file_name), dest_path)
+    except Exception as e:
+        raise ValueError(f"Error saving map: {e}")
+    finally:
+        if os.path.exists(file_path):
             os.remove(file_path)
-            raise ValueError(
-                f"The uploaded archive is missing required files: {missing_files}"
-            )
-        archive.extractall(dir_to_save)
-        logger.info(f"Successfully extracted files to {dir_to_save}")
-    os.remove(file_path)
+            logger.info(f"Removed uploaded archive file: {file_path}")

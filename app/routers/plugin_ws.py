@@ -6,6 +6,7 @@ import os
 import json
 import aioredis
 from fastapi import APIRouter, Depends, WebSocket, status, WebSocketDisconnect
+from utils.auth_utils import websocket_token_auth
 
 
 # ati code imports
@@ -22,7 +23,7 @@ router = APIRouter()
 @router.websocket("/ws/api/v1/plugin_comms/{token}")
 async def plugin_comms_ws(
     websocket: WebSocket,
-    user_name=Depends(dpd.get_user_from_query),
+    user=Depends(websocket_token_auth),
     x_real_ip=Depends(dpd.get_real_ip_from_header),
 ):
 
@@ -30,7 +31,7 @@ async def plugin_comms_ws(
     if x_real_ip is None:
         x_real_ip = client_ip
 
-    if not user_name:
+    if not user:
         logger.info(
             f"websocket connection(plugin) request from (ip: {x_real_ip}) will be turned down, Unknown user"
         )

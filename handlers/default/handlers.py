@@ -519,6 +519,26 @@ class Handlers:
         )
         _ = utils_comms.send_req_to_sherpa(self.dbsession, sherpa, sherpa_action_msg)
         self.record_dispatch_wait_start(ongoing_trip)
+    
+    def add_lift_start_to_ongoing_trip(
+            self, ongoing_trip: tm.OngoingTrip, sherpa: fm.Sherpa
+    ):
+        ongoing_trip.add_state(tm.TripState.WAITING_STATION_LIFT_START)
+        lift_msg = rqm.PeripheralsReq(
+            lifter_actuator=rqm.LifterActuatorReq(lift=True), 
+            basic_trip_description=ongoing_trip.get_basic_trip_description(),
+        )
+        _ = utils_comms.send_req_to_sherpa(self.dbsession, sherpa, lift_msg)
+
+    def add_unlift_start_to_ongoing_trip(
+            self, ongoing_trip: tm.OngoingTrip, sherpa: fm.Sherpa
+    ):
+        ongoing_trip.add_state(tm.TripState.WAITING_STATION_UNLIFT_START)
+        lift_msg = rqm.PeripheralsReq(
+            lifter_actuator=rqm.LifterActuatorReq(lift=False), 
+            basic_trip_description=ongoing_trip.get_basic_trip_description(),
+        )
+        _ = utils_comms.send_req_to_sherpa(self.dbsession, sherpa, lift_msg)
 
     def add_lift_start_to_ongoing_trip(
             self, ongoing_trip: tm.OngoingTrip, sherpa: fm.Sherpa
@@ -1148,17 +1168,17 @@ class Handlers:
             # add fleet_names to req_ctxt - this is for optimal_dispatch
             if fleet_name not in req_ctxt.fleet_names:
                 req_ctxt.fleet_names.append(fleet_name)
-            
+                
+            # add source of booking
+            if trip_msg.metadata is None:
+                trip_msg.metadata = {}
+                
             trip_msg.metadata.update(site_metadata)
 
             self.check_if_booking_is_valid(trip_msg, all_stations)
 
             if not trip_msg.priority:
                 trip_msg.priority = 1.0
-
-            # add source of booking
-            if trip_msg.metadata is None:
-                trip_msg.metadata = {}
 
             booked_by = req.source
             if trip_msg.metadata.get("booked_by") is not None:
@@ -1411,7 +1431,7 @@ class Handlers:
         self.dbsession.session.commit()
 
         # update db
-        ongoing_trip.trip.update_etas(float(req.trip_info.eta), ongoing_trip.next_idx_aug)
+        ongoing_trip.trip.update_etas(float((1- float(req.trip_info.progress))*req.trip_info.eta_at_start), ongoing_trip.next_idx_aug)
 
         if req.stoppages.extra_info.velocity_speed_factor < 0.1:
             ongoing_trip.trip_leg.status = tm.TripLegStatus.STOPPED
@@ -1476,6 +1496,15 @@ class Handlers:
             logging.getLogger("status_updates").info(
                 f"added TripAnalytics entry for trip_leg_id: {ongoing_trip.trip_leg_id}"
             )
+    
+            
+    def handle_mule_message(self, req: rqm.MuleMsg):
+        mule_msgs = self.dbsession.get_mule_msg(req.sherpa_name)
+        mule_msgs.message_jsons = req.message_jsons
+        utils_comms.send_msg_to_plugin(
+                (mule_msgs.message_jsons), f"plugin_dm_{req.sherpa_name}"
+            )
+        self.dbsession.session.commit()
 
     def handle_trigger_optimal_dispatch(self, req: rqm.TriggerOptimalDispatch):
 
@@ -1709,7 +1738,7 @@ class Handlers:
         req: rqm.SherpaPeripheralsReq,
     ):
 
-        valid_error_devices = ["auto_hitch", "conveyor"]
+        valid_error_devices = ["auto_hitch", "conveyor", "lifter_actuator"]
         if req.error_device in valid_error_devices:
             peripheral_error_resolver = getattr(
                 self, f"resolve_{req.error_device}_error", None
@@ -2229,6 +2258,9 @@ class Handlers:
             if req.other_info:
                 saved_route.other_info.update(req.other_info)
                 flag_modified(saved_route, "other_info")
+            
+            saved_route.other_info["tasks"] = req.tasks
+            flag_modified(saved_route, "other_info")
 
             logging.getLogger().info(
                 f"updated the route : {req.route} for the route tag : {req.tag} "
@@ -2240,6 +2272,9 @@ class Handlers:
 
             if "can_edit" not in list(req.other_info.keys()):
                 req.other_info["can_edit"] = "True"
+            
+            if req.tasks:
+                req.other_info["tasks"] = req.tasks
 
             saved_route: tm.SaveRoute = tm.SavedRoutes(
                 tag=req.tag,

@@ -3,6 +3,7 @@ from fastapi import Depends, APIRouter
 from utils.rq_utils import Queues
 import models.request_models as rqm
 import app.routers.dependencies as dpd
+from utils.auth_utils import AuthValidator
 
 
 router = APIRouter(
@@ -11,17 +12,20 @@ router = APIRouter(
     responses={404: {"description": "Not found"}},
 )
 
-
+# TODO: super user was present in the mongodb users collection earlier.
+# We need to either migrate that to the new auth system or remove this dependency.
 @router.post(
     "/access/resource",
     response_model=rqm.ResourceResp,
 )
 async def super_user_resource_access(
     super_user_resource_req: rqm.SuperUserResourceReq,
-    username= Depends(dpd.get_super_user)
+    user= Depends(AuthValidator('fm')),
 ):
-    if username is None:
+    if user is None:
         dpd.raise_error("Unknown requester", 401)
+    
+    username = user.get('user_name')
 
     queue = Queues.queues_dict["resource_handler"]
     _response = await dpd.process_req_with_response(

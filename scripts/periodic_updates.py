@@ -173,6 +173,12 @@ def send_fleet_level_notifications(dbsession, fleet_name):
         "fleet_name": fleet_name,
         "modules": [],
     }
+    
+    all_event_based = {
+        "type": mm.NotificationLevels.event_based,
+        "fleet_name": fleet_name,
+        "modules": [],
+    }
 
     while True:
         try:
@@ -193,11 +199,21 @@ def send_fleet_level_notifications(dbsession, fleet_name):
             for notification in notifications:
                 all_infos[module].update(
                     {notification.id: get_table_as_dict(mm.Notifications, notification)}
+                )   
+                
+        elif log_level == mm.NotificationLevels.event_based:
+            all_event_based[module] = {}
+            all_event_based["modules"].append(module)
+            for notification in notifications:
+                all_event_based[module].update(
+                    {notification.id: get_table_as_dict(mm.Notifications, notification)}
                 )
 
     send_notification(all_infos)
     send_notification(action_requests)
-
+    send_notification(all_event_based)
+    
+    
 @proc_retry()
 @report_error
 def send_periodic_updates():

@@ -5,6 +5,7 @@ from sqlalchemy.orm.attributes import flag_modified
 from models.db_session import DBSession
 import app.routers.dependencies as dpd
 import core.common as ccm
+from utils.auth_utils import AuthValidator
 
 
 router = APIRouter(
@@ -16,11 +17,11 @@ router = APIRouter(
 
 @router.get("/allow_new_sherpa_version/{version}")
 async def allow_new_sherpa_version(
-    version: str, user_name=Depends(dpd.get_user_from_header)
+    version: str, user=Depends(AuthValidator('fm'))
 ):
     response = {}
 
-    if not user_name:
+    if not user:
         dpd.raise_error("Unknown requester", 401)
 
     with DBSession(engine=ccm.engine) as dbsession:
@@ -37,11 +38,11 @@ async def allow_new_sherpa_version(
 
 @router.get("/disallow_sherpa_version/{version}")
 async def disallow_sherpa_version(
-    version: str, user_name=Depends(dpd.get_user_from_header)
+    version: str, user=Depends(AuthValidator('fm'))
 ):
     response = {}
 
-    if not user_name:
+    if not user:
         dpd.raise_error("Unknown requester", 401)
 
     with DBSession(engine=ccm.engine) as dbsession:

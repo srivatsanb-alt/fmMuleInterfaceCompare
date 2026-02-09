@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, WebSocket, status, WebSocketDisconnect
 # ati code imports
 import app.routers.dependencies as dpd
 import utils.log_utils as lu
+from utils.auth_utils import websocket_token_auth
 
 # setup logging
 logging.config.dictConfig(lu.get_log_config_dict())
@@ -22,7 +23,7 @@ router = APIRouter()
 async def update_ws(
     websocket: WebSocket,
     token: str,
-    user_name=Depends(dpd.get_user_from_query),
+    user=Depends(websocket_token_auth),
     x_real_ip=Depends(dpd.get_real_ip_from_header),
 ):
 
@@ -30,7 +31,7 @@ async def update_ws(
     if x_real_ip is None:
         x_real_ip = client_ip
 
-    if not user_name:
+    if not user:
         logger.info(
             f"websocket connection(generic updates) request from (ip: {x_real_ip}) will be turned down, Unknown user"
         )

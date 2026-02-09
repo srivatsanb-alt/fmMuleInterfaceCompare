@@ -10,6 +10,7 @@ COPY ./misc/nginx.htpasswd /etc/nginx/conf.d/nginx.htpasswd
 RUN mkdir -p /var/www/fm/html
 COPY ./fm_dashboard/ /var/www/fm/html
 COPY ./misc/fm.conf /etc/nginx/sites-available/fm.conf
+COPY ./misc/dm.conf /etc/nginx/sites-available/dm.conf
 
 RUN mkdir -p /var/wwww/map_editor/html/map_editor
 COPY ./map_editor_dashboard/ /var/www/map_editor/html/map_editor

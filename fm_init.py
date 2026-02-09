@@ -7,6 +7,8 @@ import logging.config
 import redis
 import json
 
+from dotenv import load_dotenv
+load_dotenv(dotenv_path=".env", verbose=True)
 # ati code imports
 import utils.log_utils as lu
 import utils.db_utils as dbu
@@ -20,8 +22,8 @@ from models.db_session import DBSession
 
 # get log config
 logging.config.dictConfig(lu.get_log_config_dict())
-
-sys.path.append("/app/mule")
+root_path = os.getenv("FM_INSTALL_DIR")
+sys.path.append(f"{root_path}/mule")
 from mule.ati.common.config import load_mule_config
 
 
@@ -69,8 +71,9 @@ def populate_redis_with_basic_info(dbsession: DBSession):
 
 
 def check_if_run_host_service_is_setup(dbsession):
-    if not os.path.exists("/app/static/run_on_host_fifo") or not os.path.exists(
-        "/app/static/run_on_host_updater_fifo"
+    root_path = os.getenv("FM_INSTALL_DIR")
+    if not os.path.exists(f"{root_path}/static/run_on_host_fifo") or not os.path.exists(
+        f"/{root_path}/static/run_on_host_updater_fifo"
     ):
         run_on_host_fifo_log = "Please setup run on host service by following the support manual available in downloads section"
         dbsession.add_notification(
@@ -103,11 +106,12 @@ def main():
     upgrade_mongo_schema()
 
     # regenerate_mule_config for routing
-    regenerate_mule_config()
+    regenerate_mule_config() 
 
     with DBSession() as dbsession:
         fu.add_software_compatability(dbsession)
         fu.add_sherpa_metadata(dbsession)
+        fu.add_super_user_if_none_exists(dbsession)
 
         # populate redis with basic info
         populate_redis_with_basic_info(dbsession)

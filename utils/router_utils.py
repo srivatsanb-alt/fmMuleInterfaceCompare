@@ -17,8 +17,14 @@ def get_dense_path(final_route):
 class RouterModule:
     def __init__(self, map_path):
         self.gmaj_path = os.path.join(map_path, "grid_map_attributes.json")
+        self.wpsj_path = os.path.join(map_path, "waypoints.json")
         os.environ["ATI_MAP"] = map_path
-        self.router = RoutePlannerInterface(self.gmaj_path).router
+        kwargs = {"fleet": True}
+        if not os.path.exists(self.wpsj_path):
+            kwargs.update({"route_application": "core_routes_only_solver"})
+        else:
+            kwargs.update({"route_application": "v2_wps"})
+        self.router = RoutePlannerInterface(self.gmaj_path, **kwargs).router
 
     def get_path_wps(self, start_pose, dest_poses):
         return self.router.generate_path_wps_for_viz(start_pose, dest_poses)

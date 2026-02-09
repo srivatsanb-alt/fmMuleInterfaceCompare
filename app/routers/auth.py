@@ -17,6 +17,7 @@ import utils.util as utils_util
 import utils.config_utils as cu
 import core.common as ccm
 import utils.fleet_utils as fu
+from utils.auth_utils import AuthValidator
 
 
 
@@ -35,6 +36,8 @@ as and when required
 
 # performs user authentication
 # This route is rate-limited
+# TODO: SHUBHAM: these are deprecated APIs, remove after DM changes
+
 @router.post("/login", dependencies=[Depends(RateLimiter(times=5, seconds=60))])
 async def login(user_login: rqm.UserLogin, request: Request):
     response = {}
@@ -87,8 +90,10 @@ async def share_secrets_to_plugin(
         if hashed_api_key_db != hashed_api_key:
             dpd.raise_error("Unknown requester", 401)
 
-        with redis.from_url(os.getenv("FM_REDIS_URI")) as redis_conn:
-            response["FM_SECRET_TOKEN"] = redis_conn.get("FM_SECRET_TOKEN")
+        # with redis.from_url(os.getenv("FM_REDIS_URI")) as redis_conn:
+        #     response["FM_SECRET_TOKEN"] = redis_conn.get("FM_SECRET_TOKEN")
+        response["FM_SECRET_TOKEN"] = os.getenv("SECRET_KEY")
+        response["SECRET_KEY"] = os.getenv("SECRET_KEY")
 
     return response
 
@@ -96,12 +101,13 @@ async def share_secrets_to_plugin(
 @router.post("/add_edit_frontend_user_details")
 async def add_edit_user_details(
     frontend_user_details: rqm.FrontendUserDetails,
-    user_name=Depends(dpd.get_user_from_header),
+    user=Depends(AuthValidator('fm')),
 ):
     response = {}
 
-    if user_name is None:
+    if user is None:
         dpd.raise_error("Unknown requester", 401)
+    user_name = user["user_name"]
 
     default_admin_username = cu.DefaultFrontendUser.admin["name"]
 
@@ -111,6 +117,7 @@ async def add_edit_user_details(
         app_security_params = fm_mongo.get_document_from_fm_config("app_security")
         regex_pattern = app_security_params["regex_pattern"]
         regex_statement = app_security_params["regex_statement"]
+        user_role_hierarchy = app_security_params["user_role_hierarchy"]
         operating_user_role = operating_user_details["role"]
         operating_user_hashed_password = operating_user_details["hashed_password"]
         operating_user_provided_hashed_password = hashlib.sha256(
@@ -120,9 +127,7 @@ async def add_edit_user_details(
         if operating_user_hashed_password != operating_user_provided_hashed_password:
             dpd.raise_error(f"Wrong password", 409)
 
-        if getattr(rqm.FrontendUserRoles, operating_user_role) < getattr(
-            rqm.FrontendUserRoles, frontend_user_details.role
-        ):
+        if user_role_hierarchy.get(operating_user_role, 0) < user_role_hierarchy.get(frontend_user_details.role, 0):
             dpd.raise_error(
                 f"{user_name}(role: {operating_user_role}) cannot add/edit an user with role: {frontend_user_details.role}"
             )
@@ -187,12 +192,13 @@ async def add_edit_user_details(
 @router.get("/delete_frontend_user/{frontend_user_name}")
 async def delete_frontend_user(
     frontend_user_name: str,
-    user_name=Depends(dpd.get_user_from_header),
+    user=Depends(AuthValidator('fm')),
 ):
     response = {}
 
-    if user_name is None:
+    if user is None:
         dpd.raise_error("Unknown requester", 401)
+    user_name = user["user_name"]
 
     if frontend_user_name == cu.DefaultFrontendUser.admin["name"]:
         dpd.raise_error(f"Cannot delete default user: {frontend_user_name}")
@@ -223,11 +229,11 @@ async def delete_frontend_user(
 
 @router.get("/get_all_frontend_users_info")
 async def get_all_frontend_users(
-    user_name=Depends(dpd.get_user_from_header),
+    user=Depends(AuthValidator('fm')),
 ):
     all_user_details = []
 
-    if user_name is None:
+    if user is None:
         dpd.raise_error("Unknown requester", 401)
 
     with FMMongo() as fm_mongo:
@@ -239,7 +245,6 @@ async def get_all_frontend_users(
         user_detail["fleet_names"] = fu.get_all_fleets_list_as_per_user(user_detail["name"])
 
     return all_user_details
-
 
 def update_superuser_details_db():
     with FMMongo() as fm_mongo:

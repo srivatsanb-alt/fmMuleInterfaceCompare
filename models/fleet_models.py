@@ -109,6 +109,13 @@ class SherpaStatus(TimestampMixin, Base):
     continue_curr_task = Column(Boolean)
     disabled_reason = Column(String)
     other_info = Column(JSONB)
+    
+
+class MuleMsg(Base):
+    __tablename__ = "mule_msgs"
+    id = Column(Integer, primary_key=True, index=True)
+    sherpa_name = Column(String, unique=True, index=True)
+    message_jsons = Column(JSONB)
 
 
 class SherpaMetaData(Base):
@@ -119,7 +126,6 @@ class SherpaMetaData(Base):
 
 class Station(Base):
     __tablename__ = "stations"
-
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, unique=True, index=True)
     pose = Column(ARRAY(Float))

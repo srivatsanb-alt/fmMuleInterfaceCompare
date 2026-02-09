@@ -13,6 +13,7 @@ import master_fm_comms.mfm_utils as mu
 import app.routers.dependencies as dpd
 import utils.util as utils_util
 import core.common as ccm
+from utils.auth_utils import AuthValidator
 
 
 router = APIRouter(
@@ -24,11 +25,11 @@ router = APIRouter(
 
 @router.get("/fm/get_available_updates")
 async def get_available_updates(
-    user_name=Depends(dpd.get_user_from_header),
+    user=Depends(AuthValidator('fm')),
 ):
     response = {}
 
-    if not user_name:
+    if not user:
         dpd.raise_error("Unknown requester", 401)
 
     mfm_context = mu.get_mfm_context()
@@ -62,11 +63,11 @@ async def get_available_updates(
 @router.get("/fm/update_to/{fm_version}")
 async def update_fm(
     fm_version: str,
-    user_name=Depends(dpd.get_user_from_header),
+    user=Depends(AuthValidator('fm')),
 ):
     response = {}
     
-    if not user_name:
+    if not user:
         dpd.raise_error("Unknown requester", 401)
 
     redis_conn = aioredis.Redis.from_url(

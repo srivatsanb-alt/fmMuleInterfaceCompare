@@ -1,8 +1,9 @@
 import datetime
 import logging
 import os
+import hashlib
 from typing import List
-from sqlalchemy import select, func, any_, or_, and_, extract, text, literal_column, alias, cast
+from sqlalchemy import select, func, any_, or_, and_, extract, text, literal_column, alias, cast, Float
 from sqlalchemy.orm import Session, aliased
 from sqlalchemy.types import Numeric
 from fastapi.encoders import jsonable_encoder
@@ -15,6 +16,7 @@ import models.fleet_models as fm
 import models.trip_models as tm
 import models.visa_models as vm
 import models.user_models as um
+import models.fm_dm_models as fmdm
 from utils.util import check_if_timestamp_has_passed, str_to_dt, get_table_as_dict
 
 
@@ -200,6 +202,49 @@ class DBSession:
         for fleet in all_fleets:
             fleet_names.append(fleet.name)
         return fleet_names
+    
+    def get_all_fleet_names_for_user(self, user_name: str) -> List[dict]:
+        user = self.session.query(fmdm.User).filter(fmdm.User.user_name == user_name).one_or_none()
+        if not user:
+            raise Exception(f"User {user_name} not found")
+        user_id = user.user_id
+        try:
+            if user_id == 1 or user.user_name == "admin":
+                fleet_data = (
+                    self.session.query(
+                        fmdm.FleetsMaster.fleet_id.label('id'),
+                        fmdm.FleetsMaster.fleet_name.label('fleet_name'),
+                        fm.Fleet.name.label('map_name')
+                    )
+                    .join(fm.Fleet, fmdm.FleetsMaster.fm_fleet_id == fm.Fleet.id)
+                    .all()
+                )
+            else:
+                fleet_data = (
+                    self.session.query(
+                        fmdm.FleetsMaster.fleet_id.label('id'),
+                        fmdm.FleetsMaster.fleet_name.label('fleet_name'),
+                        fm.Fleet.name.label('map_name')
+                    )
+                    .join(fm.Fleet, fmdm.FleetsMaster.fm_fleet_id == fm.Fleet.id)
+                    .join(fmdm.UserFleet, fmdm.FleetsMaster.fleet_id == fmdm.UserFleet.fleet_id)
+                    .filter(fmdm.UserFleet.user_id == user_id)
+                    .all()
+                )
+            
+            # Convert to list of dictionaries
+            result = []
+            for fleet in fleet_data:
+                result.append({
+                    'id': fleet.id,
+                    'fleet_name': fleet.fleet_name,
+                    'map_name': fleet.map_name
+                })
+            
+            return result
+        except Exception as e:
+            logging.error(f"Error getting fleet names for user {user_name}: {e}")
+            return []
 
     def get_map_files(self, fleet_name: str) -> List[fm.MapFile]:
         fleet: fm.Fleet = (
@@ -318,6 +363,13 @@ class DBSession:
         )[:-10]
         for stale_sherpa_event in stale_sherpa_events:
             self.session.delete(stale_sherpa_event)
+    
+    def get_mule_msg(self, sherpa_name: str):
+        return (
+            self.session.query(fm.MuleMsg)
+            .filter(fm.MuleMsg.sherpa_name == sherpa_name)
+            .one_or_none()
+        )
 
     def get_station_if_present(self, name: str) -> fm.Station:
         return self.session.query(fm.Station).filter(fm.Station.name == name).one_or_none()
@@ -1124,7 +1176,22 @@ class DBSession:
             .filter(mm.Notifications.id == id)
             .one_or_none()
         )
-
+    
+    def get_notifications_with_module(self, module):
+        return (
+            self.session.query(mm.Notifications)
+            .filter(mm.Notifications.module == module)
+            .all()
+        )
+        
+    def get_notifications_with_entity_names_log_level_and_module(self, entity_names, log_level, module):
+        return (
+            self.session.query(mm.Notifications)
+            .filter(mm.Notifications.entity_names == entity_names)
+            .filter(mm.Notifications.log_level == log_level)
+            .filter(mm.Notifications.module == module)
+            .all()
+        )
     def delete_notification(self, id):
         self.session.query(mm.Notifications).filter(mm.Notifications.id == id).delete()
 
@@ -1516,6 +1583,41 @@ class DBSession:
                 
         return tug_wise_dispatch_wait_time
     
+    #This method is not used anywhere in the code.
+    def get_tug_wise_utilization(
+        self,
+        from_dt: datetime,
+        to_dt: datetime,
+        fleet_name: str,
+    ):
+        common_filter = [
+            tm.Trip.start_time >= from_dt,
+            tm.Trip.end_time <= to_dt,
+            tm.Trip.fleet_name == fleet_name,
+            tm.Trip.status == 'succeeded'
+        ]
+        
+        numerator = self.session.query(
+            tm.Trip.sherpa_name,
+            func.sum(func.extract('epoch', tm.Trip.end_time - tm.Trip.start_time)).label("trip_time"),
+        ).filter(*common_filter).group_by(tm.Trip.sherpa_name).subquery().alias('numerator')
+
+        max_end_time = self.session.query(func.max(tm.Trip.end_time)).filter(*common_filter).scalar()
+        min_start_time = self.session.query(func.min(tm.Trip.start_time)).filter(*common_filter).scalar()
+
+        utilization_results = []
+        if max_end_time and min_start_time:
+            denominator = func.extract('epoch', max_end_time - min_start_time)
+            utilization = self.session.query(
+                numerator.c.sherpa_name,
+                func.round(((func.cast(numerator.c.trip_time, Float) / denominator* 100.0))).label('utilization'),
+            ).select_from(numerator)
+            utilization_results = utilization.all()
+            
+        utilization_dict = {row[0]: row[1] for row in utilization_results}
+            
+        return utilization_dict
+        
 
     def get_analytics_data(
         self,
@@ -1528,7 +1630,7 @@ class DBSession:
         tug_wise_avg_takt_time = self.get_tug_wise_avg_takt_time(fleet_name, from_dt, to_dt)
         tug_wise_avg_obstacle_time =  self.get_tug_wise_obstacle_time(fleet_name, from_dt, to_dt)
         tug_wise_dispatch_wait_time = self.get_tug_wise_dispatch_wait(fleet_name, from_dt, to_dt)
-        
+               
         return {
             "total_trips": total_trips,
             "tug_wise_distance": tug_wise_distance,
@@ -1539,3 +1641,15 @@ class DBSession:
             "avg_dispatch_wait_time": tug_wise_dispatch_wait_time
         }
 
+    def get_all_sherpa_types(self):
+        query = "SELECT sherpa_type_id, sherpa_type_name, sherpa_type_display_name FROM sherpa_type;"
+        sherpa_type_list = self.session.execute(query).fetchall()
+        return sherpa_type_list
+    
+    def create_default_super_user(self, name: str):
+        if name:
+            hashed_api_key = hashlib.sha256(name.encode("utf-8")).hexdigest()
+            new_superuser = um.SuperUser(
+                name=name, hashed_api_key=hashed_api_key
+            )
+            self.add_to_session(new_superuser)

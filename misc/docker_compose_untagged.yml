@@ -1,4 +1,3 @@
-version: "3.0"
 services:
   fleet_manager:
     image: fleet_manager:fm_version
@@ -36,8 +35,12 @@ services:
       PGPASSWORD: postgres
       PGDATABASE: ati_fleet
       FM_DATABASE_URI: postgresql://postgres:postgres@db:5432
-      FM_MONGO_DATABASE_URI: mongodb://ati:atiMongo@mongo:27017
+      FM_MONGO_DATABASE_URI: mongodb://ati:atiMongo@mongo:27017/?replicaSet=rs0&authSource=admin
       APP_ENV: app_env
+      SECRET_KEY: ATI_DEP_MGR
+      ALGORITHM: HS256
+      ACCESS_MANAGER_URL: https://reverseproxy/acm/api
+      DEPLOYMENT_MANAGER_URL: http://deployment_manager:8000
 
   plugins:
     image: plugin:fm_version
@@ -69,8 +72,34 @@ services:
       PGTZ: Asia/Kolkata
       TZ: Asia/Kolkata
       PLUGIN_DATABASE_URI: postgresql://postgres:postgres@db
-      PLUGIN_MONGO_DATABASE_URI: mongodb://ati:atiMongo@mongo:27017
+      PLUGIN_MONGO_DATABASE_URI: mongodb://ati:atiMongo@mongo:27017/?replicaSet=rs0&authSource=admin
       APP_ENV: app_env
+      SECRET_KEY: ATI_DEP_MGR
+      ALGORITHM: HS256
+      ACCESS_MANAGER_URL: https://reverseproxy/acm/api
+      DEPLOYMENT_MANAGER_URL: http://deployment_manager:8000
+      PLUGIN_CONVEYER_CLIENT_ID: app_user_TSvtCgZ03qtBE-DNL-o2CQ
+      PLUGIN_CONVEYER_SECRET_KEY: MkLz6NlCzy1qBDDORHt08IK2Kt72oFe1JeJRCiyOhCU
+      PLUGIN_ERP_CLIENT_ID: app_user_p2cxjNipHng2HUs-xabwcw
+      PLUGIN_ERP_SECRET_KEY: VLo_xCluzz8xxOxydgINnjwKubKsDn86PXNUmYgKN8U
+      PLUGIN_HOOTER_CLIENT_ID: app_user_Oi_Of9jWu3xcUi-hToQ51g
+      PLUGIN_HOOTER_SECRET_KEY: ZLka9PmxQQcub2vtBiXxJn1yMi82CwR72Vvq-5Fno1A
+      PLUGIN_IES_CLIENT_ID: app_user_VJ6U_399bGErlWhv-0V5SA
+      PLUGIN_IES_SECRET_KEY: LoQeHTjDUWpTFR2Sx8biU542V8axrP57JAky9sH8uTA
+      PLUGIN_MODBUS_LIFT_CLIENT_ID: app_user_9wdkIP4gGLRwlxGo4Mc8HA
+      PLUGIN_MODBUS_LIFT_SECRET_KEY: ax4wlrShKgn6nGVrjjsd4K-ObpxsjmtjLgk2p9x25MM
+      PLUGIN_MQTT_BRIDGE_CLIENT_ID: app_user_w8HE3sd3rfZzlO13e8XEzA
+      PLUGIN_MQTT_BRIDGE_SECRET_KEY: FFowcHSKnFBYrUq8Ej7Mzo_mhgtHHqcrLhTEhnSlTi8
+      PLUGIN_PLC_CLIENT_ID: app_user_2DV72qxQuhyD-yPsjj7LWQ
+      PLUGIN_PLC_SECRET_KEY: Uj8z8daPoxGpNCR09q80xGZ-lgnx19t6BJS0-RA6zys
+      PLUGIN_SUMMON_BUTTON_CLIENT_ID: app_user_MO5P_mdSCBEoh7kNNXyF9A
+      PLUGIN_SUMMON_BUTTON_SECRET_KEY: PCC_X6wmr4585HFrJDWlJTdpemhqTf_fGi8QCyzTRAQ
+      PLUGIN_TM_MQTT_CLIENT_ID: app_user_o0y7thiOvTNSaJHeKf28Kg
+      PLUGIN_TM_MQTT_SECRET_KEY: RdwgLlcAQniM6da0an_cguK7kkk6l8V4Jp3R4NkNhd8
+      PLUGIN_COMMS_CLIENT_ID: app_user_rryiMl33PlZpqIHycN4d8Q
+      PLUGIN_COMMS_SECRET_KEY: Oh2FmghELu_WwN02f4vxcR5TMAMxrJbvr3gjy6tPh34
+      SUPER_USER_CLIENT_ID: app_user_Vo2mX9vx5ZQL3SrTvKWgoQ
+      SUPER_USER_SECRET_KEY: rmAmiGCBgNx1OSI98eADTfQXAk5yzRqmbvH08FUmX2w
   
   db:
     image: postgres:14.0
@@ -89,18 +118,23 @@ services:
 
 
   mongo:
-    image: mongo:7.0
+    image: fm_mongo:prod
     container_name: fm_mongo
     restart: always
     volumes:
      - ./mongo:/data/db:rw
     networks:
       - fm_dn
-    add_mongo_ports:
+    ports:
+      - "27017:27017"
     environment:
       MONGO_INITDB_ROOT_USERNAME: ati
       MONGO_INITDB_ROOT_PASSWORD: atiMongo
+      MONGO_INITDB_REPLICA_SET_NAME: rs0
+    entrypoint: ["/docker-entrypoint-initdb.d/entrypoint.sh"]
+    command: ["--replSet", "rs0", "--bind_ip_all", "--keyFile", "/etc/mongodb-keyfile"]
 
+    
   mongo-express:
     image: mongo-express:1.0.0-alpha
     container_name: fm_mongo_express
@@ -116,8 +150,9 @@ services:
       ME_CONFIG_MONGODB_ADMINPASSWORD: atiMongo
       ME_CONFIG_BASICAUTH_USERNAME: "ati_support"
       ME_CONFIG_BASICAUTH_PASSWORD: "ati112"
-      ME_CONFIG_MONGODB_URL: mongodb://ati:atiMongo@mongo:27017
+      ME_CONFIG_MONGODB_URL: mongodb://ati:atiMongo@mongo:27017/?replicaSet=rs0&authSource=admin
       ME_CONFIG_SITE_BASEURL: "/config_editor"
+
 
   reverseproxy:
     image: fm_nginx:fm_version
@@ -128,7 +163,6 @@ services:
       - ./certs:/certs
     ports:
       - "443:443"
-      - "9999:9999"
     links:
       - fleet_manager
       - plugins
@@ -142,12 +176,14 @@ services:
     networks:
       - fm_dn
 
+
   registry:
     restart: always
     image: registry:2
     container_name: fm_docker_registry
     networks:
       - fm_dn
+
 
   fm_redis:
     image: redis:latest
@@ -160,9 +196,47 @@ services:
       - "6379:6379"
 
 
+  deployment_manager:
+    image: deployment_manager:dm_version
+    container_name: deployment_manager
+    ports:
+      - 8000:8000
+    expose:
+      - 8000
+    environment:
+      - ADMIN_DATABASE_URL=postgresql+asyncpg://postgres:postgres@db:5432/postgres
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@db:5432/ati_fleet
+      - MONGODB_URL=mongodb://ati:atiMongo@mongo:27017/?replicaSet=rs0&authSource=admin
+      - ACCESS_TOKEN_EXPIRE_MINUTES=480
+      - SECRET_KEY=ATI_DEP_MGR
+      - ALGORITHM=HS256
+      - REDIS_URL=fm_redis
+      - REDIS_PORT=6379
+      - APP_HOST_NAME=deployment_manager
+      - APP_PORT=8000
+      - MAPS_UPLOAD_DIR=/app/static
+      - MAPS_MIGRATION_DIR=/app/maps_migrations
+      - FM_CORE_URL=https://reverseproxy/api
+      - FM_PLUGIN_URL=https://reverseproxy/plugin
+
+    depends_on:
+      - db
+      - mongo
+      - fm_redis
+      - fleet_manager
+    volumes:
+      - ./static:/app/static
+      - dm_logs:/app/logs
+    networks:
+      - fm_dn
+    restart: always
+
 networks:
   fm_dn:
      name: fm_dn
      driver: bridge
      driver_opts:
         com.docker.network.bridge.host_binding_ipv4: "0.0.0.0"
+
+volumes:
+  dm_logs:

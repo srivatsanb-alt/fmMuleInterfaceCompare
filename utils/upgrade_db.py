@@ -138,7 +138,8 @@ class DBUpgrade:
     def upgrade_to_4_15(self):
         with get_engine(os.getenv("FM_DATABASE_URI")).connect() as conn:
             try:
-                csv_file_path = "/app/static/visa_assign.csv"
+                root_path = os.getenv("FM_INSTALL_DIR")
+                csv_file_path = f"{root_path}/static/visa_assign.csv"
                 conn.execute("commit")
                 with open(csv_file_path, "r") as file:
                     reader = csv.reader(file)
@@ -157,28 +158,41 @@ class DBUpgrade:
 
     def upgrade_to_4_2(self):
         with get_engine(os.getenv("FM_DATABASE_URI")).connect() as conn:
-            conn.execute("commit")
-            result = conn.execute(
+            try:
+                conn.execute("commit")
+                result = conn.execute("SELECT enum_range(NULL::stationproperties)")
+                enum_values_str = result.fetchall()[0][0]
+                new_values = ["LIFT", "UNLIFT", "CONVEYOR_PARK"]
+                for value in new_values:
+                    if value not in enum_values_str:
+                        conn.execute(f"ALTER TYPE stationproperties ADD VALUE '{value}'")
+                        print(f"Added '{value}' to stationproperties enum.")
+                    else:
+                        print(f"'{value}' already exists in stationproperties enum.")
+                result = conn.execute(
                 "SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='sherpas'"
-            )
-            column_names = [row[0] for row in result]
-            if "sherpa_type" not in column_names:
-                conn.execute('ALTER TABLE "sherpas" ADD COLUMN "sherpa_type" VARCHAR')
-                print("column sherpa_type added to sherpas table")
-            else:
-                print("column sherpa_type already present in sherpa table")
-            # Update sherpa_type to 'tug' in each row
-            conn.execute("UPDATE sherpas SET sherpa_type = 'tug'")
-            print("Updated sherpa_type to 'tug' in all rows of the sherpas table.")
-            result = conn.execute(
+                )
+                column_names = [row[0] for row in result]
+                if "sherpa_type" not in column_names:
+                    conn.execute('ALTER TABLE "sherpas" ADD COLUMN "sherpa_type" VARCHAR')
+                    print("column sherpa_type added to sherpas table")
+                else:
+                    print("column sherpa_type already present in sherpa table")
+                # Update sherpa_type to 'tug' in each row
+                conn.execute("UPDATE sherpas SET sherpa_type = 'tug'")
+                print("Updated sherpa_type to 'tug' in all rows of the sherpas table.")
+                result = conn.execute(
                 "SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='fm_incidents'"
-            )
-            column_names = [row[0] for row in result]
-            if "error_code" not in column_names:
-                conn.execute('ALTER TABLE "fm_incidents" ADD COLUMN "error_code" VARCHAR')
-                print("column error_code added to fm_incidents table")
-            else:
-                print("column error_code already present in fm_incidents table")
+                )
+                column_names = [row[0] for row in result]
+                if "error_code" not in column_names:
+                    conn.execute('ALTER TABLE "fm_incidents" ADD COLUMN "error_code" VARCHAR')
+                    print("column error_code added to fm_incidents table")
+                else:
+                    print("column error_code already present in fm_incidents table")
+            except Exception as e:
+                print(f"Unable to update to 4.2, exception: {e}")
+            
 
     def upgrade_to_4_21(self):
         with get_engine(os.getenv("FM_DATABASE_URI")).connect() as conn:
@@ -302,7 +316,8 @@ def maybe_delete_visa_related_tables_v4_15():
                 }
             )
         data = pd.DataFrame(data)
-        csv_file_path = "/app/static/visa_assign.csv"
+        root_path = os.getenv("FM_INSTALL_DIR")
+        csv_file_path = f"{root_path}/static/visa_assign.csv"
         data.to_csv(csv_file_path, index=False)
         print(f"Dataframe has been saved to {csv_file_path}")
 

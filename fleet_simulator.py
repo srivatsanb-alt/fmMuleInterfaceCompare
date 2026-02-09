@@ -8,6 +8,7 @@ from multiprocessing import Process
 import numpy as np
 from typing import List
 import threading
+import logging
 
 # ati code
 import core.handler_configuration as hc
@@ -48,6 +49,7 @@ with FMMongo() as fm_mongo:
 
 TIMEOUT = rq_params.get("generic_handler_job_timeout", 10)
 
+logger = logging.getLogger("simulator")
 
 def should_trip_msg_be_sent(sherpa_events):
     reached_flag = False
@@ -101,10 +103,10 @@ def entry_exit_zone_check(pose, gate_params, enter=True):
 
 
 def check_visa_release(ez, pose, visas_held):
-    print(f"visa held {visas_held}")
-    print(f"exclusion zone {ez}")
+    logger.info(f"visa held {visas_held}")
+    logger.info(f"exclusion zone {ez}")
     gate_params = find_gate_params(ez, visas_held)
-    print(f"gate params {gate_params}")
+    logger.info(f"gate params {gate_params}")
     if not entry_exit_zone_check(pose, gate_params, enter=False):
         return visas_held, gate_params["name"]
     return None
@@ -192,9 +194,9 @@ class MuleWS:
                         int((redis_conn.get("default_job_timeout_ms")).decode()),
                         json.dumps(req_json["success"]),
                     )
-                    print(f"sent ws ack to req with req_id {req_id}")
+                    logger.info(f"sent ws ack to req with req_id {req_id}")
                 else:
-                    print(f"got a ws msg without req_id. sherpa_name: {sherpa_name}")
+                    logger.info(f"got a ws msg without req_id. sherpa_name: {sherpa_name}")
 
     def establish_all_sherpa_ws(self):
         self.kill_all_sherpa_ws()
@@ -230,7 +232,7 @@ class FleetSimulator:
         self.visas_held = {}
         self.visa_needed = {}
         self.visa_handling = {}
-        print(f"simulator config {self.simulator_config}")
+        logger.info(f"simulator config {self.simulator_config}")
         self.pause_at_station = self.simulator_config.get("pause_at_station", 10.0)
         self.sim_speedup_factor = self.simulator_config.get("speedup_factor", 1.0)
         self.avg_velocity = self.simulator_config.get("average_velocity", 0.8)
@@ -243,7 +245,7 @@ class FleetSimulator:
                 self.visa_handling[fleet_name] = self.simulator_config["visa_handling"]
             except:
                 self.visa_handling[fleet_name] = False
-            print(
+            logger.info(
                 f"Visa handling {self.visa_handling} Exclusion zones... {self.exclusion_zones}"
             )
 
@@ -255,28 +257,28 @@ class FleetSimulator:
 
             for sherpa in sherpas:
                 # self.send_verify_fleet_files_req(sherpa.name)
-                # print(f"sending verify fleet files req sherpa: {sherpa.name}")
+                # logger.info(f"sending verify fleet files req sherpa: {sherpa.name}")
                 self.visas_held[sherpa.name] = []
                 self.visa_needed[sherpa.name] = []
 
             for sherpa in sherpas:
                 station_fleet_name = None
                 station_name = self.initialize_sherpas_at.get(sherpa.name)
-                print(f"Initializing sherpa {sherpa.name} station_name {station_name}")
+                logger.info(f"Initializing sherpa {sherpa.name} station_name {station_name}")
                 try:
                     st = dbsession.get_station(station_name)
                     sherpa.parking_id = station_name
                 except:
                     st = None
                 station_fleet_name = st.fleet.name if st else None
-                print(
+                logger.info(
                     f"sherpa fleet {sherpa.fleet.name} station_fleet_name {station_fleet_name}"
                 )
                 while sherpa.fleet.name != station_fleet_name:
                     i = np.random.randint(0, len(stations))
                     station_fleet_name = stations[i].fleet.name
                     st = stations[i]
-                    print("Randomizing the start station")
+                    logger.info("Randomizing the start station")
                 self.send_sherpa_status(sherpa.name, mode="fleet", pose=st.pose)
 
     def book_trip(self, route, trip_metadata={}):
@@ -306,7 +308,7 @@ class FleetSimulator:
                     }
                     self.book_trip(route, trip_metadata)
 
-                print(f"will book trip with route {route} every {freq} seconds")
+                logger.info(f"will book trip with route {route} every {freq} seconds")
                 # t = threading.Thread(target=self.book_trip, args=[route, freq])
                 # t.daemon = True
                 # t.start()
@@ -359,7 +361,7 @@ class FleetSimulator:
             msg["mode"] = mode if mode else "fleet"
             msg["current_pose"] = sherpa.status.pose if not pose else pose
             msg["battery_status"] = -1 if not battery_status else battery_status
-            # print(f"will send a proxy sherpa status {msg}")
+            # logger.info(f"will send a proxy sherpa status {msg}")
 
             if sherpa.status.pose or pose:
                 msg = SherpaStatusMsg.from_dict(msg)
@@ -373,7 +375,7 @@ class FleetSimulator:
         redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
 
         with DBSession() as session:
-            sherpa_trip_q = Queues.queues_dict[f"{sherpa_name}_trip_update_handler"]
+            sherpa_trip_q = Queues.queues_dict[f"{sherpa_name}_misc_update_handler"]
             sherpa_visa_q = Queues.queues_dict["resource_handler"]
             ongoing_trip: OngoingTrip = session.get_ongoing_trip(sherpa_name)
             sherpa: Sherpa = session.get_sherpa(sherpa_name)
@@ -389,7 +391,7 @@ class FleetSimulator:
             if to_pose == from_pose:
                 time.sleep(5)
                 self.send_reached_msg(sherpa_name)
-                print(f"ending trip leg {from_station}, {to_station}")
+                logger.info(f"ending trip leg {from_station}, {to_station}")
                 return
 
             job_id = generate_random_job_id()
@@ -410,7 +412,7 @@ class FleetSimulator:
             traj = x_vals, y_vals, t_vals
             steps = 1000
             sleep_time = self.sim_speedup_factor
-            print(
+            logger.info(
                 f"{sherpa.name}, trip_leg_id: {ongoing_trip.trip_leg_id} Pause_at_station: {self.pause_at_station}"
             )
             i = 0
@@ -418,7 +420,7 @@ class FleetSimulator:
             while i < len(x_vals):
                 sherpa: Sherpa = session.get_sherpa(sherpa_name)
                 if not sherpa.status.trip_id:
-                    print(
+                    logger.info(
                         f"ending trip leg {from_station}, {to_station}, seems like trip was deleted"
                     )
                     return
@@ -430,7 +432,7 @@ class FleetSimulator:
                     break
                 i += steps
 
-                print(f"num_steps to jump: {steps}")
+                logger.info(f"num_steps to jump: {steps}")
                 curr_pose = [x_vals[i], y_vals[i], t_vals[i]]
 
                 if (
@@ -439,23 +441,23 @@ class FleetSimulator:
                 ):
                     blocked_for_visa = False
                 else:
-                    print(f"Sherpa {sherpa_name} is waiting for a visa")
+                    logger.info(f"Sherpa {sherpa_name} is waiting for a visa")
                     stoppage_type = "Waiting for visa"
                     blocked_for_visa = True
 
                 if self.visa_handling[sherpa.fleet.name]:
                     ez = self.exclusion_zones[sherpa.fleet.name]
                     sherpa_visa = session.get_visa_assignment(sherpa_name)
-                    print(f"visa held: {sherpa_visa}")
+                    logger.info(f"visa held: {sherpa_visa}")
                     if len(sherpa_visa) > 0:
-                        print(f"visa held: {sherpa_visa}")
+                        logger.info(f"visa held: {sherpa_visa}")
                         zone_id = sherpa_visa[0].zone_id.rsplit("_", 1)[0]
-                        print(f"VISA HELD for zone id: {zone_id}")
+                        logger.info(f"VISA HELD for zone id: {zone_id}")
                         self.visas_held[sherpa_name] = sherpa_visa
                         self.visa_needed[sherpa_name] = []
                         visa_params = check_visa_release(ez, curr_pose, zone_id)
                         if visa_params is not None:
-                            print(f"Visa released: {self.visas_held[sherpa_name]}")
+                            logger.info(f"Visa released: {self.visas_held[sherpa_name]}")
                             visa_release_msg = self.get_visa_release(
                                 sherpa_name, visa_params
                             )
@@ -464,10 +466,10 @@ class FleetSimulator:
                             self.visas_held[sherpa_name] = []
                     else:
                         visa_params = check_visa_needed(ez, curr_pose)
-                        print(f"Is Visa needed? {visa_params}")
+                        logger.info(f"Is Visa needed? {visa_params}")
                         if visa_params is not None:
                             self.visa_needed[sherpa_name] = visa_params[0]
-                            print(
+                            logger.info(
                                 f"Visa for zone: {self.visa_needed[sherpa_name]}, needed for {sherpa_name}"
                             )
                             visa_request_msg = self.get_visa_request(
@@ -476,7 +478,7 @@ class FleetSimulator:
                             args = [self.handler_obj, visa_request_msg]
                             enqueue(sherpa_visa_q, handle, *args)
 
-                print(
+                logger.info(
                     f"simulating trip_id: {ongoing_trip.trip_id}, steps: {steps}, progress: {i / len(x_vals)}"
                 )
 
@@ -534,7 +536,7 @@ class FleetSimulator:
             dest_pose = [x_vals[-1], y_vals[-1], t_vals[-1]]
             self.send_sherpa_status(sherpa.name, mode="fleet", pose=dest_pose)
             self.send_reached_msg(sherpa_name)
-            print(f"ending trip leg {from_station}, {to_station}")
+            logger.info(f"ending trip leg {from_station}, {to_station}")
             time.sleep(self.pause_at_station)
 
     def send_reached_msg(self, sherpa_name):
@@ -551,13 +553,13 @@ class FleetSimulator:
                 destination_name=ongoing_trip.trip_leg.to_station,
             )
             reached_req.source = sherpa_name
-            print(f"will send a reached msg for {sherpa_name}, {reached_req}")
+            logger.info(f"will send a reached msg for {sherpa_name}, {reached_req}")
             args = [self.handler_obj, reached_req]
             enqueue(queue, handle, *args)
 
     def peripheral_response_is_needed(self, waiting_start, waiting_end, states):
         if waiting_start in states and waiting_end not in states:
-            print(f"Waiting for peripherals response: {waiting_start}")
+            logger.info(f"Waiting for peripherals response: {waiting_start}")
             return True
         return False
 
@@ -615,7 +617,7 @@ class FleetSimulator:
             send_peripheral_resp = True
 
         if send_peripheral_resp:
-            print(
+            logger.info(
                 f"Sherpa {sherpa_name} - trip_id {ongoing_trip.trip_id}, leg {ongoing_trip.trip_leg_id} sent a peripheral msg {peripheral_response}"
             )
             queue = Queues.queues_dict["generic_handler"]
@@ -625,7 +627,7 @@ class FleetSimulator:
     def act_on_sherpa_events(self):
         simulated_trip_legs = []
         active_threads = {}
-        print("Will act on sherpa events")
+        logger.info("Will act on sherpa events")
         try:
             with DBSession() as dbsession:
                 while True:
@@ -635,7 +637,7 @@ class FleetSimulator:
                         ongoing_trip = dbsession.get_ongoing_trip(sherpa.name)
                         if trip_leg:
                             if trip_leg.id not in simulated_trip_legs:
-                                print(
+                                logger.info(
                                     f"starting trip simulation for sherpa {sherpa.name}, trip_leg: {trip_leg.__dict__}"
                                 )
                                 t = threading.Thread(
@@ -657,11 +659,11 @@ class FleetSimulator:
                             self.send_sherpa_status(sherpa.name)
 
                         if sherpa.status.disabled:
-                            print(
+                            logger.info(
                                 f"{sherpa.name} disabled: {sherpa.status.disabled_reason}"
                             )
 
                     time.sleep(1)
                     dbsession.session.expire_all()
         except Exception as e:
-            print(f"exception in act on sherpa events exception: {e}")
+            logger.info(f"exception in act on sherpa events exception: {e}")

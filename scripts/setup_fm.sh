@@ -24,15 +24,16 @@ echo "Running in development mode: $DEV_MODE"
 source scripts/build_fm_images.sh
 source scripts/upload_images.sh 
 
-if [ "$DEV_MODE" = "False" ]; then
-{
-   read -p "Want to build images on a remote server? (y/n) - " remote_server
-}
-else {
-   remote_server="n"
-}
-fi
+# if [ "$DEV_MODE" = "False" ]; then
+# {
+#    read -p "Want to build images on a remote server? (y/n) - " remote_server
+# }
+# else {
+#    remote_server="n"
+# }
+# fi
 
+remote_server="n" # Currenlty DM builds are not supported on remote server
 
 if [ "$remote_server" = "y" ]; then
 {
@@ -46,6 +47,9 @@ echo "FM Version: $FM_VERSION"
 
 build_base_images_interactive $DEV_MODE
 build_final_images $DEV_MODE
+
+# Pull deployment manager from ECR and update docker-compose file
+source scripts/pull_dm_image.sh
 
 copy_default_certs="n"
 if [ "$remote_server" = "y" ]; then
@@ -79,7 +83,7 @@ else {
    else {
       upload_to_sanjaya_interactive
       tar_images
-      setup_tar_k3s
+      # setup_tar_k3s # Currenlty DM builds are not supported for k3s deployment.
       
    }
    fi

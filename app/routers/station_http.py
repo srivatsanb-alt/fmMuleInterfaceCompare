@@ -8,6 +8,7 @@ from models.base_models import StationProperties
 from models.db_session import DBSession
 import app.routers.dependencies as dpd
 import core.common as ccm
+from utils.auth_utils import AuthValidator
 
 
 router = APIRouter(
@@ -20,10 +21,10 @@ router = APIRouter(
 
 # FM gets station info
 @router.get("/{entity_name}/info")
-async def get_station_info(entity_name: str, user_name=Depends(dpd.get_user_from_header)):
+async def get_station_info(entity_name: str, user=Depends(AuthValidator('fm'))):
     response = {}
 
-    if not user_name:
+    if not user:
         dpd.raise_error("Unknown requester", 401)
 
     if not entity_name:
@@ -51,11 +52,11 @@ async def get_station_info(entity_name: str, user_name=Depends(dpd.get_user_from
 
 @router.get("/{entity_name}/disable/{disable}")
 async def disable_station(
-    entity_name: str, disable: bool, user_name=Depends(dpd.get_user_from_header)
+    entity_name: str, disable: bool, user=Depends(AuthValidator('allow_station_ops'))
 ):
     response = {}
 
-    if not user_name:
+    if not user:
         dpd.raise_error("Unknown requester", 401)
 
     if not entity_name:

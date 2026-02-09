@@ -122,7 +122,7 @@ class Trip(Base, TimestampMixin):
 
     # sherpa doing the trip
     sherpa_name = Column(String, index=True)
-
+    # sherpa_hwid = Column(String, ForeignKey("sherpas.hwid"), index=True, nullable=True)
     # relate fleet table
     fleet_name = Column(String, index=True)
 
@@ -212,6 +212,7 @@ class Trip(Base, TimestampMixin):
 
     def assign_sherpa(self, sherpa_name: str):
         self.sherpa_name = sherpa_name
+        # self.sherpa_hwid = sherpa_hwid
         self.status = TripStatus.ASSIGNED
 
     def start(self):
@@ -386,7 +387,6 @@ class OngoingTrip(Base, TimestampMixin):
             "trip_leg_id": self.trip_leg_id,
         }
         return temp
-
 
 def is_start_state(state):
     return state.endswith(START)

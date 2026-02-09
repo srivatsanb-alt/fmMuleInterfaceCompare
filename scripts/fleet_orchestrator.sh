@@ -50,11 +50,12 @@ fm_init() {
    cd /app
    poetry run python scripts/set_token.py
    poetry run python fm_init.py
+  #  poetry run alembic upgrade head
 }
 
 run_simulator() {
-  poetry run python debug.py establish_all_sherpa_ws > $LOGS/simulator.log 2>&1 &
-  poetry run python debug.py simulate > $LOGS/simulator.log 2>&1 &
+  poetry run python debug.py establish_all_sherpa_ws &
+  poetry run python debug.py simulate &
 }
 
 set_max_connections() {
@@ -110,6 +111,12 @@ update_run_on_host_service() {
 
 }
 
+
+configure_mongodb_replica_set() {
+  poetry run python /app/scripts/configure_mongodb_replica_set.py
+}
+
+configure_mongodb_replica_set
 set_max_connections
 #redis-server --port $REDIS_PORT > $LOGS/redis.log 2>&1 &
 sleep 2

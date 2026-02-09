@@ -21,6 +21,7 @@ import utils.fleet_utils as fu
 import app.routers.dependencies as dpd
 import core.constants as cc
 import core.common as ccm
+import utils.recovery_utils as recovery_utils
 
 
 # manages all the http requests for Sherpa
@@ -117,6 +118,42 @@ async def peripherals(
 ):
     response = await dpd.process_req_with_response(None, peripherals_req, sherpa)
     return response
+
+
+@router.post("/slam/recover")
+async def slam_recover(
+    slam_recover_req: rqm.SlamRecoverReq, sherpa: str = Depends(dpd.get_sherpa)
+):
+    async with aioredis.Redis.from_url(os.getenv("FM_REDIS_URI")) as aredis_conn:
+        # Get auto recover request ID from Redis
+        auto_recover_req_id = await recovery_utils._get_redis_request_id(aredis_conn, sherpa)
+        
+        # Store SLAM recover request data in Redis
+        await aredis_conn.set(
+            f"slam_recover_{sherpa}",
+            json.dumps(slam_recover_req.dict())
+        )
+        
+    with DBSession(engine=ccm.engine) as dbsession:
+        sherpa_obj: fm.Sherpa = dbsession.get_sherpa(sherpa)
+        if not sherpa_obj:
+            dpd.raise_error("Bad sherpa name")
+            
+        # Delete existing auto recovery notifications
+        entity_names = recovery_utils._get_entity_names_for_notifications(
+            sherpa_obj.name, 
+            sherpa_obj.fleet.name, 
+            auto_recover_req_id
+        )
+        recovery_utils._delete_existing_notifications(dbsession, entity_names)
+        
+        # Create log message based on available data
+        log_message = recovery_utils._create_slam_recover_log_message(slam_recover_req, auto_recover_req_id)
+        
+        # Add SLAM recovery notification
+        recovery_utils._add_auto_recover_notification(dbsession, entity_names, log_message)
+        
+    return {}
 
 
 @router.post(

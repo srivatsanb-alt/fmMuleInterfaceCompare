@@ -10,7 +10,12 @@ from models.mongo_client import FMMongo
 
 
 def update_fm_to_fm_version(fm_version, access_token):
-    kwargs = {"headers": {"X-USER-Token": access_token}}
+    kwargs = {
+        "headers": {
+            "X-User-Token": access_token,
+            "Authorization": f"Bearer {access_token}"
+        }
+    }
     FM_PORT = os.getenv("FM_PORT")
     response = requests.get(
         f"http://127.0.0.1:{FM_PORT}/api/v1/ota_update/fm/update_to/{fm_version}", **kwargs
@@ -72,7 +77,12 @@ def auto_update_fm():
                     temp_f.write(new_release_dt)
 
                 logging.getLogger("misc").info(f"Requesting a restart all services")
-                kwargs = {"headers": {"X-USER-Token": access_token}}
+                kwargs = {
+                    "headers": {
+                        "X-User-Token": access_token,
+                        "Authorization": f"Bearer {access_token}"
+                    }
+                }
                 FM_PORT = os.getenv("FM_PORT")
                 response = requests.get(
                     f"http://127.0.0.1:{FM_PORT}/api/v1/scheduled_restart/{tag_to_fetch}/now"

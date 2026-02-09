@@ -263,6 +263,14 @@ class ConfigValidator:
                     "maximum": 168,
                     "description": "Number of hours of recent data to be sent to master_fm/sanjaya server",
                 },
+                "http_proxy": {
+                    "bsonType": "string",
+                    "description": "http proxy url if required",
+                },
+                "https_proxy": {
+                    "bsonType": "string",
+                    "description": "https proxy url if required",
+                },
             }
         }
     }
@@ -439,6 +447,10 @@ class ConfigValidator:
                     "bsonType": "string",
                     "description": "Regex statement for password validation",
                 },
+                "user_role_hierarchy": {
+                    "bsonType": "object",
+                    "description": "User role hierarchy",
+                },
             },
         }
     }
@@ -486,6 +498,8 @@ class ConfigDefaults:
         "update_freq": 120,
         "api_key": "",
         "recent_hours": 72,
+        "http_proxy": "",
+        "https_proxy": "",
     }
     conditional_trips = {
         "trip_types": ["battery_swap", "auto_park"],
@@ -508,7 +522,7 @@ class ConfigDefaults:
     }
     mule_config = {
         "mule_site_config": {
-            "parent": "/app/mule/std_configs/tug.toml",
+            "parent": "/app/mule/std_configs/fm_router.toml",
             "control.policy": {"enforce_visa": False},
             "fleet": {
                 "ws_url": "xyz",

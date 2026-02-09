@@ -11,17 +11,15 @@ from core.db import get_engine
 
 
 def create_all_tables() -> None:
-    all_files = glob.glob("models/*.py")
-    for file in all_files:
-        module = file.split(".")[0]
-        module = module.replace("/", ".")
-        print(f"looking for models in module: {module}")
-        try:
-            models = importlib.import_module(module)
-            models.Base.metadata.create_all(bind=get_engine(os.getenv("FM_DATABASE_URI")))
-            print(f"created tables from {module}")
-        except Exception as e:
-            print(f"failed to create tables from {module}, {e}")
+    print(f"Creating table from models")
+    try:
+        exclude_tables = ['users', "users_fleets" , "fleets_master"]
+        models = importlib.import_module("models.base_models")
+        tables_to_create = [table for table in models.Base.metadata.tables.values() if table.name not in exclude_tables ]
+        models.Base.metadata.create_all(bind=get_engine(os.getenv("FM_DATABASE_URI")), tables=tables_to_create)
+        print(f"created tables")
+    except Exception as e:
+        print(f"failed to create tables from , {e}")
     return
 
 

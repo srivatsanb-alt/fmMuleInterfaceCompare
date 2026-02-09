@@ -265,6 +265,10 @@ def delete_notifications(dbsession: DBSession):
                 dbsession.delete_notification(notification.id)
                 continue
 
+            if notification.log_level == mm.NotificationLevels.event_based:
+                dbsession.delete_notification(notification.id)
+                continue
+
             # delete stale alerts caused by dispatch button
             if (
                 notification.log_level == mm.NotificationLevels.stale_alert_or_action
@@ -273,12 +277,13 @@ def delete_notifications(dbsession: DBSession):
                 dbsession.delete_notification(notification.id)
                 continue
 
-            if notification.log_level != mm.NotificationLevels.info:
+            if notification.log_level != mm.NotificationLevels.info or notification.log_level != mm.NotificationLevels.event_based:
                 notification.log_level = mm.NotificationLevels.stale_alert_or_action
 
             if (
-                notification.log_level != mm.NotificationLevels.info
-                and len(notification.cleared_by) == 0
+                (notification.log_level != mm.NotificationLevels.info
+                and len(notification.cleared_by) == 0)
+                or (notification.log_level != mm.NotificationLevels.event_based and len(notification.cleared_by) == 0)
             ):
                 continue
 

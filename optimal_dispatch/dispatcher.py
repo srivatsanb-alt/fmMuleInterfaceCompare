@@ -15,6 +15,7 @@ from core.constants import FleetStatus
 from models.fleet_models import Fleet, AvailableSherpas, OptimalDispatchState
 from models.trip_models import Trip, PendingTrip, TripStatus
 from optimal_dispatch.hungarian import hungarian_assignment
+import core.constants as cc
 
 # get log config
 logging.config.dictConfig(lu.get_log_config_dict())
@@ -194,6 +195,7 @@ class OptimalDispatch:
                         ),
                         "fleet_status": available_sherpa.fleet.status,
                         "parking_mode": parking_mode,
+                        "sherpa_type": available_sherpa.sherpa_type,
                     }
                 }
             )
@@ -266,6 +268,7 @@ class OptimalDispatch:
                         "route": pending_trip.trip.augmented_route,
                         "sherpa_name": sherpa_name,
                         "booked_by": pending_trip.trip.booked_by,
+                        "sherpa_type": pending_trip.trip.trip_metadata.get("sherpa_type")
                     },
                 }
             )
@@ -298,7 +301,13 @@ class OptimalDispatch:
                         if station in sherpa_q_val["exclude_stations"]
                     ]
 
-                    if len(temp_stations) > 0:
+                    if pickup_q_val["sherpa_type"] and sherpa_q_val["sherpa_type"] != pickup_q_val["sherpa_type"]:
+                        self.logger.info(
+                            f"cannot assign {sherpa_q} for trip_id: {pickup_q}, required sherpa type: {pickup_q_val['sherpa_type']} "
+                        )
+                        total_eta = np.inf
+
+                    elif len(temp_stations) > 0:
                         self.logger.info(
                             f"cannot use {sherpa_q} for trip_id: {pickup_q}, reason: sherpa restricted from going to {temp_stations}"
                         )

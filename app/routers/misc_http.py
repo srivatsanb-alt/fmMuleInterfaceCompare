@@ -11,6 +11,7 @@ import math
 import random
 from fastapi import APIRouter, Depends, UploadFile, File
 from sqlalchemy.orm.attributes import flag_modified
+import datetime
 
 
 # ati code imports
@@ -27,6 +28,7 @@ import core.common as ccm
 import core.constants as cc
 import utils.fleet_utils as fu
 from utils.rq_utils import Queues
+from utils.auth_utils import AuthValidator
 
 
 router = APIRouter(
@@ -35,14 +37,17 @@ router = APIRouter(
 
 
 @router.get("/site_info")
-async def site_info(user_name=Depends(dpd.get_user_from_header)):
-    if not user_name:
+async def site_info(user=Depends(AuthValidator('fm'))):
+    if not user:
         dpd.raise_error("Unknown requester", 401)
+    
+    user_name = user["user_name"]
 
     with DBSession(engine=ccm.engine) as dbsession:
         #fleet_names = dbsession.get_all_fleet_names()
         software_compatability = dbsession.get_compatability_info()
         compatible_sherpa_versions = software_compatability.info.get("sherpa_versions", [])
+        sherpa_types = dbsession.get_all_sherpa_types()
 
     fleet_names = fu.get_all_fleets_list_as_per_user(user_name)
 
@@ -52,25 +57,33 @@ async def site_info(user_name=Depends(dpd.get_user_from_header)):
     with FMMongo() as fm_mongo:
         simulator_config = fm_mongo.get_document_from_fm_config("simulator")
         conditional_trips_config = fm_mongo.get_document_from_fm_config("conditional_trips")
+        app_security_params = fm_mongo.get_document_from_fm_config("app_security")
+        user_role_hierarchy = app_security_params["user_role_hierarchy"]
+        user_role_hierarchy_list = [role for role in user_role_hierarchy.keys()]
 
+    """
+    sherpa_types = [
+        i.lower() for i in list(cc.SherpaTypes.__dict__.keys()) if not i.startswith("__")
+    ]
+    """
     response = {
         "fleet_names": fleet_names,
         "timezone": timezone,
         "software_version": fm_tag,
         "compatible_sherpa_versions": compatible_sherpa_versions,
         "simulator": simulator_config["simulate"],
-        "sherpa_types": [i.lower() for i in list(cc.SherpaTypes.__dict__.keys()) if not i.startswith("__")],
+        "sherpa_types": sherpa_types,
         "battery_threshold": conditional_trips_config.get("battery_swap", {}).get("threshold"),
-        "station_properties": bm.CustomTasks
+        "station_properties": bm.CustomTasks,
+        "user_role_hierarchy": user_role_hierarchy_list,
     }
-
     return response
 
 
 @router.get("/get_trip_metadata")
-async def get_trip_metadata(user_name=Depends(dpd.get_user_from_header)):
+async def get_trip_metadata(user=Depends(AuthValidator('fm'))):
 
-    if not user_name:
+    if not user:
         dpd.raise_error("Unknown requester", 401)
 
     with FMMongo() as fm_mongo:
@@ -84,12 +97,23 @@ async def get_trip_metadata(user_name=Depends(dpd.get_user_from_header)):
 
 @router.post("/master_data/fleet")
 async def master_data(
-    master_data_info: rqm.MasterDataInfo, user_name=Depends(dpd.get_user_from_header)
+    master_data_info: rqm.MasterDataInfo, user=Depends(AuthValidator('fm'))
 ):
-    if not user_name:
+    response = {}
+    if not user:
         dpd.raise_error("Unknown requester", 401)
+    
+    user_name = user["user_name"]
 
-    fleet_names = fu.get_all_fleets_list_as_per_user(user_name)
+    fleet_data = fu.get_all_fleets_list_as_per_user(user_name)
+
+    fleet_names = [fleet["map_name"] for fleet in fleet_data] if fleet_data else []
+    
+    map_file_path = fu.get_map_file_path(master_data_info.fleet_name, f"{master_data_info.fleet_name}.pcd")
+    if not os.path.exists(map_file_path):
+        response.update({"auto_recover": False})
+    else:
+        response.update({"auto_recover": True})
 
     with DBSession(engine=ccm.engine) as dbsession:
         #fleet_names = dbsession.get_all_fleet_names()
@@ -99,8 +123,7 @@ async def master_data(
 
         all_sherpas = dbsession.get_all_sherpas_in_fleet(master_data_info.fleet_name)
         all_stations = dbsession.get_all_stations_in_fleet(master_data_info.fleet_name)
-
-        response = {}
+        
         sherpa_list = []
         station_list = []
         sherpa_type_list = []
@@ -146,13 +169,12 @@ async def master_data(
 
 # returns sherpa, the fleet it belongs to and its status.
 
-
 @router.get("/sherpa_summary/{sherpa_name}/{viewable}")
 async def sherpa_summary(
-    sherpa_name: str, viewable: int, user_name=Depends(dpd.get_user_from_header)
+    sherpa_name: str, viewable: int, user=Depends(AuthValidator('fm'))
 ):
     response = {}
-    if not user_name:
+    if not user:
         dpd.raise_error("Unknown requester", 401)
 
     with DBSession(engine=ccm.engine) as dbsession:
@@ -178,10 +200,10 @@ async def sherpa_summary(
 @router.post("/update_sherpa_metadata")
 async def update_sherpa_metadata(
     update_sherpa_metadata_req: rqm.UpdateSherpaMetaDataReq,
-    user_name=Depends(dpd.get_user_from_header),
+    user=Depends(AuthValidator('fm')),
 ):
     response = {}
-    if not user_name:
+    if not user:
         dpd.raise_error("Unknown requester", 401)
 
     with DBSession(engine=ccm.engine) as dbsession:
@@ -199,10 +221,10 @@ async def update_sherpa_metadata(
 
 @router.get("/sherpa_metadata/{sherpa_name}")
 async def get_sherpa_metadata(
-    sherpa_name: str, user_name=Depends(dpd.get_user_from_header)
+    sherpa_name: str, user=Depends(AuthValidator('fm'))
 ):
     response = {}
-    if not user_name:
+    if not user:
         dpd.raise_error("Unknown requester", 401)
 
     with DBSession(engine=ccm.engine) as dbsession:
@@ -221,9 +243,9 @@ async def get_sherpa_metadata(
 @router.post("/trips/get_route_wps")
 async def get_route_wps(
     route_preview_req: rqm.RoutePreview,
-    user_name=Depends(dpd.get_user_from_header),
+    user=Depends(AuthValidator('manage_trip')),
 ):
-    if not user_name:
+    if not user:
         dpd.raise_error("Unknown requester", 401)
 
     redis_conn = aioredis.Redis.from_url(
@@ -263,12 +285,13 @@ async def get_route_wps(
 @router.post("/trips/get_sherpa_live_route")
 async def get_sherpa_live_route(
     live_route_req: rqm.LiveRoute,
-    user_name=Depends(dpd.get_user_from_header),
+    user=Depends(AuthValidator('fm')),
 ):
-    if not user_name:
+    if not user:
         dpd.raise_error("Unknown requester", 401)
 
     response = {}
+    user_name = user["user_name"]
 
     with DBSession(engine=ccm.engine) as dbsession:
         ongoing_trip = dbsession.get_enroute_trip(live_route_req.sherpa_name)
@@ -284,9 +307,9 @@ async def get_sherpa_live_route(
 
 
 @router.get("/sherpa_build_info/{sherpa_name}")
-async def sherpa_build_info(sherpa_name: str, user_name=Depends(dpd.get_user_from_header)):
+async def sherpa_build_info(sherpa_name: str, user=Depends(AuthValidator('fm'))):
     response = {}
-    if not user_name:
+    if not user:
         dpd.raise_error("Unknown requester", 401)
 
     with DBSession(engine=ccm.engine) as dbsession:
@@ -313,9 +336,9 @@ async def sherpa_build_info(sherpa_name: str, user_name=Depends(dpd.get_user_fro
 # alerts the FM with messages from Sherpa
 @router.get("/create_generic_alerts/{alert_description}")
 async def create_generic_alerts(
-    alert_description: str, user_name=Depends(dpd.get_user_from_header)
+    alert_description: str, user=Depends(AuthValidator('fm'))
 ):
-    if not user_name:
+    if not user:
         dpd.raise_error("Unknown requester", 401)
 
     with DBSession(engine=ccm.engine) as dbsession:
@@ -330,10 +353,10 @@ async def create_generic_alerts(
 @router.post("/get_fm_incidents_pg")
 async def get_fm_incidents_for_fm_health(
     fm_incidents_req: rqm.FMIncidentsReqPg,
-    user_name=Depends(dpd.get_user_from_header)
+    user=Depends(AuthValidator('fm'))
 ):
     response = {}
-    if not user_name:
+    if not user:
         dpd.raise_error("Unknown requester", 401)
 
     from_dt = utils_util.str_to_dt(fm_incidents_req.from_dt)
@@ -381,9 +404,9 @@ async def get_fm_incidents_for_fm_health(
 
 @router.post("/get_fm_incidents")
 async def get_fm_incidents(
-    get_fm_incident: rqm.GetFMIncidents, user_name=Depends(dpd.get_user_from_header)
+    get_fm_incident: rqm.GetFMIncidents, user=Depends(AuthValidator('fm'))
 ):
-    if not user_name:
+    if not user:
         dpd.raise_error("Unknown requester", 401)
 
     response = {}
@@ -418,9 +441,9 @@ async def get_fm_incidents(
 
 
 @router.get("/get_visa_assignments")
-async def get_visa_assignments(user_name=Depends(dpd.get_user_from_header)):
+async def get_visa_assignments(user=Depends(AuthValidator('view_traffic_control'))):
     response = []
-    if not user_name:
+    if not user:
         dpd.raise_error("Unknown requester", 401)
     with DBSession(engine=ccm.engine) as dbsession:
         zone_ids_with_fleet_names = dbsession.session.query(vm.ExclusionZone.zone_id, vm.ExclusionZone.fleets).all()
@@ -441,8 +464,8 @@ async def get_visa_assignments(user_name=Depends(dpd.get_user_from_header)):
 
 
 @router.get("/get_all_zones")
-async def get_all_zones_info(user_name=Depends(dpd.get_user_from_header)):
-    if not user_name:
+async def get_all_zones_info(user=Depends(AuthValidator('fm'))):
+    if not user:
         dpd.raise_error("Unknown requester", 401)
     
     with DBSession(engine=ccm.engine) as dbsession:
@@ -474,9 +497,9 @@ async def get_all_zones_info(user_name=Depends(dpd.get_user_from_header)):
 async def get_sherpa_oee(
     generic_time_req: rqm.GenericFromToTimeReq,
     sherpa_name: str,
-    user_name=Depends(dpd.get_user_from_header),
+    user=Depends(AuthValidator('fm')),
 ):
-    if not user_name:
+    if not user:
         dpd.raise_error("Unknown requester", 401)
 
     with DBSession(engine=ccm.engine) as dbsession:
@@ -542,10 +565,10 @@ async def get_sherpa_oee(
 
 @router.get("/fm_health_stats")
 async def fm_health_stats(
-    user_name=Depends(dpd.get_user_from_header),
+    user=Depends(AuthValidator('fm')),
 ):
     response = {}
-    if not user_name:
+    if not user:
         dpd.raise_error("Unknown requester", 401)
 
     # rq perf
@@ -610,10 +633,10 @@ async def fm_health_stats(
 
 @router.get("/get_downloads")
 async def get_downloads(
-    user_name=Depends(dpd.get_user_from_header),
+    user=Depends(AuthValidator('fm')),
 ):
     reponse = {}
-    if not user_name:
+    if not user:
         dpd.raise_error("Unknown requester", 401)
 
     reponse["downloads"] = os.listdir(os.getenv("FM_DOWNLOAD_DIR"))
@@ -624,10 +647,10 @@ async def get_downloads(
 
 @router.get("/get_all_valid_fm_versions")
 async def get_valid_fm_version(
-    user_name=Depends(dpd.get_user_from_header),
+    user=Depends(AuthValidator('fm')),
 ):
 
-    if not user_name:
+    if not user:
         dpd.raise_error("Unknown requester", 401)
 
     dc_patter_path = os.path.join(os.getenv("FM_STATIC_DIR"), "docker_compose_*.yml")
@@ -682,11 +705,11 @@ async def scheduled_restart(
 async def upload_map_file(
     fleet_name: str,
     uploaded_file: UploadFile = File(...),
-    user_name=Depends(dpd.get_user_from_header),
+    user=Depends(AuthValidator('fm')),
 ):
 
     response = {}
-    if not user_name:
+    if not user:
         dpd.raise_error("Unknown requester", 401)
 
     dir_to_save = os.path.join(os.getenv("FM_STATIC_DIR"), fleet_name, "map")
@@ -702,9 +725,9 @@ async def upload_map_file(
 
 @router.get("/get_error_alerts_which_are_not_acknowledged")
 async def get_error_alerts_which_are_not_acknowledged(
-    user_name=Depends(dpd.get_user_from_header),
+    user=Depends(AuthValidator('fm')),
 ):
-    if not user_name:
+    if not user:
         dpd.raise_error("Unknown requester", 401)
 
     with DBSession(engine=ccm.engine) as dbsession:
@@ -716,12 +739,9 @@ async def get_error_alerts_which_are_not_acknowledged(
 @router.get("/get_directories_in_tree_structure/{dir_name}")
 async def get_directories_in_tree_structure(
     dir_name: str,
-    user_details: dpd.UserDetails = Depends(dpd.get_user_details_from_header)
+    user: dpd.UserDetails = Depends(AuthValidator('fm'))
     ):
-    role = rqm.FrontendUserRoles.support
-    if user_details is not None:
-        user_details.basic_check(role)
-    else:
+    if user is None:
         dpd.raise_error("Unknown requester", 401)
 
     return utils_util.list_filtered_directories(
@@ -732,10 +752,12 @@ async def get_directories_in_tree_structure(
 @router.post("/get_analytics_data")
 async def get_analytics_data(
     get_analytics_data_req: rqm.GetAnalyticsDataReq,
-    user_name=Depends(dpd.get_user_from_header),
+    user=Depends(AuthValidator('analytics')),
 ):
-    if not user_name:
+    if not user:
         dpd.raise_error("Unknown requester", 401)
+    
+    user_name = user["user_name"]
         
     with DBSession(engine=ccm.engine) as dbsession:
         fleet_name = dbsession.get_fleet(get_analytics_data_req.fleet_name)
@@ -753,4 +775,28 @@ async def get_analytics_data(
             
         response = await dpd.process_req_with_response(queue, analytics_req, user_name)
             
+        return response
+    
+@router.get("/sherpa_status/{sherpa_name}")
+async def get_sherpa_status(
+    sherpa_name: str,
+    user_name=Depends(AuthValidator('fm')),
+):
+    if not user_name:
+        dpd.raise_error("Unknown requester", 401)
+        
+    response = {
+        "is_connected": False
+    }
+
+    with DBSession(engine=ccm.engine) as dbSession:
+        six_seconds_ago = datetime.datetime.now() + datetime.timedelta(
+            seconds=-6
+        )
+        sherpa = dbSession.get_sherpa_status_with_none(sherpa_name)
+        if not sherpa:
+            dpd.raise_error("Invalid Sherpa Name")
+        if sherpa.mode != "disconnected" and sherpa.updated_at >= six_seconds_ago:
+            response["is_connected"] = True
+        
         return response
