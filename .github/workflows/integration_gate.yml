@@ -8,6 +8,7 @@ jobs:
   interface-check:
     runs-on: ubuntu-latest
     permissions:
+      contents: read
       pull-requests: write
     steps:
       - name: Checkout V2 (PR Branch)
@@ -22,8 +23,7 @@ jobs:
         with:
           ref: main
           path: https://github.com/srivatsanb-alt/fmMuleInterfaceCompare/tree/main
-          token: ${{ secrets.MY_PAT }}
-          submodules: recursive
+          submodules: false
 
       - name: Generate Snapshots
         run: |
