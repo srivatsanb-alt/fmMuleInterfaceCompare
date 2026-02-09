@@ -1,0 +1,6 @@
+[submodule "mule"]
+	path = mule
+	url = https://github.com/AtiMotors/mule.git
+[submodule "fm_plugins"]
+	path = fm_plugins
+	url = https://github.com/AtiMotors/fm_plugins.git

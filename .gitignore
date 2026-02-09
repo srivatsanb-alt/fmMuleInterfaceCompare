@@ -1,6 +1,10 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
+<<<<<<< HEAD
 *.py[codz]
+=======
+*.py[cod]
+>>>>>>> FM_v4.9_base
 *$py.class
 
 # C extensions
@@ -20,6 +24,10 @@ parts/
 sdist/
 var/
 wheels/
+<<<<<<< HEAD
+=======
+pip-wheel-metadata/
+>>>>>>> FM_v4.9_base
 share/python-wheels/
 *.egg-info/
 .installed.cfg
@@ -46,10 +54,16 @@ htmlcov/
 nosetests.xml
 coverage.xml
 *.cover
+<<<<<<< HEAD
 *.py.cover
 .hypothesis/
 .pytest_cache/
 cover/
+=======
+*.py,cover
+.hypothesis/
+.pytest_cache/
+>>>>>>> FM_v4.9_base
 
 # Translations
 *.mo
@@ -72,7 +86,10 @@ instance/
 docs/_build/
 
 # PyBuilder
+<<<<<<< HEAD
 .pybuilder/
+=======
+>>>>>>> FM_v4.9_base
 target/
 
 # Jupyter Notebook
@@ -83,9 +100,13 @@ profile_default/
 ipython_config.py
 
 # pyenv
+<<<<<<< HEAD
 #   For a library or package, you might want to ignore these files since the code is
 #   intended to run in multiple environments; otherwise, check them in:
 # .python-version
+=======
+.python-version
+>>>>>>> FM_v4.9_base
 
 # pipenv
 #   According to pypa/pipenv#598, it is recommended to include Pipfile.lock in version control.
@@ -94,6 +115,7 @@ ipython_config.py
 #   install all needed dependencies.
 #Pipfile.lock
 
+<<<<<<< HEAD
 # UV
 #   Similar to Pipfile.lock, it is generally recommended to include uv.lock in version control.
 #   This is especially recommended for binary packages to ensure reproducibility, and is more
@@ -125,6 +147,9 @@ ipython_config.py
 .pixi
 
 # PEP 582; used by e.g. github.com/David-OConnor/pyflow and github.com/pdm-project/pdm
+=======
+# PEP 582; used by e.g. github.com/David-OConnor/pyflow
+>>>>>>> FM_v4.9_base
 __pypackages__/
 
 # Celery stuff
@@ -136,7 +161,10 @@ celerybeat.pid
 
 # Environments
 .env
+<<<<<<< HEAD
 .envrc
+=======
+>>>>>>> FM_v4.9_base
 .venv
 env/
 venv/
@@ -162,6 +190,7 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
+<<<<<<< HEAD
 # pytype static type analyzer
 .pytype/
 
@@ -205,3 +234,15 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+=======
+# psql backup, mongo 
+static/psql
+static/mongo
+static
+
+!fm_dashboard/static
+.gitmodules
+logs
+mule_config
+tmp
+>>>>>>> FM_v4.9_base

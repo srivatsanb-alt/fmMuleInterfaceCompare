@@ -1,0 +1,168 @@
+version: "3.0"
+services:
+  fleet_manager:
+    image: fleet_manager:fm_version
+    container_name: fleet_manager
+    restart: always
+    build: .
+    volumes:
+      fm_volume
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - db
+      - mongo
+      - fm_redis
+    links:
+      - db
+      - mongo
+      - fm_redis
+    networks:
+      fm_dn:
+        aliases:
+           - fm_alias
+    ports:
+      - "8001:8001"
+    environment:
+      FM_PORT: 8001
+      FM_SERVER_USERNAME: "ati"
+      REDIS_PORT: 6379
+      REDIS_HOST: fm_redis
+      FM_REDIS_URI: redis://fm_redis:6379
+      PGTZ: Asia/Kolkata
+      TZ: Asia/Kolkata
+      PGHOST: db
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: ati_fleet
+      FM_DATABASE_URI: postgresql://postgres:postgres@db:5432
+      FM_MONGO_DATABASE_URI: mongodb://ati:atiMongo@mongo:27017
+      APP_ENV: app_env
+
+  plugins:
+    image: plugin:fm_version
+    container_name: fm_plugins
+    restart: always
+    build: .
+    volumes:
+      plugin_volume
+      - .:/app/static
+    depends_on:
+      - db
+      - mongo
+      - fm_redis
+    links:
+      - db
+      - mongo
+      - fm_redis
+    networks:
+      fm_dn:
+        aliases:
+           - plugin_alias
+    ports:
+      - "8002:8002"
+    environment:
+      PLUGIN_PORT: 8002
+      REDIS_PORT: 6379
+      REDIS_HOST: fm_redis
+      PLUGIN_REDIS_URI: redis://fm_redis:6379
+      PGTZ: Asia/Kolkata
+      TZ: Asia/Kolkata
+      PLUGIN_DATABASE_URI: postgresql://postgres:postgres@db
+      PLUGIN_MONGO_DATABASE_URI: mongodb://ati:atiMongo@mongo:27017
+      APP_ENV: app_env
+  
+  db:
+    image: postgres:14.0
+    container_name: fleet_db
+    restart: always
+    volumes:
+      - ./psql/psql_backup:/var/lib/postgresql/data:rw
+    networks:
+     - fm_dn
+    add_db_ports:
+    environment:
+      TZ: Asia/Kolkata
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ati_fleet
+
+
+  mongo:
+    image: mongo:7.0
+    container_name: fm_mongo
+    restart: always
+    volumes:
+     - ./mongo:/data/db:rw
+    networks:
+      - fm_dn
+    add_mongo_ports:
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ati
+      MONGO_INITDB_ROOT_PASSWORD: atiMongo
+
+  mongo-express:
+    image: mongo-express:1.0.0-alpha
+    container_name: fm_mongo_express
+    restart: always
+    depends_on:
+      - mongo
+    links:
+      - mongo
+    networks:
+      - fm_dn
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: ati
+      ME_CONFIG_MONGODB_ADMINPASSWORD: atiMongo
+      ME_CONFIG_BASICAUTH_USERNAME: "ati_support"
+      ME_CONFIG_BASICAUTH_PASSWORD: "ati112"
+      ME_CONFIG_MONGODB_URL: mongodb://ati:atiMongo@mongo:27017
+      ME_CONFIG_SITE_BASEURL: "/config_editor"
+
+  reverseproxy:
+    image: fm_nginx:fm_version
+    container_name: reverseproxy
+    hostname: fm_rev_proxy
+    restart: always
+    volumes:
+      - ./certs:/certs
+    ports:
+      - "443:443"
+      - "9999:9999"
+    links:
+      - fleet_manager
+      - plugins
+      - registry
+      - mongo-express
+    depends_on:
+      - fleet_manager
+      - plugins
+      - registry
+      - mongo-express
+    networks:
+      - fm_dn
+
+  registry:
+    restart: always
+    image: registry:2
+    container_name: fm_docker_registry
+    networks:
+      - fm_dn
+
+  fm_redis:
+    image: redis:latest
+    container_name: fm_redis
+    command: [sh, -c, "rm -f /data/dump.rdb && redis-server"]
+    restart: always
+    networks:
+      - fm_dn
+    ports:
+      - "6379:6379"
+
+
+networks:
+  fm_dn:
+     name: fm_dn
+     driver: bridge
+     driver_opts:
+        com.docker.network.bridge.host_binding_ipv4: "0.0.0.0"

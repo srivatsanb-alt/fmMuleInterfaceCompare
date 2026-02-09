@@ -1,0 +1,332 @@
+import os
+import pandas as pd
+import csv
+import time
+from sqlalchemy import Boolean, Column, ForeignKey, String, ARRAY, Integer
+
+
+# ati code imports
+from core.db import get_session, get_engine
+from models.misc_models import FMVersion
+from models.db_session import DBSession
+import utils.util as utils_util
+import models.visa_models as vm
+
+
+AVAILABLE_UPGRADES = [
+    "2.2",
+    "3.0",
+    "3.01",
+    "3.1",
+    "3.2",
+    "3.3",
+    "4.0",
+    "4.01",
+    "4.02",
+    "4.1",
+    "4.15",
+    "4.2",
+    "4.21",
+    "4.3",
+    "4.61",
+    "4.9"
+]
+NO_SCHEMA_CHANGES = ["3.0", "3.01", "3.1"]
+
+
+class DBUpgrade:
+    def ack_no_schema_change_reqd(self, fm_version):
+        print(f"will upgrade db to version {fm_version}")
+        print(f"No db schema upgrades required for {fm_version}")
+
+    def upgrade_to_2_2(self):
+        with get_engine(os.getenv("FM_DATABASE_URI")).connect() as conn:
+            conn.execute("commit")
+            conn.execute('CREATE INDEX "booking_time_index" on "trips" ("booking_time")')
+
+    def upgrade_to_3_2(self):
+        with get_engine(os.getenv("FM_DATABASE_URI")).connect() as conn:
+            conn.execute("commit")
+            result = conn.execute(
+                "SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='trips'"
+            )
+            column_names = [row[0] for row in result]
+            if "booked_by" not in column_names:
+                conn.execute('ALTER TABLE "trips" ADD COLUMN "booked_by" VARCHAR')
+                print("boooked_by column added trips table")
+            else:
+                print("booked_by column already present need not be added again")
+
+    def upgrade_to_3_3(self):
+        with get_engine(os.getenv("FM_DATABASE_URI")).connect() as conn:
+            conn.execute("commit")
+            result = conn.execute(
+                "SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='trip_legs'"
+            )
+            column_names = [row[0] for row in result]
+            if "status" not in column_names:
+                conn.execute('ALTER TABLE "trip_legs" ADD COLUMN "status" VARCHAR')
+                print("status column added trip_legs table")
+            else:
+                print("status column already present need not be added again")
+            if "stoppage_reason" not in column_names:
+                conn.execute('ALTER TABLE "trip_legs" ADD COLUMN "stoppage_reason" VARCHAR')
+                print("stoppage_reason column added trip_legs table")
+            else:
+                print("stoppage_reason column already present need not be added again")
+
+    def upgrade_to_4_0(self):
+        with get_engine(os.getenv("FM_DATABASE_URI")).connect() as conn:
+            conn.execute("commit")
+            result = conn.execute(
+                "SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='trip_analytics'"
+            )
+            column_names = [row[0] for row in result]
+            if "route_length" not in column_names:
+                conn.execute('ALTER TABLE "trip_analytics" ADD COLUMN "route_length" FLOAT')
+                print("column route_length added trip_analytics table")
+            else:
+                print("column route_length already present in trip_analytics table")
+
+            if "progress" not in column_names:
+                conn.execute('ALTER TABLE "trip_analytics" ADD COLUMN "progress" FLOAT')
+                print("column progress added trip_analytics table")
+            else:
+                print("column progress already present in trip_analytics table")
+
+            result = conn.execute(
+                "SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='trips'"
+            )
+            column_names = [row[0] for row in result]
+            if "route_lengths" not in column_names:
+                conn.execute('ALTER TABLE "trips" ADD COLUMN "route_lengths" FLOAT[]')
+                print("column route_lengths added trips table")
+            else:
+                print("column route_lengths already present in trips table")
+
+    def upgrade_to_4_01(self):
+        with get_engine(os.getenv("FM_DATABASE_URI")).connect() as conn:
+            conn.execute("commit")
+            result = conn.execute(
+                "SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='sherpas'"
+            )
+            column_names = [row[0] for row in result]
+            if "parking_id" not in column_names:
+                conn.execute('ALTER TABLE "sherpas" ADD COLUMN "parking_id" VARCHAR')
+                conn.execute(
+                    'ALTER TABLE "sherpas" ADD CONSTRAINT fk_parking_id FOREIGN KEY (parking_id) REFERENCES stations (name)'
+                )
+                print("column parking_id added to sherpas table")
+            else:
+                print("column parking_id already present in sherpa table")
+
+    def upgrade_to_4_02(self):
+        ## have no limits on num connections ##
+        with get_engine(os.getenv("FM_DATABASE_URI")).connect() as conn:
+            conn.execute("commit")
+            conn.execute("alter role postgres with connection limit -1")
+            print("Set no-limit to num connections")
+
+    def upgrade_to_4_1(self):
+        with get_engine(os.getenv("FM_DATABASE_URI")).connect() as conn:
+            try:
+                conn.execute("commit")
+                conn.execute("drop table master_fm_data_upload")
+            except Exception as e:
+                print(f"Unable to drop master_fm_data_upload, exception: {e}")
+    
+    def upgrade_to_4_15(self):
+        with get_engine(os.getenv("FM_DATABASE_URI")).connect() as conn:
+            try:
+                csv_file_path = "/app/static/visa_assign.csv"
+                conn.execute("commit")
+                with open(csv_file_path, "r") as file:
+                    reader = csv.reader(file)
+                    next(reader)  # Skip the header row
+                    for row in reader:
+                        conn.execute(
+                            """
+                            INSERT INTO visa_assignments (zone_id, sherpa_name)
+                            VALUES (%s, %s)
+                        """,
+                            row,
+                        )
+                print(f"Inserted visa_assignments")
+            except Exception as e:
+                print(f"Unable to insert visa_assignments, exception: {e}")
+
+    def upgrade_to_4_2(self):
+        with get_engine(os.getenv("FM_DATABASE_URI")).connect() as conn:
+            conn.execute("commit")
+            result = conn.execute(
+                "SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='sherpas'"
+            )
+            column_names = [row[0] for row in result]
+            if "sherpa_type" not in column_names:
+                conn.execute('ALTER TABLE "sherpas" ADD COLUMN "sherpa_type" VARCHAR')
+                print("column sherpa_type added to sherpas table")
+            else:
+                print("column sherpa_type already present in sherpa table")
+            # Update sherpa_type to 'tug' in each row
+            conn.execute("UPDATE sherpas SET sherpa_type = 'tug'")
+            print("Updated sherpa_type to 'tug' in all rows of the sherpas table.")
+            result = conn.execute(
+                "SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='fm_incidents'"
+            )
+            column_names = [row[0] for row in result]
+            if "error_code" not in column_names:
+                conn.execute('ALTER TABLE "fm_incidents" ADD COLUMN "error_code" VARCHAR')
+                print("column error_code added to fm_incidents table")
+            else:
+                print("column error_code already present in fm_incidents table")
+
+    def upgrade_to_4_21(self):
+        with get_engine(os.getenv("FM_DATABASE_URI")).connect() as conn:
+            conn.execute("commit")
+            result = conn.execute(
+                "SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='ongoing_trips'"
+            )
+            column_names = [row[0] for row in result]
+            if "post_action_initiated" not in column_names:
+                conn.execute('ALTER TABLE "ongoing_trips" ADD COLUMN "post_action_initiated" BOOLEAN')
+                print("column post_action_initiated added to ongoing_trips table")
+            else:
+                print("column post_action_initiated already present in sherpa table")
+
+    def upgrade_to_4_3(self):
+        with get_engine(os.getenv("FM_DATABASE_URI")).connect() as conn:
+            try:
+                conn.execute("commit")
+                result = conn.execute("SELECT enum_range(NULL::stationproperties)")
+                enum_values_str = result.fetchall()[0][0]
+                new_values = ["LIFT", "UNLIFT", "CONVEYOR_PARK"]
+                for value in new_values:
+                    if value not in enum_values_str:
+                        conn.execute(f"ALTER TYPE stationproperties ADD VALUE '{value}'")
+                        print(f"Added '{value}' to stationproperties enum.")
+                    else:
+                        print(f"'{value}' already exists in stationproperties enum.")
+            except Exception as e:
+                print(f"Unable to add values to stationproperties enum, exception: {e}")
+                
+    def upgrade_to_4_61(self):
+        with get_engine(os.getenv("FM_DATABASE_URI")).connect() as conn:
+            conn.execute("commit")
+            try:
+                conn.execute("DROP DATABASE plugin_erp")
+                print("plugin_erp database dropped")
+            except Exception as e:
+                print(f"Unable to drop plugin_erp database, exception: {e}")
+                
+    def upgrade_to_4_9(self):
+        with get_engine(os.getenv("FM_DATABASE_URI")).connect() as conn:
+            conn.execute("commit")
+            try:
+                result = conn.execute("SELECT enum_range(NULL::stationproperties)")
+                enum_values_str = result.fetchall()[0][0]
+                new_values = ["PLAT_ON", "PLAT_OFF", "PLAT_UP", "PLAT_DOWN"]
+                for value in new_values:
+                    if value not in enum_values_str:
+                        conn.execute(f"ALTER TYPE stationproperties ADD VALUE '{value}'")
+                        print(f"Added '{value}' to stationproperties enum.")
+                    else:
+                        print(f"'{value}' already exists in stationproperties enum.")
+                conn.execute("DROP DATABASE plugin_summon_button")
+                print("plugin_summon_button database dropped")
+            except Exception as e:
+                print(f"Unable to drop plugin_summon_button database or add values to stationproperties enum, exception: {e}")
+
+def upgrade_db_schema():
+    # fm version records available only after v2.1
+    with get_session(os.getenv("FM_DATABASE_URI")) as session:
+        fm_version = session.query(FMVersion).one_or_none()
+        if not fm_version:
+            fm_version = FMVersion(version="2.1")
+            session.add(fm_version)
+            session.flush()
+            session.commit()
+
+        dbupgrade = DBUpgrade()
+
+    # upgrade sequentially
+
+    sorted_upgrades = sorted(AVAILABLE_UPGRADES, key=float)
+    for version in sorted_upgrades:
+        with get_session(os.getenv("FM_DATABASE_URI")) as session:
+            fm_version = session.query(FMVersion).one_or_none()
+            if float(fm_version.version) < float(version):
+                print(f"Will try to upgrade db from v_{fm_version.version} to v_{version}")
+                version_txt = version.replace(".", "_")
+
+                if version in NO_SCHEMA_CHANGES:
+                    dbupgrade.ack_no_schema_change_reqd(version)
+                else:
+                    upgrade_fn = getattr(dbupgrade, f"upgrade_to_{version_txt}", None)
+                    if not upgrade_fn:
+                        print(
+                            f"Invalid upgrade call, cannot upgrade from {fm_version.version} to {version}"
+                        )
+                        continue
+                    upgrade_fn()
+
+                print(f"Successfully upgraded db from {fm_version.version} to {version}")
+                fm_version.version = version
+                session.commit()
+
+
+def maybe_delete_fm_incidents_v3_3():
+    # many schema changes ,false positives in fm_incidents data - dropping the table with old data
+    with get_engine(os.getenv("FM_DATABASE_URI")).connect() as conn:
+        conn.execute("commit")
+        result = conn.execute(
+            "SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='fm_incidents'"
+        )
+        column_names = [row[0] for row in result]
+
+        # data_path was added post FM_v3.2.1
+        if "data_path" not in column_names:
+            conn.execute('DROP TABLE "fm_incidents"')
+            print("dropped table fm_incidents")
+
+
+def maybe_delete_visa_related_tables_v4_15():
+    with get_engine(os.getenv("FM_DATABASE_URI")).connect() as conn:
+        conn.execute("commit")
+        result = conn.execute("SELECT zone_id, sherpa_name FROM visa_assignments")
+        data = []
+        for visa_assignment in result:
+            data.append(
+                {
+                    "zone_id": visa_assignment[0],
+                    "sherpa_name": visa_assignment[1],
+                }
+            )
+        data = pd.DataFrame(data)
+        csv_file_path = "/app/static/visa_assign.csv"
+        data.to_csv(csv_file_path, index=False)
+        print(f"Dataframe has been saved to {csv_file_path}")
+
+    with get_engine(os.getenv("FM_DATABASE_URI")).connect() as conn:
+        try:
+            conn.execute("commit")
+            conn.execute("drop table visa_assignments")
+            conn.execute("drop table visa_rejects")
+            print("dropped visa_assignments and visa_rejects and copied data to visa_assign.csv")
+        except Exception as e:
+            print(f"Unable to drop visa_assignments and visa_rejects or copied data to visa_assign.csv, exception: {e}")
+
+
+def maybe_drop_tables():
+    with get_session(os.getenv("FM_DATABASE_URI")) as session:
+        try:
+            fm_version = session.query(FMVersion).one_or_none()
+            if fm_version:
+                if float(fm_version.version) <= 3.3:
+                    maybe_delete_fm_incidents_v3_3()
+                if float(fm_version.version) < 4.15:
+                    maybe_delete_visa_related_tables_v4_15()
+
+        except Exception as e:
+            print(
+                f"Unable tom fetch fm version from DB, cannot drop tables based on fm_version, exception: {e}"
+            )
