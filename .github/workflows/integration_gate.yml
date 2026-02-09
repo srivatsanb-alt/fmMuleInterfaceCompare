@@ -1,0 +1,60 @@
+name: V2 Integration Gate
+
+on:
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  interface-check:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Checkout V2 (PR Branch)
+        uses: actions/checkout@v4
+        with:
+          path: https://github.com/srivatsanb-alt/fmMuleInterfaceCompare/tree/map_upload_fix
+          submodules: recursive
+
+      - name: Checkout Main (To get Scripts & Base)
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: https://github.com/srivatsanb-alt/fmMuleInterfaceCompare/tree/main
+          submodules: recursive
+
+      - name: Generate Snapshots
+        run: |
+          # Run the extraction script from Main against Main's code
+          python https://github.com/srivatsanb-alt/fmMuleInterfaceCompare/tree/main/scripts/analyze_detailed_mule_deps.py . https://github.com/srivatsanb-alt/fmMuleInterfaceCompare/tree/main/mule > base_snap.json
+          
+          # Run the extraction script from Main against V2's code
+          python https://github.com/srivatsanb-alt/fmMuleInterfaceCompare/tree/main/scripts/analyze_detailed_mule_deps.py . https://github.com/srivatsanb-alt/fmMuleInterfaceCompare/tree/map_upload_fix/mule > head_snap.json
+
+      - name: Compare and Comment
+        id: compare
+        run: |
+          # This will exit 1 if they differ, turning the PR check RED
+          python https://github.com/srivatsanb-alt/fmMuleInterfaceCompare/tree/main/scripts/compare_json.py base_snap.json head_snap.json > diff_report.md
+        continue-on-error: true
+
+      - name: Post Results to PR
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const diff = fs.readFileSync('diff_report.md', 'utf8');
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: diff
+            });
+
+      - name: Enforcement
+        if: steps.compare.outcome == 'failure'
+        run: |
+          echo "Interface mismatch detected. Check requires 'interface-verified' label to pass."
+          # Logic to check for label
+          LABEL_CHECK=$(curl -s https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/labels | grep "interface-verified" || true)
+          if [ -z "$LABEL_CHECK" ]; then exit 1; fi
