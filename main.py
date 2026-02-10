@@ -71,6 +71,10 @@ class FMProcessesHandler:
 
 if __name__ == "__main__":
     redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
+    if os.getenv("FM_DEV_LOCAL", None) == "true":
+        import fm_init
+        fm_init.main()
+        redis_conn.flushall()
     logging.info(f"all queues {rqu.Queues.get_queues()}")
 
     for q in rqu.Queues.get_queues():

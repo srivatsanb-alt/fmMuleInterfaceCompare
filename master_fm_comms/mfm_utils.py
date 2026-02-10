@@ -22,6 +22,8 @@ class MFMContext:
     ws_update_freq: int
     send_updates: bool
     recent_hours: int
+    https_proxy: str
+    http_proxy: str
 
 
 def get_mfm_ws_url(mfm_context: MFMContext):
@@ -163,6 +165,8 @@ def get_mfm_context():
         ws_update_freq=mfm_config["ws_update_freq"],
         send_updates=mfm_config["send_updates"],
         recent_hours=mfm_config["recent_hours"],
+        http_proxy=mfm_config["http_proxy"],
+        https_proxy=mfm_config["https_proxy"],
     )
 
     if mfm_context.send_updates is False:

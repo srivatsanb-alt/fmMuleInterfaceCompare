@@ -9,6 +9,7 @@ import aioredis
 from sqlalchemy.orm.attributes import flag_modified
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, status
 from redis import Redis
+from multiprocessing import Process
 
 
 # ati code imports
@@ -20,7 +21,7 @@ import models.request_models as rqm
 import app.routers.dependencies as dpd
 import utils.log_utils as lu
 import utils.util as utils_util
-from utils.rq_utils import Queues, enqueue
+from utils.rq_utils import Queues, enqueue, start_worker
 import core.common as ccm
 
 
@@ -193,8 +194,15 @@ async def sherpa_status(
 
 async def reader(websocket, sherpa):
     handler_obj = hc.HandlerConfiguration.get_handler()
+    if f"{sherpa}_update_handler" not in Queues.queues_dict.keys() or f"{sherpa}_misc_update_handler" not in Queues.queues_dict.keys():
+        new_qs = [f"{sherpa}_update_handler", f"{sherpa}_misc_update_handler"]
+        for new_q in new_qs:
+            Queues.add_queue(new_q)
+            process = Process(target=start_worker, args=(new_q,))
+            process.start()
     sherpa_update_q = Queues.queues_dict[f"{sherpa}_update_handler"]
-    sherpa_trip_q = Queues.queues_dict[f"{sherpa}_trip_update_handler"]
+    sherpa_misc_update_q = Queues.queues_dict[f"{sherpa}_misc_update_handler"]
+
     kwargs = {}
     generic_handler_job_timeout = int(
         int(redis.get("generic_handler_job_timeout_ms").decode()) / 1000
@@ -229,7 +237,7 @@ async def reader(websocket, sherpa):
                     msg["stoppages"]["extra_info"]
                 )
                 args = [handler_obj, trip_status_msg]
-                enqueue(sherpa_trip_q, handle, *args, **kwargs)
+                enqueue(sherpa_misc_update_q, handle, *args, **kwargs)
             except Exception as e:
                 logging.error(f"Unable to enqueue trip status message, Exception: {e}")
 
@@ -256,6 +264,14 @@ async def reader(websocket, sherpa):
                 logging.getLogger().info(
                     f"Unable to enqueue status msg of type {msg_type} for {sherpa}, exception: {e}"
                 )
+        elif msg_type == MessageType.MULE_MESSAGE:
+            msg["source"] = sherpa
+            try:
+                mule_msg = rqm.MuleMsg.from_dict(msg)
+                args = [handler_obj, mule_msg]
+                enqueue(sherpa_misc_update_q, handle, *args, **kwargs)
+            except Exception as e:
+                logging.error(f"Unable to enqueue mule message, Exception: {e}")
         else:
             logging.error(f"Unsupported message type {msg_type}")
 

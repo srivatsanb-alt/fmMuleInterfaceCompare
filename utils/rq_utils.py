@@ -29,28 +29,29 @@ class Queues:
         os.getenv("FM_REDIS_URI"), encoding="utf-8", decode_responses=True
     )
 
+    all_sherpas = []
     queues_dict = {}
     all_sherpas = redis_conn.get("all_sherpas")
     if all_sherpas:
         all_sherpas = json.loads(all_sherpas)
 
-    for sherpa in all_sherpas:
-        queues_dict.update(
-            {
-                f"{sherpa}_update_handler": Queue(
-                    f"{sherpa}_update_handler", connection=redis_conn
-                )
-            }
-        )
+        for sherpa in all_sherpas:
+            queues_dict.update(
+                {
+                    f"{sherpa}_update_handler": Queue(
+                        f"{sherpa}_update_handler", connection=redis_conn
+                    )
+                }
+            )
 
-    for sherpa in all_sherpas:
-        queues_dict.update(
-            {
-                f"{sherpa}_trip_update_handler": Queue(
-                    f"{sherpa}_trip_update_handler", connection=redis_conn
-                )
-            }
-        )
+        for sherpa in all_sherpas:
+            queues_dict.update(
+                {
+                    f"{sherpa}_misc_update_handler": Queue(
+                        f"{sherpa}_misc_update_handler", connection=redis_conn
+                    )
+                }
+            )
 
     queues_dict.update(
         {"resource_handler": Queue("resource_handler", connection=redis_conn)}

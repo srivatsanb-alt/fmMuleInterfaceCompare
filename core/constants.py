@@ -10,6 +10,7 @@ class MessageType:
     REACHED = "reached"
     PERIPHERALS = "peripherals"
     SHERPA_STATUS = "sherpa_status"
+    MULE_MESSAGE = "mule_message"
     FLEET_START_STOP = "fleet_start_stop"
     TRIP_STATUS = "trip_status"
     BOOKING = "book"
@@ -28,6 +29,7 @@ class MessageType:
     ACTIVATE_PARKING_MODE = "activate_parking_mode"
     MANUAL_VISA_RELEASE = "manual_visa_release"
     GET_ANALYTICS_DATA = "get_analytics_data"
+    SLAM_RECOVER = "slam_recover"
 
 
 OptimalDispatchInfluencers = [
@@ -72,3 +74,4 @@ ListofSherpaTypes = [SherpaTypes.TUG, SherpaTypes.TUG_LITE, SherpaTypes.LITE, Sh
 class SoundVolume:
     LOW = 0
     HIGH = 0.1
+

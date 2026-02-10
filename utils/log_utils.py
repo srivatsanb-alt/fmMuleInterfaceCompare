@@ -19,6 +19,7 @@ def get_other_loggers():
     others_loggers.append("process_times")
     others_loggers.append("rq")
     others_loggers.append("fm_debug")
+    others_loggers.append("simulator")
 
     return others_loggers
 

@@ -19,7 +19,7 @@ import re
 
 TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
 IES_TIME_FORMAT = "%Y-%m-%dT%H:%M:%S.%f"
-
+root_path = os.getenv("FM_INSTALL_DIR")
 
 def get_mule_config():
     return toml.load(os.getenv("ATI_CONSOLIDATED_CONFIG"))
@@ -48,16 +48,20 @@ def str_to_dt_UTC(dt_str):
 def normalize(theta):
     return np.arctan2(np.sin(theta), np.cos(theta))
 
-def are_poses_close(pose1, pose2):
+def are_poses_close(pose1, pose2, dist_thresh=None, theta_thresh=None):
     mule_config = get_mule_config()
-    dist_threshold = (
-        mule_config.get("control").get("common").get("station_dist_thresh", 0.8)
-    )
-    theta_thresh = mule_config.get("control").get("common").get("station_theta_thresh", 0.2)
+    if dist_thresh is None:
+        dist_threshold = (
+            mule_config.get("control").get("common").get("station_dist_thresh", 0.8)
+        )
+    if theta_thresh is None:
+        theta_thresh = (
+            mule_config.get("control").get("common").get("station_theta_thresh", 0.2)
+        )
     pose1 = np.array(pose1)
     pose2 = np.array(pose2)
     xy_close = np.linalg.norm(pose1[:2] - pose2[:2]) <= dist_threshold
-    theta_close = abs(normalize(pose1[2] - pose2[2])) <= theta_thresh
+    theta_close = abs(pose1[2] - pose2[2]) <= theta_thresh
     return xy_close and theta_close
 
 def get_table_as_dict(model, model_obj):
@@ -94,7 +98,7 @@ def generate_random_job_id():
 def get_all_map_names():
     map_names = []
     _ = os.system(
-        "find $FM_STATIC_DIR -name 'map' -printf '%h\n' | awk -'F/' '{ print $NF }' > /app/static/map_names.txt"
+        f"find {root_path}/static -name 'map' -printf '%h\n' | awk -'F/' '{{ print $NF }}' > {root_path}/static/map_names.txt"
     )
     map_names_file = open(os.path.join(os.getenv("FM_STATIC_DIR"), "map_names.txt"), "r")
     for line in map_names_file.readlines():
@@ -257,7 +261,7 @@ def get_closest_station(dbsession, pose, fleet_name):
 
 def read_docker_compose_yml():
     fm_version = os.getenv("FM_TAG")
-    with open(f"/app/static/docker_compose_v{fm_version}.yml") as f:
+    with open(f"{root_path}/static/docker_compose_v{fm_version}.yml") as f:
         data = yaml.safe_load(f)
 
     return data

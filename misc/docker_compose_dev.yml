@@ -1,0 +1,51 @@
+services:
+  db:
+    image: postgres:14.0
+    container_name: fleet_db
+    restart: always
+    volumes:
+      - ./psql/psql_backup:/var/lib/postgresql/data:rw
+    networks:
+      - fm_dn
+    ports:
+      - "5432:5432"
+    environment:
+      TZ: Asia/Kolkata
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ati_fleet
+
+  mongo:
+    image: mongo:7.0
+    container_name: fm_mongo
+    restart: always
+    volumes:
+      - ./mongo:/data/db:rw
+      - ./mongo-init:/docker-entrypoint-initdb.d
+    networks:
+      - fm_dn
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ati
+      MONGO_INITDB_ROOT_PASSWORD: atiMongo
+      MONGO_INITDB_REPLICA_SET_NAME: rs0
+    entrypoint: ["/docker-entrypoint-initdb.d/entrypoint.sh"]
+    command: ["--replSet", "rs0", "--bind_ip_all", "--keyFile", "/etc/mongodb-keyfile"]
+
+  fm_redis:
+    image: redis:latest
+    container_name: fm_redis
+    command: [sh, -c, "rm -f /data/dump.rdb && redis-server"]
+    restart: always
+    networks:
+      - fm_dn
+    ports:
+      - "6379:6379"
+
+networks:
+  fm_dn:
+     name: fm_dn
+     driver: bridge
+     driver_opts:
+        com.docker.network.bridge.host_binding_ipv4: "0.0.0.0"

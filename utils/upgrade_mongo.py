@@ -5,14 +5,15 @@ import os
 from models.mongo_client import FMMongo
 from models.db_session import DBSession
 
-AVAILABLE_UPGRADES = ["4.0", "4.2", "4.21", "4.22", "4.3", "4.6"]
+AVAILABLE_UPGRADES = ["4.0", "4.2", "4.21", "4.22", "4.3", "4.6", "5.0"]
 
+root_path = os.getenv("FM_INSTALL_DIR")
 
 def read_fm_config_toml_and_update_mongo_db(fm_mongo, fc_db):
     try:
         optimal_dispatch_col = fm_mongo.get_collection("optimal_dispatch", fc_db)
         optimal_dispatch_doc = fm_mongo.get_document_from_fm_config("optimal_dispatch")
-        fleet_config = toml.load("/app/static/fleet_config/fleet_config.toml")
+        fleet_config = toml.load(f"{root_path}/static/fleet_config/fleet_config.toml")
         optimal_dispatch_doc["max_trips_to_consider"] = fleet_config["optimal_dispatch"][
             "max_trips_to_consider"
         ]
@@ -26,7 +27,7 @@ def read_master_fm_toml_and_update_mongo_db(fm_mongo, fc_db):
     try:
         master_fm_collection = fm_mongo.get_collection("master_fm", fc_db)
         master_fm_doc = fm_mongo.get_document_from_fm_config("master_fm")
-        master_fm_config = toml.load("/app/static/fleet_config/master_fm_config.toml")
+        master_fm_config = toml.load(f"{root_path}/static/fleet_config/master_fm_config.toml")
         master_fm_doc["api_key"] = master_fm_config["master_fm"]["comms"]["api_key"]
         master_fm_doc["send_updates"] = master_fm_config["master_fm"]["comms"][
             "send_updates"
@@ -42,7 +43,7 @@ def read_conditional_trips_toml_and_update_mongo_db(fm_mongo, fc_db):
         conditional_trips_collection = fm_mongo.get_collection("conditional_trips", fc_db)
         conditional_trips_doc = fm_mongo.get_document_from_fm_config("conditional_trips")
         conditional_trips_config = toml.load(
-            "/app/static/fleet_config/conditional_trips.toml"
+            f"{root_path}/static/fleet_config/conditional_trips.toml"
         )
 
         conditional_trips_doc["auto_park"]["book"] = conditional_trips_config[
@@ -116,9 +117,20 @@ class MongoUpgrade:
             "regex_statement": "Password must be at least 8 characters long, contain at least one uppercase letter and one special character."
         }})
         print("Updated regex pattern and statement in app_security config")
-
-
-
+        
+    def upgrade_to_5_0(self, fm_mongo):
+        fc_db = fm_mongo.get_database("fm_config")
+        app_security_col = fm_mongo.get_collection("app_security", fc_db)
+        app_security_col.update_one({}, {"$set": {
+            "user_role_hierarchy": {
+                "support": 4,
+                "superuser": 3,
+                "supervisor": 2,
+                "operator": 1,
+                "viewer": 0
+            }
+        }})
+        print("Updated user role hierarchy in app_security config")
     
 
 def upgrade_mongo_schema():

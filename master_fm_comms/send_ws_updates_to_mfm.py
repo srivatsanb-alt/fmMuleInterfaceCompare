@@ -7,11 +7,19 @@ import aioredis
 import os
 import datetime
 import json
+import aiohttp
 
 # ati code imports
 import master_fm_comms.mfm_utils as mu
 import utils.util as utils_util
 
+async def keep_receiving(ws):
+    try:
+        async for _ in ws:
+            await asyncio.sleep(10)
+            pass
+    except Exception:
+        pass
 
 # @utils_util.async_report_error
 async def send_ongoing_trip_status(ws, mfm_context: mu.MFMContext):
@@ -52,7 +60,7 @@ async def send_ongoing_trip_status(ws, mfm_context: mu.MFMContext):
                 time_delta = datetime.datetime.now() - temp
 
                 if time_delta.seconds > mfm_context.ws_update_freq:
-                    await ws.send(json.dumps(data))
+                    await ws.send_str(json.dumps(data))
                     last_update_dt.update({fleet_name: datetime.datetime.now()})
                     logging.getLogger("mfm_updates_ws").info(
                         f"sent an ongoing_trip status msg for {fleet_name} to master fm"
@@ -100,7 +108,7 @@ async def send_fleet_status(ws, mfm_context: mu.MFMContext):
                 if time_delta.seconds > mfm_context.ws_update_freq:
                     pruned_fleet_status = mu.prune_fleet_status(data)
 
-                    await ws.send(json.dumps(pruned_fleet_status))
+                    await ws.send_str(json.dumps(pruned_fleet_status))
 
                     last_update_dt.update({fleet_name: datetime.datetime.now()})
                     logging.getLogger("mfm_updates_ws").info(
@@ -124,22 +132,30 @@ async def async_send_ws_msgs_to_mfm():
     else:
         ssl_context = None
     ssl_context_set = True if ssl_context else False
+    proxy_url = mfm_context.https_proxy if ssl_context_set else mfm_context.http_proxy
 
     while True:
         try:
             logging.getLogger("mfm_updates_ws").info(
                 f"Will attempt to connect to {ws_url}, is ssl_context set {ssl_context_set}"
             )
-            async with websockets.connect(
-                ws_url,
-                ssl=ssl_context,
-                extra_headers=(("X-API-Key", mfm_context.x_api_key),),
-            ) as ws:
-                logging.getLogger("mfm_updates_ws").info(f"connected to {ws_url}")
-                await asyncio.gather(
-                    send_ongoing_trip_status(ws, mfm_context),
-                    send_fleet_status(ws, mfm_context),
-                )
+            ws_connect_args = {
+                "headers": {'X-API-Key': mfm_context.x_api_key},
+            }
+            if proxy_url:
+                ws_connect_args["proxy"] = proxy_url
+            async with aiohttp.ClientSession() as session:
+                async with session.ws_connect(
+                    ws_url,
+                    ssl=ssl_context,
+                    **ws_connect_args,
+                ) as ws:
+                    logging.getLogger("mfm_updates_ws").info(f"connected to {ws_url}")
+                    await asyncio.gather(
+                        send_ongoing_trip_status(ws, mfm_context),
+                        send_fleet_status(ws, mfm_context),
+                        keep_receiving(ws),
+                    )
 
         except Exception as e:
             sl = 10
@@ -152,4 +168,4 @@ async def async_send_ws_msgs_to_mfm():
 @utils_util.proc_retry(sleep_time=30)
 @utils_util.report_error
 def send_ws_msgs_to_mfm():
-    asyncio.get_event_loop().run_until_complete(async_send_ws_msgs_to_mfm())
+    asyncio.run(async_send_ws_msgs_to_mfm())

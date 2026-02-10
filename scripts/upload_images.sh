@@ -79,21 +79,60 @@ setup_tar_k3s() {
 }
 
 tar_images() {
+   echo "=== Starting tar_images function ==="
    read -p "Want to tarball the images? (y/n) - " tar_images
    if [ "$tar_images" = "y" ] ; then
    {
+      echo "Creating directory for tarball setup..."
       rm -rf static/fm_setup_v$FM_VERSION || true
       mkdir static/fm_setup_v$FM_VERSION
+      echo "Created directory: static/fm_setup_v$FM_VERSION"
+      
+      echo "Creating save_images.sh script..."
       touch static/fm_setup_v$FM_VERSION/save_images.sh
+      echo "Generated save_images.sh script"
+      
+      echo "Extracting image names from docker-compose and generating save commands..."
       docker-compose -f static/docker_compose_v$FM_VERSION.yml config | grep image | awk '{print $2}' | xargs -I % echo "docker save" % ">" %.tar >> static/fm_setup_v$FM_VERSION/save_images.sh
-      cd static/fm_setup_v$FM_VERSION && bash save_images.sh 
+      echo "Generated save commands for all images"
+      
+      echo "Content of save_images.sh:"
+      cat static/fm_setup_v$FM_VERSION/save_images.sh
+      
+      echo "Changing to tarball directory and executing save_images.sh..."
+      cd static/fm_setup_v$FM_VERSION
+      echo "Current directory: $(pwd)"
+      echo "About to execute save_images.sh with verbose output..."
+      bash -x save_images.sh 
+      echo "Finished saving all images"
+      
+      echo "Returning to original directory..."
       cd ../../
+      echo "Current directory: $(pwd)"
+      
+      echo "Cleaning up save_images.sh..."
       rm static/fm_setup_v$FM_VERSION/save_images.sh
+      
+      echo "Creating load_images.sh script..."
       touch static/fm_setup_v$FM_VERSION/load_images.sh
+      
+      echo "Copying docker-compose file..."
       cp static/docker_compose_v$FM_VERSION.yml static/fm_setup_v$FM_VERSION/docker_compose_v$FM_VERSION.yml
+      
+      echo "Generating load commands for all images..."
       docker-compose -f static/docker_compose_v$FM_VERSION.yml config | grep image | awk '{print $2}' | xargs -I % echo "docker load -i" %.tar >> static/fm_setup_v$FM_VERSION/load_images.sh
+      echo "Generated load commands"
+      
+      echo "Content of load_images.sh:"
+      cat static/fm_setup_v$FM_VERSION/load_images.sh
+      
+      echo "Copying readme.pdf..."
       cp readme.pdf static/fm_setup_v$FM_VERSION/readme_v$FM_VERSION.pdf
+      
+      echo "Copying default certificates..."
       cp -r misc/default_certs static/fm_setup_v$FM_VERSION/.
+      
+      echo "=== tar_images function completed successfully ==="
    }
   fi
 }

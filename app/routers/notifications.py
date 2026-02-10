@@ -14,6 +14,7 @@ import utils.log_utils as lu
 import models.misc_models as mm
 import core.common as ccm
 from utils.fleet_utils import get_all_fleets_list_as_per_user
+from utils.auth_utils import AuthValidator, websocket_token_auth
 
 
 # module regarding the http and websocket notifications(read, write, delete)
@@ -28,9 +29,9 @@ router = APIRouter(tags=["notifications"], responses={404: {"description": "Not 
 
 
 @router.get("/api/v1/notification/basic_info")
-async def get_all_notification_modules(user_name=Depends(dpd.get_user_from_header)):
+async def get_all_notification_modules(user=Depends(AuthValidator('fm'))):
     response = {}
-    if not user_name:
+    if not user:
         dpd.raise_error("Unknown requester", 401)
 
     all_notif_mods = [
@@ -48,11 +49,11 @@ async def get_all_notification_modules(user_name=Depends(dpd.get_user_from_heade
 
 @router.delete("/api/v1/notification/clear/{id}/{token}")
 async def clear_notification(
-    id: int, token: str, user_name=Depends(dpd.get_user_from_query)
+    id: int, token: str, user=Depends(AuthValidator('fm'))
 ):
 
     response = {}
-    if not user_name:
+    if not user:
         dpd.raise_error("Unknown requester", 401)
 
     with DBSession(engine=ccm.engine) as dbsession:
@@ -70,9 +71,9 @@ async def clear_notification(
 
 
 @router.get("/api/v1/notifications/clear_all/{token}")
-async def clear_notifications(token: str, user_name=Depends(dpd.get_user_from_query)):
+async def clear_notifications(token: str, user=Depends(AuthValidator('fm'))):
     response = {}
-    if not user_name:
+    if not user:
         dpd.raise_error("Unknown requester", 401)
 
     with DBSession(engine=ccm.engine) as dbsession:
@@ -90,10 +91,10 @@ async def clear_notifications(token: str, user_name=Depends(dpd.get_user_from_qu
 
 @router.get("/api/v1/notifications/clear_log_level/{log_level}/{token}")
 async def clear_notifications_log_level(
-    token: str, log_level: str, user_name=Depends(dpd.get_user_from_query)
+    token: str, log_level: str, user=Depends(AuthValidator('fm'))
 ):
     response = {}
-    if not user_name:
+    if not user:
         dpd.raise_error("Unknown requester", 401)
 
     with DBSession(engine=ccm.engine) as dbsession:
@@ -113,7 +114,7 @@ async def clear_notifications_log_level(
 async def notifications(
     websocket: WebSocket,
     token: str,
-    user_name=Depends(dpd.get_user_from_query),
+    user=Depends(websocket_token_auth),
     x_real_ip=Depends(dpd.get_real_ip_from_header),
 ):
 
@@ -121,7 +122,7 @@ async def notifications(
     if x_real_ip is None:
         x_real_ip = client_ip
 
-    if not user_name:
+    if not user:
         logger.info(
             f"websocket connection(notifications) request from (ip: {x_real_ip}) will be turned down, Unknown user"
         )
@@ -130,6 +131,7 @@ async def notifications(
 
     await websocket.accept()
 
+    user_name = user["user_name"]
     rw = [
         asyncio.create_task(reader(websocket, token, x_real_ip)),
         asyncio.create_task(
@@ -165,8 +167,8 @@ async def writer(websocket, token, x_real_ip, user_name):
     await psub.subscribe("channel:notifications")
 
     
-    fleet_names = get_all_fleets_list_as_per_user(user_name)
-
+    fleets = get_all_fleets_list_as_per_user(user_name)
+    fleet_names = [fleet["fleet_name"] for fleet in fleets]
     while True:
         message = await psub.get_message(ignore_subscribe_messages=True, timeout=5)
         if message:

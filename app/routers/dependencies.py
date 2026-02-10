@@ -142,7 +142,7 @@ def get_real_ip_from_header(x_real_ip: str = Header(None)):
 def get_forwarded_for_from_header(x_forwarded_for: str = Header(None)):
     return x_forwarded_for
 
-def get_number_of_request(times=1, seconds=60,fleet_name=None):
+def get_number_of_request(times=10, seconds=60,fleet_name=None):
     redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
     number_of_request = redis_conn.get(f"{fleet_name}_number_of_request")
     if number_of_request is None:
@@ -152,7 +152,7 @@ def get_number_of_request(times=1, seconds=60,fleet_name=None):
             json.dumps(1)
         )
     else:
-        if int(number_of_request) > times:
+        if int(number_of_request) < times:
             number_of_request = int(number_of_request) + 1
             remaing_time = redis_conn.ttl(f"{fleet_name}_number_of_request")
             if remaing_time > 0:
@@ -176,7 +176,7 @@ def decode_token(token: str):
     try:
         details = jwt.decode(
             token,
-            redis_conn.get("FM_SECRET_TOKEN"),
+            os.getenv("SECRET_KEY"),
             algorithms=["HS256"],
             options={"require": ["exp", "sub"]},
         )
@@ -211,8 +211,10 @@ def generate_jwt_token(username: str, role=None, expiry_interval=None):
             "sub": username,
             "role": role,
             "exp": time.time() + expiry_interval,
+            "user_name": username,
         },
-        redis_conn.get("FM_SECRET_TOKEN"),
+        # redis_conn.get("FM_SECRET_TOKEN"),
+        os.getenv("SECRET_KEY"),
         algorithm="HS256",
     )
     return access_token
@@ -283,9 +285,10 @@ def relay_error_details(e: Exception):
     raise_error(detail=error_detail, code=status_code)
 
 
-async def process_req_with_response(queue, req, user: str):
+async def process_req_with_response(queue, req, user):
     redis_conn = redis.from_url(os.getenv("FM_REDIS_URI"))
     job = process_req(queue, req, user, redis_conn)
+    # job = process_req(queue, req, user, redis_conn)
     add_job_to_queued_jobs(job.id, req.source, redis_conn)
 
     status = ""

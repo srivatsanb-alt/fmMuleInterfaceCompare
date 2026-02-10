@@ -37,7 +37,9 @@ class SendEventUpdates2MFM:
         self.recent_dt = None
         self.last_conf_sent_unix_dt = self.get_send_conf_to_mfm_unix_dt(time.time())
         self.sherpa_oee_send_freq = 30 * 60  #  every 30 minutes
-        self.last_oee_check = datetime.datetime.now()+datetime.timedelta(seconds=-self.sherpa_oee_send_freq)
+        self.last_oee_check = datetime.datetime.now() + datetime.timedelta(
+            seconds=-self.sherpa_oee_send_freq
+        )
         self.batch_size = 50
 
     def get_send_conf_to_mfm_unix_dt(self, default=None):
@@ -248,9 +250,11 @@ def update_sherpa_info(mfm_context: mu.MFMContext):
     with DBSession() as dbsession:
         sherpa_names = []
         master_sherpa_info = []
+        # sherpa_ids = []
         all_sherpas = dbsession.get_all_sherpas()
         for sherpa in all_sherpas:
             sherpa_names.append(sherpa.name)
+            # sherpa_ids.append(sherpa.hwid)
             sherpa_info = {
                 "name": sherpa.name,
                 "hwid": sherpa.hwid,
@@ -260,6 +264,7 @@ def update_sherpa_info(mfm_context: mu.MFMContext):
             master_sherpa_info.append(sherpa_info)
 
         req_json = {
+            # "sherpa_ids": sherpa_ids,
             "sherpa_names": sherpa_names,
             "master_sherpa_info": master_sherpa_info,
         }
@@ -462,7 +467,7 @@ def update_fm_incidents(
     if len(all_fm_incidents) == 0:
         logging.getLogger("mfm_updates").info("no new fm incidents to be updated")
         return
-    
+
     for i in range(0, len(all_fm_incidents), batch_size):
         fm_incidents_chunk = all_fm_incidents[i : i + batch_size]
         fm_incident_ids_chunk = fm_incident_ids[i : i + batch_size]
@@ -494,9 +499,7 @@ def update_sherpa_oee(
     dbsession: DBSession,
 ):
     now_time = datetime.datetime.now()
-    ts_diff = (
-       now_time - event_updater.last_oee_check
-    )
+    ts_diff = now_time - event_updater.last_oee_check
 
     if ts_diff.seconds < event_updater.sherpa_oee_send_freq:
         return
@@ -522,7 +525,7 @@ def update_sherpa_oee(
     if len(all_sherpa_oees) == 0:
         logging.getLogger("mfm_updates").info("no new sherpa oee to be updated")
         return
-    
+
     req_json = {"all_sherpa_oee": all_sherpa_oees}
 
     endpoint = "update_sherpa_oee"
@@ -631,5 +634,4 @@ def send_mfm_updates_with_decorators(mfm_context):
                 update_sherpa_oee(event_updater, dbsession)
                 update_fm_incidents(event_updater, dbsession)
                 upload_important_files(event_updater, dbsession)
-
             time.sleep(mfm_context.update_freq)

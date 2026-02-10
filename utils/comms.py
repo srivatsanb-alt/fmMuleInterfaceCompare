@@ -224,7 +224,12 @@ def get_num_units_converyor(conveyor_name):
 
     username = "fm_to_conveyor"
     user_token = dpd.generate_jwt_token(username)
-    kwargs = {"headers": {"X-User-Token": user_token}}
+    kwargs = {
+        "headers": {
+            "X-User-Token": user_token,
+            "Authorization": f"Bearer {user_token}"
+        }
+    }
     response = requests.get(endpoint, **kwargs)
 
     if response.status_code == 200:

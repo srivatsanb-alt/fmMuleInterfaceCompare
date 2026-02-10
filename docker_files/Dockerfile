@@ -8,7 +8,8 @@ ARG APP_ENV
 
 
 
-ENV FM_INSTALL_DIR="/app"
+ENV FM_INSTALL_DIR="/app" \
+    FM_DEV_LOCAL="false" 
 
 ENV FM_STATIC_DIR="/app/static" \
     FM_LOG_DIR="/app/logs" \
@@ -24,7 +25,8 @@ ENV FM_STATIC_DIR="/app/static" \
     FM_TAG=$FM_TAG \
     GIT_TAGGED=$GIT_TAGGED \
     LAST_COMMIT_DT=$LAST_COMMIT_DT \
-    PYTHONPATH="/app"
+    PYTHONPATH="/app" \
+    STATIC_AUTH_FILE="/app/misc/nginx.htpasswd"
 
 RUN ln -fs /usr/share/zoneinfo/Asia/Kolkata /etc/localtime && \
        dpkg-reconfigure -f noninteractive tzdata

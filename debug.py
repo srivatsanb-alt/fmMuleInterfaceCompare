@@ -3,10 +3,17 @@ import time
 import json
 import redis
 import os
+import logging
 
 # ati code imports....
 from models.mongo_client import FMMongo
 from fleet_simulator import FleetSimulator, MuleWS
+
+import utils.log_utils as lu
+
+# get log config
+
+logger = logging.getLogger("simulator")
 
 if __name__ == "__main__":
 
@@ -27,7 +34,7 @@ if __name__ == "__main__":
         with redis.from_url(os.getenv("FM_REDIS_URI")) as redis_conn:
             while not fleet_manager_up:
                 fleet_manager_up = redis_conn.get("is_fleet_manager_up")
-                print("waiting for fleet-manager to start")
+                logger.info("waiting for fleet-manager to start")
                 if fleet_manager_up is not None:
                     fleet_manager_up = json.loads(fleet_manager_up)
                 time.sleep(5)

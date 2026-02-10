@@ -9,7 +9,17 @@ from fastapi_limiter import FastAPILimiter
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from dotenv import load_dotenv
 
+import io
+import zipfile
+import tempfile
+from fastapi.responses import FileResponse
+
+load_dotenv()
+
+import sys
+sys.path.append(os.path.join(os.getcwd()))
 
 # ati code imports
 from app.routers import (
@@ -27,6 +37,7 @@ from app.routers import (
     plugin_ws,
     ota_update_http,
     super_user_http,
+    staging_area,
 )
 import utils.log_utils as lu
 
@@ -89,6 +100,7 @@ app.include_router(version_control.router)
 app.include_router(plugin_ws.router)
 app.include_router(ota_update_http.router)
 app.include_router(super_user_http.router)
+app.include_router(staging_area.router)
 
 
 def get_uvicorn_config():
@@ -102,14 +114,87 @@ def get_uvicorn_config():
     )
     return uvi_config
 
+root_dir =  "" if os.getenv("FM_INSTALL_DIR") == "/" else os.getenv("FM_INSTALL_DIR")
 
-app.mount("/api/static", StaticFiles(directory="/app/static"), name="static")
-app.mount("/api/downloads", StaticFiles(directory="/app/downloads"), name="manuals")
+from fastapi import Depends, HTTPException
+from utils.auth_utils import AuthValidator, DualAuthValidator
+from fastapi.responses import FileResponse
 
+# Custom static file handlers with dual authentication
+@app.get("/api/static/{file_path:path}")
+async def serve_static_file(
+    file_path: str, 
+    user=Depends(DualAuthValidator('fm'))
+):
+    """Serve static files with dual authentication (Bearer token or Basic Auth)"""
+    if not user:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    
+    static_dir = os.path.join(root_dir, "static")
+    file_location = os.path.join(static_dir, file_path)
+    
+    if not os.path.exists(file_location) or not os.path.isfile(file_location):
+        raise HTTPException(status_code=404, detail="File not found")
+    
+    return FileResponse(file_location)
+
+@app.get("/api/downloads/{file_path:path}")
+async def serve_downloads_file(
+    file_path: str, 
+    user=Depends(DualAuthValidator('fm'))
+):
+    """Serve download files with dual authentication (Bearer token or Basic Auth)"""
+    if not user:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    
+    downloads_dir = os.path.join(root_dir, "downloads")
+    file_location = os.path.join(downloads_dir, file_path)
+    
+    if not os.path.exists(file_location) or not os.path.isfile(file_location):
+        raise HTTPException(status_code=404, detail="File not found")
+    
+    return FileResponse(file_location)
+
+
+@app.get("/api/map/download/{map_name}")
+async def download_map_folder(map_name: str, user=Depends(AuthValidator)):
+    """Download all files under static/<map_name>/map as a zip archive."""
+    if not user:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    map_folder = os.path.join(root_dir, "static", map_name, "map")
+    if not (os.path.isdir(map_folder)):
+        raise HTTPException(status_code=404, detail="Map folder not found")
+
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+        for root, _, files in os.walk(map_folder):
+            for f in files:
+                zf.write(os.path.join(root, f), os.path.relpath(os.path.join(root, f), map_folder))
+    zip_buffer.seek(0)
+
+    filename = f"{map_name}_map.zip"
+    headers = {"Content-Disposition": f'attachment; filename="{filename}"'}
+
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".zip") as tmp:
+        tmp.write(zip_buffer.getvalue())
+        tmp_path = tmp.name
+
+    class TempFileResponse(FileResponse):
+        async def __call__(self, scope, receive, send):
+            try:
+                await super().__call__(scope, receive, send)
+            finally:
+                try: os.remove(self.path)
+                except Exception: pass
+
+    return TempFileResponse(tmp_path, media_type="application/zip", headers=headers, filename=filename)
 
 def main():
     config = get_uvicorn_config()
     server = uvicorn.Server(config)
+    print("====================API Server Started and can be accessed at====================")
+    print(f"http://localhost:{config.port}/docs")
     server.run()
 
 

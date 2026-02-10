@@ -7,6 +7,7 @@
 4. [Start using fleet manager](#start-using-fleet_manager)
 5. [Run CI](#run-ci)
 6. [Learn about FM backend](#learn-about-fm-backend)
+7. [Setup FM for dev environment](#fm-dev-setup)
 
 ## System requirements ## 
 
@@ -97,9 +98,12 @@ git submodule init
         active = true
         branch = dev
         ```
-    
+      b. Sync the submodule with new changes
+      ```
+      git submodule sync
+      ```
 
-   3. Update submodules
+   4. Update submodules
 ```
 git submodule update --recursive
 ```
@@ -170,4 +174,122 @@ arg 3 - Sanjaya login password
 
 Please check [Working of FM backend](app/readme.md)
 
+## Running FM using VS Code Debugger ##
 
+To run Fleet Manager (FM) using the VS Code debugger, follow these steps:
+
+1. **Run the Docker setup first**
+   - This will add all the required data inside Redis. Follow the earlier Docker setup instructions in this README.
+
+2. **Install Poetry and project dependencies**
+   - If Poetry is not installed, install it by following the instructions at https://python-poetry.org/docs/#installation
+   - Run `poetry install` in the project root to install all dependencies.
+
+3. **Add the Poetry environment to VS Code's `launch.json`**
+   - Open the command palette in VS Code (`Ctrl+Shift+P`), search for `Python: Select Interpreter`, and choose the Poetry environment for this project.
+   - In your `.vscode/launch.json`, ensure the `python` path points to the Poetry environment. Example:
+     ```json
+     "python": "${workspaceFolder}/.venv/bin/python"
+     ```
+   - Adjust the path if your Poetry environment is elsewhere (use `poetry env info --path` to find it).
+
+4. **Change a line in `utils/log_utils.py`**
+   - Edit line 104 from:
+     ```python
+     if log_config_dict is None:
+     ```
+     to:
+     ```python
+     if log_config_dict:
+     ```
+   - This change is required for local debugging with VS Code.
+
+5. **Start debugging**
+   - Set your breakpoints and use the VS Code debugger as usual.
+
+**Note:**
+
+If you want to run FM on localhost and also connect the `fm_plugins` service to FM:
+
+- In `misc/nginx_bridge.conf`, change all instances of `fleet_manager` to `host.docker.internal` (for example, in the `upstream fm_server` block) and build the image.
+- In your MongoDB `fm_info` collection, update the `fm_alias` field to `"host.docker.internal"`.
+
+This ensures that the plugins running in Docker can communicate with the FM instance running on your local machine.
+
+## fm-dev-setup ##
+
+1. Clone the fm code.
+2. Change to fm_dm_integration branch - # TODO - This needs to be updated once this branch is merged with main. 
+   Create empty directories logs, static, downlaods, mule_config at the project root level.
+3. Create a python virtual environment and activate. Use this env name later in launch.json file. 
+   Run the below commands inside the venv. This would install all the required python dependenies.
+   
+   $ sudo apt update
+   $ sudo apt install pipx
+   $ pipx ensurepath
+   $ pipx install poetry
+   $ poetry install
+
+3. From Terminal navgate to misc directory. Start the dependent docker images for psql, mongo and redis.
+   docker compose -f docker_compose_dev.yml up
+4. Add the below code snippet as part of launch.json
+```
+{
+	// Use IntelliSense to learn about possible attributes.
+	// Hover to view descriptions of existing attributes.
+	// For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+	"version": "0.2.0",
+	"compounds": [
+            {
+                "name": "Run: FM All Processes",
+                "configurations": [
+					"Run FM Supporting Processes", 
+					"Run API Core",
+					"Run API Plugins"
+				],
+                "postDebugTask": "Join Terminals",
+                "presentation": {
+                    "group": "fm-processes",
+                    "order": 1
+                }
+            }
+        ],
+	"configurations": [
+		{
+			"name": "Run FM Supporting Processes",
+			"type": "debugpy",
+			"request": "launch",
+			"program": "${workspaceFolder}/main.py",
+			"console": "integratedTerminal",
+			"justMyCode": true,
+			"cwd": "${workspaceFolder}",
+			"envFile": "${workspaceFolder}/.env",
+			"python": "${workspaceFolder}/.venv/bin/python"
+		},
+		{
+			"name": "Run API Core",
+			"type": "debugpy",
+			"request": "launch",
+			"program": "${workspaceFolder}/app/main.py",
+			"console": "integratedTerminal",
+			"justMyCode": true,
+			"cwd": "${workspaceFolder}",
+			"envFile": "${workspaceFolder}/.env",
+			"python": "${workspaceFolder}/.venv/bin/python"
+		},
+		{
+			"name": "Run API Plugins",
+			"type": "debugpy",
+			"request": "launch",
+			"program": "${workspaceFolder}/fm_plugins/uvicorn_app/uvicorn_main.py",
+			"console": "integratedTerminal",
+			"justMyCode": true,
+			"cwd": "${workspaceFolder}",
+			"envFile": "${workspaceFolder}/.env",
+			"python": "${workspaceFolder}/.venv/bin/python"
+		}
+	]
+}
+```
+5. Start the application from the launch.json - Run 'FM Processes'.
+6. FastAPI docs can be accessed from https://localhost:8081/docs port.    

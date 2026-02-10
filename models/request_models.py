@@ -55,7 +55,11 @@ class PasstoSherpaEndpoints:
     SOUND = "sound"
     CURRENT_SOUND_STATUS = "current_sound_status"
     RESET_POSE_VPR = 'reset_pose_vpr'
-
+    UPDATE_SHERPA_CONFIG = "update_sherpa_config"
+    GET_DATA_DIR = "get_data_dir"
+    FM_MESSAGE = "fm_message"
+    RETRIEVE_DATA = "retrieve_data"
+    AUTO_RECOVER = "auto_recover"
 
 class SherpaType(str, Enum):
     tug = "tug"
@@ -119,8 +123,9 @@ class SherpaReq(BaseModel):
 
 class WSResp(BaseModel):
     success: bool
-    response: Optional[Dict[str, Union[str, int, float, dict, None]]]
+    response: Optional[Dict[str, Any]]
     ttl: Optional[int] = None
+    
 
 
 class InitExtraInfo(SherpaReq):
@@ -163,6 +168,11 @@ class SherpaPeripheralsReq(SherpaReq):
     error_device: str = None
     type = MessageType.PERIPHERALS
     
+class SlamRecoverReq(SherpaReq):
+    pose: Optional[Union[List[float], None]] = None
+    station_name: str
+    error: Optional[Union[str, None]] = None
+    type = MessageType.SLAM_RECOVER
 
 class SoftPeripheralsReq(SherpaReq):
     dispatch_button: DispatchButtonReq = None
@@ -228,6 +238,11 @@ class SherpaStatusMsg(SherpaMsg, JsonMixin):
     error_info: str = None
     type: str = MessageType.SHERPA_STATUS
 
+@dataclass
+class MuleMsg(SherpaMsg, JsonMixin):
+    sherpa_name: str
+    message_jsons: List[Dict]
+    type: str = MessageType.MULE_MESSAGE
 
 @dataclass
 class StoppageInfo(JsonMixin):
@@ -414,7 +429,8 @@ class SwitchModeCtrlReq(ClientReq):
 class ResetPoseCtrlReq(ClientReq):
     fleet_station: str
 
-
+class AutoRecoverReq(ClientReq):
+    is_auto_recover: bool
 class SherpaImgUpdateCtrlReq(ClientReq):
     sherpa_name: str
     type: str = "sherpa_img_update"
@@ -478,6 +494,7 @@ class FMIncidentsReqPg(ClientReq):
 class SaveRouteReq(ClientReq):
     tag: str
     route: List[str]
+    tasks: Optional[Dict[str, str]] = None
     other_info: Optional[Dict[str, str]] = None
     type: str = MessageType.SAVE_ROUTE
 
@@ -573,6 +590,13 @@ class SwitchModeReq(FMReq):
     mode: str
     sherpa_name: str
     type = MessageType.PASS_TO_SHERPA
+    
+class AutoRecoverMsg(FMReq):
+    endpoint: str = PasstoSherpaEndpoints.AUTO_RECOVER
+    req_id: str
+    sherpa_name: str
+    is_auto_recover: bool
+    type = MessageType.PASS_TO_SHERPA
 
 
 class ResetPoseReq(FMReq):
@@ -635,7 +659,32 @@ class ManualVisaReleaseReq(ClientReq):
 class SoundSettingCtrlReq(ClientReq):
     volume: Optional[float] = 0.01
     sound_type: str
-
+    
+class SherpaConfigReq(FMReq):
+    endpoint: str = PasstoSherpaEndpoints.UPDATE_SHERPA_CONFIG
+    sherpa_name: str
+    config: Dict[str, Union[str, Any]]
+    type: str = MessageType.PASS_TO_SHERPA
+    
+class GetDataDirectoryInfoReq(FMReq):
+    endpoint: str = PasstoSherpaEndpoints.GET_DATA_DIR
+    sherpa_name: str
+    data_dir: Optional[str] = None
+    type: str = MessageType.PASS_TO_SHERPA
+    
+class FMMessageReq(FMReq):
+    endpoint: str = PasstoSherpaEndpoints.FM_MESSAGE
+    sherpa_name: str
+    message_type: str
+    body_json: dict
+    type: str = MessageType.PASS_TO_SHERPA
+    
+class RetrieveDataReq(FMReq):
+    endpoint: str = PasstoSherpaEndpoints.RETRIEVE_DATA
+    sherpa_name: str
+    data_req: str
+    data_dir: Optional[str] = None
+    type: str = MessageType.PASS_TO_SHERPA
 
 
 @dataclass

@@ -21,6 +21,7 @@ from utils.comms import close_websocket_for_sherpa
 import utils.log_utils as lu
 import core.common as ccm
 # from utils.fleet_utils import save_map, strip_archive_extensions
+from utils.auth_utils import AuthValidator
 
 
 # manages the overall configuration of fleet by- deleting sherpa, fleet, map, station; update map.
@@ -36,7 +37,7 @@ router = APIRouter(
 
 
 @router.get("/all_sherpa_info")
-async def get_all_sherpa_info(user_name=Depends(dpd.get_user_from_header)):
+async def get_all_sherpa_info(user_name=Depends(AuthValidator('fm'))):
     response = {}
     if not user_name:
         dpd.raise_error("Unknown requester", 401)
@@ -55,12 +56,12 @@ async def get_all_sherpa_info(user_name=Depends(dpd.get_user_from_header)):
 async def switch_sherpa(
     add_edit_sherpa: rqm.AddEditSherpaReq,
     sherpa_name: str,
-    user_name=Depends(dpd.get_user_from_header)
+    user=Depends(AuthValidator('fm'))
     ):
 
     response = {}
 
-    if not user_name:
+    if not user:
         dpd.raise_error("Unknown requester", 401)
 
     with DBSession(engine=ccm.engine) as dbsession:
@@ -94,7 +95,7 @@ async def switch_sherpa(
 
                 queues_to_delete = [
                     f"{sherpa_name}_update_handler",
-                    f"{sherpa_name}_trip_update_handler",
+                    f"{sherpa_name}_misc_update_handler",
                 ]
                 for q_name in queues_to_delete:
                     send_shutdown_command(aredis_conn, q_name)
@@ -118,7 +119,7 @@ async def switch_sherpa(
             async with aioredis.Redis.from_url(os.getenv("FM_REDIS_URI")) as aredis_conn:
                 await fu.update_fleet_conf_in_redis(dbsession, aredis_conn)
 
-            new_qs = [f"{sherpa_name}_update_handler", f"{sherpa_name}_trip_update_handler"]
+            new_qs = [f"{sherpa_name}_update_handler", f"{sherpa_name}_misc_update_handler"]
             for new_q in new_qs:
                 rqu.Queues.add_queue(new_q)
                 process = Process(target=rqu.start_worker, args=(new_q,))
@@ -134,11 +135,11 @@ async def switch_sherpa(
 async def add_edit_sherpa(
     add_edit_sherpa: rqm.AddEditSherpaReq,
     sherpa_name: str,
-    user_name=Depends(dpd.get_user_from_header),
+    user=Depends(AuthValidator('fm')),
 ):
 
     response = {}
-    if not user_name:
+    if not user:
         dpd.raise_error("Unknown requester", 401)
 
     with DBSession(engine=ccm.engine) as dbsession:
@@ -169,7 +170,7 @@ async def add_edit_sherpa(
             async with aioredis.Redis.from_url(os.getenv("FM_REDIS_URI")) as aredis_conn:
                 await fu.update_fleet_conf_in_redis(dbsession, aredis_conn)
 
-            new_qs = [f"{sherpa_name}_update_handler", f"{sherpa_name}_trip_update_handler"]
+            new_qs = [f"{sherpa_name}_update_handler", f"{sherpa_name}_misc_update_handler"]
             for new_q in new_qs:
                 rqu.Queues.add_queue(new_q)
                 process = Process(target=rqu.start_worker, args=(new_q,))
@@ -181,11 +182,11 @@ async def add_edit_sherpa(
 @router.get("/delete_sherpa/{sherpa_name}")
 async def delete_sherpa(
     sherpa_name: str,
-    user_name=Depends(dpd.get_user_from_header),
+    user=Depends(AuthValidator('fm')),
 ):
     response = {}
 
-    if not user_name:
+    if not user:
         dpd.raise_error("Unknown requester", 401)
 
     with DBSession(engine=ccm.engine) as dbsession:
@@ -224,9 +225,9 @@ async def delete_sherpa(
 
 
 @router.get("/all_fleet_info")
-async def get_all_fleet_info(user_name=Depends(dpd.get_user_from_header)):
+async def get_all_fleet_info(user=Depends(AuthValidator('fm'))):
 
-    if not user_name:
+    if not user:
         dpd.raise_error("Unknown requester", 401)
 
     response = {}
@@ -238,10 +239,10 @@ async def get_all_fleet_info(user_name=Depends(dpd.get_user_from_header)):
 
 @router.get("/get_all_available_maps/{fleet_name}")
 async def get_all_available_maps(
-    fleet_name: str, user_name=Depends(dpd.get_user_from_header)
+    fleet_name: str, user=Depends(AuthValidator('fm'))
 ):
     response = []
-    if not user_name:
+    if not user:
         dpd.raise_error("Unknown requester", 401)
 
     with DBSession(engine=ccm.engine) as dbsession:
@@ -269,7 +270,7 @@ async def add_fleet(
     customer: str = Form(...),
     map_name: str = Form(...),
     map_file: Optional[UploadFile] = File(None),
-    user_name=Depends(dpd.get_user_from_header),
+    user=Depends(AuthValidator('fm')),
 ):
 
     response = {}
@@ -280,7 +281,7 @@ async def add_fleet(
         map_name=map_name,
     )
 
-    if not user_name:
+    if not user:
         dpd.raise_error("Unknown requester", 401)
 
     with DBSession(engine=ccm.engine) as dbsession:
@@ -288,10 +289,11 @@ async def add_fleet(
         new_fleet = False if fleet_name in all_fleets else True
         try:
             if map_file:
-                file_name = fu.strip_archive_extensions(map_file.filename)
+                # file_name = fu.strip_archive_extensions(map_file.filename)
+                file_name = fleet_name
                 if map_file and file_name != fleet_name:
                     dpd.raise_error("Map file name and fleet name should match", 400)
-                await fu.save_map(map_file)
+                await fu.save_map(map_file, fleet_name)
             fu.FleetUtils.add_map(dbsession, fleet_name)
             fu.FleetUtils.add_fleet(
                 dbsession,
@@ -306,6 +308,8 @@ async def add_fleet(
             fu.ExclusionZoneUtils.add_exclusion_zones(dbsession, fleet.name)
             fu.ExclusionZoneUtils.add_linked_gates(dbsession, fleet.name)
 
+            response["fleet_id"] = fleet.id
+            response["map_id"] = fleet.map_id
         except Exception as e:
             dpd.relay_error_details(e)
 
@@ -320,10 +324,10 @@ async def add_fleet(
 @router.get("/delete_fleet/{fleet_name}")
 async def delete_fleet(
     fleet_name: str,
-    user_name=Depends(dpd.get_user_from_header),
+    user=Depends(AuthValidator('fm')),
 ):
     response = {}
-    if not user_name:
+    if not user:
         dpd.raise_error("Unknown requester", 401)
 
     try:
@@ -371,17 +375,17 @@ async def delete_fleet(
 @router.post("/update_map")
 async def update_map(
     update_map_req: rqm.UpdateMapReq,
-    user_name=Depends(dpd.get_user_from_header),
+    user=Depends(AuthValidator('fm')),
 ):
     response = {}
 
-    if not user_name:
+    if not user:
         dpd.raise_error("Unknown requester", 401)
 
     with DBSession(engine=ccm.engine) as dbsession:
         fleet_name = update_map_req.fleet_name
 
-        dpd.get_number_of_request(times=1, seconds=120, fleet_name=fleet_name)
+        dpd.get_number_of_request(times=10, seconds=120, fleet_name=fleet_name)
 
         if update_map_req.map_path != "use current map":
             new_map = os.path.join(

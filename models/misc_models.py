@@ -19,12 +19,15 @@ class NotificationModules:
     dispatch_button = "dispatch_button"
     optimal_dispatch = "optimal_dispatch"
     platform = "platform"
+    auto_recovery_start = "auto_recovery_start"
+    auto_recovery= "auto_recovery"
 
 class NotificationLevels:
     info = "info"
     alert = "alert"
     stale_alert_or_action = "stale_alert_or_action"
     action_request = "action_request"
+    event_based = "event_based"
 
 
 NotificationTimeout = {
@@ -32,6 +35,7 @@ NotificationTimeout = {
     NotificationLevels.action_request: 120,
     NotificationLevels.alert: 120,
     NotificationLevels.stale_alert_or_action: 10,
+    NotificationLevels.event_based: 60,
 }
 
 
