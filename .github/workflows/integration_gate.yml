@@ -17,6 +17,13 @@ jobs:
           path: https://github.com/srivatsanb-alt/fmMuleInterfaceCompare/tree/map_upload_fix
           token: ${{ secrets.MY_PAT }}
           submodules: recursive
+      - name: Force PAT for Org Submodule
+        run: |
+          # Use the PAT for ANY request to github.com
+          git config --global url."https://${{ secrets.MY_PAT }}@github.com/".insteadOf "https://github.com/"
+          
+          # Now initialize the Org-owned submodule
+          git submodule update --init --recursive
 
       - name: Checkout Main (To get Scripts & Base)
         uses: actions/checkout@v4
@@ -24,8 +31,15 @@ jobs:
           ref: main
           path: https://github.com/srivatsanb-alt/fmMuleInterfaceCompare/tree/main
           token: ${{ secrets.MY_PAT }}
-          submodules: false
-
+          submodules: recursive
+      - name: Force PAT for Org Submodule
+        run: |
+          # Use the PAT for ANY request to github.com
+          git config --global url."https://${{ secrets.MY_PAT }}@github.com/".insteadOf "https://github.com/"
+          
+          # Now initialize the Org-owned submodule
+          git submodule update --init --recursive
+          
       - name: Generate Snapshots
         run: |
           # Run the extraction script from Main against Main's code
